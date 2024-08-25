@@ -1,24 +1,15 @@
 {
-  "name": "gustavo",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "next": "14.2.6"
-  },
-  "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.6"
-  }
+    "name": "peanut",
+    "version": "0.0.1",
+    "description": "a companion for tracking.",
+    "author": "Ivan Wong",
+    "repository": "git+https://github.com/iwong3/peanut.git",
+    "private": true,
+    "workspaces": [
+        "backend",
+        "frontend"
+    ],
+    "scripts": {
+        "start-fe": "yarn workspace peanut-frontend start"
+    }
 }

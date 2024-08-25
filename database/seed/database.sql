@@ -1,0 +1,3 @@
+DROP DATABASE IF EXISTS peanut;
+
+CREATE DATABASE peanut;
