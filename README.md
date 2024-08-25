@@ -34,3 +34,13 @@ Provides a UI to allow users to read and write to a Google Sheet.
 ## Resources
 
 - https://developers.google.com/sheets/api/guides/concepts
+
+## Technical Ideas
+
+- How do we handle multiple users making edits at the same time?
+  - Look into web sockets (this may require a server)
+- How do we refresh every time someone makes an update?
+- Can we provide a read-only version for everyone else besides me?
+- Refresh buttons?
+- Or look into GCP free tier for hosting a server.
+  - Check out Firebase free tier.
