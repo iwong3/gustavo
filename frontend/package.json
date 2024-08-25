@@ -1,9 +1,9 @@
 {
-    "name": "peanut-frontend",
+    "name": "gustavo-frontend",
     "version": "0.0.1",
-    "description": "a companion for tracking.",
+    "description": "track spending and split costs",
     "author": "Ivan Wong",
-    "repository": "git+https://github.com/iwong3/peanut.git",
+    "repository": "git+https://github.com/iwong3/gustavo.git",
     "private": true,
     "scripts": {
         "start": "react-scripts start"
