@@ -1,3 +1,0 @@
-DROP DATABASE IF EXISTS gustavo;
-
-CREATE DATABASE gustavo;

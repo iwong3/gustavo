@@ -4,18 +4,46 @@
     "description": "track spending and split costs",
     "author": "Ivan Wong",
     "repository": "git+https://github.com/iwong3/gustavo.git",
-    "private": true,
-    "workspaces": [
-        "backend",
-        "frontend"
-    ],
     "scripts": {
-        "deploy": "gh-pages -d frontend/build",
-        "predeploy": "yarn workspace gustavo-frontend build",
-        "start": "yarn workspace gustavo-frontend start",
-        "start-fe": "yarn workspace gustavo-frontend start"
+        "build": "react-scripts build",
+        "deploy": "gh-pages -d build",
+        "eject": "react-scripts eject",
+        "predeploy": "npm run build",
+        "start": "react-scripts start",
+        "test": "react-scripts test"
+    },
+    "dependencies": {
+        "@emotion/react": "^11.13.3",
+        "@emotion/styled": "^11.13.0",
+        "@mui/material": "^6.0.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^6.3.0",
+        "react-scripts": "5.0.1"
     },
     "devDependencies": {
-        "gh-pages": "^6.1.1"
+        "@testing-library/jest-dom": "^5.16.4",
+        "@testing-library/react": "^13.3.0",
+        "@testing-library/user-event": "^13.5.0",
+        "@types/jest": "^28.1.6",
+        "@types/node": "^18.6.3",
+        "@types/react": "^18.0.15",
+        "@types/react-dom": "^18.0.6",
+        "gh-pages": "^6.1.1",
+        "jest": "^28.1.3",
+        "ts-jest": "^28.0.8",
+        "typescript": "^4.7.4"
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
     }
 }
