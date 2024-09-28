@@ -1,18 +1,31 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import { Home } from 'views/home'
-import { Database } from 'components/database'
+import { TrackSpend } from 'views/track-spend'
+
+enum Path {
+    HOME = '/',
+    TRACK_SPEND = '/track-spend',
+}
+
+const routes = [
+    {
+        path: Path.HOME,
+        component: () => <Home />,
+    },
+    {
+        path: Path.TRACK_SPEND,
+        component: () => <TrackSpend />,
+    },
+]
 
 export const MainRouter = () => {
-    const databaseProps = {
-        numRows: 3,
-        numCols: 3,
-    }
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/databases" element={<Database {...databaseProps} />} />
+                {routes.map(({ path, component }) => (
+                    <Route path={path} element={component()} />
+                ))}
             </Routes>
         </BrowserRouter>
     )
