@@ -10,7 +10,7 @@
         "frontend"
     ],
     "scripts": {
-        "deploy": "gh-pages -d build",
+        "deploy": "gh-pages -d frontend/build",
         "predeploy": "yarn workspace gustavo-frontend build",
         "start": "yarn workspace gustavo-frontend start",
         "start-fe": "yarn workspace gustavo-frontend start"
