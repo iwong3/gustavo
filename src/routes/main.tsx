@@ -21,7 +21,7 @@ const routes = [
 
 export const MainRouter = () => {
     return (
-        <BrowserRouter>
+        <BrowserRouter basename={process.env.PUBLIC_URL}>
             <Routes>
                 {routes.map(({ path, component }) => (
                     <Route path={path} element={component()} />
