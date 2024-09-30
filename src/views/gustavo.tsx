@@ -1,13 +1,21 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 
-import { Spend, SpendTable } from 'components/spend-table'
-import { Columns, Currency, getPersonFromEmail, Person } from 'helpers/spend'
+import { SpendTable } from 'components/spend-table'
+import {
+    Columns,
+    Currency,
+    getPersonFromEmail,
+    parseRow,
+    Person,
+    Spend,
+    SpendType,
+} from 'helpers/spend'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 
 const googleSheetCsvUrl =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
-
-const rowSplitByCommaRegex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g
 
 export const Gustavo = () => {
     const [spendData, setSpendData] = useState<Spend[]>([])
@@ -28,15 +36,10 @@ export const Gustavo = () => {
             const typeIndex = headers.indexOf(Columns.SpendType)
             const reportedByIndex = headers.indexOf(Columns.Email)
 
-            // need to fix comma splitting:
-            // - split by commas but ignore quotes
-            // - include empty cell if value missing
-            // - use csv library?
             const data = rows
                 .slice(1)
                 .map((row: string) => {
-                    const rowValues = row.match(rowSplitByCommaRegex)
-                    console.log(rowValues)
+                    const rowValues = parseRow(row)
                     if (rowValues) {
                         const spend: Spend = {
                             date: rowValues[dateIndex],
@@ -45,10 +48,10 @@ export const Gustavo = () => {
                             currency: rowValues[currencyIndex] as Currency,
                             paidBy: rowValues[paidByIndex] as Person,
                             splitBetween: rowValues[splitBetweenIndex]
-                                .replace(/['"]+/g, '')
+                                .replace(/['" ]+/g, '')
                                 .split(',') as Person[],
                             location: rowValues[locationIndex],
-                            type: rowValues[typeIndex],
+                            type: rowValues[typeIndex] as SpendType,
                             reportedBy: getPersonFromEmail(rowValues[reportedByIndex]),
                         }
                         return spend
@@ -56,14 +59,15 @@ export const Gustavo = () => {
                 })
                 .filter((row) => row !== undefined) as Spend[]
             setSpendData(data)
-
-            console.log(data)
         })
     }, [])
 
     return (
-        <div>
+        <Box>
+            <Typography variant="h4" sx={{ m: 1 }}>
+                Gustavo
+            </Typography>
             <SpendTable spendData={spendData} />
-        </div>
+        </Box>
     )
 }
