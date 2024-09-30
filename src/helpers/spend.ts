@@ -61,24 +61,31 @@ export const getInitials = (person: Person): string => {
         case Person.Everyone:
             return 'EV'
         case Person.Aibek:
-            return 'AI'
+            return 'AS'
         case Person.Angela:
-            return 'AN'
+            return 'AM'
         case Person.Ivan:
-            return 'IV'
+            return 'IW'
         case Person.Jenny:
             return 'JE'
         case Person.Joanna:
             return 'JO'
         case Person.Lisa:
-            return 'LI'
+            return 'LM'
         case Person.Michelle:
-            return 'MI'
+            return 'MC'
         case Person.MichellesMom:
             return 'MM'
         default:
             return ''
     }
+}
+
+export const getSplitCost = (cost: number, splitBetween: Person[]): number => {
+    if (splitBetween[0] === Person.Everyone) {
+        return cost / 8
+    }
+    return cost / splitBetween.length
 }
 
 export const parseRow = (row: string): string[] => {
