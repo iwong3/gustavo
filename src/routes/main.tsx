@@ -1,7 +1,7 @@
+import { Box } from '@mui/material'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-import { Home } from 'views/home'
-import { TrackSpend } from 'views/track-spend'
+import { Gustavo } from 'views/gustavo'
 
 enum Path {
     HOME = '/',
@@ -11,22 +11,20 @@ enum Path {
 const routes = [
     {
         path: Path.HOME,
-        component: () => <Home />,
-    },
-    {
-        path: Path.TRACK_SPEND,
-        component: () => <TrackSpend />,
+        component: () => <Gustavo />,
     },
 ]
 
 export const MainRouter = () => {
     return (
         <BrowserRouter basename={process.env.PUBLIC_URL}>
-            <Routes>
-                {routes.map(({ path, component }) => (
-                    <Route path={path} element={component()} />
-                ))}
-            </Routes>
+            <Box sx={{ m: 3 }}>
+                <Routes>
+                    {routes.map(({ path, component }) => (
+                        <Route path={path} element={component()} />
+                    ))}
+                </Routes>
+            </Box>
         </BrowserRouter>
     )
 }
