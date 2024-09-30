@@ -11,7 +11,15 @@ export const SpendTable = ({ spendData }: ISpendTableProps) => {
     return (
         <Box>
             {spendData.map((row, index) => (
-                <SpendRow key={'row-' + index} spend={row} />
+                <Box
+                    key={'row-' + index}
+                    sx={{
+                        margin: 1,
+                        border: '1px solid lightgray',
+                        borderRadius: 4,
+                    }}>
+                    <SpendRow spend={row} />
+                </Box>
             ))}
         </Box>
     )

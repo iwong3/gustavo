@@ -16,8 +16,9 @@ import { getInitials, getSplitCost, Spend, SpendType, USDollar } from 'helpers/s
  * - Total spend summary
  * - Table filters (should apply to both table and summary)
  * - Table sorting
- * - Color
+ * - Color, color person initials
  * - Gus Fring icon
+ * - Toggle to show USD/YEN
  */
 
 interface ISpendRowProps {
@@ -30,7 +31,6 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
     return (
         <Box
             sx={{
-                borderBottom: '1px solid gray',
                 paddingY: 2,
             }}
             onClick={() => setExpanded(!expanded)}>
@@ -46,7 +46,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                         <Box
                             sx={{
                                 display: 'flex',
-                                borderRadius: '10%',
+                                borderRadius: '20%',
                                 border: '1px solid gray',
                                 p: 0.25,
                             }}>
