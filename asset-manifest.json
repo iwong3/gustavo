@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/gustavo/static/css/main.e6c13ad2.css",
-    "main.js": "/gustavo/static/js/main.9c70216b.js",
+    "main.js": "/gustavo/static/js/main.deb9b248.js",
     "index.html": "/gustavo/index.html",
     "main.e6c13ad2.css.map": "/gustavo/static/css/main.e6c13ad2.css.map",
-    "main.9c70216b.js.map": "/gustavo/static/js/main.9c70216b.js.map"
+    "main.deb9b248.js.map": "/gustavo/static/js/main.deb9b248.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.9c70216b.js"
+    "static/js/main.deb9b248.js"
   ]
 }
