@@ -12,19 +12,21 @@ import {
     SpendType,
 } from 'helpers/spend'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import { FilterPaidBy } from 'components/filter/filter-items/filter-paid-by'
+import GusFringLogo from '../images/gus-fring.png'
 
 const googleSheetCsvUrl =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
 
 export const Gustavo = () => {
     const [spendData, setSpendData] = useState<Spend[]>([])
+    const [filteredSpendData, setFilteredSpendData] = useState<Spend[]>([])
 
     useEffect(() => {
         axios.get(googleSheetCsvUrl).then((res: any) => {
             const dataString: string = res.data
             const rows = dataString.split('\n')
-            const headers = rows[0].split(',')
+            const headers = rows[0].replace(/[\r]/g, '').split(',')
 
             const dateIndex = headers.indexOf(Columns.Date)
             const nameIndex = headers.indexOf(Columns.ItemName)
@@ -52,22 +54,45 @@ export const Gustavo = () => {
                                 .split(',') as Person[],
                             location: rowValues[locationIndex],
                             type: rowValues[typeIndex] as SpendType,
-                            reportedBy: getPersonFromEmail(rowValues[reportedByIndex]),
+                            reportedBy: getPersonFromEmail(
+                                rowValues[reportedByIndex].replace(/\s/g, '')
+                            ),
                         }
                         return spend
                     }
                 })
                 .filter((row) => row !== undefined) as Spend[]
             setSpendData(data)
+            setFilteredSpendData(data)
         })
     }, [])
 
     return (
         <Box>
-            <Typography variant="h4" sx={{ m: 1 }}>
-                Gustavo
-            </Typography>
-            <SpendTable spendData={spendData} />
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                    alignItems: 'center',
+                    margin: 2,
+                }}>
+                <img
+                    src={GusFringLogo}
+                    style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: '100%',
+                        objectFit: 'cover',
+                    }}
+                />
+            </Box>
+            <Box
+                sx={{
+                    marginBottom: 2,
+                }}>
+                <FilterPaidBy spendData={spendData} setFilteredSpendData={setFilteredSpendData} />
+            </Box>
+            <SpendTable spendData={filteredSpendData} />
         </Box>
     )
 }

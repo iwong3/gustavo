@@ -1,10 +1,13 @@
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid2'
-import { BowlFood, Train, House, Gift, CaretRight } from '@phosphor-icons/react'
 import dayjs from 'dayjs'
 import React from 'react'
 
-import { getInitials, getSplitCost, Spend, SpendType, USDollar } from 'helpers/spend'
+import { FormattedMoney, getInitials, getSplitCost, Spend, USDollar } from 'helpers/spend'
+import { SpendTypeIcon } from 'components/spend-items/spend-type-icon'
+import { SplitBetweenInitials } from 'components/spend-items/split-between-initials'
+import { OriginalCost } from 'components/spend-items/original-cost'
+import { Typography } from '@mui/material'
 
 /**
  * To-Do:
@@ -12,13 +15,17 @@ import { getInitials, getSplitCost, Spend, SpendType, USDollar } from 'helpers/s
  *   - Split Between
  *   - Split Cost
  *   - Original Cost (USD, YEN)
- * - Turn rows into cards
  * - Total spend summary
+ *   - View selector at top right
  * - Table filters (should apply to both table and summary)
+ *   - Need to apply all filters sequentially
  * - Table sorting
  * - Color, color person initials
- * - Gus Fring icon
+ * - Gus Fring quote? "A man provides... spend data."
  * - Toggle to show USD/YEN
+ *
+ * Ideas
+ * - Put initials on left?
  */
 
 interface ISpendRowProps {
@@ -36,25 +43,8 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
             onClick={() => setExpanded(!expanded)}>
             <Grid container>
                 <Grid size={2}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            height: '100%',
-                            marginLeft: 2,
-                        }}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                borderRadius: '20%',
-                                border: '1px solid gray',
-                                p: 0.25,
-                            }}>
-                            {getIconFromSpendType(spend.type, 32)}
-                        </Box>
-                    </Box>
+                    <SpendTypeIcon spend={spend} />
                 </Grid>
-                {/* Spend Row Top */}
                 <Grid size={7}>
                     <Box
                         sx={{
@@ -63,6 +53,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                             justifyContent: 'center',
                             height: '100%',
                         }}>
+                        {/* Spend Row Top */}
                         <Box
                             sx={{
                                 display: 'flex',
@@ -71,6 +62,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                             }}>
                             {spend.name}
                         </Box>
+                        {/* Spend Row Bottom */}
                         <Box
                             sx={{
                                 display: 'flex',
@@ -81,7 +73,6 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                         </Box>
                     </Box>
                 </Grid>
-                {/* Spend Row Bottom */}
                 <Grid size={3}>
                     <Box
                         sx={{
@@ -117,7 +108,12 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                 </Grid>
             </Grid>
             {expanded && (
-                <Grid container>
+                <Grid
+                    container
+                    sx={{
+                        marginTop: 2,
+                        borderTop: '1px solid lightgray',
+                    }}>
                     <Grid size={12}>
                         <Box
                             sx={{
@@ -127,83 +123,48 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                 alignItems: 'flex-start',
                                 marginTop: 1,
                                 marginX: 2,
+                                fontSize: '14px',
                             }}>
                             {/* Split Between */}
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    height: '24px',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    marginY: 1,
+                                    // height: '24px',
                                 }}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '14px',
-                                        fontWeight: 'bold',
-                                    }}>
-                                    Split Between:
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        fontSize: '14px',
-                                    }}>
-                                    {spend.splitBetween.map((person, index) => {
-                                        return (
-                                            <Box
-                                                key={'split-' + index}
-                                                sx={{
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                    width: 24,
-                                                    height: 24,
-                                                    marginLeft: 1,
-                                                    borderRadius: '100%',
-                                                    backgroundColor: 'lightgray',
-                                                }}>
-                                                {getInitials(person)}
-                                            </Box>
-                                        )
-                                    })}
-                                </Box>
+                                <SplitBetweenInitials spend={spend} />
                             </Box>
                             {/* Split Cost */}
                             <Box
                                 sx={{
                                     display: 'flex',
+                                    justifyContent: 'center',
                                     alignItems: 'center',
-                                    height: '24px',
-                                    fontSize: '14px',
+                                    width: '100%',
                                 }}>
-                                {USDollar.format(getSplitCost(spend.cost, spend.splitBetween))} per
-                                person
+                                <OriginalCost spend={spend} />
+                                &nbsp;→&nbsp;
+                                {FormattedMoney().format(
+                                    getSplitCost(spend.cost, spend.splitBetween)
+                                )}{' '}
+                                each
                             </Box>
-                            {/* Type of Spend */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    height: '24px',
-                                }}>
+                            {/* Reported by */}
+                            {spend.reportedBy && (
                                 <Box
                                     sx={{
                                         display: 'flex',
+                                        justifyContent: 'flex-end',
                                         alignItems: 'center',
-                                        fontSize: '14px',
-                                        fontWeight: 'bold',
+                                        width: '100%',
+                                        marginTop: 1,
+                                        fontStyle: 'italic',
                                     }}>
-                                    Type:
+                                    Reported by {spend.reportedBy}
                                 </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        marginLeft: 1,
-                                        fontSize: '14px',
-                                    }}>
-                                    {spend.type}
-                                </Box>
-                            </Box>
+                            )}
                         </Box>
                     </Grid>
                 </Grid>
@@ -211,23 +172,3 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
         </Box>
     )
 }
-
-const getIconFromSpendType = (type: SpendType, size: number) => {
-    switch (type) {
-        case SpendType.Attraction:
-            return <BowlFood size={size} />
-        case SpendType.Commute:
-            return <Train size={size} />
-        case SpendType.Food:
-            return <BowlFood size={size} />
-        case SpendType.Hotel:
-            return <House size={size} />
-        case SpendType.Souvenir:
-            return <Gift size={size} />
-        case SpendType.Other:
-        default:
-            return <CaretRight size={size} />
-    }
-}
-
-const detailRows = ['Split Between', 'Split Cost', 'Type']
