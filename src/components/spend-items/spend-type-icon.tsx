@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box'
-import { BowlFood, Train, House, Gift, CaretRight } from '@phosphor-icons/react'
+import { BowlFood, Train, Gift, Bed, MapPin, ListBullets } from '@phosphor-icons/react'
 
 import { Spend, SpendType } from 'helpers/spend'
 
@@ -29,20 +29,20 @@ export const SpendTypeIcon = ({ spend }: ISpendTypeIconProps) => {
     )
 }
 
-const getIconFromSpendType = (type: SpendType, size: number) => {
+const getIconFromSpendType = (type: SpendType | undefined, size: number) => {
     switch (type) {
         case SpendType.Attraction:
-            return <BowlFood size={size} />
+            return <MapPin size={size} />
         case SpendType.Commute:
             return <Train size={size} />
         case SpendType.Food:
             return <BowlFood size={size} />
-        case SpendType.Hotel:
-            return <House size={size} />
+        case SpendType.Lodging:
+            return <Bed size={size} />
         case SpendType.Souvenir:
             return <Gift size={size} />
         case SpendType.Other:
         default:
-            return <CaretRight size={size} />
+            return <ListBullets size={size} />
     }
 }

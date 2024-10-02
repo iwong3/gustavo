@@ -1,16 +1,22 @@
 import Box from '@mui/material/Box'
 import { InitialsIcon } from 'components/spend-items/initials-icon'
 import { Person, Spend } from 'helpers/spend'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { create } from 'zustand'
 
-interface IFilterPaidByProps {
-    spendData: Spend[]
-    setFilteredSpendData: (filteredSpendData: Spend[]) => void
+type FilterPaidByState = {
+    everyone: boolean
+    filters: Partial<Record<Person, boolean>>
+
+    filterByPaidBy: (spendData: Spend[]) => Spend[]
+
+    setEveryone: (everyone: boolean) => void
+    setFilters: (filters: Partial<Record<Person, boolean>>) => void
 }
 
-export const FilterPaidBy = ({ spendData, setFilteredSpendData }: IFilterPaidByProps) => {
-    const [everyone, setEveryone] = useState<boolean>(true)
-    const [filters, setFilters] = useState<Partial<Record<Person, boolean>>>({
+export const useFilterPaidByStore = create<FilterPaidByState>((set, get) => ({
+    everyone: true,
+    filters: {
         [Person.Aibek]: false,
         [Person.Angela]: false,
         [Person.Ivan]: false,
@@ -19,18 +25,37 @@ export const FilterPaidBy = ({ spendData, setFilteredSpendData }: IFilterPaidByP
         [Person.Lisa]: false,
         [Person.Michelle]: false,
         [Person.MichellesMom]: false,
-    })
+    },
+
+    filterByPaidBy: (spendData: Spend[]): Spend[] => {
+        const everyone = get().everyone
+        const filters = get().filters
+
+        if (everyone) {
+            return spendData
+        }
+
+        const filteredSpendData = spendData.filter((spend) => {
+            return filters[spend.paidBy]
+        })
+        return filteredSpendData
+    },
+
+    setEveryone: (everyone: boolean) => set(() => ({ everyone })),
+    setFilters: (filters: Partial<Record<Person, boolean>>) => set(() => ({ filters })),
+}))
+
+export const FilterPaidBy = () => {
+    const everyone = useFilterPaidByStore((state) => state.everyone)
+    const setEveryone = useFilterPaidByStore((state) => state.setEveryone)
+    const filters = useFilterPaidByStore((state) => state.filters)
+    const setFilters = useFilterPaidByStore((state) => state.setFilters)
 
     useEffect(() => {
         if (Object.values(filters).every((filter) => !filter)) {
             setEveryone(true)
-            setFilteredSpendData(spendData)
         } else {
             setEveryone(false)
-            const newFilteredSpendData = spendData.filter((spend) => {
-                return filters[spend.paidBy]
-            })
-            setFilteredSpendData(newFilteredSpendData)
         }
     }, [filters])
 
@@ -41,16 +66,12 @@ export const FilterPaidBy = ({ spendData, setFilteredSpendData }: IFilterPaidByP
             }
 
             setEveryone(true)
-            setFilters({
-                [Person.Aibek]: false,
-                [Person.Angela]: false,
-                [Person.Ivan]: false,
-                [Person.Jenny]: false,
-                [Person.Joanna]: false,
-                [Person.Lisa]: false,
-                [Person.Michelle]: false,
-                [Person.MichellesMom]: false,
-            })
+            setFilters(
+                Object.keys(filters).reduce((acc, key) => {
+                    acc[key as Person] = false
+                    return acc
+                }, {} as Partial<Record<Person, boolean>>)
+            )
         } else {
             setFilters({
                 ...filters,
@@ -87,6 +108,7 @@ export const FilterPaidBy = ({ spendData, setFilteredSpendData }: IFilterPaidByP
             {Object.entries(filters).map(([person, isActive]) => {
                 return (
                     <Box
+                        key={'filter-paid-by-' + person}
                         sx={{
                             display: 'flex',
                             justifyContent: 'center',

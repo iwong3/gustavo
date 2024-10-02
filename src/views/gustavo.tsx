@@ -12,8 +12,12 @@ import {
     SpendType,
 } from 'helpers/spend'
 import Box from '@mui/material/Box'
-import { FilterPaidBy } from 'components/filter/filter-items/filter-paid-by'
+import { FilterPaidBy, useFilterPaidByStore } from 'components/filter/filter-items/filter-paid-by'
 import GusFringLogo from '../images/gus-fring.png'
+import {
+    FilterSpendType,
+    useFilterSpendTypeStore,
+} from 'components/filter/filter-items/filter-spend-type'
 
 const googleSheetCsvUrl =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
@@ -43,20 +47,28 @@ export const Gustavo = () => {
                 .map((row: string) => {
                     const rowValues = parseRow(row)
                     if (rowValues) {
+                        const cost = parseFloat(rowValues[costIndex].replace(/[,'"]+/g, ''))
+                        const splitBetween = rowValues[splitBetweenIndex]
+                            .replace(/['" ]+/g, '')
+                            .split(',') as Person[]
+                        const type =
+                            rowValues[typeIndex] === ''
+                                ? undefined
+                                : (rowValues[typeIndex] as SpendType)
+                        const reportedBy = getPersonFromEmail(
+                            rowValues[reportedByIndex].replace(/\s/g, '')
+                        )
+
                         const spend: Spend = {
                             date: rowValues[dateIndex],
                             name: rowValues[nameIndex],
-                            cost: parseFloat(rowValues[costIndex].replace(/[,'"]+/g, '')),
+                            cost: cost,
                             currency: rowValues[currencyIndex] as Currency,
                             paidBy: rowValues[paidByIndex] as Person,
-                            splitBetween: rowValues[splitBetweenIndex]
-                                .replace(/['" ]+/g, '')
-                                .split(',') as Person[],
+                            splitBetween: splitBetween,
                             location: rowValues[locationIndex],
-                            type: rowValues[typeIndex] as SpendType,
-                            reportedBy: getPersonFromEmail(
-                                rowValues[reportedByIndex].replace(/\s/g, '')
-                            ),
+                            type: type,
+                            reportedBy: reportedBy,
                         }
                         return spend
                     }
@@ -66,6 +78,21 @@ export const Gustavo = () => {
             setFilteredSpendData(data)
         })
     }, [])
+
+    const paidByEveryone = useFilterPaidByStore((state) => state.everyone)
+    const paidByFilters = useFilterPaidByStore((state) => state.filters)
+    const filterByPaidBy = useFilterPaidByStore((state) => state.filterByPaidBy)
+
+    const spendTypeAll = useFilterSpendTypeStore((state) => state.all)
+    const spendTypeFilters = useFilterSpendTypeStore((state) => state.filters)
+    const filterBySpendType = useFilterSpendTypeStore((state) => state.filterBySpendType)
+
+    useEffect(() => {
+        let filteredSpendData = spendData
+        filteredSpendData = filterByPaidBy(filteredSpendData)
+        filteredSpendData = filterBySpendType(filteredSpendData)
+        setFilteredSpendData(filteredSpendData)
+    }, [paidByEveryone, paidByFilters, spendTypeAll, spendTypeFilters])
 
     return (
         <Box>
@@ -90,7 +117,10 @@ export const Gustavo = () => {
                 sx={{
                     marginBottom: 2,
                 }}>
-                <FilterPaidBy spendData={spendData} setFilteredSpendData={setFilteredSpendData} />
+                <FilterPaidBy />
+                <Box sx={{ marginTop: 1 }}>
+                    <FilterSpendType />
+                </Box>
             </Box>
             <SpendTable spendData={filteredSpendData} />
         </Box>

@@ -18,7 +18,7 @@ export interface Spend {
     paidBy: Person
     splitBetween: Person[]
     location: string
-    type: SpendType
+    type: SpendType | undefined
     reportedBy: Person | undefined
 }
 
@@ -34,13 +34,13 @@ export enum Person {
     MichellesMom = "Michelle's Mom",
 }
 
-export type Currency = 'USD' | 'YEN'
+export type Currency = 'USD' | 'JPY'
 
 export enum SpendType {
     Attraction = 'Attraction',
     Commute = 'Commute',
     Food = 'Food',
-    Hotel = 'Hotel',
+    Lodging = 'Lodging',
     Other = 'Other',
     Souvenir = 'Souvenir',
 }
