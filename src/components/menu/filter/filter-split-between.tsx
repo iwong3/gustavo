@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { InitialsIcon } from 'components/spend-items/initials-icon'
+import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
 import { Person, Spend } from 'helpers/spend'
 
 type FilterSplitBetweenState = {
@@ -13,7 +13,7 @@ type FilterSplitBetweenState = {
 }
 
 type FilterSplitBetweenActions = {
-    filterBySplitBetween: (spendData: Spend[]) => Spend[]
+    filter: (spendData: Spend[]) => Spend[]
     isFilterActive: () => boolean
 
     setEveryone: (everyone: boolean) => void
@@ -40,7 +40,7 @@ export const useFilterSplitBetweenStore = create<
 >()((set, get) => ({
     ...initialState,
 
-    filterBySplitBetween: (spendData: Spend[]): Spend[] => {
+    filter: (spendData: Spend[]): Spend[] => {
         const { everyone, filters } = get()
 
         if (everyone) {

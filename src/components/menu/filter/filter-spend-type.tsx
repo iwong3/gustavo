@@ -4,7 +4,7 @@ import { Spend, SpendType } from 'helpers/spend'
 import { useEffect } from 'react'
 import Box from '@mui/material/Box'
 import { useShallow } from 'zustand/react/shallow'
-import { getIconFromSpendType } from 'components/spend-items/spend-type-icon'
+import { getIconFromSpendType } from 'components/spend/spend-items/spend-type-icon'
 import { ArrowClockwise } from '@phosphor-icons/react'
 
 type FilterSpendTypeState = {
@@ -13,7 +13,7 @@ type FilterSpendTypeState = {
 }
 
 type FilterSpendTypeActions = {
-    filterBySpendType: (spendData: Spend[]) => Spend[]
+    filter: (spendData: Spend[]) => Spend[]
     isFilterActive: () => boolean
 
     setAll: (all: boolean) => void
@@ -37,7 +37,7 @@ export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpend
     (set, get) => ({
         ...initialState,
 
-        filterBySpendType: (spendData: Spend[]): Spend[] => {
+        filter: (spendData: Spend[]): Spend[] => {
             const { all, filters } = get()
 
             if (all) {
@@ -106,7 +106,6 @@ export const FilterSpendType = () => {
                 justifyContent: 'space-evenly',
                 alignItems: 'center',
                 width: '100%',
-                fontSize: '14px',
             }}>
             <Box
                 sx={{

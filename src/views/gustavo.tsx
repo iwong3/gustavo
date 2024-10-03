@@ -3,8 +3,8 @@ import axios from 'axios'
 import { useEffect } from 'react'
 import { create } from 'zustand'
 
-import { Filters } from 'components/filter/filters'
-import { SpendTable } from 'components/spend-table'
+import { Menu } from 'components/menu/menu'
+import { SpendTable } from 'components/spend/spend-table'
 import {
     Columns,
     Currency,
@@ -37,7 +37,7 @@ export const useGustavoStore = create<GustavoState>((set) => ({
 }))
 
 export const Gustavo = () => {
-    const { spendData, filteredSpendData, setSpendData, setFilteredSpendData } = useGustavoStore()
+    const { filteredSpendData, setSpendData, setFilteredSpendData } = useGustavoStore()
 
     useEffect(() => {
         async function fetchData() {
@@ -130,8 +130,8 @@ export const Gustavo = () => {
                     </Typography>
                 </Box>
             </Box>
-            <Filters />
             <SpendTable spendData={filteredSpendData} />
+            <Menu />
         </Box>
     )
 }

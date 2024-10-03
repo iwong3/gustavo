@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Person, Spend, SpendType } from 'helpers/spend'
 import Box from '@mui/material/Box'
-import { InitialsIcon } from 'components/spend-items/initials-icon'
+import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
 
 interface ISplitBetweenInitialsProps {
     spend: Spend

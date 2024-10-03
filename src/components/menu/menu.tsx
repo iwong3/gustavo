@@ -9,64 +9,77 @@ import {
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import { FilterPaidBy, useFilterPaidByStore } from 'components/filter/filter-items/filter-paid-by'
-import {
-    FilterSpendType,
-    useFilterSpendTypeStore,
-} from 'components/filter/filter-items/filter-spend-type'
+import { FilterPaidBy, useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
+import { FilterSpendType, useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import {
     FilterSplitBetween,
     useFilterSplitBetweenStore,
-} from 'components/filter/filter-items/filter-split-between'
-import { Columns } from 'helpers/spend'
+} from 'components/menu/filter/filter-split-between'
+import { useSortDateStore } from 'components/menu/sort/sort-date'
+import { SortMenu } from 'components/menu/sort/sort-menu'
 import { useGustavoStore } from 'views/gustavo'
 
-export const storeResets = new Set<() => void>()
-
-const resetAllStores = () => {
-    storeResets.forEach((reset) => reset())
+enum MenuItem {
+    FilterPaidBy,
+    FilterSpendType,
+    FilterSplitBetween,
+    Sort,
 }
 
-export const Filters = () => {
+type MenuItemData = {
+    item: MenuItem
+    component: JSX.Element
+    state: any
+}
+
+export const Menu = () => {
     // update filtered spend data
     const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
 
-    // get filters individually so we can control the order the filters are applied
-    const paidByFilterState = useFilterPaidByStore(useShallow((state) => state))
-    const splitBetweenFilterState = useFilterSplitBetweenStore(useShallow((state) => state))
-    const spendTypeFilterState = useFilterSpendTypeStore(useShallow((state) => state))
+    // get filters and sorts individually so we can control the order the data is filtered
+    const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
+    const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
+    const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
+    const sortDateState = useSortDateStore(useShallow((state) => state))
 
     // filter data, used for rendering
-    const filters = [
+    const menuItems: MenuItemData[] = [
         {
-            column: Columns.PaidBy,
+            item: MenuItem.FilterPaidBy,
             component: <FilterPaidBy />,
-            state: paidByFilterState,
+            state: filterPaidByState,
         },
         {
-            column: Columns.SplitBetween,
+            item: MenuItem.FilterSplitBetween,
             component: <FilterSplitBetween />,
-            state: splitBetweenFilterState,
+            state: filterSplitBetweenState,
         },
         {
-            column: Columns.SpendType,
+            item: MenuItem.FilterSpendType,
             component: <FilterSpendType />,
-            state: spendTypeFilterState,
+            state: filterSpendTypeState,
+        },
+        {
+            item: MenuItem.Sort,
+            component: <SortMenu />,
+            state: sortDateState,
         },
     ]
 
-    const allFiltersState = filters.map((filter) => filter.state)
-    allFiltersState.forEach((filter) => {
-        storeResets.add(filter.reset)
+    const allFiltersState = menuItems.map((item) => item.state)
+    allFiltersState.forEach((item) => {
+        storeResets.add(item.reset)
     })
 
     // whenever any filter changes, update the filtered spend data
     useEffect(() => {
         let filteredSpendData = spendData
 
-        filteredSpendData = paidByFilterState.filterByPaidBy(filteredSpendData)
-        filteredSpendData = splitBetweenFilterState.filterBySplitBetween(filteredSpendData)
-        filteredSpendData = spendTypeFilterState.filterBySpendType(filteredSpendData)
+        filteredSpendData = filterPaidByState.filter(filteredSpendData)
+        filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
+        filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
+
+        filteredSpendData = sortDateState.sort(filteredSpendData)
 
         setFilteredSpendData(filteredSpendData)
     }, [...allFiltersState])
@@ -84,7 +97,7 @@ export const Filters = () => {
 
     const renderExpandedFilter = () => {
         if (expandedFilter !== -1) {
-            return filters[expandedFilter].component
+            return menuItems[expandedFilter].component
         }
     }
 
@@ -133,6 +146,7 @@ export const Filters = () => {
                         {renderExpandedFilter()}
                     </Box>
                 )}
+                {/* Menu */}
                 <Box
                     sx={{
                         display: 'flex',
@@ -146,6 +160,7 @@ export const Filters = () => {
                         borderTopRightRadius: expandedFilter === -1 ? '10px' : 0,
                         backgroundColor: 'white',
                     }}>
+                    {/* Menu item - Reset all */}
                     <Box
                         sx={{
                             display: 'flex',
@@ -172,11 +187,11 @@ export const Filters = () => {
                             <ArrowClockwise size={24} />
                         </Box>
                     </Box>
-                    {/* Filter choices */}
-                    {filters.map((filter, index) => {
+                    {/* Menu items */}
+                    {menuItems.map((item, index) => {
                         return (
                             <Box
-                                key={'filter-' + index}
+                                key={'menu-item-' + index}
                                 sx={{
                                     display: 'flex',
                                     justifyContent: 'center',
@@ -184,11 +199,23 @@ export const Filters = () => {
                                     paddingY: 2,
                                     width: '100%',
                                     borderTop:
-                                        index === expandedFilter ? 'none' : '1px solid #FBBC04',
+                                        index === expandedFilter
+                                            ? '1px solid white'
+                                            : '1px solid #FBBC04',
                                     borderRight:
-                                        index === expandedFilter ? '1px solid #FBBC04' : 'none',
+                                        index === menuItems.length - 1
+                                            ? '1px solid white'
+                                            : index === expandedFilter
+                                            ? '1px solid #FBBC04'
+                                            : '1px solid white',
                                     borderLeft:
-                                        index === expandedFilter ? '1px solid #FBBC04' : 'none',
+                                        index === expandedFilter
+                                            ? '1px solid #FBBC04'
+                                            : '1px solid white',
+                                    borderTopRightRadius:
+                                        index === menuItems.length - 1 && expandedFilter === -1
+                                            ? '10px'
+                                            : 0,
                                     fontWeight: index === expandedFilter ? 'bold' : 'normal',
                                 }}
                                 onClick={() => {
@@ -202,56 +229,51 @@ export const Filters = () => {
                                         width: 26,
                                         height: 26,
                                         borderRadius: '100%',
-                                        backgroundColor: filters[index].state.isFilterActive()
-                                            ? '#FBBC04'
-                                            : 'white',
+                                        backgroundColor: getMenuItemBackgroundColor(item),
                                     }}>
-                                    {getIconFromColumnFilter(filter.column)}
+                                    {getMenuItemIcon(item.item)}
                                 </Box>
                             </Box>
                         )
                     })}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            paddingY: 2,
-                            width: '100%',
-                            borderTop: '1px solid #FBBC04',
-                            borderTopRightRadius: expandedFilter === -1 ? '10px' : 0,
-                        }}
-                        onClick={() => handleResetAllFilters()}>
-                        <Box
-                            sx={{
-                                'display': 'flex',
-                                'justifyContent': 'center',
-                                'alignItems': 'center',
-                                'width': 26,
-                                'height': 26,
-                                'borderRadius': '100%',
-                                '&:active': {
-                                    backgroundColor: '#FBBC04',
-                                },
-                            }}>
-                            <FunnelSimple size={24} />
-                        </Box>
-                    </Box>
                 </Box>
             </Box>
         </Box>
     )
 }
 
-const getIconFromColumnFilter = (column: Columns, size: number = 24) => {
-    switch (column) {
-        case Columns.PaidBy:
+export const storeResets = new Set<() => void>()
+
+const resetAllStores = () => {
+    storeResets.forEach((reset) => reset())
+}
+
+const getMenuItemIcon = (item: MenuItem, size: number = 24) => {
+    switch (item) {
+        case MenuItem.FilterPaidBy:
             return <UserCirclePlus size={size} />
-        case Columns.SpendType:
+        case MenuItem.FilterSpendType:
             return <Tag size={size} />
-        case Columns.SplitBetween:
+        case MenuItem.FilterSplitBetween:
             return <UserCircleMinus size={size} />
+        case MenuItem.Sort:
+            return <FunnelSimple size={size} />
         default:
             return null
     }
+}
+
+const FilterMenuItems = [
+    MenuItem.FilterPaidBy,
+    MenuItem.FilterSpendType,
+    MenuItem.FilterSplitBetween,
+]
+
+const getMenuItemBackgroundColor = (item: MenuItemData) => {
+    if (FilterMenuItems.includes(item.item)) {
+        if (item.state.isFilterActive()) {
+            return '#FBBC04'
+        }
+    }
+    return 'white'
 }

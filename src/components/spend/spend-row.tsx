@@ -4,11 +4,11 @@ import dayjs from 'dayjs'
 import React from 'react'
 
 import { FormattedMoney, getInitials, getSplitCost, Spend, USDollar } from 'helpers/spend'
-import { SpendTypeIcon } from 'components/spend-items/spend-type-icon'
-import { SplitBetweenInitials } from 'components/spend-items/split-between-initials'
-import { OriginalCost } from 'components/spend-items/original-cost'
+import { SpendTypeIcon } from 'components/spend/spend-items/spend-type-icon'
+import { SplitBetweenInitials } from 'components/spend/spend-items/split-between-initials'
+import { OriginalCost } from 'components/spend/spend-items/original-cost'
 import { Typography } from '@mui/material'
-import { InitialsIcon } from 'components/spend-items/initials-icon'
+import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
 
 /**
  * To-Do:

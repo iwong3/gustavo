@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { InitialsIcon } from 'components/spend-items/initials-icon'
+import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
 import { Person, Spend } from 'helpers/spend'
 
 type FilterPaidByState = {
@@ -13,7 +13,7 @@ type FilterPaidByState = {
 }
 
 type FilterPaidByActions = {
-    filterByPaidBy: (spendData: Spend[]) => Spend[]
+    filter: (spendData: Spend[]) => Spend[]
     isFilterActive: () => boolean
 
     setEveryone: (everyone: boolean) => void
@@ -39,7 +39,7 @@ export const useFilterPaidByStore = create<FilterPaidByState & FilterPaidByActio
     (set, get) => ({
         ...initialState,
 
-        filterByPaidBy: (spendData: Spend[]): Spend[] => {
+        filter: (spendData: Spend[]): Spend[] => {
             const { everyone, filters } = get()
 
             if (everyone) {

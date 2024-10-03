@@ -1,5 +1,5 @@
 import { Box } from '@mui/material'
-import { SpendRow } from 'components/spend-row'
+import { SpendRow } from 'components/spend/spend-row'
 
 import { Spend } from 'helpers/spend'
 
