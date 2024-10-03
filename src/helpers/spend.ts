@@ -31,7 +31,7 @@ export enum Person {
     Joanna = 'Joanna',
     Lisa = 'Lisa',
     Michelle = 'Michelle',
-    MichellesMom = "Michelle's Mom",
+    Suming = 'Suming', // Michelle's mom
 }
 
 export type Currency = 'USD' | 'JPY'
@@ -67,15 +67,15 @@ export const getInitials = (person: Person): string => {
         case Person.Ivan:
             return 'IW'
         case Person.Jenny:
-            return 'JE'
+            return 'JY'
         case Person.Joanna:
             return 'JO'
         case Person.Lisa:
             return 'LM'
         case Person.Michelle:
             return 'MC'
-        case Person.MichellesMom:
-            return 'MM'
+        case Person.Suming:
+            return 'SL'
         default:
             return ''
     }

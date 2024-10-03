@@ -1,6 +1,9 @@
+import Box from '@mui/material/Box'
 import axios from 'axios'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { create } from 'zustand'
 
+import { Filters } from 'components/filter/filters'
 import { SpendTable } from 'components/spend-table'
 import {
     Columns,
@@ -11,88 +14,87 @@ import {
     Spend,
     SpendType,
 } from 'helpers/spend'
-import Box from '@mui/material/Box'
-import { FilterPaidBy, useFilterPaidByStore } from 'components/filter/filter-items/filter-paid-by'
 import GusFringLogo from '../images/gus-fring.png'
-import {
-    FilterSpendType,
-    useFilterSpendTypeStore,
-} from 'components/filter/filter-items/filter-spend-type'
+import Typography from '@mui/material/Typography'
 
 const googleSheetCsvUrl =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
 
+type GustavoState = {
+    spendData: Spend[]
+    filteredSpendData: Spend[]
+
+    setSpendData: (spendData: Spend[]) => void
+    setFilteredSpendData: (filteredSpendData: Spend[]) => void
+}
+
+export const useGustavoStore = create<GustavoState>((set) => ({
+    spendData: [],
+    filteredSpendData: [],
+
+    setSpendData: (spendData: Spend[]) => set(() => ({ spendData })),
+    setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
+}))
+
 export const Gustavo = () => {
-    const [spendData, setSpendData] = useState<Spend[]>([])
-    const [filteredSpendData, setFilteredSpendData] = useState<Spend[]>([])
+    const { spendData, filteredSpendData, setSpendData, setFilteredSpendData } = useGustavoStore()
 
     useEffect(() => {
-        axios.get(googleSheetCsvUrl).then((res: any) => {
-            const dataString: string = res.data
-            const rows = dataString.split('\n')
-            const headers = rows[0].replace(/[\r]/g, '').split(',')
+        async function fetchData() {
+            axios.get(googleSheetCsvUrl).then((res: any) => {
+                const dataString: string = res.data
+                const rows = dataString.split('\n')
+                const headers = rows[0].replace(/[\r]/g, '').split(',')
 
-            const dateIndex = headers.indexOf(Columns.Date)
-            const nameIndex = headers.indexOf(Columns.ItemName)
-            const costIndex = headers.indexOf(Columns.Cost)
-            const currencyIndex = headers.indexOf(Columns.Currency)
-            const paidByIndex = headers.indexOf(Columns.PaidBy)
-            const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
-            const locationIndex = headers.indexOf(Columns.Location)
-            const typeIndex = headers.indexOf(Columns.SpendType)
-            const reportedByIndex = headers.indexOf(Columns.Email)
+                const dateIndex = headers.indexOf(Columns.Date)
+                const nameIndex = headers.indexOf(Columns.ItemName)
+                const costIndex = headers.indexOf(Columns.Cost)
+                const currencyIndex = headers.indexOf(Columns.Currency)
+                const paidByIndex = headers.indexOf(Columns.PaidBy)
+                const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
+                const locationIndex = headers.indexOf(Columns.Location)
+                const typeIndex = headers.indexOf(Columns.SpendType)
+                const reportedByIndex = headers.indexOf(Columns.Email)
 
-            const data = rows
-                .slice(1)
-                .map((row: string) => {
-                    const rowValues = parseRow(row)
-                    if (rowValues) {
-                        const cost = parseFloat(rowValues[costIndex].replace(/[,'"]+/g, ''))
-                        const splitBetween = rowValues[splitBetweenIndex]
-                            .replace(/['" ]+/g, '')
-                            .split(',') as Person[]
-                        const type =
-                            rowValues[typeIndex] === ''
-                                ? undefined
-                                : (rowValues[typeIndex] as SpendType)
-                        const reportedBy = getPersonFromEmail(
-                            rowValues[reportedByIndex].replace(/\s/g, '')
-                        )
+                const data = rows
+                    .slice(1)
+                    .map((row: string) => {
+                        const rowValues = parseRow(row)
+                        if (rowValues) {
+                            const cost = parseFloat(rowValues[costIndex].replace(/[,'"]+/g, ''))
+                            const splitBetween = rowValues[splitBetweenIndex]
+                                .replace(/['" ]+/g, '')
+                                .split(',') as Person[]
+                            const type =
+                                rowValues[typeIndex] === ''
+                                    ? undefined
+                                    : (rowValues[typeIndex] as SpendType)
+                            const reportedBy = getPersonFromEmail(
+                                rowValues[reportedByIndex].replace(/\s/g, '')
+                            )
 
-                        const spend: Spend = {
-                            date: rowValues[dateIndex],
-                            name: rowValues[nameIndex],
-                            cost: cost,
-                            currency: rowValues[currencyIndex] as Currency,
-                            paidBy: rowValues[paidByIndex] as Person,
-                            splitBetween: splitBetween,
-                            location: rowValues[locationIndex],
-                            type: type,
-                            reportedBy: reportedBy,
+                            const spend: Spend = {
+                                date: rowValues[dateIndex],
+                                name: rowValues[nameIndex],
+                                cost: cost,
+                                currency: rowValues[currencyIndex] as Currency,
+                                paidBy: rowValues[paidByIndex] as Person,
+                                splitBetween: splitBetween,
+                                location: rowValues[locationIndex],
+                                type: type,
+                                reportedBy: reportedBy,
+                            }
+                            return spend
                         }
-                        return spend
-                    }
-                })
-                .filter((row) => row !== undefined) as Spend[]
-            setSpendData(data)
-            setFilteredSpendData(data)
-        })
+                    })
+                    .filter((row) => row !== undefined) as Spend[]
+                setSpendData(data)
+                setFilteredSpendData(data)
+            })
+        }
+
+        fetchData()
     }, [])
-
-    const paidByEveryone = useFilterPaidByStore((state) => state.everyone)
-    const paidByFilters = useFilterPaidByStore((state) => state.filters)
-    const filterByPaidBy = useFilterPaidByStore((state) => state.filterByPaidBy)
-
-    const spendTypeAll = useFilterSpendTypeStore((state) => state.all)
-    const spendTypeFilters = useFilterSpendTypeStore((state) => state.filters)
-    const filterBySpendType = useFilterSpendTypeStore((state) => state.filterBySpendType)
-
-    useEffect(() => {
-        let filteredSpendData = spendData
-        filteredSpendData = filterByPaidBy(filteredSpendData)
-        filteredSpendData = filterBySpendType(filteredSpendData)
-        setFilteredSpendData(filteredSpendData)
-    }, [paidByEveryone, paidByFilters, spendTypeAll, spendTypeFilters])
 
     return (
         <Box>
@@ -112,16 +114,23 @@ export const Gustavo = () => {
                         objectFit: 'cover',
                     }}
                 />
-            </Box>
-            <Box
-                sx={{
-                    marginBottom: 2,
-                }}>
-                <FilterPaidBy />
-                <Box sx={{ marginTop: 1 }}>
-                    <FilterSpendType />
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        marginLeft: 2,
+                    }}>
+                    <Typography
+                        sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
+                        "And a man, a man provides...
+                    </Typography>
+                    <Typography
+                        sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
+                        &nbsp;...your spending habits."
+                    </Typography>
                 </Box>
             </Box>
+            <Filters />
             <SpendTable spendData={filteredSpendData} />
         </Box>
     )

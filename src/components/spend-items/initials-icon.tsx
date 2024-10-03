@@ -4,11 +4,19 @@ import { getInitials, Person, Spend } from 'helpers/spend'
 interface IInitialsIconProps {
     person: Person
     size?: number
+    colorOverride?: string
     bgColorOverride?: string
 }
 
-export const InitialsIcon = ({ person, size = 24, bgColorOverride }: IInitialsIconProps) => {
-    const bgColor = bgColorOverride ?? getInitialsIconColor(person)
+export const InitialsIcon = ({
+    person,
+    size = 24,
+    colorOverride,
+    bgColorOverride,
+}: IInitialsIconProps) => {
+    const personColors = getInitialsIconColors(person)
+    const color = colorOverride ?? personColors.color
+    const bgColor = bgColorOverride ?? personColors.bgColor
 
     return (
         <Box
@@ -18,35 +26,67 @@ export const InitialsIcon = ({ person, size = 24, bgColorOverride }: IInitialsIc
                 alignItems: 'center',
                 width: size,
                 height: size,
-                marginLeft: 1,
-                color: 'black',
-                backgroundColor: bgColor,
                 borderRadius: '100%',
+                color: color,
+                backgroundColor: bgColor,
+                fontWeight: 'bold',
             }}>
             {getInitials(person)}
         </Box>
     )
 }
 
-const getInitialsIconColor = (person: Person) => {
+type IconColors = {
+    color: string
+    bgColor: string
+}
+
+const getInitialsIconColors = (person: Person): IconColors => {
     switch (person) {
         case Person.Aibek:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#c8553d',
+            }
         case Person.Angela:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#64b5f6',
+            }
         case Person.Ivan:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#ffc857',
+            }
         case Person.Jenny:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#c8b6ff',
+            }
         case Person.Joanna:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#90a955',
+            }
         case Person.Lisa:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#e5989b',
+            }
         case Person.Michelle:
-            return '#FBBC04'
-        case Person.MichellesMom:
-            return '#FBBC04'
+            return {
+                color: 'black',
+                bgColor: '#b8c0ff',
+            }
+        case Person.Suming:
+            return {
+                color: 'black',
+                bgColor: '#ffc09f',
+            }
         default:
-            return 'gray'
+            return {
+                color: 'black',
+                bgColor: '#FBBC04',
+            }
     }
 }

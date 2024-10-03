@@ -3,6 +3,7 @@ import { InitialsIcon } from 'components/spend-items/initials-icon'
 import { Person, Spend } from 'helpers/spend'
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 
 type FilterPaidByState = {
     everyone: boolean
@@ -24,7 +25,7 @@ export const useFilterPaidByStore = create<FilterPaidByState>((set, get) => ({
         [Person.Joanna]: false,
         [Person.Lisa]: false,
         [Person.Michelle]: false,
-        [Person.MichellesMom]: false,
+        [Person.Suming]: false,
     },
 
     filterByPaidBy: (spendData: Spend[]): Spend[] => {
@@ -46,10 +47,9 @@ export const useFilterPaidByStore = create<FilterPaidByState>((set, get) => ({
 }))
 
 export const FilterPaidBy = () => {
-    const everyone = useFilterPaidByStore((state) => state.everyone)
-    const setEveryone = useFilterPaidByStore((state) => state.setEveryone)
-    const filters = useFilterPaidByStore((state) => state.filters)
-    const setFilters = useFilterPaidByStore((state) => state.setFilters)
+    const { everyone, filters, setEveryone, setFilters } = useFilterPaidByStore(
+        useShallow((state) => state)
+    )
 
     useEffect(() => {
         if (Object.values(filters).every((filter) => !filter)) {
@@ -84,8 +84,10 @@ export const FilterPaidBy = () => {
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'center',
+                justifyContent: 'space-evenly',
                 alignItems: 'center',
+                marginX: 1,
+                width: '100%',
                 fontSize: '14px',
             }}>
             <Box
@@ -95,7 +97,6 @@ export const FilterPaidBy = () => {
                     alignItems: 'center',
                     width: 24,
                     height: 24,
-                    marginLeft: 1,
                     color: 'black',
                     backgroundColor: everyone ? '#FBBC04' : 'lightgray',
                     borderRadius: '100%',
@@ -113,7 +114,6 @@ export const FilterPaidBy = () => {
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            marginLeft: 1,
                         }}
                         onClick={() => {
                             updateFilters(person as Person)

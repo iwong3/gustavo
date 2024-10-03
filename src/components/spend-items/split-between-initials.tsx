@@ -17,7 +17,7 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
         [Person.Joanna]: false,
         [Person.Lisa]: false,
         [Person.Michelle]: false,
-        [Person.MichellesMom]: false,
+        [Person.Suming]: false,
     })
 
     useEffect(() => {
@@ -30,7 +30,7 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
                 [Person.Joanna]: true,
                 [Person.Lisa]: true,
                 [Person.Michelle]: true,
-                [Person.MichellesMom]: true,
+                [Person.Suming]: true,
             })
         } else {
             const newSplitters = { ...splitters }
@@ -51,11 +51,17 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
             }}>
             {Object.entries(splitters).map(([person, isSplitter]) => {
                 return (
-                    <InitialsIcon
-                        person={person as Person}
-                        size={28}
-                        bgColorOverride={!isSplitter ? 'lightgray' : undefined}
-                    />
+                    <Box
+                        sx={{
+                            marginX: 0.5,
+                        }}>
+                        <InitialsIcon
+                            person={person as Person}
+                            size={28}
+                            colorOverride={!isSplitter ? 'black' : undefined}
+                            bgColorOverride={!isSplitter ? 'lightgray' : undefined}
+                        />
+                    </Box>
                 )
             })}
         </Box>

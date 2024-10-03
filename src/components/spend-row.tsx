@@ -8,6 +8,7 @@ import { SpendTypeIcon } from 'components/spend-items/spend-type-icon'
 import { SplitBetweenInitials } from 'components/spend-items/split-between-initials'
 import { OriginalCost } from 'components/spend-items/original-cost'
 import { Typography } from '@mui/material'
+import { InitialsIcon } from 'components/spend-items/initials-icon'
 
 /**
  * To-Do:
@@ -38,7 +39,8 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
     return (
         <Box
             sx={{
-                paddingY: 2,
+                paddingTop: 2,
+                paddingBottom: expanded ? 0 : 2,
             }}
             onClick={() => setExpanded(!expanded)}>
             <Grid container>
@@ -52,12 +54,12 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                             flexDirection: 'column',
                             justifyContent: 'center',
                             height: '100%',
+                            fontSize: '14px',
                         }}>
                         {/* Spend Row Top */}
                         <Box
                             sx={{
                                 display: 'flex',
-                                fontSize: '14px',
                                 fontWeight: 'bold',
                             }}>
                             {spend.name}
@@ -66,7 +68,6 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                         <Box
                             sx={{
                                 display: 'flex',
-                                fontSize: '14px',
                             }}>
                             {dayjs(spend.date).format('M/DD')}
                             {spend.location && ' • ' + spend.location}
@@ -81,11 +82,11 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                             justifyContent: 'center',
                             alignItems: 'flex-end',
                             marginRight: 2,
+                            fontSize: '14px',
                         }}>
                         <Box
                             sx={{
                                 display: 'flex',
-                                fontSize: '14px',
                                 fontWeight: 'bold',
                             }}>
                             {USDollar.format(spend.cost)}
@@ -95,14 +96,9 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                width: 24,
-                                height: 24,
-                                marginLeft: 1,
-                                fontSize: '14px',
-                                borderRadius: '100%',
-                                backgroundColor: 'lightgray',
+                                fontSize: '12px',
                             }}>
-                            {getInitials(spend.paidBy)}
+                            <InitialsIcon person={spend.paidBy} />
                         </Box>
                     </Box>
                 </Grid>
@@ -112,7 +108,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                     container
                     sx={{
                         marginTop: 2,
-                        borderTop: '1px solid lightgray',
+                        borderTop: '1px solid #FBBC04',
                     }}>
                     <Grid size={12}>
                         <Box
@@ -159,7 +155,8 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                         justifyContent: 'flex-end',
                                         alignItems: 'center',
                                         width: '100%',
-                                        marginTop: 1,
+                                        marginY: 1,
+                                        fontSize: '12px',
                                         fontStyle: 'italic',
                                     }}>
                                     Reported by {spend.reportedBy}
