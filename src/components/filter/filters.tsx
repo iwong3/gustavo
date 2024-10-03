@@ -8,6 +8,8 @@ import {
     useFilterSpendTypeStore,
 } from 'components/filter/filter-items/filter-spend-type'
 import { useGustavoStore } from 'views/gustavo'
+import { Columns } from 'helpers/spend'
+import { Tag, UserCirclePlus } from '@phosphor-icons/react'
 
 export const Filters = () => {
     // update filtered spend data
@@ -27,11 +29,11 @@ export const Filters = () => {
     // filter menu logic
     const filters = [
         {
-            name: 'Paid By',
+            column: Columns.PaidBy,
             component: <FilterPaidBy />,
         },
         {
-            name: 'Spend Type',
+            column: Columns.SpendType,
             component: <FilterSpendType />,
         },
     ]
@@ -108,10 +110,12 @@ export const Filters = () => {
                     {filters.map((filter, index) => {
                         return (
                             <Box
+                                key={'filter-' + index}
                                 sx={{
                                     display: 'flex',
                                     justifyContent: 'center',
                                     alignItems: 'center',
+                                    paddingY: 2,
                                     width: '100%',
                                     borderTop:
                                         index === activeFilter ? 'none' : '1px solid #FBBC04',
@@ -128,17 +132,7 @@ export const Filters = () => {
                                 onClick={() => {
                                     updateActiveFilter(index)
                                 }}>
-                                <Box
-                                    key={'filter-' + index}
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        padding: 2,
-                                        cursor: 'pointer',
-                                    }}>
-                                    {filter.name}
-                                </Box>
+                                {getIconFromColumnFilter(filter.column)}
                             </Box>
                         )
                     })}
@@ -146,4 +140,13 @@ export const Filters = () => {
             </Box>
         </Box>
     )
+}
+
+const getIconFromColumnFilter = (column: Columns, size: number = 24) => {
+    switch (column) {
+        case Columns.PaidBy:
+            return <UserCirclePlus size={size} />
+        case Columns.SpendType:
+            return <Tag size={size} />
+    }
 }

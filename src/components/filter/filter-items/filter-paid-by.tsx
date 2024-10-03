@@ -114,13 +114,15 @@ export const FilterPaidBy = () => {
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
+                            fontSize: '12px',
                         }}
                         onClick={() => {
                             updateFilters(person as Person)
                         }}>
                         <InitialsIcon
                             person={person as Person}
-                            bgColorOverride={isActive ? '#FBBC04' : 'lightgray'}
+                            colorOverride={isActive ? undefined : 'black'}
+                            bgColorOverride={isActive ? undefined : 'lightgray'}
                         />
                     </Box>
                 )

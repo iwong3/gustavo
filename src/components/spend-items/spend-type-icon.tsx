@@ -22,7 +22,7 @@ export const SpendTypeIcon = ({ spend }: ISpendTypeIconProps) => {
     )
 }
 
-export const getIconFromSpendType = (type: SpendType | undefined, size: number) => {
+export const getIconFromSpendType = (type: SpendType | undefined, size: number = 24) => {
     switch (type) {
         case SpendType.Attraction:
             return <MapPinArea size={size} />

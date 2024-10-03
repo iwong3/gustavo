@@ -11,7 +11,7 @@ export const SpendTable = ({ spendData }: ISpendTableProps) => {
     return (
         <Box
             sx={{
-                marginBottom: 15, // could make this dynamic based on if filter menu is open or not
+                marginBottom: 16, // could make this dynamic based on if filter menu is open or not
             }}>
             {spendData.map((row, index) => (
                 <Box
