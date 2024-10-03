@@ -5,18 +5,23 @@ import { useEffect } from 'react'
 import Box from '@mui/material/Box'
 import { useShallow } from 'zustand/react/shallow'
 import { getIconFromSpendType } from 'components/spend-items/spend-type-icon'
+import { ArrowClockwise } from '@phosphor-icons/react'
 
 type FilterSpendTypeState = {
     all: boolean
     filters: Record<SpendType, boolean>
+}
 
+type FilterSpendTypeActions = {
     filterBySpendType: (spendData: Spend[]) => Spend[]
+    isFilterActive: () => boolean
 
     setAll: (all: boolean) => void
     setFilters: (filters: Record<SpendType, boolean>) => void
+    reset: () => void
 }
 
-export const useFilterSpendTypeStore = create<FilterSpendTypeState>((set, get) => ({
+const initialState: FilterSpendTypeState = {
     all: true,
     filters: {
         [SpendType.Attraction]: false,
@@ -26,30 +31,41 @@ export const useFilterSpendTypeStore = create<FilterSpendTypeState>((set, get) =
         [SpendType.Souvenir]: false,
         [SpendType.Other]: false,
     },
+}
 
-    filterBySpendType: (spendData: Spend[]): Spend[] => {
-        const all = get().all
-        const filters = get().filters
+export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpendTypeActions>()(
+    (set, get) => ({
+        ...initialState,
 
-        if (all) {
-            return spendData
-        }
+        filterBySpendType: (spendData: Spend[]): Spend[] => {
+            const { all, filters } = get()
 
-        const filteredSpendData = spendData.filter((spend) => {
-            if (spend.type === undefined) {
-                if (filters[SpendType.Other]) {
-                    return true
-                }
-                return false
+            if (all) {
+                return spendData
             }
-            return filters[spend.type]
-        })
-        return filteredSpendData
-    },
 
-    setAll: (all: boolean) => set(() => ({ all })),
-    setFilters: (filters: Record<SpendType, boolean>) => set(() => ({ filters })),
-}))
+            const filteredSpendData = spendData.filter((spend) => {
+                if (spend.type === undefined) {
+                    if (filters[SpendType.Other]) {
+                        return true
+                    }
+                    return false
+                }
+                return filters[spend.type]
+            })
+            return filteredSpendData
+        },
+
+        isFilterActive: () => {
+            const { all } = get()
+            return !all
+        },
+
+        setAll: (all: boolean) => set(() => ({ all })),
+        setFilters: (filters: Record<SpendType, boolean>) => set(() => ({ filters })),
+        reset: () => set(initialState),
+    })
+)
 
 export const FilterSpendType = () => {
     const { all, filters, setAll, setFilters } = useFilterSpendTypeStore(
@@ -94,19 +110,20 @@ export const FilterSpendType = () => {
             }}>
             <Box
                 sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: 24,
-                    height: 24,
-                    color: 'black',
-                    backgroundColor: all ? '#FBBC04' : 'lightgray',
-                    borderRadius: '100%',
+                    'display': 'flex',
+                    'justifyContent': 'center',
+                    'alignItems': 'center',
+                    'width': 24,
+                    'height': 24,
+                    'borderRadius': '100%',
+                    '&:active': {
+                        backgroundColor: '#FBBC04',
+                    },
                 }}
                 onClick={() => {
                     handleAllClick()
                 }}>
-                All
+                <ArrowClockwise size={24} />
             </Box>
             {Object.entries(filters).map(([spendType, isActive]) => {
                 return (
@@ -125,9 +142,8 @@ export const FilterSpendType = () => {
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                width: 24,
-                                height: 24,
-                                color: 'black',
+                                width: 26,
+                                height: 26,
                                 backgroundColor: isActive ? '#FBBC04' : 'white',
                                 borderRadius: '100%',
                             }}>

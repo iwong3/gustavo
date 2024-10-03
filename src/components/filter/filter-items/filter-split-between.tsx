@@ -7,13 +7,13 @@ import { useShallow } from 'zustand/react/shallow'
 import { InitialsIcon } from 'components/spend-items/initials-icon'
 import { Person, Spend } from 'helpers/spend'
 
-type FilterPaidByState = {
+type FilterSplitBetweenState = {
     everyone: boolean
     filters: Partial<Record<Person, boolean>>
 }
 
-type FilterPaidByActions = {
-    filterByPaidBy: (spendData: Spend[]) => Spend[]
+type FilterSplitBetweenActions = {
+    filterBySplitBetween: (spendData: Spend[]) => Spend[]
     isFilterActive: () => boolean
 
     setEveryone: (everyone: boolean) => void
@@ -21,7 +21,7 @@ type FilterPaidByActions = {
     reset: () => void
 }
 
-const initialState: FilterPaidByState = {
+const initialState: FilterSplitBetweenState = {
     everyone: true,
     filters: {
         [Person.Aibek]: false,
@@ -35,36 +35,36 @@ const initialState: FilterPaidByState = {
     },
 }
 
-export const useFilterPaidByStore = create<FilterPaidByState & FilterPaidByActions>()(
-    (set, get) => ({
-        ...initialState,
+export const useFilterSplitBetweenStore = create<
+    FilterSplitBetweenState & FilterSplitBetweenActions
+>()((set, get) => ({
+    ...initialState,
 
-        filterByPaidBy: (spendData: Spend[]): Spend[] => {
-            const { everyone, filters } = get()
+    filterBySplitBetween: (spendData: Spend[]): Spend[] => {
+        const { everyone, filters } = get()
 
-            if (everyone) {
-                return spendData
-            }
+        if (everyone) {
+            return spendData
+        }
 
-            const filteredSpendData = spendData.filter((spend) => {
-                return filters[spend.paidBy]
-            })
-            return filteredSpendData
-        },
+        const filteredSpendData = spendData.filter((spend) => {
+            return spend.splitBetween.some((person) => filters[person])
+        })
+        return filteredSpendData
+    },
 
-        isFilterActive: () => {
-            const { everyone } = get()
-            return !everyone
-        },
+    isFilterActive: () => {
+        const { everyone } = get()
+        return !everyone
+    },
 
-        setEveryone: (everyone: boolean) => set(() => ({ everyone })),
-        setFilters: (filters: Partial<Record<Person, boolean>>) => set(() => ({ filters })),
-        reset: () => set(initialState),
-    })
-)
+    setEveryone: (everyone: boolean) => set(() => ({ everyone })),
+    setFilters: (filters: Partial<Record<Person, boolean>>) => set(() => ({ filters })),
+    reset: () => set(initialState),
+}))
 
-export const FilterPaidBy = () => {
-    const { everyone, filters, setEveryone, setFilters } = useFilterPaidByStore(
+export const FilterSplitBetween = () => {
+    const { everyone, filters, setEveryone, setFilters } = useFilterSplitBetweenStore(
         useShallow((state) => state)
     )
 

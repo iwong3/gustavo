@@ -1,4 +1,11 @@
 import Box from '@mui/material/Box'
+import {
+    ArrowClockwise,
+    FunnelSimple,
+    Tag,
+    UserCircleMinus,
+    UserCirclePlus,
+} from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -7,50 +14,83 @@ import {
     FilterSpendType,
     useFilterSpendTypeStore,
 } from 'components/filter/filter-items/filter-spend-type'
-import { useGustavoStore } from 'views/gustavo'
+import {
+    FilterSplitBetween,
+    useFilterSplitBetweenStore,
+} from 'components/filter/filter-items/filter-split-between'
 import { Columns } from 'helpers/spend'
-import { Tag, UserCirclePlus } from '@phosphor-icons/react'
+import { useGustavoStore } from 'views/gustavo'
+
+export const storeResets = new Set<() => void>()
+
+const resetAllStores = () => {
+    storeResets.forEach((reset) => reset())
+}
 
 export const Filters = () => {
     // update filtered spend data
     const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
 
+    // get filters individually so we can control the order the filters are applied
     const paidByFilterState = useFilterPaidByStore(useShallow((state) => state))
+    const splitBetweenFilterState = useFilterSplitBetweenStore(useShallow((state) => state))
     const spendTypeFilterState = useFilterSpendTypeStore(useShallow((state) => state))
-    const allFiltersState = [paidByFilterState, spendTypeFilterState]
 
-    useEffect(() => {
-        let filteredSpendData = spendData
-        filteredSpendData = paidByFilterState.filterByPaidBy(filteredSpendData)
-        filteredSpendData = spendTypeFilterState.filterBySpendType(filteredSpendData)
-        setFilteredSpendData(filteredSpendData)
-    }, [...allFiltersState])
-
-    // filter menu logic
+    // filter data, used for rendering
     const filters = [
         {
             column: Columns.PaidBy,
             component: <FilterPaidBy />,
+            state: paidByFilterState,
+        },
+        {
+            column: Columns.SplitBetween,
+            component: <FilterSplitBetween />,
+            state: splitBetweenFilterState,
         },
         {
             column: Columns.SpendType,
             component: <FilterSpendType />,
+            state: spendTypeFilterState,
         },
     ]
-    const [activeFilter, setActiveFilter] = useState(-1)
 
-    const updateActiveFilter = (index: number) => {
-        if (activeFilter === index) {
-            setActiveFilter(-1)
+    const allFiltersState = filters.map((filter) => filter.state)
+    allFiltersState.forEach((filter) => {
+        storeResets.add(filter.reset)
+    })
+
+    // whenever any filter changes, update the filtered spend data
+    useEffect(() => {
+        let filteredSpendData = spendData
+
+        filteredSpendData = paidByFilterState.filterByPaidBy(filteredSpendData)
+        filteredSpendData = splitBetweenFilterState.filterBySplitBetween(filteredSpendData)
+        filteredSpendData = spendTypeFilterState.filterBySpendType(filteredSpendData)
+
+        setFilteredSpendData(filteredSpendData)
+    }, [...allFiltersState])
+
+    // expanded filter state
+    const [expandedFilter, setExpandedFilter] = useState(-1)
+
+    const updateExpandedFilter = (index: number) => {
+        if (expandedFilter === index) {
+            setExpandedFilter(-1)
         } else {
-            setActiveFilter(index)
+            setExpandedFilter(index)
         }
     }
 
-    const renderActiveFilter = () => {
-        if (activeFilter !== -1) {
-            return filters[activeFilter].component
+    const renderExpandedFilter = () => {
+        if (expandedFilter !== -1) {
+            return filters[expandedFilter].component
         }
+    }
+
+    const handleResetAllFilters = () => {
+        resetAllStores()
+        setExpandedFilter(-1)
     }
 
     return (
@@ -73,7 +113,7 @@ export const Filters = () => {
                     boxShadow: '0px 40px 50px 0px rgba(0,0,0,1)',
                 }}>
                 {/* Active filter */}
-                {activeFilter !== -1 && (
+                {expandedFilter !== -1 && (
                     <Box
                         sx={{
                             display: 'flex',
@@ -90,7 +130,7 @@ export const Filters = () => {
                             borderTopRightRadius: '10px',
                             marginTop: '-10px',
                         }}>
-                        {renderActiveFilter()}
+                        {renderExpandedFilter()}
                     </Box>
                 )}
                 <Box
@@ -102,10 +142,36 @@ export const Filters = () => {
                         borderBottom: 'none',
                         borderLeft: '1px solid #FBBC04',
                         borderRight: '1px solid #FBBC04',
-                        borderTopLeftRadius: activeFilter === -1 ? '10px' : 0,
-                        borderTopRightRadius: activeFilter === -1 ? '10px' : 0,
+                        borderTopLeftRadius: expandedFilter === -1 ? '10px' : 0,
+                        borderTopRightRadius: expandedFilter === -1 ? '10px' : 0,
                         backgroundColor: 'white',
                     }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            paddingY: 2,
+                            width: '100%',
+                            borderTop: '1px solid #FBBC04',
+                            borderTopLeftRadius: expandedFilter === -1 ? '10px' : 0,
+                        }}
+                        onClick={() => handleResetAllFilters()}>
+                        <Box
+                            sx={{
+                                'display': 'flex',
+                                'justifyContent': 'center',
+                                'alignItems': 'center',
+                                'width': 26,
+                                'height': 26,
+                                'borderRadius': '100%',
+                                '&:active': {
+                                    backgroundColor: '#FBBC04',
+                                },
+                            }}>
+                            <ArrowClockwise size={24} />
+                        </Box>
+                    </Box>
                     {/* Filter choices */}
                     {filters.map((filter, index) => {
                         return (
@@ -118,24 +184,59 @@ export const Filters = () => {
                                     paddingY: 2,
                                     width: '100%',
                                     borderTop:
-                                        index === activeFilter ? 'none' : '1px solid #FBBC04',
+                                        index === expandedFilter ? 'none' : '1px solid #FBBC04',
                                     borderRight:
-                                        index === activeFilter && index === 0
-                                            ? '1px solid #FBBC04'
-                                            : 'none',
+                                        index === expandedFilter ? '1px solid #FBBC04' : 'none',
                                     borderLeft:
-                                        index === activeFilter && index === filters.length - 1
-                                            ? '1px solid #FBBC04'
-                                            : 'none',
-                                    fontWeight: index === activeFilter ? 'bold' : 'normal',
+                                        index === expandedFilter ? '1px solid #FBBC04' : 'none',
+                                    fontWeight: index === expandedFilter ? 'bold' : 'normal',
                                 }}
                                 onClick={() => {
-                                    updateActiveFilter(index)
+                                    updateExpandedFilter(index)
                                 }}>
-                                {getIconFromColumnFilter(filter.column)}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: 26,
+                                        height: 26,
+                                        borderRadius: '100%',
+                                        backgroundColor: filters[index].state.isFilterActive()
+                                            ? '#FBBC04'
+                                            : 'white',
+                                    }}>
+                                    {getIconFromColumnFilter(filter.column)}
+                                </Box>
                             </Box>
                         )
                     })}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            paddingY: 2,
+                            width: '100%',
+                            borderTop: '1px solid #FBBC04',
+                            borderTopRightRadius: expandedFilter === -1 ? '10px' : 0,
+                        }}
+                        onClick={() => handleResetAllFilters()}>
+                        <Box
+                            sx={{
+                                'display': 'flex',
+                                'justifyContent': 'center',
+                                'alignItems': 'center',
+                                'width': 26,
+                                'height': 26,
+                                'borderRadius': '100%',
+                                '&:active': {
+                                    backgroundColor: '#FBBC04',
+                                },
+                            }}>
+                            <FunnelSimple size={24} />
+                        </Box>
+                    </Box>
                 </Box>
             </Box>
         </Box>
@@ -148,5 +249,9 @@ const getIconFromColumnFilter = (column: Columns, size: number = 24) => {
             return <UserCirclePlus size={size} />
         case Columns.SpendType:
             return <Tag size={size} />
+        case Columns.SplitBetween:
+            return <UserCircleMinus size={size} />
+        default:
+            return null
     }
 }
