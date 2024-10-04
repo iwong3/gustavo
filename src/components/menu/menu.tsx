@@ -15,9 +15,10 @@ import {
     FilterSplitBetween,
     useFilterSplitBetweenStore,
 } from 'components/menu/filter/filter-split-between'
-import { useSortDateStore } from 'components/menu/sort/sort-date'
-import { SortMenu } from 'components/menu/sort/sort-menu'
+import { SortMenu, useSortMenuStore } from 'components/menu/sort/sort-menu'
 import { useGustavoStore } from 'views/gustavo'
+import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import { useSortDateStore } from 'components/menu/sort/sort-date'
 
 enum MenuItem {
     FilterPaidBy,
@@ -40,7 +41,9 @@ export const Menu = () => {
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
+    const sortMenuState = useSortMenuStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
+    const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
 
     // filter data, used for rendering
     const menuItems: MenuItemData[] = [
@@ -62,7 +65,7 @@ export const Menu = () => {
         {
             item: MenuItem.Sort,
             component: <SortMenu />,
-            state: sortDateState,
+            state: sortMenuState,
         },
     ]
 
@@ -79,10 +82,15 @@ export const Menu = () => {
         filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
         filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
 
-        filteredSpendData = sortDateState.sort(filteredSpendData)
+        // filteredSpendData = sortMenuState.sort(filteredSpendData)
+        if (sortDateState.order !== 0) {
+            filteredSpendData = sortDateState.sort(filteredSpendData)
+        } else if (sortItemNameState.order !== 0) {
+            filteredSpendData = sortItemNameState.sort(filteredSpendData)
+        }
 
         setFilteredSpendData(filteredSpendData)
-    }, [...allFiltersState])
+    }, [...allFiltersState, sortDateState, sortItemNameState])
 
     // expanded filter state
     const [expandedFilter, setExpandedFilter] = useState(-1)
@@ -242,7 +250,7 @@ export const Menu = () => {
     )
 }
 
-export const storeResets = new Set<() => void>()
+const storeResets = new Set<() => void>()
 
 const resetAllStores = () => {
     storeResets.forEach((reset) => reset())

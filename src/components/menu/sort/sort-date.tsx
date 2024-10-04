@@ -1,8 +1,10 @@
 import Box from '@mui/material/Box'
-import { CalendarBlank, List, SortAscending, SortDescending } from '@phosphor-icons/react'
-import { Spend } from 'helpers/spend'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
+
+import { Spend } from 'helpers/spend'
+import { getTablerIcon } from 'icons/tabler-icons'
+import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 
 enum SortOrder {
     None,
@@ -49,7 +51,9 @@ export const useSortDateStore = create<SortDateState & SortDateActions>()((set, 
 
     toggleSortOrder: () => {
         const { order } = get()
-        set(() => ({ order: (order + 1) % (Object.keys(SortOrder).length / 2) }))
+        const currentOrder = order
+        resetAllSortStores()
+        set(() => ({ order: (currentOrder + 1) % (Object.keys(SortOrder).length / 2) }))
     },
 
     reset: () => set(initialState),
@@ -79,19 +83,9 @@ export const SortDate = () => {
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     borderRadius: '100%',
                 }}>
-                <CalendarBlank size={24} />
-            </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: 26,
-                    height: 26,
-                }}>
-                {order === SortOrder.None && <List size={24} />}
-                {order === SortOrder.Descending && <SortDescending size={24} />}
-                {order === SortOrder.Ascending && <SortAscending size={24} />}
+                {order === SortOrder.None && getTablerIcon('IconCalendarEvent')}
+                {order === SortOrder.Descending && getTablerIcon('IconCalendarDown')}
+                {order === SortOrder.Ascending && getTablerIcon('IconCalendarUp')}
             </Box>
         </Box>
     )
