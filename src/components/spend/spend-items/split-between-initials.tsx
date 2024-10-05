@@ -1,8 +1,9 @@
+import Box from '@mui/material/Box'
 import { useEffect, useState } from 'react'
 
-import { Person, Spend, SpendType } from 'helpers/spend'
-import Box from '@mui/material/Box'
 import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
+import { Person } from 'helpers/person'
+import { Spend } from 'helpers/spend'
 
 interface ISplitBetweenInitialsProps {
     spend: Spend
@@ -49,9 +50,10 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
                 alignItems: 'center',
                 fontSize: '14px',
             }}>
-            {Object.entries(splitters).map(([person, isSplitter]) => {
+            {Object.entries(splitters).map(([person, isSplitter], index) => {
                 return (
                     <Box
+                        key={'split-between-person-' + index}
                         sx={{
                             marginX: 0.5,
                         }}>

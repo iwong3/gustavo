@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box'
-import { getInitials, Person, Spend } from 'helpers/spend'
+import { getPersonInitials, Person } from 'helpers/person'
 
 interface IInitialsIconProps {
     person: Person
@@ -31,7 +31,7 @@ export const InitialsIcon = ({
                 backgroundColor: bgColor,
                 fontWeight: 'bold',
             }}>
-            {getInitials(person)}
+            {getPersonInitials(person)}
         </Box>
     )
 }

@@ -1,11 +1,8 @@
 import Box from '@mui/material/Box'
-import { useShallow } from 'zustand/react/shallow'
-
 import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
 import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
-import { useState } from 'react'
-import { Spend } from 'helpers/spend'
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 
 enum SortItem {
     SortDate,
@@ -18,57 +15,43 @@ type SortMenuItemData = {
     state: any
 }
 
-type SortMenuState = {
-    sortItems: SortMenuItemData[]
-}
-
 type SortMenuActions = {
-    sort: (spendData: Spend[]) => Spend[]
     reset: () => void
 }
 
-const initialState: SortMenuState = {
-    sortItems: [
+export const useSortMenuStore = create<SortMenuActions>((set, get) => ({
+    reset: () => resetAllSortStores(),
+}))
+
+const sortStoreResets = new Set<() => void>()
+
+export const resetAllSortStores = () => {
+    sortStoreResets.forEach((reset) => reset())
+}
+
+export const SortMenu = () => {
+    // sort states
+    const sortDateState = useSortDateStore(useShallow((state) => state))
+    const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
+
+    // define sort menu item properties, used for rendering
+    const sortMenuItems: SortMenuItemData[] = [
         {
             item: SortItem.SortDate,
             component: <SortDate />,
-            state: useSortDateStore.getState(),
+            state: sortDateState,
         },
         {
             item: SortItem.SortItemName,
             component: <SortItemName />,
-            state: useSortItemNameStore.getState(),
+            state: sortItemNameState,
         },
-    ],
-}
+    ]
 
-export const useSortMenuStore = create<SortMenuState & SortMenuActions>((set, get) => ({
-    ...initialState,
-
-    sort: (spendData: Spend[]): Spend[] => {
-        const { sortItems } = get()
-
-        for (let i = 0; i < sortItems.length; i++) {
-            if (sortItems[i].state.order !== 0) {
-                return sortItems[i].state.sort(spendData)
-            }
-        }
-
-        return spendData
-    },
-
-    reset: () => {
-        useSortDateStore.getState().reset()
-        useSortItemNameStore.getState().reset()
-        set(initialState)
-    },
-}))
-
-export const SortMenu = () => {
-    const { sortItems } = useSortMenuStore(useShallow((state) => state))
-
-    sortItems.forEach((sortItem) => {
-        sortStoreResets.add(sortItem.state.reset)
+    // get all sort state resets
+    const sortStates = sortMenuItems.map((sortItem) => sortItem.state)
+    sortStates.forEach((state) => {
+        sortStoreResets.add(state.reset)
     })
 
     return (
@@ -79,7 +62,7 @@ export const SortMenu = () => {
                 alignItems: 'center',
                 width: '100%',
             }}>
-            {sortItems.map((sortItem, index) => {
+            {sortMenuItems.map((sortItem, index) => {
                 return (
                     <Box
                         key={'sort-menu-item-' + index}
@@ -94,10 +77,4 @@ export const SortMenu = () => {
             })}
         </Box>
     )
-}
-
-const sortStoreResets = new Set<() => void>()
-
-export const resetAllSortStores = () => {
-    sortStoreResets.forEach((reset) => reset())
 }

@@ -81,8 +81,8 @@ export const SortItemName = () => {
                     borderRadius: '100%',
                 }}>
                 {order === SortOrder.None && getTablerIcon('IconSortAZ')}
-                {order === SortOrder.Ascending && getTablerIcon('IconSortAscendingLetters')}
-                {order === SortOrder.Descending && getTablerIcon('IconSortDescendingLetters')}
+                {order === SortOrder.Ascending && getTablerIcon('IconSortAZ')}
+                {order === SortOrder.Descending && getTablerIcon('IconSortZA')}
             </Box>
         </Box>
     )

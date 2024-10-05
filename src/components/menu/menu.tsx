@@ -16,9 +16,11 @@ import {
     useFilterSplitBetweenStore,
 } from 'components/menu/filter/filter-split-between'
 import { SortMenu, useSortMenuStore } from 'components/menu/sort/sort-menu'
-import { useGustavoStore } from 'views/gustavo'
+import { SettingsCost } from 'components/menu/settings/settings-cost'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
+import { getTablerIcon } from 'icons/tabler-icons'
+import { useGustavoStore } from 'views/gustavo'
 
 enum MenuItem {
     FilterPaidBy,
@@ -33,20 +35,28 @@ type MenuItemData = {
     state: any
 }
 
+const menuItemStoreResets = new Set<() => void>()
+
+const resetAllMenuItemStores = () => {
+    menuItemStoreResets.forEach((reset) => reset())
+}
+
 export const Menu = () => {
-    // update filtered spend data
     const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
 
-    // get filters and sorts individually so we can control the order the data is filtered
+    // menu item states
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
     const sortMenuState = useSortMenuStore(useShallow((state) => state))
-    const sortDateState = useSortDateStore(useShallow((state) => state))
-    const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
 
-    // filter data, used for rendering
+    // define menu item properties, used for rendering
     const menuItems: MenuItemData[] = [
+        {
+            item: MenuItem.Sort,
+            component: <SortMenu />,
+            state: sortMenuState,
+        },
         {
             item: MenuItem.FilterPaidBy,
             component: <FilterPaidBy />,
@@ -62,56 +72,72 @@ export const Menu = () => {
             component: <FilterSpendType />,
             state: filterSpendTypeState,
         },
-        {
-            item: MenuItem.Sort,
-            component: <SortMenu />,
-            state: sortMenuState,
-        },
     ]
 
-    const allFiltersState = menuItems.map((item) => item.state)
-    allFiltersState.forEach((item) => {
-        storeResets.add(item.reset)
+    // get all menu item state resets
+    const menuItemStates = menuItems.map((item) => item.state)
+    menuItemStates.forEach((state) => {
+        menuItemStoreResets.add(state.reset)
     })
 
-    // whenever any filter changes, update the filtered spend data
+    // sort states
+    const sortDateState = useSortDateStore(useShallow((state) => state))
+    const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
+    const sortStates = [sortDateState, sortItemNameState]
+
+    // whenever any filter and sort state changes, update the filtered spend data
     useEffect(() => {
         let filteredSpendData = spendData
 
+        // apply filters
         filteredSpendData = filterPaidByState.filter(filteredSpendData)
         filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
         filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
 
-        // filteredSpendData = sortMenuState.sort(filteredSpendData)
-        if (sortDateState.order !== 0) {
-            filteredSpendData = sortDateState.sort(filteredSpendData)
-        } else if (sortItemNameState.order !== 0) {
-            filteredSpendData = sortItemNameState.sort(filteredSpendData)
+        // apply sorting - only one sort will be active at a time
+        for (const sortState of sortStates) {
+            if (sortState.order !== 0) {
+                filteredSpendData = sortState.sort(filteredSpendData)
+                break
+            }
         }
 
         setFilteredSpendData(filteredSpendData)
-    }, [...allFiltersState, sortDateState, sortItemNameState])
+    }, [...menuItemStates, ...sortStates])
 
-    // expanded filter state
-    const [expandedFilter, setExpandedFilter] = useState(-1)
+    // expanded menu item state
+    const [expandedMenuItem, setExpandedMenuItem] = useState(-1)
 
-    const updateExpandedFilter = (index: number) => {
-        if (expandedFilter === index) {
-            setExpandedFilter(-1)
+    const handleMenuItemClick = (index: number) => {
+        if (showSettings) {
+            setShowSettings(false)
+        }
+
+        if (expandedMenuItem === index) {
+            setExpandedMenuItem(-1)
         } else {
-            setExpandedFilter(index)
+            setExpandedMenuItem(index)
         }
     }
 
-    const renderExpandedFilter = () => {
-        if (expandedFilter !== -1) {
-            return menuItems[expandedFilter].component
+    const handleResetAllMenuItems = () => {
+        resetAllMenuItemStores()
+        setExpandedMenuItem(-1)
+    }
+
+    const renderExpandedMenuItem = () => {
+        if (expandedMenuItem !== -1) {
+            return menuItems[expandedMenuItem].component
         }
     }
 
-    const handleResetAllFilters = () => {
-        resetAllStores()
-        setExpandedFilter(-1)
+    // settings
+    const [showSettings, setShowSettings] = useState(false)
+    const handleSettingsClick = () => {
+        if (expandedMenuItem !== -1) {
+            setExpandedMenuItem(-1)
+        }
+        setShowSettings(!showSettings)
     }
 
     return (
@@ -131,17 +157,37 @@ export const Menu = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     width: '90%',
-                    boxShadow: '0px 40px 50px 0px rgba(0,0,0,1)',
                 }}>
                 {/* Active filter */}
-                {expandedFilter !== -1 && (
+                {expandedMenuItem !== -1 && (
                     <Box
                         sx={{
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
+                            marginTop: '-10px',
                             paddingY: 2,
                             width: '100%',
+                            borderTop: '1px solid #FBBC04',
+                            borderBottom: '1px solid white',
+                            borderLeft: '1px solid #FBBC04',
+                            borderRight: '1px solid #FBBC04',
+                            borderTopLeftRadius: '10px',
+                            borderTopRightRadius: '10px',
+                            backgroundColor: 'white',
+                        }}>
+                        {renderExpandedMenuItem()}
+                    </Box>
+                )}
+                {/* Show settings */}
+                {showSettings && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                            alignSelf: 'flex-end',
+                            paddingY: 2,
                             backgroundColor: 'white',
                             borderTop: '1px solid #FBBC04',
                             borderBottom: '1px solid white',
@@ -151,7 +197,7 @@ export const Menu = () => {
                             borderTopRightRadius: '10px',
                             marginTop: '-10px',
                         }}>
-                        {renderExpandedFilter()}
+                        <SettingsCost />
                     </Box>
                 )}
                 {/* Menu */}
@@ -164,8 +210,8 @@ export const Menu = () => {
                         borderBottom: 'none',
                         borderLeft: '1px solid #FBBC04',
                         borderRight: '1px solid #FBBC04',
-                        borderTopLeftRadius: expandedFilter === -1 ? '10px' : 0,
-                        borderTopRightRadius: expandedFilter === -1 ? '10px' : 0,
+                        borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
+                        borderTopRightRadius: expandedMenuItem === -1 && !showSettings ? '10px' : 0,
                         backgroundColor: 'white',
                     }}>
                     {/* Menu item - Reset all */}
@@ -177,9 +223,9 @@ export const Menu = () => {
                             paddingY: 2,
                             width: '100%',
                             borderTop: '1px solid #FBBC04',
-                            borderTopLeftRadius: expandedFilter === -1 ? '10px' : 0,
+                            borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
                         }}
-                        onClick={() => handleResetAllFilters()}>
+                        onClick={() => handleResetAllMenuItems()}>
                         <Box
                             sx={{
                                 'display': 'flex',
@@ -207,27 +253,21 @@ export const Menu = () => {
                                     paddingY: 2,
                                     width: '100%',
                                     borderTop:
-                                        index === expandedFilter
+                                        index === expandedMenuItem
                                             ? '1px solid white'
                                             : '1px solid #FBBC04',
                                     borderRight:
-                                        index === menuItems.length - 1
-                                            ? '1px solid white'
-                                            : index === expandedFilter
+                                        index === expandedMenuItem
                                             ? '1px solid #FBBC04'
                                             : '1px solid white',
                                     borderLeft:
-                                        index === expandedFilter
+                                        index === expandedMenuItem
                                             ? '1px solid #FBBC04'
                                             : '1px solid white',
-                                    borderTopRightRadius:
-                                        index === menuItems.length - 1 && expandedFilter === -1
-                                            ? '10px'
-                                            : 0,
-                                    fontWeight: index === expandedFilter ? 'bold' : 'normal',
+                                    fontWeight: index === expandedMenuItem ? 'bold' : 'normal',
                                 }}
                                 onClick={() => {
-                                    updateExpandedFilter(index)
+                                    handleMenuItemClick(index)
                                 }}>
                                 <Box
                                     sx={{
@@ -244,16 +284,36 @@ export const Menu = () => {
                             </Box>
                         )
                     })}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            paddingY: 2,
+                            width: '100%',
+                            borderTop: showSettings ? '1px solid white' : '1px solid #FBBC04',
+                            borderLeft: showSettings ? '1px solid #FBBC04' : '1px solid white',
+                            borderTopRightRadius:
+                                expandedMenuItem === -1 && !showSettings ? '10px' : 0,
+                        }}
+                        onClick={() => handleSettingsClick()}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: 26,
+                                height: 26,
+                                borderRadius: '100%',
+                                backgroundColor: showSettings ? '#FBBC04' : 'white',
+                            }}>
+                            {getTablerIcon('IconSettings')}
+                        </Box>
+                    </Box>
                 </Box>
             </Box>
         </Box>
     )
-}
-
-const storeResets = new Set<() => void>()
-
-const resetAllStores = () => {
-    storeResets.forEach((reset) => reset())
 }
 
 const getMenuItemIcon = (item: MenuItem, size: number = 24) => {

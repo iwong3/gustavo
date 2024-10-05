@@ -1,24 +1,16 @@
 import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 import axios from 'axios'
 import { useEffect } from 'react'
 import { create } from 'zustand'
 
 import { Menu } from 'components/menu/menu'
 import { SpendTable } from 'components/spend/spend-table'
-import {
-    Columns,
-    Currency,
-    getPersonFromEmail,
-    parseRow,
-    Person,
-    Spend,
-    SpendType,
-} from 'helpers/spend'
+import { Currency } from 'helpers/currency'
+import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
+import { Person, getPersonFromEmail } from 'helpers/person'
+import { Spend, SpendType } from 'helpers/spend'
 import GusFringLogo from '../images/gus-fring.png'
-import Typography from '@mui/material/Typography'
-
-const googleSheetCsvUrl =
-    'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
 
 type GustavoState = {
     spendData: Spend[]
@@ -41,15 +33,16 @@ export const Gustavo = () => {
 
     useEffect(() => {
         async function fetchData() {
-            axios.get(googleSheetCsvUrl).then((res: any) => {
+            axios.get(GOOGLE_SHEET_CSV_URL).then((res: any) => {
                 const dataString: string = res.data
                 const rows = dataString.split('\n')
                 const headers = rows[0].replace(/[\r]/g, '').split(',')
 
-                const dateIndex = headers.indexOf(Columns.Date)
                 const nameIndex = headers.indexOf(Columns.ItemName)
-                const costIndex = headers.indexOf(Columns.Cost)
+                const dateIndex = headers.indexOf(Columns.Date)
+                const originalCostIndex = headers.indexOf(Columns.Cost)
                 const currencyIndex = headers.indexOf(Columns.Currency)
+                const convertedCostIndex = headers.indexOf(Columns.ConvertedCost)
                 const paidByIndex = headers.indexOf(Columns.PaidBy)
                 const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
                 const locationIndex = headers.indexOf(Columns.Location)
@@ -61,7 +54,12 @@ export const Gustavo = () => {
                     .map((row: string) => {
                         const rowValues = parseRow(row)
                         if (rowValues) {
-                            const cost = parseFloat(rowValues[costIndex].replace(/[,'"]+/g, ''))
+                            const originalCost = parseFloat(
+                                rowValues[originalCostIndex].replace(/[,'"]+/g, '')
+                            )
+                            const currency = rowValues[currencyIndex] as Currency
+                            const convertedCost = parseFloat(rowValues[convertedCostIndex])
+
                             const splitBetween = rowValues[splitBetweenIndex]
                                 .replace(/['" ]+/g, '')
                                 .split(',') as Person[]
@@ -76,8 +74,9 @@ export const Gustavo = () => {
                             const spend: Spend = {
                                 date: rowValues[dateIndex],
                                 name: rowValues[nameIndex],
-                                cost: cost,
-                                currency: rowValues[currencyIndex] as Currency,
+                                originalCost: originalCost,
+                                currency: currency,
+                                convertedCost: convertedCost,
                                 paidBy: rowValues[paidByIndex] as Person,
                                 splitBetween: splitBetween,
                                 location: rowValues[locationIndex],

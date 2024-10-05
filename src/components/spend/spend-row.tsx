@@ -1,40 +1,23 @@
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
-import React from 'react'
+import { useState } from 'react'
 
-import { FormattedMoney, getInitials, getSplitCost, Spend, USDollar } from 'helpers/spend'
+import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
+import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
+import { OriginalCost } from 'components/spend/spend-items/original-cost'
 import { SpendTypeIcon } from 'components/spend/spend-items/spend-type-icon'
 import { SplitBetweenInitials } from 'components/spend/spend-items/split-between-initials'
-import { OriginalCost } from 'components/spend/spend-items/original-cost'
-import { Typography } from '@mui/material'
-import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
-
-/**
- * To-Do:
- * - Display:
- *   - Split Between
- *   - Split Cost
- *   - Original Cost (USD, YEN)
- * - Total spend summary
- *   - View selector at top right
- * - Table filters (should apply to both table and summary)
- *   - Need to apply all filters sequentially
- * - Table sorting
- * - Color, color person initials
- * - Gus Fring quote? "A man provides... spend data."
- * - Toggle to show USD/YEN
- *
- * Ideas
- * - Put initials on left?
- */
+import { CostDisplay, FormattedMoney } from 'helpers/currency'
+import { getSplitCost, Spend } from 'helpers/spend'
 
 interface ISpendRowProps {
     spend: Spend
 }
 
 export const SpendRow = ({ spend }: ISpendRowProps) => {
-    const [expanded, setExpanded] = React.useState(false)
+    const [expanded, setExpanded] = useState(false)
+    const { costDisplay } = useSettingsCostStore()
 
     return (
         <Box
@@ -89,7 +72,9 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                 display: 'flex',
                                 fontWeight: 'bold',
                             }}>
-                            {USDollar.format(spend.cost)}
+                            {costDisplay === CostDisplay.Original
+                                ? FormattedMoney(spend.currency, 0).format(spend.originalCost)
+                                : FormattedMoney('USD', 0).format(spend.convertedCost)}
                         </Box>
                         <Box
                             sx={{
@@ -128,7 +113,6 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                     justifyContent: 'center',
                                     width: '100%',
                                     marginY: 1,
-                                    // height: '24px',
                                 }}>
                                 <SplitBetweenInitials spend={spend} />
                             </Box>
@@ -143,7 +127,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                 <OriginalCost spend={spend} />
                                 &nbsp;→&nbsp;
                                 {FormattedMoney().format(
-                                    getSplitCost(spend.cost, spend.splitBetween)
+                                    getSplitCost(spend.convertedCost, spend.splitBetween)
                                 )}{' '}
                                 each
                             </Box>

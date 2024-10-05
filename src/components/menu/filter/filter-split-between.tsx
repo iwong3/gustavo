@@ -5,7 +5,8 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
-import { Person, Spend } from 'helpers/spend'
+import { Spend } from 'helpers/spend'
+import { Person } from 'helpers/person'
 
 type FilterSplitBetweenState = {
     everyone: boolean
