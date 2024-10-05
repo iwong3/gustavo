@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import axios from 'axios'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 
 import { Menu } from 'components/menu/menu'
@@ -11,6 +11,9 @@ import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
 import { Person, getPersonFromEmail } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 import GusFringLogo from '../images/gus-fring.png'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import ToggleButton from '@mui/material/ToggleButton'
+import { getTablerIcon } from 'icons/tabler-icons'
 
 type GustavoState = {
     spendData: Spend[]
@@ -95,41 +98,84 @@ export const Gustavo = () => {
         fetchData()
     }, [])
 
+    const [showLogs, setShowLogs] = useState(true)
+
     return (
         <Box>
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     margin: 2,
                 }}>
-                <img
-                    src={GusFringLogo}
-                    style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: '100%',
-                        objectFit: 'cover',
-                    }}
-                />
                 <Box
                     sx={{
                         display: 'flex',
-                        flexDirection: 'column',
-                        marginLeft: 2,
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
                     }}>
-                    <Typography
-                        sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
-                        "And a man, a man provides...
-                    </Typography>
-                    <Typography
-                        sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
-                        &nbsp;...your spending habits."
-                    </Typography>
+                    <img
+                        src={GusFringLogo}
+                        style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: '100%',
+                            objectFit: 'cover',
+                        }}
+                    />
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            marginLeft: 2,
+                        }}>
+                        <Typography
+                            sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
+                            "And a man, a man provides...
+                        </Typography>
+                        <Typography
+                            sx={{ fontSize: '14px', fontFamily: 'Spectral', lineHeight: '90%' }}>
+                            &nbsp;...your spending habits."
+                        </Typography>
+                    </Box>
+                </Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                    }}>
+                    <ToggleButtonGroup
+                        sx={{
+                            backgroundColor: 'white',
+                        }}>
+                        <ToggleButton
+                            sx={{
+                                '&.Mui-selected, &.Mui-selected:hover': {
+                                    backgroundColor: '#FBBC04',
+                                },
+                            }}
+                            value="left"
+                            selected={!showLogs}
+                            onClick={() => setShowLogs(false)}>
+                            {getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })}
+                        </ToggleButton>
+                        <ToggleButton
+                            sx={{
+                                '&.Mui-selected, &.Mui-selected:hover': {
+                                    backgroundColor: '#FBBC04',
+                                },
+                            }}
+                            value="right"
+                            selected={showLogs}
+                            onClick={() => setShowLogs(true)}>
+                            {getTablerIcon({ name: 'IconLayoutList', size: 18, fill: 'white' })}
+                        </ToggleButton>
+                    </ToggleButtonGroup>
                 </Box>
             </Box>
-            <SpendTable spendData={filteredSpendData} />
+            {showLogs && <SpendTable spendData={filteredSpendData} />}
+            {!showLogs && <Box>Graphs</Box>}
             <Menu />
         </Box>
     )

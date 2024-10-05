@@ -83,9 +83,9 @@ export const SortDate = () => {
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     borderRadius: '100%',
                 }}>
-                {order === SortOrder.None && getTablerIcon('IconCalendarEvent')}
-                {order === SortOrder.Descending && getTablerIcon('IconCalendarDown')}
-                {order === SortOrder.Ascending && getTablerIcon('IconCalendarUp')}
+                {order === SortOrder.None && getTablerIcon({ name: 'IconCalendarEvent' })}
+                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCalendarDown' })}
+                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCalendarUp' })}
             </Box>
         </Box>
     )

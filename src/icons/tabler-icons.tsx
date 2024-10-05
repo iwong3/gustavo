@@ -2,7 +2,9 @@ import {
     IconCalendarDown,
     IconCalendarEvent,
     IconCalendarUp,
+    IconChartBar,
     IconCurrencyDollar,
+    IconLayoutList,
     IconListLetters,
     IconSettings,
     IconSortAscendingLetters,
@@ -11,28 +13,52 @@ import {
     IconSortZA,
 } from '@tabler/icons-react'
 
-export const getTablerIcon = (iconName: string, size: number = 24, stroke: number = 1.5) => {
-    switch (iconName) {
+type TablerIconProps = {
+    name: string
+    size?: number
+    stroke?: number
+    color?: string
+    fill?: string
+}
+
+export const getTablerIcon = ({
+    name,
+    size = 24,
+    stroke = 1.5,
+    color = 'black',
+    fill = 'none',
+}: TablerIconProps) => {
+    const props = {
+        size,
+        stroke,
+        color,
+        fill,
+    }
+    switch (name) {
         case 'IconCalendarEvent':
-            return <IconCalendarEvent size={size} stroke={stroke} />
+            return <IconCalendarEvent {...props} />
         case 'IconCalendarDown':
-            return <IconCalendarDown size={size} stroke={stroke} />
+            return <IconCalendarDown {...props} />
         case 'IconCalendarUp':
-            return <IconCalendarUp size={size} stroke={stroke} />
+            return <IconCalendarUp {...props} />
+        case 'IconChartBar':
+            return <IconChartBar {...props} />
         case 'IconCurrencyDollar':
-            return <IconCurrencyDollar size={size} stroke={stroke} />
+            return <IconCurrencyDollar {...props} />
+        case 'IconLayoutList':
+            return <IconLayoutList {...props} />
         case 'IconListLetters':
-            return <IconListLetters size={size} stroke={stroke} />
+            return <IconListLetters {...props} />
         case 'IconSettings':
-            return <IconSettings size={size} stroke={stroke} />
+            return <IconSettings {...props} />
         case 'IconSortAZ':
-            return <IconSortAZ size={size} stroke={stroke} />
+            return <IconSortAZ {...props} />
         case 'IconSortZA':
-            return <IconSortZA size={size} stroke={stroke} />
+            return <IconSortZA {...props} />
         case 'IconSortAscendingLetters':
-            return <IconSortAscendingLetters size={size} stroke={stroke} />
+            return <IconSortAscendingLetters {...props} />
         case 'IconSortDescendingLetters':
-            return <IconSortDescendingLetters size={size} stroke={stroke} />
+            return <IconSortDescendingLetters {...props} />
         default:
             return null
     }

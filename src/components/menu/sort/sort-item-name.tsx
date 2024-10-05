@@ -80,9 +80,9 @@ export const SortItemName = () => {
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     borderRadius: '100%',
                 }}>
-                {order === SortOrder.None && getTablerIcon('IconSortAZ')}
-                {order === SortOrder.Ascending && getTablerIcon('IconSortAZ')}
-                {order === SortOrder.Descending && getTablerIcon('IconSortZA')}
+                {order === SortOrder.None && getTablerIcon({ name: 'IconSortAZ' })}
+                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconSortAZ' })}
+                {order === SortOrder.Descending && getTablerIcon({ name: 'IconSortZA' })}
             </Box>
         </Box>
     )

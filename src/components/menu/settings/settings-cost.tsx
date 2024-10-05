@@ -35,7 +35,7 @@ export const SettingsCost = () => {
                 alignItems: 'center',
                 marginX: 2,
             }}>
-            {getTablerIcon('IconCurrencyDollar')}
+            {getTablerIcon({ name: 'IconCurrencyDollar' })}
             <Box
                 sx={{
                     display: 'flex',

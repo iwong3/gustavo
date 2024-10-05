@@ -307,7 +307,7 @@ export const Menu = () => {
                                 borderRadius: '100%',
                                 backgroundColor: showSettings ? '#FBBC04' : 'white',
                             }}>
-                            {getTablerIcon('IconSettings')}
+                            {getTablerIcon({ name: 'IconSettings' })}
                         </Box>
                     </Box>
                 </Box>
