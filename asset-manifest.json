@@ -1,14 +1,14 @@
 {
   "files": {
     "main.css": "/gustavo/static/css/main.345ef473.css",
-    "main.js": "/gustavo/static/js/main.45e4caaf.js",
+    "main.js": "/gustavo/static/js/main.b2dac808.js",
     "static/media/gus-fring.png": "/gustavo/static/media/gus-fring.70930d6dc17f27585539.png",
     "index.html": "/gustavo/index.html",
     "main.345ef473.css.map": "/gustavo/static/css/main.345ef473.css.map",
-    "main.45e4caaf.js.map": "/gustavo/static/js/main.45e4caaf.js.map"
+    "main.b2dac808.js.map": "/gustavo/static/js/main.b2dac808.js.map"
   },
   "entrypoints": [
     "static/css/main.345ef473.css",
-    "static/js/main.45e4caaf.js"
+    "static/js/main.b2dac808.js"
   ]
 }
