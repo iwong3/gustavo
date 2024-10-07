@@ -77,8 +77,9 @@ export const SortItemName = () => {
                     alignItems: 'center',
                     width: 26,
                     height: 26,
-                    backgroundColor: isActive ? '#FBBC04' : 'white',
                     borderRadius: '100%',
+                    backgroundColor: isActive ? '#FBBC04' : 'white',
+                    transition: 'background-color 0.1s',
                 }}>
                 {order === SortOrder.None && getTablerIcon({ name: 'IconSortAZ' })}
                 {order === SortOrder.Ascending && getTablerIcon({ name: 'IconSortAZ' })}

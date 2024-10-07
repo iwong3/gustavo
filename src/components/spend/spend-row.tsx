@@ -52,7 +52,7 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                             sx={{
                                 display: 'flex',
                             }}>
-                            {dayjs(spend.date).format('M/DD')}
+                            {dayjs(spend.date).format('M/D')}
                             {spend.location && ' • ' + spend.location}
                         </Box>
                     </Box>

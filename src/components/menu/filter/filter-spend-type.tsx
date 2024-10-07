@@ -28,7 +28,7 @@ const initialState: FilterSpendTypeState = {
         [SpendType.Commute]: false,
         [SpendType.Food]: false,
         [SpendType.Lodging]: false,
-        [SpendType.Souvenir]: false,
+        [SpendType.Shopping]: false,
         [SpendType.Other]: false,
     },
 }
@@ -118,6 +118,7 @@ export const FilterSpendType = () => {
                     '&:active': {
                         backgroundColor: '#FBBC04',
                     },
+                    'transition': 'background-color 0.1s',
                 }}
                 onClick={() => {
                     handleAllClick()
@@ -145,6 +146,7 @@ export const FilterSpendType = () => {
                                 height: 26,
                                 backgroundColor: isActive ? '#FBBC04' : 'white',
                                 borderRadius: '100%',
+                                transition: 'background-color 0.1s',
                             }}>
                             {getIconFromSpendType(spendType as SpendType, 24)}
                         </Box>

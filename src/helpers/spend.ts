@@ -24,12 +24,12 @@ export enum SpendType {
     Commute = 'Commute',
     Food = 'Food',
     Lodging = 'Lodging',
-    Souvenir = 'Souvenir',
+    Shopping = 'Shopping',
     Other = 'Other',
 }
 
 export const getSplitCost = (cost: number, splitBetween: Person[]): number => {
-    if (splitBetween[0] === Person.Everyone) {
+    if (splitBetween.includes(Person.Everyone)) {
         return cost / 8
     }
     return cost / splitBetween.length

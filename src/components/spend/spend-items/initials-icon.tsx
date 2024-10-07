@@ -30,6 +30,7 @@ export const InitialsIcon = ({
                 color: color,
                 backgroundColor: bgColor,
                 fontWeight: 'bold',
+                transition: 'background-color 0.1s',
             }}>
             {getPersonInitials(person)}
         </Box>

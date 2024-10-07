@@ -3,10 +3,13 @@ import {
     IconCalendarEvent,
     IconCalendarUp,
     IconChartBar,
+    IconChartBarOff,
     IconCurrencyDollar,
+    IconDots,
     IconLayoutList,
     IconListLetters,
     IconSettings,
+    IconShoppingBag,
     IconSortAscendingLetters,
     IconSortAZ,
     IconSortDescendingLetters,
@@ -43,14 +46,20 @@ export const getTablerIcon = ({
             return <IconCalendarUp {...props} />
         case 'IconChartBar':
             return <IconChartBar {...props} />
+        case 'IconChartBarOff':
+            return <IconChartBarOff {...props} />
         case 'IconCurrencyDollar':
             return <IconCurrencyDollar {...props} />
+        case 'IconDots':
+            return <IconDots {...props} />
         case 'IconLayoutList':
             return <IconLayoutList {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} />
         case 'IconSettings':
             return <IconSettings {...props} />
+        case 'IconShoppingBag':
+            return <IconShoppingBag {...props} />
         case 'IconSortAZ':
             return <IconSortAZ {...props} />
         case 'IconSortZA':

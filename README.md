@@ -20,3 +20,4 @@ To-Do:
 Ideas:
 
 -   Put initials on the left
+-   Setting to toggle icons vs. text

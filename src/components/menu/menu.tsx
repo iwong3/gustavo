@@ -42,7 +42,9 @@ const resetAllMenuItemStores = () => {
 }
 
 export const Menu = () => {
-    const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { spendData, showLogs, setFilteredSpendData } = useGustavoStore(
+        useShallow((state) => state)
+    )
 
     // menu item states
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
@@ -52,11 +54,6 @@ export const Menu = () => {
 
     // define menu item properties, used for rendering
     const menuItems: MenuItemData[] = [
-        {
-            item: MenuItem.Sort,
-            component: <SortMenu />,
-            state: sortMenuState,
-        },
         {
             item: MenuItem.FilterPaidBy,
             component: <FilterPaidBy />,
@@ -73,6 +70,14 @@ export const Menu = () => {
             state: filterSpendTypeState,
         },
     ]
+
+    if (showLogs) {
+        menuItems.unshift({
+            item: MenuItem.Sort,
+            component: <SortMenu />,
+            state: sortMenuState,
+        })
+    }
 
     // get all menu item state resets
     const menuItemStates = menuItems.map((item) => item.state)
@@ -237,6 +242,7 @@ export const Menu = () => {
                                 '&:active': {
                                     backgroundColor: '#FBBC04',
                                 },
+                                'transition': 'background-color 0.1s',
                             }}>
                             <ArrowClockwise size={24} />
                         </Box>
@@ -278,6 +284,7 @@ export const Menu = () => {
                                         height: 26,
                                         borderRadius: '100%',
                                         backgroundColor: getMenuItemBackgroundColor(item),
+                                        transition: 'background-color 0.1s',
                                     }}>
                                     {getMenuItemIcon(item.item)}
                                 </Box>
@@ -306,6 +313,7 @@ export const Menu = () => {
                                 height: 26,
                                 borderRadius: '100%',
                                 backgroundColor: showSettings ? '#FBBC04' : 'white',
+                                transition: 'background-color 0.1s',
                             }}>
                             {getTablerIcon({ name: 'IconSettings' })}
                         </Box>

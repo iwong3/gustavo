@@ -49,7 +49,9 @@ export const useFilterSplitBetweenStore = create<
         }
 
         const filteredSpendData = spendData.filter((spend) => {
-            return spend.splitBetween.some((person) => filters[person])
+            return spend.splitBetween.some((person) => {
+                return person === Person.Everyone || filters[person]
+            })
         })
         return filteredSpendData
     },
@@ -119,6 +121,7 @@ export const FilterSplitBetween = () => {
                     '&:active': {
                         backgroundColor: '#FBBC04',
                     },
+                    'transition': 'background-color 0.1s',
                 }}
                 onClick={() => {
                     updateFilters(Person.Everyone)

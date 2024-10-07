@@ -119,6 +119,7 @@ export const FilterPaidBy = () => {
                     '&:active': {
                         backgroundColor: '#FBBC04',
                     },
+                    'transition': 'background-color 0.1s',
                 }}
                 onClick={() => {
                     updateFilters(Person.Everyone)
