@@ -1,11 +1,11 @@
-import { create } from 'zustand'
-
-import { Spend, SpendType } from 'helpers/spend'
+import { Box, Typography } from '@mui/material'
 import { useEffect } from 'react'
-import Box from '@mui/material/Box'
+import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
-import { getIconFromSpendType } from 'components/spend/spend-items/spend-type-icon'
-import { ArrowClockwise } from '@phosphor-icons/react'
+
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { getIconFromSpendType, getTablerIcon } from 'helpers/icons'
+import { Spend, SpendType } from 'helpers/spend'
 
 type FilterSpendTypeState = {
     all: boolean
@@ -14,7 +14,7 @@ type FilterSpendTypeState = {
 
 type FilterSpendTypeActions = {
     filter: (spendData: Spend[]) => Spend[]
-    isFilterActive: () => boolean
+    isActive: () => boolean
 
     setAll: (all: boolean) => void
     setFilters: (filters: Record<SpendType, boolean>) => void
@@ -25,10 +25,10 @@ const initialState: FilterSpendTypeState = {
     all: true,
     filters: {
         [SpendType.Attraction]: false,
-        [SpendType.Commute]: false,
         [SpendType.Food]: false,
         [SpendType.Lodging]: false,
         [SpendType.Shopping]: false,
+        [SpendType.Transit]: false,
         [SpendType.Other]: false,
     },
 }
@@ -56,7 +56,7 @@ export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpend
             return filteredSpendData
         },
 
-        isFilterActive: () => {
+        isActive: () => {
             const { all } = get()
             return !all
         },
@@ -99,31 +99,45 @@ export const FilterSpendType = () => {
         })
     }
 
+    // settings stores
+    const { showIconLabels } = useSettingsIconLabelsStore()
+
     return (
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'space-evenly',
+                justifyContent: 'space-between',
                 alignItems: 'center',
+                marginX: 2,
                 width: '100%',
+                border: '1px solid white',
+                borderBottomWidth: 0,
             }}>
             <Box
                 sx={{
-                    'display': 'flex',
-                    'justifyContent': 'center',
-                    'alignItems': 'center',
-                    'width': 24,
-                    'height': 24,
-                    'borderRadius': '100%',
-                    '&:active': {
-                        backgroundColor: '#FBBC04',
-                    },
-                    'transition': 'background-color 0.1s',
-                }}
-                onClick={() => {
-                    handleAllClick()
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                 }}>
-                <ArrowClockwise size={24} />
+                <Box
+                    sx={{
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                        'alignItems': 'center',
+                        'width': 24,
+                        'height': 24,
+                        'borderRadius': '100%',
+                        '&:active': {
+                            backgroundColor: '#FBBC04',
+                        },
+                        'transition': 'background-color 0.1s',
+                    }}
+                    onClick={() => {
+                        handleAllClick()
+                    }}>
+                    {getTablerIcon({ name: 'IconX' })}
+                </Box>
+                {showIconLabels && <Typography sx={{ fontSize: '10px' }}>Clear</Typography>}
             </Box>
             {Object.entries(filters).map(([spendType, isActive]) => {
                 return (
@@ -133,6 +147,7 @@ export const FilterSpendType = () => {
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
+                            width: 24,
                         }}
                         onClick={() => {
                             updateFilters(spendType as SpendType)
@@ -140,15 +155,23 @@ export const FilterSpendType = () => {
                         <Box
                             sx={{
                                 display: 'flex',
-                                justifyContent: 'center',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                width: 26,
-                                height: 26,
-                                backgroundColor: isActive ? '#FBBC04' : 'white',
-                                borderRadius: '100%',
-                                transition: 'background-color 0.1s',
                             }}>
-                            {getIconFromSpendType(spendType as SpendType, 24)}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    borderRadius: '100%',
+                                    backgroundColor: isActive ? '#FBBC04' : 'white',
+                                    transition: 'background-color 0.1s',
+                                }}>
+                                {getIconFromSpendType(spendType as SpendType, 24)}
+                            </Box>
+                            {showIconLabels && (
+                                <Typography sx={{ fontSize: '10px' }}>{spendType}</Typography>
+                            )}
                         </Box>
                     </Box>
                 )

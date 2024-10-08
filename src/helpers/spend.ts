@@ -21,11 +21,28 @@ export interface Spend {
 
 export enum SpendType {
     Attraction = 'Attraction',
-    Commute = 'Commute',
     Food = 'Food',
     Lodging = 'Lodging',
     Shopping = 'Shopping',
+    Transit = 'Transit',
     Other = 'Other',
+}
+
+export const getSpendTypeLabel = (type: SpendType): string => {
+    switch (type) {
+        case SpendType.Attraction:
+            return 'Attraction'
+        case SpendType.Food:
+            return 'Food'
+        case SpendType.Lodging:
+            return 'Lodging'
+        case SpendType.Shopping:
+            return 'Shopping'
+        case SpendType.Transit:
+            return 'Transit'
+        case SpendType.Other:
+            return 'Other'
+    }
 }
 
 export const getSplitCost = (cost: number, splitBetween: Person[]): number => {

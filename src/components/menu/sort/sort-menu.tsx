@@ -1,8 +1,11 @@
-import Box from '@mui/material/Box'
-import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
-import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import { Box, Typography } from '@mui/material'
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
+
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
+import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 
 enum SortItem {
     SortDate,
@@ -13,14 +16,37 @@ type SortMenuItemData = {
     item: SortItem
     component: JSX.Element
     state: any
+    label: string
+}
+
+type SortMenuState = {
+    active: boolean
 }
 
 type SortMenuActions = {
+    isActive: () => boolean
+
+    setActive: (active: boolean) => void
     reset: () => void
 }
 
-export const useSortMenuStore = create<SortMenuActions>((set, get) => ({
-    reset: () => resetAllSortStores(),
+const initialState: SortMenuState = {
+    active: false,
+}
+
+export const useSortMenuStore = create<SortMenuState & SortMenuActions>((set, get) => ({
+    ...initialState,
+
+    isActive: () => {
+        const { active } = get()
+        return active
+    },
+
+    setActive: (active: boolean) => set({ active }),
+    reset: () => {
+        set(initialState)
+        resetAllSortStores()
+    },
 }))
 
 const sortStoreResets = new Set<() => void>()
@@ -31,6 +57,7 @@ export const resetAllSortStores = () => {
 
 export const SortMenu = () => {
     // sort states
+    const { setActive } = useSortMenuStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
 
@@ -40,11 +67,13 @@ export const SortMenu = () => {
             item: SortItem.SortDate,
             component: <SortDate />,
             state: sortDateState,
+            label: 'Date',
         },
         {
             item: SortItem.SortItemName,
             component: <SortItemName />,
             state: sortItemNameState,
+            label: 'Alphabetically',
         },
     ]
 
@@ -54,6 +83,17 @@ export const SortMenu = () => {
         sortStoreResets.add(state.reset)
     })
 
+    useEffect(() => {
+        if (sortStates.some((state) => state.isActive())) {
+            setActive(true)
+        } else {
+            setActive(false)
+        }
+    }, [...sortStates])
+
+    // settings stores
+    const { showIconLabels } = useSettingsIconLabelsStore()
+
     return (
         <Box
             sx={{
@@ -61,6 +101,8 @@ export const SortMenu = () => {
                 justifyContent: 'space-evenly',
                 alignItems: 'center',
                 width: '100%',
+                border: '1px solid white',
+                borderBottomWidth: 0,
             }}>
             {sortMenuItems.map((sortItem, index) => {
                 return (
@@ -68,10 +110,20 @@ export const SortMenu = () => {
                         key={'sort-menu-item-' + index}
                         sx={{
                             display: 'flex',
-                            justifyContent: 'center',
+                            flexDirection: 'column',
                             alignItems: 'center',
                         }}>
-                        {sortItem.component}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}>
+                            {sortItem.component}
+                        </Box>
+                        {showIconLabels && (
+                            <Typography sx={{ fontSize: '10px' }}>{sortItem.label}</Typography>
+                        )}
                     </Box>
                 )
             })}

@@ -4,11 +4,11 @@ import dayjs from 'dayjs'
 import { useState } from 'react'
 
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
-import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
+import { InitialsIcon } from 'helpers/icons'
 import { OriginalCost } from 'components/spend/spend-items/original-cost'
-import { SpendTypeIcon } from 'components/spend/spend-items/spend-type-icon'
 import { SplitBetweenInitials } from 'components/spend/spend-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
+import { SpendTypeIcon } from 'helpers/icons'
 import { getSplitCost, Spend } from 'helpers/spend'
 
 interface ISpendRowProps {

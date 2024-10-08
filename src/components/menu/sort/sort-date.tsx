@@ -2,9 +2,9 @@ import Box from '@mui/material/Box'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { Spend } from 'helpers/spend'
-import { getTablerIcon } from 'icons/tabler-icons'
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
+import { Spend } from 'helpers/spend'
+import { getTablerIcon } from 'helpers/icons'
 
 enum SortOrder {
     None,
@@ -18,6 +18,7 @@ type SortDateState = {
 
 type SortDateActions = {
     sort: (spendData: Spend[]) => Spend[]
+    isActive: () => boolean
 
     toggleSortOrder: () => void
     reset: () => void
@@ -47,6 +48,10 @@ export const useSortDateStore = create<SortDateState & SortDateActions>()((set, 
             return dateA.getTime() - dateB.getTime()
         })
         return sortedSpendData
+    },
+    isActive: () => {
+        const { order } = get()
+        return order !== SortOrder.None
     },
 
     toggleSortOrder: () => {
@@ -78,8 +83,6 @@ export const SortDate = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    width: 26,
-                    height: 26,
                     borderRadius: '100%',
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     transition: 'background-color 0.1s',

@@ -1,9 +1,9 @@
-import Box from '@mui/material/Box'
+import { Box } from '@mui/material'
 import { create } from 'zustand'
 
-import { Spend } from 'helpers/spend'
-import { getTablerIcon } from 'icons/tabler-icons'
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
+import { Spend } from 'helpers/spend'
+import { getTablerIcon } from 'helpers/icons'
 
 enum SortOrder {
     None,
@@ -17,6 +17,7 @@ type SortItemNameState = {
 
 type SortItemNameActions = {
     sort: (spendData: Spend[]) => Spend[]
+    isActive: () => boolean
 
     toggleSortOrder: () => void
     reset: () => void
@@ -44,6 +45,10 @@ export const useSortItemNameStore = create<SortItemNameState & SortItemNameActio
                 return b.name.localeCompare(a.name)
             })
             return sortedSpendData
+        },
+        isActive: () => {
+            const { order } = get()
+            return order !== SortOrder.None
         },
 
         toggleSortOrder: () => {
@@ -75,8 +80,6 @@ export const SortItemName = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    width: 26,
-                    height: 26,
                     borderRadius: '100%',
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     transition: 'background-color 0.1s',

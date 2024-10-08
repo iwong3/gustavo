@@ -1,8 +1,10 @@
 import Box from '@mui/material/Box'
 import Switch from '@mui/material/Switch'
-import { CostDisplay } from 'helpers/currency'
-import { getTablerIcon } from 'icons/tabler-icons'
 import { create } from 'zustand'
+
+import { CostDisplay } from 'helpers/currency'
+import { getTablerIcon } from 'helpers/icons'
+import { Typography } from '@mui/material'
 
 type SettingsCostState = {
     costDisplay: CostDisplay
@@ -31,11 +33,17 @@ export const SettingsCost = () => {
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'center',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                marginX: 2,
             }}>
-            {getTablerIcon({ name: 'IconCurrencyDollar' })}
+            {/* {getTablerIcon({ name: 'IconCurrencyDollar' })} */}
+            <Typography
+                sx={{
+                    marginRight: 2,
+                    fontSize: '14px',
+                }}>
+                Convert to USD
+            </Typography>
             <Box
                 sx={{
                     display: 'flex',
@@ -45,7 +53,7 @@ export const SettingsCost = () => {
                 onClick={() => {
                     toggleCostDisplay()
                 }}>
-                <Switch checked={costDisplay === CostDisplay.Converted} />
+                <Switch checked={costDisplay === CostDisplay.Converted} size={'small'} />
             </Box>
         </Box>
     )

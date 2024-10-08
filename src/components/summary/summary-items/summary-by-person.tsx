@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box'
-import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
+import { InitialsIcon } from 'helpers/icons'
 import { FormattedMoney } from 'helpers/currency'
 import { Person } from 'helpers/person'
 import { getSplitCost } from 'helpers/spend'

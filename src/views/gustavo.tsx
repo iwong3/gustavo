@@ -1,20 +1,17 @@
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import axios from 'axios'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { create } from 'zustand'
 
 import { Menu } from 'components/menu/menu'
 import { SpendTable } from 'components/spend/spend-table'
+import { SpendSummary } from 'components/summary/spend-summary'
 import { Currency } from 'helpers/currency'
 import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
+import { getTablerIcon } from 'helpers/icons'
 import { Person, getPersonFromEmail } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 import GusFringLogo from '../images/gus-fring.png'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
-import ToggleButton from '@mui/material/ToggleButton'
-import { getTablerIcon } from 'icons/tabler-icons'
-import { SpendSummary } from 'components/summary/spend-summary'
 
 type GustavoState = {
     spendData: Spend[]

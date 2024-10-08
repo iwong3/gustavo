@@ -1,12 +1,11 @@
-import Box from '@mui/material/Box'
-import { ArrowClockwise } from '@phosphor-icons/react'
+import { Box } from '@mui/material'
 import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { InitialsIcon } from 'components/spend/spend-items/initials-icon'
-import { Spend } from 'helpers/spend'
+import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { Person } from 'helpers/person'
+import { Spend } from 'helpers/spend'
 
 type FilterPaidByState = {
     everyone: boolean
@@ -15,7 +14,7 @@ type FilterPaidByState = {
 
 type FilterPaidByActions = {
     filter: (spendData: Spend[]) => Spend[]
-    isFilterActive: () => boolean
+    isActive: () => boolean
 
     setEveryone: (everyone: boolean) => void
     setFilters: (filters: Partial<Record<Person, boolean>>) => void
@@ -53,7 +52,7 @@ export const useFilterPaidByStore = create<FilterPaidByState & FilterPaidByActio
             return filteredSpendData
         },
 
-        isFilterActive: () => {
+        isActive: () => {
             const { everyone } = get()
             return !everyone
         },
@@ -102,9 +101,9 @@ export const FilterPaidBy = () => {
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'space-evenly',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                marginX: 1,
+                marginX: 2,
                 width: '100%',
                 fontSize: '14px',
             }}>
@@ -124,7 +123,7 @@ export const FilterPaidBy = () => {
                 onClick={() => {
                     updateFilters(Person.Everyone)
                 }}>
-                <ArrowClockwise size={24} />
+                {getTablerIcon({ name: 'IconX' })}
             </Box>
             {Object.entries(filters).map(([person, isActive]) => {
                 return (
@@ -141,8 +140,11 @@ export const FilterPaidBy = () => {
                         }}>
                         <InitialsIcon
                             person={person as Person}
-                            colorOverride={isActive ? undefined : 'black'}
-                            bgColorOverride={isActive ? undefined : 'lightgray'}
+                            sx={
+                                !isActive
+                                    ? { color: 'black', backgroundColor: 'lightgray' }
+                                    : undefined
+                            }
                         />
                     </Box>
                 )

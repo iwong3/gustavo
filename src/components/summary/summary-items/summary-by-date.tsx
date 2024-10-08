@@ -9,7 +9,7 @@ import dayjs from 'dayjs'
 import { FormattedMoney } from 'helpers/currency'
 import { Person } from 'helpers/person'
 import { getSplitCost } from 'helpers/spend'
-import { getTablerIcon } from 'icons/tabler-icons'
+import { getTablerIcon } from 'helpers/icons'
 import { useEffect, useState } from 'react'
 import { useGustavoStore } from 'views/gustavo'
 

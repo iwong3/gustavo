@@ -1,6 +1,7 @@
 import { Box } from '@mui/material'
-import { SpendRow } from 'components/spend/spend-row'
 
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { SpendRow } from 'components/spend/spend-row'
 import { Spend } from 'helpers/spend'
 
 interface ISpendTableProps {
@@ -8,10 +9,12 @@ interface ISpendTableProps {
 }
 
 export const SpendTable = ({ spendData }: ISpendTableProps) => {
+    const { showIconLabels } = useSettingsIconLabelsStore()
+
     return (
         <Box
             sx={{
-                marginBottom: 16, // could make this dynamic based on if filter menu is open or not
+                marginBottom: showIconLabels ? 20 : 16, // could make this dynamic based on if filter menu is open or not
             }}>
             {spendData.map((row, index) => (
                 <Box
