@@ -1,21 +1,20 @@
 import { Box } from '@mui/material'
-import { create } from 'zustand'
-
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
-import { Spend } from 'helpers/spend'
 import { defaultIconSize, getTablerIcon } from 'helpers/icons'
+import { Spend } from 'helpers/spend'
+import { create } from 'zustand'
 
 enum SortOrder {
     None,
-    Ascending,
     Descending,
+    Ascending,
 }
 
-type SortItemNameState = {
+type SortCostState = {
     order: SortOrder
 }
 
-type SortItemNameActions = {
+type SortCostActions = {
     sort: (spendData: Spend[]) => Spend[]
     isActive: () => boolean
 
@@ -23,46 +22,45 @@ type SortItemNameActions = {
     reset: () => void
 }
 
-const initialState: SortItemNameState = {
+const initialState: SortCostState = {
     order: SortOrder.None,
 }
 
-export const useSortItemNameStore = create<SortItemNameState & SortItemNameActions>()(
-    (set, get) => ({
-        ...initialState,
+export const useSortCostStore = create<SortCostState & SortCostActions>()((set, get) => ({
+    ...initialState,
 
-        sort: (spendData: Spend[]): Spend[] => {
-            const { order } = get()
+    sort: (spendData: Spend[]): Spend[] => {
+        const { order } = get()
 
-            if (order === SortOrder.None) {
-                return spendData
+        if (order === SortOrder.None) {
+            return spendData
+        }
+
+        const sortedSpendData = spendData.slice().sort((a, b) => {
+            if (order === SortOrder.Descending) {
+                return b.convertedCost - a.convertedCost
             }
+            return a.convertedCost - b.convertedCost
+        })
+        return sortedSpendData
+    },
+    isActive: () => {
+        const { order } = get()
+        return order !== SortOrder.None
+    },
 
-            const sortedSpendData = spendData.slice().sort((a, b) => {
-                if (order === SortOrder.Ascending) {
-                    return a.name.localeCompare(b.name)
-                }
-                return b.name.localeCompare(a.name)
-            })
-            return sortedSpendData
-        },
-        isActive: () => {
-            const { order } = get()
-            return order !== SortOrder.None
-        },
+    toggleSortOrder: () => {
+        const { order } = get()
+        const currentOrder = order
+        resetAllSortStores()
+        set(() => ({ order: (currentOrder + 1) % (Object.keys(SortOrder).length / 2) }))
+    },
 
-        toggleSortOrder: () => {
-            const { order } = get()
-            const currentOrder = order
-            resetAllSortStores()
-            set(() => ({ order: (currentOrder + 1) % (Object.keys(SortOrder).length / 2) }))
-        },
-        reset: () => set(initialState),
-    })
-)
+    reset: () => set(initialState),
+}))
 
-export const SortItemName = () => {
-    const { order, toggleSortOrder } = useSortItemNameStore((state) => state)
+export const SortCost = () => {
+    const { order, toggleSortOrder } = useSortCostStore()
     const isActive = order !== SortOrder.None
 
     return (
@@ -85,7 +83,7 @@ export const SortItemName = () => {
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     transition: 'background-color 0.1s',
                 }}>
-                {getTablerIcon({ name: 'IconSortAZ' })}
+                {getTablerIcon({ name: 'IconCurrencyDollar' })}
             </Box>
             <Box
                 sx={{

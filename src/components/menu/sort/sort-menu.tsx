@@ -6,8 +6,11 @@ import { useShallow } from 'zustand/react/shallow'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
 import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import { getTablerIcon } from 'helpers/icons'
+import { SortCost, useSortCostStore } from 'components/menu/sort/sort-cost'
 
 enum SortItem {
+    SortCost,
     SortDate,
     SortItemName,
 }
@@ -58,6 +61,7 @@ export const resetAllSortStores = () => {
 export const SortMenu = () => {
     // sort states
     const { setActive } = useSortMenuStore(useShallow((state) => state))
+    const sortCostState = useSortCostStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
 
@@ -70,10 +74,16 @@ export const SortMenu = () => {
             label: 'Date',
         },
         {
+            item: SortItem.SortDate,
+            component: <SortCost />,
+            state: sortCostState,
+            label: 'Cost',
+        },
+        {
             item: SortItem.SortItemName,
             component: <SortItemName />,
             state: sortItemNameState,
-            label: 'Alphabetically',
+            label: 'Item Name',
         },
     ]
 
@@ -98,12 +108,37 @@ export const SortMenu = () => {
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'space-evenly',
+                justifyContent: 'space-between',
                 alignItems: 'center',
+                marginX: 2,
                 width: '100%',
                 border: '1px solid white',
                 borderBottomWidth: 0,
             }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}>
+                <Box
+                    sx={{
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                        'alignItems': 'center',
+                        'borderRadius': '100%',
+                        '&:active': {
+                            backgroundColor: '#FBBC04',
+                        },
+                        'transition': 'background-color 0.1s',
+                    }}
+                    onClick={() => {
+                        resetAllSortStores()
+                    }}>
+                    {getTablerIcon({ name: 'IconX' })}
+                </Box>
+                {showIconLabels && <Typography sx={{ fontSize: '10px' }}>Clear</Typography>}
+            </Box>
             {sortMenuItems.map((sortItem, index) => {
                 return (
                     <Box

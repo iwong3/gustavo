@@ -2,6 +2,9 @@
  * For everything used to map google sheet data
  */
 
+export const GOOGLE_FORM_URL =
+    'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform'
+
 export const GOOGLE_SHEET_CSV_URL =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
 

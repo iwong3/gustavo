@@ -14,10 +14,13 @@ import {
     IconCalendarDown,
     IconCalendarEvent,
     IconCalendarUp,
+    IconCaretDown,
+    IconCaretUp,
     IconChartBar,
     IconChartBarOff,
     IconCurrencyDollar,
     IconDots,
+    IconExternalLink,
     IconLayoutList,
     IconListLetters,
     IconSettings,
@@ -34,6 +37,8 @@ import { MenuItem, MenuItemData } from 'components/menu/menu'
 import { Person, getPersonInitials } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
+export const defaultIconSize = 24
+
 type TablerIconProps = {
     name: string
     size?: number
@@ -44,7 +49,7 @@ type TablerIconProps = {
 
 export const getTablerIcon = ({
     name,
-    size = 24,
+    size = defaultIconSize,
     stroke = 1.5,
     color = 'black',
     fill = 'none',
@@ -62,6 +67,10 @@ export const getTablerIcon = ({
             return <IconCalendarDown {...props} />
         case 'IconCalendarUp':
             return <IconCalendarUp {...props} />
+        case 'IconCaretUp':
+            return <IconCaretUp {...props} />
+        case 'IconCaretDown':
+            return <IconCaretDown {...props} />
         case 'IconChartBar':
             return <IconChartBar {...props} />
         case 'IconChartBarOff':
@@ -70,6 +79,8 @@ export const getTablerIcon = ({
             return <IconCurrencyDollar {...props} />
         case 'IconDots':
             return <IconDots {...props} />
+        case 'IconExternalLink':
+            return <IconExternalLink {...props} />
         case 'IconLayoutList':
             return <IconLayoutList {...props} />
         case 'IconListLetters':
@@ -95,7 +106,7 @@ export const getTablerIcon = ({
     }
 }
 
-export const getMenuItemIcon = (item: MenuItem, size: number = 24) => {
+export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
     switch (item) {
         case MenuItem.FilterPaidBy:
             return <Receipt size={size} />
@@ -123,11 +134,10 @@ interface IInitialsIconProps {
 }
 
 export const InitialsIcon = ({ person, sx }: IInitialsIconProps) => {
-    const defaultSize = 24
     const personColors = getInitialsIconColors(person)
     const defaultSx = {
-        width: defaultSize,
-        height: defaultSize,
+        width: defaultIconSize,
+        height: defaultIconSize,
         color: personColors.color,
         backgroundColor: personColors.bgColor,
     }
@@ -223,7 +233,10 @@ export const SpendTypeIcon = ({ spend }: ISpendTypeIconProps) => {
     )
 }
 
-export const getIconFromSpendType = (type: SpendType | undefined, size: number = 24) => {
+export const getIconFromSpendType = (
+    type: SpendType | undefined,
+    size: number = defaultIconSize
+) => {
     switch (type) {
         case SpendType.Attraction:
             return <MapPinArea size={size} />

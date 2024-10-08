@@ -112,8 +112,6 @@ export const FilterPaidBy = () => {
                     'display': 'flex',
                     'justifyContent': 'center',
                     'alignItems': 'center',
-                    'width': 24,
-                    'height': 24,
                     'borderRadius': '100%',
                     '&:active': {
                         backgroundColor: '#FBBC04',

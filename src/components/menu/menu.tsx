@@ -14,8 +14,14 @@ import { SettingsMenu } from 'components/menu/settings/settings-menu'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortMenu, useSortMenuStore } from 'components/menu/sort/sort-menu'
-import { getMenuItemBackgroundColor, getMenuItemIcon, getTablerIcon } from 'helpers/icons'
+import {
+    defaultIconSize,
+    getMenuItemBackgroundColor,
+    getMenuItemIcon,
+    getTablerIcon,
+} from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
+import { useSortCostStore } from 'components/menu/sort/sort-cost'
 
 export enum MenuItem {
     FilterPaidBy,
@@ -49,9 +55,10 @@ export const Menu = () => {
     const sortMenuState = useSortMenuStore(useShallow((state) => state))
 
     // sort states
+    const sortCostState = useSortCostStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
-    const sortStates = [sortDateState, sortItemNameState]
+    const sortStates = [sortCostState, sortDateState, sortItemNameState]
 
     // define menu item properties, used for rendering
     const sortMenuItem = {
@@ -267,7 +274,7 @@ export const Menu = () => {
                                     },
                                     'transition': 'background-color 0.1s',
                                 }}>
-                                <ArrowClockwise size={24} />
+                                <ArrowClockwise size={defaultIconSize} />
                             </Box>
                             {showIconLabels && (
                                 <Typography sx={{ fontSize: '12px' }}>Reset</Typography>

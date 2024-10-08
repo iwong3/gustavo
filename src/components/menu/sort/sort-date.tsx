@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 import { Spend } from 'helpers/spend'
-import { getTablerIcon } from 'helpers/icons'
+import { defaultIconSize, getTablerIcon } from 'helpers/icons'
 
 enum SortOrder {
     None,
@@ -74,6 +74,7 @@ export const SortDate = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
+                width: defaultIconSize * 2,
             }}
             onClick={() => {
                 toggleSortOrder()
@@ -87,9 +88,16 @@ export const SortDate = () => {
                     backgroundColor: isActive ? '#FBBC04' : 'white',
                     transition: 'background-color 0.1s',
                 }}>
-                {order === SortOrder.None && getTablerIcon({ name: 'IconCalendarEvent' })}
-                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCalendarDown' })}
-                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCalendarUp' })}
+                {getTablerIcon({ name: 'IconCalendarEvent' })}
+            </Box>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}>
+                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCaretDown' })}
+                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCaretUp' })}
             </Box>
         </Box>
     )

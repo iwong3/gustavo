@@ -124,8 +124,6 @@ export const FilterSpendType = () => {
                         'display': 'flex',
                         'justifyContent': 'center',
                         'alignItems': 'center',
-                        'width': 24,
-                        'height': 24,
                         'borderRadius': '100%',
                         '&:active': {
                             backgroundColor: '#FBBC04',
@@ -147,7 +145,6 @@ export const FilterSpendType = () => {
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            width: 24,
                         }}
                         onClick={() => {
                             updateFilters(spendType as SpendType)
@@ -167,7 +164,7 @@ export const FilterSpendType = () => {
                                     backgroundColor: isActive ? '#FBBC04' : 'white',
                                     transition: 'background-color 0.1s',
                                 }}>
-                                {getIconFromSpendType(spendType as SpendType, 24)}
+                                {getIconFromSpendType(spendType as SpendType)}
                             </Box>
                             {showIconLabels && (
                                 <Typography sx={{ fontSize: '10px' }}>{spendType}</Typography>
