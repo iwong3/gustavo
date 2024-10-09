@@ -53,3 +53,26 @@ export const getPersonInitials = (person: Person): string => {
             return ''
     }
 }
+
+export const getVenmoUrl = (person: Person): string => {
+    switch (person) {
+        case Person.Aibek:
+            return 'https://account.venmo.com/u/Aibek-Sarbayev'
+        case Person.Angela:
+            return 'https://account.venmo.com/u/takoyuki'
+        case Person.Ivan:
+            return 'https://account.venmo.com/u/iwong3'
+        case Person.Jenny:
+            return 'https://account.venmo.com/u/Jenny-Mei-1'
+        case Person.Joanna:
+            return 'https://account.venmo.com/u/Joanna-Mei'
+        case Person.Lisa:
+            return ''
+        case Person.Michelle:
+            return 'https://account.venmo.com/u/Michellec_8'
+        case Person.Suming:
+            return ''
+        default:
+            return ''
+    }
+}

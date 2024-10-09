@@ -22,12 +22,18 @@ import {
 } from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
 import { useSortCostStore } from 'components/menu/sort/sort-cost'
+import { ToolsMenu, useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { useToolsMenuDebtStore } from 'components/menu/tools/tools-menu-debt'
+import { useToolsMenuSpendByDateStore } from 'components/menu/tools/tools-menu-spend-by-date'
 
 export enum MenuItem {
     FilterPaidBy,
     FilterSpendType,
     FilterSplitBetween,
     Sort,
+    Tools,
+    ToolsDebtPerson1,
+    ToolsDebtPerson2,
 }
 
 export type MenuItemData = {
@@ -49,46 +55,83 @@ export const Menu = () => {
     )
 
     // menu item states
+    // filters
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
-    const sortMenuState = useSortMenuStore(useShallow((state) => state))
+    const filterStates = [filterPaidByState, filterSplitBetweenState, filterSpendTypeState]
 
-    // sort states
+    // sorts
+    const sortMenuState = useSortMenuStore(useShallow((state) => state))
     const sortCostState = useSortCostStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
     const sortStates = [sortCostState, sortDateState, sortItemNameState]
 
+    // tools
+    // const toolsMenuState = useToolsMenuStore(useShallow((state) => state))
+    // const toolsMenuDebtState = useToolsMenuDebtStore(useShallow((state) => state))
+    // const toolsMenuSpendByDateState = useToolsMenuSpendByDateStore(useShallow((state) => state))
+    // const toolStates = [toolsMenuDebtState, toolsMenuSpendByDateState]
+
+    // tools helpers, shown on menu
+    // const debtPerson1State = useDebtPerson1Store(useShallow((state) => state))
+    // const debtPerson2State = useDebtPerson2Store(useShallow((state) => state))
+    // const toolHelperStates = [debtPerson1State, debtPerson2State]
+
     // define menu item properties, used for rendering
-    const sortMenuItem = {
+    const filterMenuItems: MenuItemData[] = [
+        {
+            item: MenuItem.FilterSplitBetween,
+            component: <FilterSplitBetween />,
+            state: filterSplitBetweenState,
+            label: 'Buyer',
+        },
+        {
+            item: MenuItem.FilterPaidBy,
+            component: <FilterPaidBy />,
+            state: filterPaidByState,
+            label: 'Paid By',
+        },
+        {
+            item: MenuItem.FilterSpendType,
+            component: <FilterSpendType />,
+            state: filterSpendTypeState,
+            label: 'Type',
+        },
+    ]
+
+    const sortMenuItem: MenuItemData = {
         item: MenuItem.Sort,
         component: <SortMenu />,
         state: sortMenuState,
         label: 'Sort',
     }
 
-    const defaultMenuItems = [
-        sortMenuItem,
-        {
-            item: MenuItem.FilterSplitBetween,
-            component: <FilterSplitBetween />,
-            label: 'Buyer',
-            state: filterSplitBetweenState,
-        },
-        {
-            item: MenuItem.FilterPaidBy,
-            component: <FilterPaidBy />,
-            label: 'Paid By',
-            state: filterPaidByState,
-        },
-        {
-            item: MenuItem.FilterSpendType,
-            component: <FilterSpendType />,
-            label: 'Type',
-            state: filterSpendTypeState,
-        },
-    ]
+    // const toolsMenuItem: MenuItemData = {
+    //     item: MenuItem.Tools,
+    //     component: <ToolsMenu />,
+    //     state: toolsMenuState,
+    //     label: 'Tools',
+    // }
+
+    const defaultMenuItems = [sortMenuItem, ...filterMenuItems]
+    // const toolsMenuItems = [toolsMenuItem, ...filterMenuItems]
+    // const debtToolMenuItems: MenuItemData[] = [
+    //     toolsMenuItem,
+    //     {
+    //         item: MenuItem.ToolsDebtPerson1,
+    //         component: <DebtPerson1 />,
+    //         state: debtPerson1State,
+    //         label: 'Person 1',
+    //     },
+    //     {
+    //         item: MenuItem.ToolsDebtPerson2,
+    //         component: <DebtPerson2 />,
+    //         state: debtPerson2State,
+    //         label: 'Person 2',
+    //     },
+    // ]
 
     const [menuItems, setMenuItems] = useState<MenuItemData[]>(defaultMenuItems)
     const [expandedMenuItem, setExpandedMenuItem] = useState(-1)
@@ -96,15 +139,38 @@ export const Menu = () => {
     // when changing views, update the menu items accordingly
     useEffect(() => {
         setExpandedMenuItem(-1)
-        if (!showLogs) {
-            setMenuItems(menuItems.slice(1))
-        } else {
-            setMenuItems(defaultMenuItems)
-        }
     }, [showLogs])
+    // useEffect(() => {
+    //     setExpandedMenuItem(-1)
+
+    //     if (!toolStates.some((state) => state.isActive())) {
+    //         // default tool view
+    //         toolsMenuDebtState.toggleActive()
+    //     }
+
+    //     if (!showLogs) {
+    //         setMenuItems(toolsMenuItems)
+    //     } else {
+    //         setMenuItems(defaultMenuItems)
+    //     }
+    // }, [showLogs])
+
+    // when changing tool views, update the menu items accordingly
+    // separate from showLogs because we don't need to hide expanded menu
+    // useEffect(() => {
+    //     if (!showLogs) {
+    //         if (toolsMenuDebtState.isActive()) {
+    //             setMenuItems(debtToolMenuItems)
+    //         } else {
+    //             setMenuItems(toolsMenuItems)
+    //         }
+    //     } else {
+    //         setMenuItems(defaultMenuItems)
+    //     }
+    // }, [showLogs, ...toolStates])
 
     // get all menu item state resets
-    const menuItemStates = defaultMenuItems.map((item) => item.state)
+    const menuItemStates = menuItems.map((item) => item.state)
     menuItemStates.forEach((state) => {
         menuItemStoreResets.add(state.reset)
     })
@@ -127,7 +193,8 @@ export const Menu = () => {
         }
 
         setFilteredSpendData(filteredSpendData)
-    }, [...menuItemStates, ...sortStates])
+    }, [...filterStates, ...sortStates])
+    // }, [...filterStates, ...sortStates, ...toolHelperStates])
 
     // expanded menu item state
     const handleMenuItemClick = (index: number) => {
@@ -163,7 +230,7 @@ export const Menu = () => {
     }
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore()
+    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
     return (
         <Box
@@ -184,7 +251,20 @@ export const Menu = () => {
                     width: '90%',
                 }}>
                 {/* Active filter */}
-                {expandedMenuItem !== -1 && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        width: '100%',
+                        borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                        borderTopRightRadius: '10px',
+                        borderTopLeftRadius: '10px',
+                        borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                        borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                        maxHeight: expandedMenuItem !== -1 ? 'auto' : 0,
+                        opacity: expandedMenuItem !== -1 ? 1 : 0,
+                        overflow: 'hidden',
+                        transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                    }}>
                     <Box
                         sx={{
                             display: 'flex',
@@ -192,35 +272,35 @@ export const Menu = () => {
                             alignItems: 'center',
                             paddingY: 2,
                             width: '100%',
-                            borderTop: '1px solid #FBBC04',
-                            borderTopRightRadius: '10px',
-                            borderTopLeftRadius: '10px',
-                            borderRight: '1px solid #FBBC04',
-                            borderBottomWidth: 0,
-                            borderLeft: '1px solid #FBBC04',
                             backgroundColor: 'white',
                         }}>
                         {renderExpandedMenuItem()}
                     </Box>
-                )}
+                </Box>
                 {/* Show settings */}
-                {showSettings && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignSelf: 'flex-end',
+                        borderTop: showSettings ? '1px solid #FBBC04' : 'none',
+                        borderTopRightRadius: '10px',
+                        borderTopLeftRadius: '10px',
+                        borderRight: showSettings ? '1px solid #FBBC04' : 'none',
+                        borderLeft: showSettings ? '1px solid #FBBC04' : 'none',
+                        maxHeight: showSettings ? 'auto' : 0,
+                        opacity: showSettings ? 1 : 0,
+                        overflow: 'hidden',
+                        transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                    }}>
                     <Box
                         sx={{
                             display: 'flex',
-                            alignSelf: 'flex-end',
                             paddingY: 2,
-                            borderTop: '1px solid #FBBC04',
-                            borderTopRightRadius: '10px',
-                            borderTopLeftRadius: '10px',
-                            borderRight: '1px solid #FBBC04',
-                            borderBottomWidth: 0,
-                            borderLeft: '1px solid #FBBC04',
                             backgroundColor: 'white',
                         }}>
                         <SettingsMenu />
                     </Box>
-                )}
+                </Box>
                 {/* Menu */}
                 <Box
                     sx={{
@@ -231,7 +311,6 @@ export const Menu = () => {
                         borderTopRightRadius: expandedMenuItem === -1 && !showSettings ? '10px' : 0,
                         borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
                         borderRight: '1px solid #FBBC04',
-                        borderBottom: 'none',
                         borderLeft: '1px solid #FBBC04',
                         backgroundColor: 'white',
                     }}>
@@ -245,8 +324,6 @@ export const Menu = () => {
                             width: '100%',
                             borderTop: '1px solid #FBBC04',
                             borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
-                            borderRightWidth: 0,
-                            borderLeftWidth: 0,
                         }}
                         onClick={() => handleResetAllMenuItems()}>
                         {/* Inside box */}
@@ -293,8 +370,6 @@ export const Menu = () => {
                                         index === expandedMenuItem
                                             ? '1px solid white'
                                             : '1px solid #FBBC04',
-                                    borderRightWidth: 0,
-                                    borderLeftWidth: 0,
                                 }}
                                 onClick={() => {
                                     handleMenuItemClick(index)
@@ -345,8 +420,6 @@ export const Menu = () => {
                             borderTop: showSettings ? '1px solid white' : '1px solid #FBBC04',
                             borderTopRightRadius:
                                 expandedMenuItem === -1 && !showSettings ? '10px' : 0,
-                            borderRightWidth: 0,
-                            borderLeftWidth: 0,
                         }}
                         onClick={() => handleSettingsClick()}>
                         {/* Inside box */}

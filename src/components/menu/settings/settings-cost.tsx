@@ -1,10 +1,8 @@
-import Box from '@mui/material/Box'
-import Switch from '@mui/material/Switch'
+import { Box, Switch, Typography } from '@mui/material'
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 
 import { CostDisplay } from 'helpers/currency'
-import { getTablerIcon } from 'helpers/icons'
-import { Typography } from '@mui/material'
 
 type SettingsCostState = {
     costDisplay: CostDisplay
@@ -27,7 +25,7 @@ export const useSettingsCostStore = create<SettingsCostState & SettingsCostActio
 }))
 
 export const SettingsCost = () => {
-    const { costDisplay, toggleCostDisplay } = useSettingsCostStore()
+    const { costDisplay, toggleCostDisplay } = useSettingsCostStore(useShallow((state) => state))
 
     return (
         <Box
@@ -36,7 +34,6 @@ export const SettingsCost = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
             }}>
-            {/* {getTablerIcon({ name: 'IconCurrencyDollar' })} */}
             <Typography
                 sx={{
                     marginRight: 2,

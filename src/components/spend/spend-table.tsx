@@ -1,22 +1,20 @@
 import { Box } from '@mui/material'
+import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { SpendRow } from 'components/spend/spend-row'
-import { Spend } from 'helpers/spend'
+import { useGustavoStore } from 'views/gustavo'
 
-interface ISpendTableProps {
-    spendData: Spend[]
-}
-
-export const SpendTable = ({ spendData }: ISpendTableProps) => {
-    const { showIconLabels } = useSettingsIconLabelsStore()
+export const SpendTable = () => {
+    const { filteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
     return (
         <Box
             sx={{
                 marginBottom: showIconLabels ? 20 : 16, // could make this dynamic based on if filter menu is open or not
             }}>
-            {spendData.map((row, index) => (
+            {filteredSpendData.map((row, index) => (
                 <Box
                     key={'row-' + index}
                     sx={{

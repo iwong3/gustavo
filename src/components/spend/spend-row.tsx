@@ -2,13 +2,13 @@ import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
 import { useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
-import { InitialsIcon } from 'helpers/icons'
 import { OriginalCost } from 'components/spend/spend-items/original-cost'
 import { SplitBetweenInitials } from 'components/spend/spend-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
-import { SpendTypeIcon } from 'helpers/icons'
+import { InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getSplitCost, Spend } from 'helpers/spend'
 
 interface ISpendRowProps {
@@ -17,16 +17,16 @@ interface ISpendRowProps {
 
 export const SpendRow = ({ spend }: ISpendRowProps) => {
     const [expanded, setExpanded] = useState(false)
-    const { costDisplay } = useSettingsCostStore()
+
+    const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
 
     return (
-        <Box
-            sx={{
-                paddingTop: 2,
-                paddingBottom: expanded ? 0 : 2,
-            }}
-            onClick={() => setExpanded(!expanded)}>
-            <Grid container>
+        <Box onClick={() => setExpanded(!expanded)}>
+            <Grid
+                container
+                sx={{
+                    paddingY: 2,
+                }}>
                 <Grid size={2}>
                     <SpendTypeIcon spend={spend} />
                 </Grid>
@@ -89,133 +89,72 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                 </Grid>
             </Grid>
 
-            <Grid
-                container
+            <Box
                 sx={{
-                    marginTop: expanded ? 2 : 0,
-                    borderTop: expanded ? '1px solid #FBBC04' : 'none',
-                    maxHeight: expanded ? '1000px' : 0,
+                    maxHeight: expanded ? 'auto' : 0,
                     opacity: expanded ? 1 : 0,
                     overflow: 'hidden',
-                    transition: 'all 0.1s linear',
+                    transition: 'max-height 0.05s ease-out, opacity 0.1s ease-in',
                 }}>
-                <Grid size={12}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            // alignItems: 'flex-start',
-                            marginTop: 1,
-                            marginX: 2,
-                            fontSize: '14px',
-                        }}>
-                        {/* Split Between */}
+                <Grid
+                    container
+                    sx={{
+                        borderTop: '1px solid #FBBC04',
+                    }}>
+                    <Grid size={12}>
                         <Box
                             sx={{
                                 display: 'flex',
+                                flexDirection: 'column',
                                 justifyContent: 'center',
-                                width: '100%',
-                                marginY: 1,
+                                marginTop: 1,
+                                marginX: 2,
+                                fontSize: '14px',
                             }}>
-                            <SplitBetweenInitials spend={spend} />
-                        </Box>
-                        {/* Split Cost */}
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                width: '100%',
-                            }}>
-                            <OriginalCost spend={spend} />
-                            &nbsp;→&nbsp;
-                            {FormattedMoney().format(
-                                getSplitCost(spend.convertedCost, spend.splitBetween)
-                            )}{' '}
-                            each
-                        </Box>
-                        {/* Reported by */}
-                        {spend.reportedBy && (
+                            {/* Split Between */}
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     width: '100%',
                                     marginY: 1,
-                                    fontSize: '12px',
-                                    fontStyle: 'italic',
                                 }}>
-                                Submitted by {spend.reportedBy}
+                                <SplitBetweenInitials spend={spend} />
                             </Box>
-                        )}
-                    </Box>
+                            {/* Split Cost */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                }}>
+                                <OriginalCost spend={spend} />
+                                &nbsp;→&nbsp;
+                                {FormattedMoney().format(
+                                    getSplitCost(spend.convertedCost, spend.splitBetween)
+                                )}{' '}
+                                each
+                            </Box>
+                            {/* Reported by */}
+                            {spend.reportedBy && (
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'flex-end',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                        marginY: 1,
+                                        fontSize: '12px',
+                                        fontStyle: 'italic',
+                                    }}>
+                                    Submitted by {spend.reportedBy}
+                                </Box>
+                            )}
+                        </Box>
+                    </Grid>
                 </Grid>
-            </Grid>
+            </Box>
         </Box>
     )
 }
-
-// {expanded && (
-//     <Grid
-//         container
-//         sx={{
-//             marginTop: 2,
-//             borderTop: '1px solid #FBBC04',
-//         }}>
-//         <Grid size={12}>
-//             <Box
-//                 sx={{
-//                     display: 'flex',
-//                     flexDirection: 'column',
-//                     justifyContent: 'center',
-//                     alignItems: 'flex-start',
-//                     marginTop: 1,
-//                     marginX: 2,
-//                     fontSize: '14px',
-//                 }}>
-//                 {/* Split Between */}
-//                 <Box
-//                     sx={{
-//                         display: 'flex',
-//                         justifyContent: 'center',
-//                         width: '100%',
-//                         marginY: 1,
-//                     }}>
-//                     <SplitBetweenInitials spend={spend} />
-//                 </Box>
-//                 {/* Split Cost */}
-//                 <Box
-//                     sx={{
-//                         display: 'flex',
-//                         justifyContent: 'center',
-//                         alignItems: 'center',
-//                         width: '100%',
-//                     }}>
-//                     <OriginalCost spend={spend} />
-//                     &nbsp;→&nbsp;
-//                     {FormattedMoney().format(
-//                         getSplitCost(spend.convertedCost, spend.splitBetween)
-//                     )}{' '}
-//                     each
-//                 </Box>
-//                 {/* Reported by */}
-//                 {spend.reportedBy && (
-//                     <Box
-//                         sx={{
-//                             display: 'flex',
-//                             justifyContent: 'flex-end',
-//                             alignItems: 'center',
-//                             width: '100%',
-//                             marginY: 1,
-//                             fontSize: '12px',
-//                             fontStyle: 'italic',
-//                         }}>
-//                         Reported by {spend.reportedBy}
-//                     </Box>
-//                 )}
-//             </Box>
-//         </Grid>
-//     </Grid>
-// )}

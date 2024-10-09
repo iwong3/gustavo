@@ -36,7 +36,7 @@ export const useSummaryByPersonStore = create<SummaryByPersonState & SummaryByPe
 )
 
 export const SummaryByPerson = () => {
-    const { filteredSpendData: spendData } = useGustavoStore()
+    const { filteredSpendData: spendData } = useGustavoStore(useShallow((state) => state))
 
     const { spendTotalsByPerson, setSpendTotalsByPerson, setDebtMapByPerson } =
         useSummaryByPersonStore(useShallow((state) => state))

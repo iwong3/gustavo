@@ -14,10 +14,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useGustavoStore } from 'views/gustavo'
 import BaseBrush from '@visx/brush/lib/BaseBrush'
 import { Bounds } from '@visx/brush/lib/types'
+import { useShallow } from 'zustand/react/shallow'
 
 export const SummaryByDateScrollable = () => {
-    const { filteredSpendData: spendData } = useGustavoStore()
-    const { everyone, filters: splitBetweenFilter } = useFilterSplitBetweenStore()
+    const { filteredSpendData: spendData } = useGustavoStore(useShallow((state) => state))
+    const { everyone, filters: splitBetweenFilter } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
 
     const [totalSpendByDate, setTotalSpendByDate] = useState(new Map<string, number>())
     const [dateRange, setDateRange] = useState<string[]>([])

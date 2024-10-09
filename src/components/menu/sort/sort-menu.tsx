@@ -102,7 +102,7 @@ export const SortMenu = () => {
     }, [...sortStates])
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore()
+    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
     return (
         <Box

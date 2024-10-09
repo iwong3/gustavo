@@ -4,18 +4,22 @@ import { AxisBottom } from '@visx/axis'
 import { Group } from '@visx/group'
 import { scaleBand, scaleLinear } from '@visx/scale'
 import { Bar } from '@visx/shape'
-import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import dayjs from 'dayjs'
+import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+
+import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { FormattedMoney } from 'helpers/currency'
+import { getTablerIcon } from 'helpers/icons'
 import { Person } from 'helpers/person'
 import { getSplitCost } from 'helpers/spend'
-import { getTablerIcon } from 'helpers/icons'
-import { useEffect, useState } from 'react'
 import { useGustavoStore } from 'views/gustavo'
 
 export const SummaryByDate = () => {
-    const { filteredSpendData: spendData } = useGustavoStore()
-    const { everyone, filters: splitBetweenFilter } = useFilterSplitBetweenStore()
+    const { filteredSpendData: spendData } = useGustavoStore(useShallow((state) => state))
+    const { everyone, filters: splitBetweenFilter } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
 
     const [totalSpendByDate, setTotalSpendByDate] = useState(new Map<string, number>())
     const [dateRange, setDateRange] = useState<string[]>([])

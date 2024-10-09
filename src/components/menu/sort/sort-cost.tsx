@@ -1,8 +1,10 @@
 import { Box } from '@mui/material'
+import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
+
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 import { defaultIconSize, getTablerIcon } from 'helpers/icons'
 import { Spend } from 'helpers/spend'
-import { create } from 'zustand'
 
 enum SortOrder {
     None,
@@ -60,7 +62,7 @@ export const useSortCostStore = create<SortCostState & SortCostActions>()((set, 
 }))
 
 export const SortCost = () => {
-    const { order, toggleSortOrder } = useSortCostStore()
+    const { order, toggleSortOrder } = useSortCostStore(useShallow((state) => state))
     const isActive = order !== SortOrder.None
 
     return (

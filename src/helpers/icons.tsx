@@ -21,6 +21,8 @@ import {
     IconCurrencyDollar,
     IconDots,
     IconExternalLink,
+    IconHandFingerLeft,
+    IconHandFingerRight,
     IconLayoutList,
     IconListLetters,
     IconSettings,
@@ -30,6 +32,7 @@ import {
     IconSortDescendingLetters,
     IconSortZA,
     IconTextSize,
+    IconTool,
     IconX,
 } from '@tabler/icons-react'
 
@@ -81,6 +84,10 @@ export const getTablerIcon = ({
             return <IconDots {...props} />
         case 'IconExternalLink':
             return <IconExternalLink {...props} />
+        case 'IconHandFingerLeft':
+            return <IconHandFingerLeft {...props} />
+        case 'IconHandFingerRight':
+            return <IconHandFingerRight {...props} />
         case 'IconLayoutList':
             return <IconLayoutList {...props} />
         case 'IconListLetters':
@@ -99,6 +106,8 @@ export const getTablerIcon = ({
             return <IconSortDescendingLetters {...props} />
         case 'IconTextSize':
             return <IconTextSize {...props} />
+        case 'IconTool':
+            return <IconTool {...props} />
         case 'IconX':
             return <IconX {...props} />
         default:
@@ -116,6 +125,12 @@ export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) 
             return <UserCircle size={size} />
         case MenuItem.Sort:
             return <FunnelSimple size={size} />
+        case MenuItem.Tools:
+            return getTablerIcon({ name: 'IconTool' })
+        case MenuItem.ToolsDebtPerson1:
+            return <UserCircle size={size} />
+        case MenuItem.ToolsDebtPerson2:
+            return <UserCircle size={size} />
         default:
             return null
     }

@@ -1,8 +1,6 @@
 import { Box, Switch, Typography } from '@mui/material'
 import { create } from 'zustand'
 
-import { getTablerIcon } from 'helpers/icons'
-
 type SettingsIconLabelsState = {
     showIconLabels: boolean
 }
@@ -14,7 +12,7 @@ type SettingsIconLabelsActions = {
 export const useSettingsIconLabelsStore = create<
     SettingsIconLabelsState & SettingsIconLabelsActions
 >((set) => ({
-    showIconLabels: false,
+    showIconLabels: true,
 
     toggleIconLabels: () =>
         set((state) => ({
@@ -32,7 +30,6 @@ export const SettingsIconLabels = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
             }}>
-            {/* {getTablerIcon({ name: 'IconTextSize' })} */}
             <Typography
                 sx={{
                     marginRight: 2,
