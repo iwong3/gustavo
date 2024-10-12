@@ -1,6 +1,7 @@
 import { Box, Link, Typography } from '@mui/material'
 import { HandCoins, UserCircle } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import AnimateHeight from 'react-animate-height'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -9,6 +10,8 @@ import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { getVenmoUrl, Person } from 'helpers/person'
 import { useGustavoStore } from 'views/gustavo'
 import VenmoLogo from '../../../../images/venmo-icon.png'
+import { Spend } from 'helpers/spend'
+import { ReceiptsList } from 'components/receipts/receipts-list'
 
 type SummaryDebtState = {
     person1: Person | undefined
@@ -47,20 +50,41 @@ export const SummaryDebt = () => {
     const { person1, person2, setPerson1, setPerson2 } = useSummaryDebtStore(
         useShallow((state) => state)
     )
-    const { debtMapByPerson } = useGustavoStore(useShallow((state) => state))
+    const { debtMapByPerson, spendData, filteredSpendData } = useGustavoStore(
+        useShallow((state) => state)
+    )
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
+    const [debtSpendData, setDebtSpendData] = useState<Spend[]>([])
 
-    // calculate debt
     useEffect(() => {
         if (person1 && person2) {
+            // calculate debt
             const debt = debtMapByPerson.get(person1)?.get(person2) || 0
             setDebt(debt)
+
+            // get spend data between the two people
+            const debtFilteredSpendData = filteredSpendData.filter((spend) => {
+                if (spend.paidBy === person1) {
+                    return (
+                        spend.splitBetween.includes(Person.Everyone) ||
+                        spend.splitBetween.includes(person2)
+                    )
+                }
+                if (spend.paidBy === person2) {
+                    return (
+                        spend.splitBetween.includes(Person.Everyone) ||
+                        spend.splitBetween.includes(person1)
+                    )
+                }
+            })
+            setDebtSpendData(debtFilteredSpendData)
         } else {
             setDebt(0)
+            setDebtSpendData([])
         }
-    }, [person1, person2])
+    }, [person1, person2, filteredSpendData])
 
     const debtAbsolute = Math.abs(debt)
     const debtString = FormattedMoney('USD', 2).format(debtAbsolute)
@@ -74,43 +98,70 @@ export const SummaryDebt = () => {
     ) => {
         return (
             <Box
-                onClick={() => {
-                    setPerson(undefined)
-                }}
                 sx={{
                     display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: debtPersonWidth,
-                    height: debtPersonWidth,
+                    flexDirection: 'column',
                 }}>
-                <InitialsIcon
-                    person={person!}
+                <Box
+                    onClick={() => {
+                        setPerson(undefined)
+                    }}
                     sx={{
-                        width: person ? 100 : 0,
-                        height: person ? 100 : 0,
-                        fontSize: 32,
-                        opacity: person ? 1 : 0,
-                        transition: 'opacity 0.2s ease-out',
-                    }}
-                />
-                <UserCircle
-                    weight="duotone"
-                    color="#495057"
-                    style={{
-                        width: person ? 0 : 120,
-                        height: person ? 0 : 120,
-                        opacity: person ? 0 : 1,
-                        transition: 'opacity 0.2s ease-out',
-                    }}
-                />
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        width: debtPersonWidth,
+                        height: debtPersonWidth,
+                    }}>
+                    <InitialsIcon
+                        person={person!}
+                        sx={{
+                            width: person ? 100 : 0,
+                            height: person ? 100 : 0,
+                            fontSize: 32,
+                            opacity: person ? 1 : 0,
+                            transition: 'opacity 0.2s ease-out',
+                        }}
+                    />
+                    <UserCircle
+                        weight="duotone"
+                        color="#495057"
+                        style={{
+                            width: person ? 0 : 120,
+                            height: person ? 0 : 120,
+                            opacity: person ? 0 : 1,
+                            transition: 'opacity 0.2s ease-out',
+                        }}
+                    />
+                </Box>
             </Box>
         )
     }
 
-    // Select person state and style
-    const [expanded, setExpanded] = useState(false)
+    const renderVenmoIcon = (person: Person) => {
+        return (
+            <Link
+                href={getVenmoUrl(person)}
+                target="_blank"
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}>
+                <img
+                    src={VenmoLogo}
+                    style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '100%',
+                        objectFit: 'cover',
+                    }}
+                />
+            </Link>
+        )
+    }
 
+    // Select person state and style
     const people = Object.values(Person).filter((person) => person !== Person.Everyone)
 
     const handleSelectPerson = (person: Person) => {
@@ -134,94 +185,24 @@ export const SummaryDebt = () => {
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'space-between',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    paddingY: 2,
-                    width: '100%',
-                    border: '1px solid #FBBC04',
-                    borderRadius: '10px',
-                    backgroundColor: isActive ? '#F4D35E' : 'white',
                 }}
                 onClick={() => {
                     handleSelectPerson(person)
                 }}>
-                <Box
+                <InitialsIcon
+                    person={person}
                     sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                    }}>
-                    <InitialsIcon
-                        person={person}
-                        sx={{
-                            marginRight: 1,
-                            marginLeft: 1.5,
-                            width: 28,
-                            height: 28,
-                            fontSize: 14,
-                            ...(disabled ? disabledSx : {}),
-                        }}
-                    />
-                    <Typography
-                        sx={{
-                            fontSize: 14,
-                        }}>
-                        {person}
-                    </Typography>
-                </Box>
-                <Link
-                    href={getVenmoUrl(person)}
-                    target="_blank"
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        marginRight: 1,
-                    }}>
-                    <img
-                        src={VenmoLogo}
-                        style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '100%',
-                            objectFit: 'cover',
-                            filter: disabled ? 'grayscale(100%)' : 'none',
-                        }}
-                    />
-                </Link>
+                        border: isActive ? '2px solid #FBBC04' : '2px solid white',
+                        width: 28,
+                        height: 28,
+                        fontSize: 14,
+                        ...(disabled ? disabledSx : {}),
+                    }}
+                />
             </Box>
         )
-    }
-
-    const renderSelectPersonRows = () => {
-        const rows = []
-        const rowLength = 2
-        let row = []
-        for (let i = 0; i < people.length; i++) {
-            row.push(
-                <Box
-                    key={'select-person-' + i + 1}
-                    sx={{
-                        marginRight: row.length === 0 ? 1 : 0,
-                        marginLeft: row.length === 1 ? 1 : 0,
-                        width: '100%',
-                    }}>
-                    {renderSelectPerson(people[i])}
-                </Box>
-            )
-            if (row.length === rowLength) {
-                rows.push(
-                    <Box
-                        key={'select-person-row-' + rows.length + 1}
-                        sx={{
-                            display: 'flex',
-                            marginBottom: i === people.length - 1 ? 0 : 1,
-                        }}>
-                        {row}
-                    </Box>
-                )
-                row = []
-            }
-        }
-        return rows
     }
 
     return (
@@ -229,71 +210,114 @@ export const SummaryDebt = () => {
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                margin: 1,
-                border: '1px solid #FBBC04',
-                borderRadius: '20px',
-                backgroundColor: 'white',
             }}>
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: 2,
-                    paddingX: 2,
+                    flexDirection: 'column',
+                    margin: 1,
+                    border: '1px solid #FBBC04',
+                    borderRadius: '20px',
+                    backgroundColor: 'white',
                 }}>
-                {renderDebtPerson(person1, setPerson1)}
-                {/* Debt amount */}
+                {/* Top row */}
                 <Box
                     sx={{
                         display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
+                        padding: 2,
                     }}>
-                    <Typography
+                    {renderDebtPerson(person1, setPerson1)}
+                    <Box
                         sx={{
-                            fontSize: 18,
-                            fontWeight: 'bold',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            width: '100%',
                         }}>
-                        {debtString}
-                    </Typography>
-                    <Box>
-                        {debt < 0 && <HandCoins size={24} mirrored />}
-                        {debt > 0 && <HandCoins size={24} />}
+                        <Box
+                            sx={{
+                                height: '100%',
+                            }}></Box>
+                        {/* Debt amount */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                            }}>
+                            <Typography
+                                sx={{
+                                    fontSize: 22,
+                                    fontWeight: 'bold',
+                                }}>
+                                {person1 && person2 && debtString}
+                            </Typography>
+                            <Box
+                                sx={{
+                                    height: 28,
+                                }}>
+                                {debt < 0 &&
+                                    getTablerIcon({ name: 'IconHandFingerLeft', size: 28 })}
+                                {debt > 0 &&
+                                    getTablerIcon({ name: 'IconHandFingerRight', size: 28 })}
+                            </Box>
+                        </Box>
+                        {/* Venmo icons */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-end',
+                                width: '100%',
+                                height: '100%',
+                            }}>
+                            {person1 && person2 && getVenmoUrl(person1) && renderVenmoIcon(person1)}
+                            {person1 && person2 && getVenmoUrl(person2) && renderVenmoIcon(person2)}
+                        </Box>
                     </Box>
+                    {renderDebtPerson(person2, setPerson2)}
                 </Box>
-                {renderDebtPerson(person2, setPerson2)}
-            </Box>
-            <Box
-                onClick={() => {
-                    setExpanded(!expanded)
-                }}
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}>
-                {!expanded && getTablerIcon({ name: 'IconCaretDown' })}
-                {expanded && getTablerIcon({ name: 'IconCaretUp' })}
-            </Box>
-            {/* Select person */}
-            <Box
-                sx={{
-                    maxHeight: expanded ? 'auto' : 0,
-                    opacity: expanded ? 1 : 0,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.05s ease-out, opacity 0.1s ease-in',
-                }}>
+                {/* Select person */}
                 <Box
                     sx={{
                         display: 'flex',
-                        flexDirection: 'column',
+                        justifyContent: 'space-between',
                         padding: 2,
                         borderTop: '1px solid #FBBC04',
                     }}>
-                    {renderSelectPersonRows()}
+                    {people.map((person, index) => {
+                        return <Box key={index}>{renderSelectPerson(person)}</Box>
+                    })}
                 </Box>
             </Box>
+            {/* {debtSpendData.length > 0 && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        marginLeft: 2,
+                        borderRadius: '10px',
+                        backgroundColor: 'white',
+                    }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginRight: 1,
+                        }}>
+                        {getTablerIcon({ name: 'IconLayoutList', size: 14 })}
+                    </Box>
+                    <Typography
+                        sx={{
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            fontStyle: 'italic',
+                        }}>
+                        Receipts
+                    </Typography>
+                </Box>
+            )} */}
+            <ReceiptsList spendData={debtSpendData} />
         </Box>
     )
 }

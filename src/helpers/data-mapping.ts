@@ -17,7 +17,9 @@ export enum Columns {
     Email = 'Email Address',
     ItemName = 'Item Name',
     Location = 'Location',
+    Notes = 'Notes',
     PaidBy = 'Paid By',
+    ResponseTimestamp = 'Timestamp',
     SpendType = 'Type of Spend',
     SplitBetween = 'Split Between',
 }

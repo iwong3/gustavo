@@ -9,8 +9,10 @@ import {
     Receipt,
     Tag,
     UserCircle,
+    HandCoins,
 } from '@phosphor-icons/react'
 import {
+    IconArrowsSplit2,
     IconCalendarDown,
     IconCalendarEvent,
     IconCalendarUp,
@@ -18,6 +20,7 @@ import {
     IconCaretUp,
     IconChartBar,
     IconChartBarOff,
+    IconClock,
     IconCurrencyDollar,
     IconDots,
     IconExternalLink,
@@ -25,6 +28,7 @@ import {
     IconHandFingerRight,
     IconLayoutList,
     IconListLetters,
+    IconNotes,
     IconSettings,
     IconShoppingBag,
     IconSortAscendingLetters,
@@ -37,6 +41,7 @@ import {
 } from '@tabler/icons-react'
 
 import { MenuItem, MenuItemData } from 'components/menu/menu'
+import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
 import { Person, getPersonInitials } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
@@ -64,6 +69,8 @@ export const getTablerIcon = ({
         fill,
     }
     switch (name) {
+        case 'IconArrowsSplit2':
+            return <IconArrowsSplit2 {...props} />
         case 'IconCalendarEvent':
             return <IconCalendarEvent {...props} />
         case 'IconCalendarDown':
@@ -78,6 +85,8 @@ export const getTablerIcon = ({
             return <IconChartBar {...props} />
         case 'IconChartBarOff':
             return <IconChartBarOff {...props} />
+        case 'IconClock':
+            return <IconClock {...props} />
         case 'IconCurrencyDollar':
             return <IconCurrencyDollar {...props} />
         case 'IconDots':
@@ -92,6 +101,8 @@ export const getTablerIcon = ({
             return <IconLayoutList {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} />
+        case 'IconNotes':
+            return <IconNotes {...props} />
         case 'IconSettings':
             return <IconSettings {...props} />
         case 'IconShoppingBag':
@@ -141,6 +152,19 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
         return '#FBBC04'
     }
     return 'white'
+}
+
+export const getToolsMenuItemIcon = (item: ToolsMenuItem) => {
+    switch (item) {
+        case ToolsMenuItem.Receipts:
+            return getTablerIcon({ name: 'IconLayoutList', size: 18, fill: 'white' })
+        case ToolsMenuItem.DebtCalculator:
+            return <HandCoins size={18} weight="fill" />
+        case ToolsMenuItem.SpendByDate:
+            return getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })
+        default:
+            return null
+    }
 }
 
 interface IInitialsIconProps {

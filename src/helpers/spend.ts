@@ -16,7 +16,9 @@ export interface Spend {
     splitBetween: Person[]
     location: string
     type: SpendType | undefined
+    notes: string
     reportedBy: Person | undefined
+    reportedAt: string | undefined
 }
 
 export enum SpendType {

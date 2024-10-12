@@ -1,21 +1,21 @@
-import Box from '@mui/material/Box'
+import { Box } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
 import { useState } from 'react'
+import AnimateHeight from 'react-animate-height'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
-import { OriginalCost } from 'components/spend/spend-items/original-cost'
-import { SplitBetweenInitials } from 'components/spend/spend-items/split-between-initials'
+import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
-import { InitialsIcon, SpendTypeIcon } from 'helpers/icons'
+import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getSplitCost, Spend } from 'helpers/spend'
 
-interface ISpendRowProps {
+interface IReceiptsRowProps {
     spend: Spend
 }
 
-export const SpendRow = ({ spend }: ISpendRowProps) => {
+export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
     const [expanded, setExpanded] = useState(false)
 
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
@@ -89,13 +89,8 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                 </Grid>
             </Grid>
 
-            <Box
-                sx={{
-                    maxHeight: expanded ? 'auto' : 0,
-                    opacity: expanded ? 1 : 0,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.05s ease-out, opacity 0.1s ease-in',
-                }}>
+            {/* Expanded row */}
+            <AnimateHeight duration={100} height={expanded ? 'auto' : 0}>
                 <Grid
                     container
                     sx={{
@@ -129,32 +124,72 @@ export const SpendRow = ({ spend }: ISpendRowProps) => {
                                     alignItems: 'center',
                                     width: '100%',
                                 }}>
-                                <OriginalCost spend={spend} />
-                                &nbsp;→&nbsp;
+                                <Box>
+                                    {FormattedMoney(spend.currency).format(spend.originalCost)}
+                                </Box>
+                                <Box sx={{ marginX: 1 }}>
+                                    {getTablerIcon({ name: 'IconArrowsSplit2', size: 12 })}
+                                </Box>
                                 {FormattedMoney().format(
                                     getSplitCost(spend.convertedCost, spend.splitBetween)
-                                )}{' '}
-                                each
+                                )}
                             </Box>
-                            {/* Reported by */}
-                            {spend.reportedBy && (
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'flex-end',
-                                        alignItems: 'center',
-                                        width: '100%',
-                                        marginY: 1,
-                                        fontSize: '12px',
-                                        fontStyle: 'italic',
-                                    }}>
-                                    Submitted by {spend.reportedBy}
-                                </Box>
-                            )}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    width: '100%',
+                                    marginTop: 2,
+                                    marginBottom: 1,
+                                }}>
+                                {/* Notes */}
+                                {spend.notes && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '12px',
+                                            marginBottom: 1,
+                                        }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                marginRight: 1,
+                                            }}>
+                                            {getTablerIcon({ name: 'IconNotes', size: 14 })}
+                                        </Box>
+                                        {spend.notes}
+                                    </Box>
+                                )}
+                                {/* Reported by */}
+                                {spend.reportedBy && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '12px',
+                                            fontStyle: 'italic',
+                                        }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                marginRight: 1,
+                                            }}>
+                                            {getTablerIcon({ name: 'IconClock', size: 14 })}
+                                        </Box>
+                                        Submitted by {spend.reportedBy} at{' '}
+                                        {dayjs(spend.reportedAt).format('M/D h:mm A')}
+                                    </Box>
+                                )}
+                            </Box>
                         </Box>
                     </Grid>
                 </Grid>
-            </Box>
+            </AnimateHeight>
         </Box>
     )
 }

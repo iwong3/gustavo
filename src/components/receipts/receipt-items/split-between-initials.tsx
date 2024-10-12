@@ -10,7 +10,7 @@ interface ISplitBetweenInitialsProps {
 }
 
 export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
-    const [splitters, setSplitters] = useState<Partial<Record<Person, boolean>>>({
+    const initialState = {
         [Person.Aibek]: false,
         [Person.Angela]: false,
         [Person.Ivan]: false,
@@ -19,27 +19,22 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
         [Person.Lisa]: false,
         [Person.Michelle]: false,
         [Person.Suming]: false,
-    })
+    }
+
+    const [splitters, setSplitters] = useState<Partial<Record<Person, boolean>>>(initialState)
 
     useEffect(() => {
+        const newSplitters: Partial<Record<Person, boolean>> = { ...initialState }
         if (spend.splitBetween[0] === Person.Everyone) {
-            setSplitters({
-                [Person.Aibek]: true,
-                [Person.Angela]: true,
-                [Person.Ivan]: true,
-                [Person.Jenny]: true,
-                [Person.Joanna]: true,
-                [Person.Lisa]: true,
-                [Person.Michelle]: true,
-                [Person.Suming]: true,
+            Object.keys(newSplitters).forEach((key) => {
+                newSplitters[key as Person] = true
             })
         } else {
-            const newSplitters = { ...splitters }
             spend.splitBetween.forEach((person) => {
                 newSplitters[person] = true
             })
-            setSplitters(newSplitters)
         }
+        setSplitters(newSplitters)
     }, [spend])
 
     return (

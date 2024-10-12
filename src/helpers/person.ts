@@ -62,6 +62,7 @@ export const getVenmoUrl = (person: Person): string => {
             return 'https://account.venmo.com/u/takoyuki'
         case Person.Ivan:
             return 'https://account.venmo.com/u/iwong3'
+        // return 'venmo://paycharge?txn=pay&recipients=iwong3'
         case Person.Jenny:
             return 'https://account.venmo.com/u/Jenny-Mei-1'
         case Person.Joanna:

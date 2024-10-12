@@ -22,9 +22,8 @@ import {
 } from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
 import { useSortCostStore } from 'components/menu/sort/sort-cost'
-import { ToolsMenu, useToolsMenuStore } from 'components/menu/tools/tools-menu'
-import { useToolsMenuDebtStore } from 'components/menu/tools/tools-menu-debt'
-import { useToolsMenuSpendByDateStore } from 'components/menu/tools/tools-menu-spend-by-date'
+import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import AnimateHeight from 'react-animate-height'
 
 export enum MenuItem {
     FilterPaidBy,
@@ -50,9 +49,8 @@ const resetAllMenuItemStores = () => {
 }
 
 export const Menu = () => {
-    const { spendData, showLogs, setFilteredSpendData } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { activeItem } = useToolsMenuStore(useShallow((state) => state))
 
     // menu item states
     // filters
@@ -139,7 +137,7 @@ export const Menu = () => {
     // when changing views, update the menu items accordingly
     useEffect(() => {
         setExpandedMenuItem(-1)
-    }, [showLogs])
+    }, [activeItem])
     // useEffect(() => {
     //     setExpandedMenuItem(-1)
 
@@ -232,6 +230,8 @@ export const Menu = () => {
     // settings stores
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
+    const menuLabelFontSize = 12
+
     return (
         <Box
             sx={{
@@ -241,7 +241,7 @@ export const Menu = () => {
                 width: '100%',
                 position: 'fixed',
                 bottom: 0,
-                fontSize: '14px',
+                fontSize: 14,
             }}>
             <Box
                 sx={{
@@ -251,6 +251,17 @@ export const Menu = () => {
                     width: '90%',
                 }}>
                 {/* Active filter */}
+                {/* <AnimateHeight
+                    duration={100}
+                    height={expandedMenuItem !== -1 ? 'auto' : 0}
+                    style={{
+                        width: '100%',
+                        borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                        borderTopRightRadius: '10px',
+                        borderTopLeftRadius: '10px',
+                        borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                        borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                    }}> */}
                 <Box
                     sx={{
                         display: 'flex',
@@ -277,6 +288,7 @@ export const Menu = () => {
                         {renderExpandedMenuItem()}
                     </Box>
                 </Box>
+                {/* </AnimateHeight> */}
                 {/* Show settings */}
                 <Box
                     sx={{
@@ -311,6 +323,7 @@ export const Menu = () => {
                         borderTopRightRadius: expandedMenuItem === -1 && !showSettings ? '10px' : 0,
                         borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
                         borderRight: '1px solid #FBBC04',
+                        borderBottom: '1px solid #FBBC04',
                         borderLeft: '1px solid #FBBC04',
                         backgroundColor: 'white',
                     }}>
@@ -354,7 +367,7 @@ export const Menu = () => {
                                 <ArrowClockwise size={defaultIconSize} />
                             </Box>
                             {showIconLabels && (
-                                <Typography sx={{ fontSize: '12px' }}>Reset</Typography>
+                                <Typography sx={{ fontSize: menuLabelFontSize }}>Reset</Typography>
                             )}
                         </Box>
                     </Box>
@@ -405,7 +418,7 @@ export const Menu = () => {
                                         {getMenuItemIcon(item.item)}
                                     </Box>
                                     {showIconLabels && (
-                                        <Typography sx={{ fontSize: '12px' }}>
+                                        <Typography sx={{ fontSize: menuLabelFontSize }}>
                                             {item.label}
                                         </Typography>
                                     )}
@@ -450,7 +463,9 @@ export const Menu = () => {
                                 {getTablerIcon({ name: 'IconSettings' })}
                             </Box>
                             {showIconLabels && (
-                                <Typography sx={{ fontSize: '12px' }}>Settings</Typography>
+                                <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                    Settings
+                                </Typography>
                             )}
                         </Box>
                     </Box>

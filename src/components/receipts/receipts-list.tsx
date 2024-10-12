@@ -1,20 +1,22 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
-import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
-import { SpendRow } from 'components/spend/spend-row'
+import { ReceiptsRow } from 'components/receipts/receipt-row'
+import { Spend } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
 
-export const SpendTable = () => {
+interface ReceiptsListProps {
+    spendData?: Spend[] // optional override for spendData
+}
+
+export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
     const { filteredSpendData } = useGustavoStore(useShallow((state) => state))
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+
+    const useSpendData = spendData || filteredSpendData
 
     return (
-        <Box
-            sx={{
-                marginBottom: showIconLabels ? 20 : 16, // could make this dynamic based on if filter menu is open or not
-            }}>
-            {filteredSpendData.map((row, index) => (
+        <Box>
+            {useSpendData.map((row, index) => (
                 <Box
                     key={'row-' + index}
                     sx={{
@@ -23,7 +25,7 @@ export const SpendTable = () => {
                         borderRadius: 4,
                         backgroundColor: 'white',
                     }}>
-                    <SpendRow spend={row} />
+                    <ReceiptsRow spend={row} />
                 </Box>
             ))}
         </Box>

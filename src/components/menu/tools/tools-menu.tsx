@@ -1,97 +1,212 @@
-import { Box } from '@mui/material'
-import { useEffect } from 'react'
+import { Box, Typography } from '@mui/material'
+import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { ToolsMenuDebt, useToolsMenuDebtStore } from 'components/menu/tools/tools-menu-debt'
-import {
-    ToolsMenuSpendByDate,
-    useToolsMenuSpendByDateStore,
-} from 'components/menu/tools/tools-menu-spend-by-date'
+import { getToolsMenuItemIcon } from 'helpers/icons'
+import { ReceiptsList } from 'components/receipts/receipts-list'
+import { SummaryDebt } from 'components/summary/summary-items/debt/summary-debt'
+import { SummaryByDate } from 'components/summary/summary-items/summary-by-date'
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 
-enum ToolsMenuItem {
-    ToolsDebt,
-    ToolsSpendByDate,
+export enum ToolsMenuItem {
+    Receipts = 'Receipts',
+    DebtCalculator = 'DebtCalculator',
+    SpendByDate = 'SpendByDate',
 }
 
 type ToolsMenuItemData = {
-    type: ToolsMenuItem
     component: JSX.Element
-    state: any
+    label: string
+}
+
+export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
+    [
+        ToolsMenuItem.Receipts,
+        {
+            component: <ReceiptsList />,
+            label: 'Receipts',
+        },
+    ],
+    [
+        ToolsMenuItem.DebtCalculator,
+        {
+            component: <SummaryDebt />,
+            label: 'Debt',
+        },
+    ],
+    [
+        ToolsMenuItem.SpendByDate,
+        {
+            component: <SummaryByDate />,
+            label: '$ By Date',
+        },
+    ],
+])
+
+type ToolsMenuState = {
+    activeItem: ToolsMenuItem
 }
 
 type ToolsMenuActions = {
-    isActive: () => boolean
-
+    setActiveItem: (item: ToolsMenuItem) => void
     reset: () => void
 }
 
-export const useToolsMenuStore = create<ToolsMenuActions>(() => ({
-    isActive: () => false,
-
-    reset: () => {},
-}))
-
-const toolsMenuStoreResets = new Set<() => void>()
-
-export const resetAllToolsMenuStores = () => {
-    toolsMenuStoreResets.forEach((reset) => reset())
+const initialState: ToolsMenuState = {
+    activeItem: ToolsMenuItem.Receipts,
 }
 
+export const useToolsMenuStore = create<ToolsMenuState & ToolsMenuActions>((set) => ({
+    ...initialState,
+
+    setActiveItem: (item) => {
+        set(() => ({
+            activeItem: item,
+        }))
+    },
+    reset: () => {
+        set(initialState)
+    },
+}))
+
 export const ToolsMenu = () => {
-    const toolsDebtState = useToolsMenuDebtStore(useShallow((state) => state))
-    const toolsSpendByDateState = useToolsMenuSpendByDateStore(useShallow((state) => state))
+    const { activeItem, setActiveItem } = useToolsMenuStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
-    const toolsMenuItems: ToolsMenuItemData[] = [
-        {
-            type: ToolsMenuItem.ToolsDebt,
-            component: <ToolsMenuDebt />,
-            state: toolsDebtState,
-        },
-        {
-            type: ToolsMenuItem.ToolsSpendByDate,
-            component: <ToolsMenuSpendByDate />,
-            state: toolsSpendByDateState,
-        },
-    ]
+    const [toolMenuExpanded, setToolMenuExpanded] = useState(false)
 
-    const toolsMenuStates = toolsMenuItems.map((item) => item.state)
-    toolsMenuStates.forEach((state) => {
-        toolsMenuStoreResets.add(state.reset)
-    })
+    const iconBoxWidth = 24
+    const iconBoxMaxWidth = 86
 
-    // make sure one summary menu item is always active
-    // defaults to the first summary menu item
-    useEffect(() => {
-        if (!toolsMenuStates.some((state) => state.isActive())) {
-            toolsMenuItems[0].state.toggleActive()
-        }
-    }, [...toolsMenuStates])
+    const handleMenuItemClick = (item: ToolsMenuItem) => {
+        setActiveItem(item)
+        setToolMenuExpanded(false)
+    }
 
     return (
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'space-evenly',
                 alignItems: 'center',
-                paddingY: 1,
-                border: '1px solid #FBBC04',
-                borderRadius: 4,
-                backgroundColor: 'white',
             }}>
-            {toolsMenuItems.map((menuItem, index) => {
-                return (
+            <Box
+                sx={{
+                    display: 'inline-block',
+                    position: 'relative',
+                }}>
+                {/* Active tool */}
+                <Box
+                    onClick={() => setToolMenuExpanded(!toolMenuExpanded)}
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        padding: 1,
+                        width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
+                        height: iconBoxWidth,
+                        borderTop: '1px solid #FBBC04',
+                        borderRight: '1px solid #FBBC04',
+                        borderBottom: toolMenuExpanded ? '1px solid white' : '1px solid #FBBC04',
+                        borderLeft: '1px solid #FBBC04',
+                        borderTopRightRadius: '10px',
+                        borderTopLeftRadius: '10px',
+                        borderBottomLeftRadius: toolMenuExpanded ? 0 : '10px',
+                        borderBottomRightRadius: toolMenuExpanded ? 0 : '10px',
+                        backgroundColor: 'white',
+                        transition: 'width 0.1s ease-out',
+                    }}>
                     <Box
-                        key={'tools-menu-item-' + index}
                         sx={{
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
+                            width: iconBoxWidth,
+                            height: iconBoxWidth,
                         }}>
-                        {menuItem.component}
+                        {getToolsMenuItemIcon(activeItem)}
                     </Box>
-                )
-            })}
+                    <Box
+                        sx={{
+                            maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
+                            overflow: 'hidden',
+                        }}>
+                        <Typography
+                            sx={{
+                                marginLeft: 1,
+                                fontSize: 12,
+                                textAlign: 'left',
+                                whiteSpace: 'nowrap',
+                            }}>
+                            {ToolsMenuItemMap.get(activeItem)!.label}
+                        </Typography>
+                    </Box>
+                </Box>
+                {/* Menu */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        position: 'absolute',
+                        maxHeight: toolMenuExpanded ? 9999 : 0,
+                        overflow: 'hidden',
+                    }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            border: '1px solid #FBBC04',
+                            borderBottomLeftRadius: '10px',
+                            borderBottomRightRadius: '10px',
+                            backgroundColor: 'white',
+                        }}>
+                        {Object.values(ToolsMenuItem).map((item, index) => {
+                            return (
+                                <Box
+                                    key={'tools-menu-item-' + index}
+                                    onClick={() => handleMenuItemClick(item as ToolsMenuItem)}
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'flex-start',
+                                        alignItems: 'center',
+                                        padding: 1,
+                                        width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
+                                        height: iconBoxWidth,
+                                        transition: 'width 0.1s ease-out',
+                                    }}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            width: iconBoxWidth,
+                                            height: iconBoxWidth,
+                                            borderRadius: '100%',
+                                            backgroundColor:
+                                                activeItem === item ? '#FBBC04' : 'white',
+                                        }}>
+                                        {getToolsMenuItemIcon(item as ToolsMenuItem)}
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
+                                            overflow: 'hidden',
+                                        }}>
+                                        <Typography
+                                            sx={{
+                                                marginLeft: 1,
+                                                fontSize: 12,
+                                                textAlign: 'left',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                            {ToolsMenuItemMap.get(item)!.label}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            )
+                        })}
+                    </Box>
+                </Box>
+            </Box>
         </Box>
     )
 }

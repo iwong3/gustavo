@@ -33,7 +33,7 @@ export const SettingsMenu = () => {
                         sx={{
                             display: 'flex',
                         }}>
-                        <Box>Submit spend</Box>
+                        <Box>Submit Receipt</Box>
                         <Box
                             sx={{
                                 display: 'flex',

@@ -1,18 +1,32 @@
-import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import axios from 'axios'
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 
 import { Menu } from 'components/menu/menu'
-import { SpendTable } from 'components/spend/spend-table'
-import { SpendSummary } from 'components/summary/spend-summary'
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { ToolsMenu, ToolsMenuItemMap, useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { Currency } from 'helpers/currency'
 import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
-import { getTablerIcon } from 'helpers/icons'
 import { Person, getPersonFromEmail } from 'helpers/person'
 import { getSplitCost, Spend, SpendType } from 'helpers/spend'
 import GusFringLogo from '../images/gus-fring.png'
-import { useShallow } from 'zustand/react/shallow'
+
+/**
+ * Summarizes every person's spend data
+ * - Total covered
+ * - Total spent (net spent)
+ * - Total owed
+ * - Total owed to each person
+ *
+ * Other views / ideas
+ * - Total spend by day
+ * - Bar graph of total spend by person
+ * - Whole trip totals
+ * - Click any 2 people to show their debts to each other
+ * - Horizontally scrollable graphs
+ */
 
 type GustavoState = {
     // total spend
@@ -21,9 +35,6 @@ type GustavoState = {
 
     // filtered spend
     filteredSpendData: Spend[]
-
-    // view
-    showLogs: boolean
 }
 
 type GustavoActions = {
@@ -33,9 +44,6 @@ type GustavoActions = {
 
     // filtered spend
     setFilteredSpendData: (filteredSpendData: Spend[]) => void
-
-    // view
-    setShowLogs: (value: boolean) => void
 }
 
 const initialState: GustavoState = {
@@ -43,7 +51,6 @@ const initialState: GustavoState = {
     debtMapByPerson: new Map<Person, Map<Person, number>>(),
 
     filteredSpendData: [],
-    showLogs: true,
 }
 
 export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
@@ -54,19 +61,11 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
         set(() => ({ debtMapByPerson })),
 
     setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
-    setShowLogs: (showLogs: boolean) => set(() => ({ showLogs })),
 }))
 
 export const Gustavo = () => {
-    const {
-        spendData,
-        filteredSpendData,
-        showLogs,
-        setSpendData,
-        setDebtMapByPerson,
-        setFilteredSpendData,
-        setShowLogs,
-    } = useGustavoStore(useShallow((state) => state))
+    const { spendData, filteredSpendData, setSpendData, setDebtMapByPerson, setFilteredSpendData } =
+        useGustavoStore(useShallow((state) => state))
 
     useEffect(() => {
         async function fetchData() {
@@ -84,7 +83,9 @@ export const Gustavo = () => {
                 const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
                 const locationIndex = headers.indexOf(Columns.Location)
                 const typeIndex = headers.indexOf(Columns.SpendType)
+                const notesIndex = headers.indexOf(Columns.Notes)
                 const reportedByIndex = headers.indexOf(Columns.Email)
+                const reportedAtIndex = headers.indexOf(Columns.ResponseTimestamp)
 
                 const data = rows
                     .slice(1)
@@ -118,7 +119,9 @@ export const Gustavo = () => {
                                 splitBetween: splitBetween,
                                 location: rowValues[locationIndex],
                                 type: type,
+                                notes: rowValues[notesIndex],
                                 reportedBy: reportedBy,
+                                reportedAt: rowValues[reportedAtIndex],
                             }
                             return spend
                         }
@@ -178,6 +181,9 @@ export const Gustavo = () => {
     // calculate filtered spend data to expose to spend components
     useEffect(() => {}, [filteredSpendData])
 
+    const { activeItem } = useToolsMenuStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+
     return (
         <Box>
             <Box
@@ -234,50 +240,19 @@ export const Gustavo = () => {
                             </Typography>
                         </Box>
                     </Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center',
-                        }}>
-                        <ToggleButtonGroup
-                            sx={{
-                                backgroundColor: 'white',
-                            }}>
-                            <ToggleButton
-                                sx={{
-                                    '&.Mui-selected, &.Mui-selected:hover': {
-                                        backgroundColor: '#FBBC04',
-                                    },
-                                    'transition': 'background-color 0.1s ease-in',
-                                }}
-                                value="left"
-                                selected={!showLogs}
-                                onClick={() => setShowLogs(false)}>
-                                {getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })}
-                            </ToggleButton>
-                            <ToggleButton
-                                sx={{
-                                    '&.Mui-selected, &.Mui-selected:hover': {
-                                        backgroundColor: '#FBBC04',
-                                    },
-                                    'transition': 'background-color 0.1s ease-in',
-                                }}
-                                value="right"
-                                selected={showLogs}
-                                onClick={() => setShowLogs(true)}>
-                                {getTablerIcon({ name: 'IconLayoutList', size: 18, fill: 'white' })}
-                            </ToggleButton>
-                        </ToggleButtonGroup>
-                    </Box>
+                    <ToolsMenu />
                 </Box>
             </Box>
             <Box
                 sx={{
                     marginTop: '20%',
+                    maxHeight: showIconLabels
+                        ? window.innerHeight * 0.75
+                        : window.innerHeight * 0.77,
+                    overflow: 'hidden',
+                    overflowY: 'scroll',
                 }}>
-                {showLogs && <SpendTable />}
-                {!showLogs && <SpendSummary />}
+                {ToolsMenuItemMap.get(activeItem)?.component}
             </Box>
             <Menu />
         </Box>
