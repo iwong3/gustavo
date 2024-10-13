@@ -3,6 +3,7 @@ import { ArrowClockwise } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
+import { FilterLocation, useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { FilterPaidBy, useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { FilterSpendType, useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import {
@@ -11,9 +12,11 @@ import {
 } from 'components/menu/filter/filter-split-between'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { SettingsMenu } from 'components/menu/settings/settings-menu'
+import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortMenu, useSortMenuStore } from 'components/menu/sort/sort-menu'
+import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import {
     defaultIconSize,
     getMenuItemBackgroundColor,
@@ -21,11 +24,9 @@ import {
     getTablerIcon,
 } from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
-import { useSortCostStore } from 'components/menu/sort/sort-cost'
-import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
-import AnimateHeight from 'react-animate-height'
 
 export enum MenuItem {
+    FilterLocation,
     FilterPaidBy,
     FilterSpendType,
     FilterSplitBetween,
@@ -57,7 +58,13 @@ export const Menu = () => {
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
-    const filterStates = [filterPaidByState, filterSplitBetweenState, filterSpendTypeState]
+    const filterLocationState = useFilterLocationStore(useShallow((state) => state))
+    const filterStates = [
+        filterPaidByState,
+        filterSplitBetweenState,
+        filterSpendTypeState,
+        filterLocationState,
+    ]
 
     // sorts
     const sortMenuState = useSortMenuStore(useShallow((state) => state))
@@ -65,17 +72,6 @@ export const Menu = () => {
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
     const sortStates = [sortCostState, sortDateState, sortItemNameState]
-
-    // tools
-    // const toolsMenuState = useToolsMenuStore(useShallow((state) => state))
-    // const toolsMenuDebtState = useToolsMenuDebtStore(useShallow((state) => state))
-    // const toolsMenuSpendByDateState = useToolsMenuSpendByDateStore(useShallow((state) => state))
-    // const toolStates = [toolsMenuDebtState, toolsMenuSpendByDateState]
-
-    // tools helpers, shown on menu
-    // const debtPerson1State = useDebtPerson1Store(useShallow((state) => state))
-    // const debtPerson2State = useDebtPerson2Store(useShallow((state) => state))
-    // const toolHelperStates = [debtPerson1State, debtPerson2State]
 
     // define menu item properties, used for rendering
     const filterMenuItems: MenuItemData[] = [
@@ -97,6 +93,12 @@ export const Menu = () => {
             state: filterSpendTypeState,
             label: 'Type',
         },
+        {
+            item: MenuItem.FilterLocation,
+            component: <FilterLocation />,
+            state: filterLocationState,
+            label: 'Location',
+        },
     ]
 
     const sortMenuItem: MenuItemData = {
@@ -106,66 +108,15 @@ export const Menu = () => {
         label: 'Sort',
     }
 
-    // const toolsMenuItem: MenuItemData = {
-    //     item: MenuItem.Tools,
-    //     component: <ToolsMenu />,
-    //     state: toolsMenuState,
-    //     label: 'Tools',
-    // }
-
     const defaultMenuItems = [sortMenuItem, ...filterMenuItems]
-    // const toolsMenuItems = [toolsMenuItem, ...filterMenuItems]
-    // const debtToolMenuItems: MenuItemData[] = [
-    //     toolsMenuItem,
-    //     {
-    //         item: MenuItem.ToolsDebtPerson1,
-    //         component: <DebtPerson1 />,
-    //         state: debtPerson1State,
-    //         label: 'Person 1',
-    //     },
-    //     {
-    //         item: MenuItem.ToolsDebtPerson2,
-    //         component: <DebtPerson2 />,
-    //         state: debtPerson2State,
-    //         label: 'Person 2',
-    //     },
-    // ]
 
     const [menuItems, setMenuItems] = useState<MenuItemData[]>(defaultMenuItems)
     const [expandedMenuItem, setExpandedMenuItem] = useState(-1)
 
-    // when changing views, update the menu items accordingly
+    // when changing views, collapse the expanded menu item
     useEffect(() => {
         setExpandedMenuItem(-1)
     }, [activeItem])
-    // useEffect(() => {
-    //     setExpandedMenuItem(-1)
-
-    //     if (!toolStates.some((state) => state.isActive())) {
-    //         // default tool view
-    //         toolsMenuDebtState.toggleActive()
-    //     }
-
-    //     if (!showLogs) {
-    //         setMenuItems(toolsMenuItems)
-    //     } else {
-    //         setMenuItems(defaultMenuItems)
-    //     }
-    // }, [showLogs])
-
-    // when changing tool views, update the menu items accordingly
-    // separate from showLogs because we don't need to hide expanded menu
-    // useEffect(() => {
-    //     if (!showLogs) {
-    //         if (toolsMenuDebtState.isActive()) {
-    //             setMenuItems(debtToolMenuItems)
-    //         } else {
-    //             setMenuItems(toolsMenuItems)
-    //         }
-    //     } else {
-    //         setMenuItems(defaultMenuItems)
-    //     }
-    // }, [showLogs, ...toolStates])
 
     // get all menu item state resets
     const menuItemStates = menuItems.map((item) => item.state)
@@ -181,6 +132,7 @@ export const Menu = () => {
         filteredSpendData = filterPaidByState.filter(filteredSpendData)
         filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
         filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
+        filteredSpendData = filterLocationState.filter(filteredSpendData)
 
         // apply sorting - only one sort will be active at a time
         for (const sortState of sortStates) {
@@ -192,7 +144,6 @@ export const Menu = () => {
 
         setFilteredSpendData(filteredSpendData)
     }, [...filterStates, ...sortStates])
-    // }, [...filterStates, ...sortStates, ...toolHelperStates])
 
     // expanded menu item state
     const handleMenuItemClick = (index: number) => {
@@ -251,17 +202,6 @@ export const Menu = () => {
                     width: '90%',
                 }}>
                 {/* Active filter */}
-                {/* <AnimateHeight
-                    duration={100}
-                    height={expandedMenuItem !== -1 ? 'auto' : 0}
-                    style={{
-                        width: '100%',
-                        borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                        borderTopRightRadius: '10px',
-                        borderTopLeftRadius: '10px',
-                        borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                        borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                    }}> */}
                 <Box
                     sx={{
                         display: 'flex',
@@ -288,7 +228,6 @@ export const Menu = () => {
                         {renderExpandedMenuItem()}
                     </Box>
                 </Box>
-                {/* </AnimateHeight> */}
                 {/* Show settings */}
                 <Box
                     sx={{

@@ -4,46 +4,44 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { ToolsMenu, ToolsMenuItemMap, useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { Currency } from 'helpers/currency'
 import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
+import { processFilteredSpendData, processSpendData } from 'helpers/data-processing'
+import { Location } from 'helpers/location'
 import { Person, getPersonFromEmail } from 'helpers/person'
-import { getSplitCost, Spend, SpendType } from 'helpers/spend'
+import { Spend, SpendType } from 'helpers/spend'
 import GusFringLogo from '../images/gus-fring.png'
-
-/**
- * Summarizes every person's spend data
- * - Total covered
- * - Total spent (net spent)
- * - Total owed
- * - Total owed to each person
- *
- * Other views / ideas
- * - Total spend by day
- * - Bar graph of total spend by person
- * - Whole trip totals
- * - Click any 2 people to show their debts to each other
- * - Horizontally scrollable graphs
- */
 
 type GustavoState = {
     // total spend
     spendData: Spend[]
+    // total spend calculations
     debtMapByPerson: Map<Person, Map<Person, number>>
 
     // filtered spend
     filteredSpendData: Spend[]
+    // filtered spend calculations
+    totalSpendByPerson: Map<Person, number>
+    totalSpendByType: Map<SpendType, number>
+    totalSpendByLocation: Map<Location, number>
 }
 
 type GustavoActions = {
     // total spend
     setSpendData: (spendData: Spend[]) => void
+    // total spend calculations
     setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) => void
 
     // filtered spend
     setFilteredSpendData: (filteredSpendData: Spend[]) => void
+    // filtered spend calculations
+    setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) => void
+    setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) => void
+    setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) => void
 }
 
 const initialState: GustavoState = {
@@ -51,6 +49,9 @@ const initialState: GustavoState = {
     debtMapByPerson: new Map<Person, Map<Person, number>>(),
 
     filteredSpendData: [],
+    totalSpendByPerson: new Map<Person, number>(),
+    totalSpendByType: new Map<SpendType, number>(),
+    totalSpendByLocation: new Map<Location, number>(),
 }
 
 export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
@@ -61,11 +62,25 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
         set(() => ({ debtMapByPerson })),
 
     setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
+    setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) =>
+        set(() => ({ totalSpendByPerson })),
+    setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) =>
+        set(() => ({ totalSpendByType })),
+    setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) =>
+        set(() => ({ totalSpendByLocation })),
 }))
 
 export const Gustavo = () => {
-    const { spendData, filteredSpendData, setSpendData, setDebtMapByPerson, setFilteredSpendData } =
-        useGustavoStore(useShallow((state) => state))
+    const {
+        spendData,
+        filteredSpendData,
+        setSpendData,
+        setDebtMapByPerson,
+        setFilteredSpendData,
+        setTotalSpendByPerson,
+        setTotalSpendByType,
+        setTotalSpendByLocation,
+    } = useGustavoStore(useShallow((state) => state))
 
     useEffect(() => {
         async function fetchData() {
@@ -117,7 +132,9 @@ export const Gustavo = () => {
                                 convertedCost: convertedCost,
                                 paidBy: rowValues[paidByIndex] as Person,
                                 splitBetween: splitBetween,
-                                location: rowValues[locationIndex],
+                                location: (rowValues[locationIndex] as Location)
+                                    ? (rowValues[locationIndex] as Location)
+                                    : Location.Other,
                                 type: type,
                                 notes: rowValues[notesIndex],
                                 reportedBy: reportedBy,
@@ -137,49 +154,22 @@ export const Gustavo = () => {
 
     // calculate total spend summary data to expose to summary components
     useEffect(() => {
-        const debtMap = new Map<Person, Map<Person, number>>()
-
-        let persons = Object.values(Person).filter((person) => person !== Person.Everyone)
-        persons.forEach((person) => {
-            debtMap.set(person, new Map<Person, number>())
-        })
-
-        spendData.forEach((spend) => {
-            const { paidBy, convertedCost, splitBetween } = spend
-
-            /* DEBT MAP */
-            // for every spend item, get an array of people splitting the cost
-            let splitters: Person[] = splitBetween
-            if (splitBetween.includes(Person.Everyone)) {
-                splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
-            }
-            splitters = splitters.filter((person) => person !== paidBy)
-            splitters.forEach((splitter) => {
-                const splitCost = getSplitCost(convertedCost, splitBetween)
-
-                // update splitter's debt
-                let splitterDebtMap = debtMap.get(splitter)
-                if (!splitterDebtMap) {
-                    splitterDebtMap = new Map<Person, number>()
-                }
-                splitterDebtMap.set(paidBy, (splitterDebtMap.get(paidBy) || 0) + splitCost)
-                debtMap.set(splitter, splitterDebtMap)
-
-                // update paidBy's debt
-                let paidByDebtMap = debtMap.get(paidBy)
-                if (!paidByDebtMap) {
-                    paidByDebtMap = new Map<Person, number>()
-                }
-                paidByDebtMap.set(splitter, (paidByDebtMap.get(splitter) || 0) - splitCost)
-                debtMap.set(paidBy, paidByDebtMap)
-            })
-        })
+        const { debtMap } = processSpendData(spendData)
 
         setDebtMapByPerson(debtMap)
     }, [spendData])
 
     // calculate filtered spend data to expose to spend components
-    useEffect(() => {}, [filteredSpendData])
+    const { everyone: splitBetweenEveryone, filters: splitBetweenFilter } =
+        useFilterSplitBetweenStore(useShallow((state) => state))
+    useEffect(() => {
+        const { totalSpendByPerson, totalSpendByType, totalSpendByLocation } =
+            processFilteredSpendData(filteredSpendData, splitBetweenEveryone, splitBetweenFilter)
+
+        setTotalSpendByPerson(totalSpendByPerson)
+        setTotalSpendByType(totalSpendByType)
+        setTotalSpendByLocation(totalSpendByLocation)
+    }, [filteredSpendData])
 
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))

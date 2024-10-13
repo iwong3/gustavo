@@ -1,4 +1,5 @@
 import { Currency } from 'helpers/currency'
+import { Location } from 'helpers/location'
 import { Person } from 'helpers/person'
 
 /**
@@ -14,7 +15,7 @@ export interface Spend {
     convertedCost: number // calculated from original cost, currency, and date
     paidBy: Person
     splitBetween: Person[]
-    location: string
+    location: Location | undefined
     type: SpendType | undefined
     notes: string
     reportedBy: Person | undefined

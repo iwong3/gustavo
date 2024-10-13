@@ -28,6 +28,7 @@ import {
     IconHandFingerRight,
     IconLayoutList,
     IconListLetters,
+    IconMap2,
     IconNotes,
     IconSettings,
     IconShoppingBag,
@@ -42,6 +43,7 @@ import {
 
 import { MenuItem, MenuItemData } from 'components/menu/menu'
 import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
+import { getLocationAbbr, Location } from 'helpers/location'
 import { Person, getPersonInitials } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
@@ -101,6 +103,8 @@ export const getTablerIcon = ({
             return <IconLayoutList {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} />
+        case 'IconMap2':
+            return <IconMap2 {...props} />
         case 'IconNotes':
             return <IconNotes {...props} />
         case 'IconSettings':
@@ -128,6 +132,8 @@ export const getTablerIcon = ({
 
 export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
     switch (item) {
+        case MenuItem.FilterLocation:
+            return getTablerIcon({ name: 'IconMap2', size })
         case MenuItem.FilterPaidBy:
             return <Receipt size={size} />
         case MenuItem.FilterSpendType:
@@ -160,7 +166,7 @@ export const getToolsMenuItemIcon = (item: ToolsMenuItem) => {
             return getTablerIcon({ name: 'IconLayoutList', size: 18, fill: 'white' })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={18} weight="fill" />
-        case ToolsMenuItem.SpendByDate:
+        case ToolsMenuItem.TotalSpend:
             return getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })
         default:
             return null
@@ -291,4 +297,37 @@ export const getIconFromSpendType = (
         default:
             return getTablerIcon({ name: 'IconDots', size })
     }
+}
+
+interface ILocationIconProps {
+    location: Location
+    sx?: SxProps<Theme>
+}
+
+export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
+    const defaultSx = {
+        width: defaultIconSize,
+        height: defaultIconSize,
+        fontSize: 12,
+        color: 'black',
+        backgroundColor: 'lightgray',
+    }
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: '100%',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                transition: 'background-color 0.1s',
+                ...defaultSx,
+                ...sx,
+            }}>
+            {getLocationAbbr(location)}
+        </Box>
+    )
 }

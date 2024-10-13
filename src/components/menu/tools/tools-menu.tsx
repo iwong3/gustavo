@@ -3,16 +3,16 @@ import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { getToolsMenuItemIcon } from 'helpers/icons'
+import { DebtCalculator } from 'components/debt/debt-calculator'
 import { ReceiptsList } from 'components/receipts/receipts-list'
-import { SummaryDebt } from 'components/summary/summary-items/debt/summary-debt'
-import { SummaryByDate } from 'components/summary/summary-items/summary-by-date'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { Summary } from 'components/summary/summary'
+import { getToolsMenuItemIcon } from 'helpers/icons'
 
 export enum ToolsMenuItem {
     Receipts = 'Receipts',
     DebtCalculator = 'DebtCalculator',
-    SpendByDate = 'SpendByDate',
+    TotalSpend = 'SpendByDate',
 }
 
 type ToolsMenuItemData = {
@@ -31,15 +31,15 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.DebtCalculator,
         {
-            component: <SummaryDebt />,
+            component: <DebtCalculator />,
             label: 'Debt',
         },
     ],
     [
-        ToolsMenuItem.SpendByDate,
+        ToolsMenuItem.TotalSpend,
         {
-            component: <SummaryByDate />,
-            label: '$ By Date',
+            component: <Summary />,
+            label: 'Totals',
         },
     ],
 ])

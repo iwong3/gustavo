@@ -1,53 +1,47 @@
 import { Box, Link, Typography } from '@mui/material'
-import { HandCoins, UserCircle } from '@phosphor-icons/react'
+import { UserCircle } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import AnimateHeight from 'react-animate-height'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { ReceiptsList } from 'components/receipts/receipts-list'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { getVenmoUrl, Person } from 'helpers/person'
-import { useGustavoStore } from 'views/gustavo'
-import VenmoLogo from '../../../../images/venmo-icon.png'
 import { Spend } from 'helpers/spend'
-import { ReceiptsList } from 'components/receipts/receipts-list'
+import { useGustavoStore } from 'views/gustavo'
+import VenmoLogo from '../../images/venmo-icon.png'
 
-type SummaryDebtState = {
+type DebtCalculatorState = {
     person1: Person | undefined
     person2: Person | undefined
 }
 
-type SummaryDebtActions = {
+type DebtCalculatorActions = {
     setPerson1: (person: Person | undefined) => void
     setPerson2: (person: Person | undefined) => void
 }
 
-const initialState: SummaryDebtState = {
+const initialState: DebtCalculatorState = {
     person1: undefined,
     person2: undefined,
 }
 
-export const useSummaryDebtStore = create<SummaryDebtState & SummaryDebtActions>((set) => ({
-    ...initialState,
+export const useDebtCalculatorStore = create<DebtCalculatorState & DebtCalculatorActions>(
+    (set) => ({
+        ...initialState,
 
-    setPerson1: (person: Person | undefined) => {
-        set(() => ({ person1: person }))
-    },
-    setPerson2: (person: Person | undefined) => {
-        set(() => ({ person2: person }))
-    },
-}))
+        setPerson1: (person: Person | undefined) => {
+            set(() => ({ person1: person }))
+        },
+        setPerson2: (person: Person | undefined) => {
+            set(() => ({ person2: person }))
+        },
+    })
+)
 
-/**
- * Ideas
- * - Add expand button
- * - Include menu at top of expanded box
- *   - Reset
- * - Include a list of spend between the two selected people
- */
-export const SummaryDebt = () => {
-    const { person1, person2, setPerson1, setPerson2 } = useSummaryDebtStore(
+export const DebtCalculator = () => {
+    const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
     const { debtMapByPerson, spendData, filteredSpendData } = useGustavoStore(
@@ -219,6 +213,7 @@ export const SummaryDebt = () => {
                     border: '1px solid #FBBC04',
                     borderRadius: '20px',
                     backgroundColor: 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                 }}>
                 {/* Top row */}
                 <Box
