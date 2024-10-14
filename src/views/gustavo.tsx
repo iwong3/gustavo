@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { ActiveMenuItems } from 'components/menu/active-menu-items'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
@@ -20,11 +21,14 @@ type GustavoState = {
     // total spend
     spendData: Spend[]
     // total spend calculations
+    totalSpend: number
     debtMapByPerson: Map<Person, Map<Person, number>>
 
     // filtered spend
     filteredSpendData: Spend[]
     // filtered spend calculations
+    filteredTotalSpend: number // total spend of the filtered items
+    filteredPeopleTotalSpend: number // total spend by filtered people out of the filtered items
     totalSpendByPerson: Map<Person, number>
     totalSpendByType: Map<SpendType, number>
     totalSpendByLocation: Map<Location, number>
@@ -34,11 +38,14 @@ type GustavoActions = {
     // total spend
     setSpendData: (spendData: Spend[]) => void
     // total spend calculations
+    setTotalSpend: (totalSpend: number) => void
     setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) => void
 
     // filtered spend
     setFilteredSpendData: (filteredSpendData: Spend[]) => void
     // filtered spend calculations
+    setFilteredTotalSpend: (filteredTotalSpend: number) => void
+    setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) => void
     setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) => void
     setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) => void
     setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) => void
@@ -46,9 +53,12 @@ type GustavoActions = {
 
 const initialState: GustavoState = {
     spendData: [],
+    totalSpend: 0,
     debtMapByPerson: new Map<Person, Map<Person, number>>(),
 
     filteredSpendData: [],
+    filteredTotalSpend: 0,
+    filteredPeopleTotalSpend: 0,
     totalSpendByPerson: new Map<Person, number>(),
     totalSpendByType: new Map<SpendType, number>(),
     totalSpendByLocation: new Map<Location, number>(),
@@ -58,9 +68,13 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
     ...initialState,
 
     setSpendData: (spendData: Spend[]) => set(() => ({ spendData })),
+    setTotalSpend: (totalSpend: number) => set(() => ({ totalSpend })),
     setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) =>
         set(() => ({ debtMapByPerson })),
 
+    setFilteredTotalSpend: (filteredTotalSpend: number) => set(() => ({ filteredTotalSpend })),
+    setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) =>
+        set(() => ({ filteredPeopleTotalSpend })),
     setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
     setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) =>
         set(() => ({ totalSpendByPerson })),
@@ -75,8 +89,11 @@ export const Gustavo = () => {
         spendData,
         filteredSpendData,
         setSpendData,
+        setTotalSpend,
         setDebtMapByPerson,
         setFilteredSpendData,
+        setFilteredTotalSpend,
+        setFilteredPeopleTotalSpend,
         setTotalSpendByPerson,
         setTotalSpendByType,
         setTotalSpendByLocation,
@@ -154,18 +171,25 @@ export const Gustavo = () => {
 
     // calculate total spend summary data to expose to summary components
     useEffect(() => {
-        const { debtMap } = processSpendData(spendData)
+        const { totalSpend, debtMap } = processSpendData(spendData)
 
+        setTotalSpend(totalSpend)
         setDebtMapByPerson(debtMap)
     }, [spendData])
 
     // calculate filtered spend data to expose to spend components
-    const { everyone: splitBetweenEveryone, filters: splitBetweenFilter } =
-        useFilterSplitBetweenStore(useShallow((state) => state))
+    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(useShallow((state) => state))
     useEffect(() => {
-        const { totalSpendByPerson, totalSpendByType, totalSpendByLocation } =
-            processFilteredSpendData(filteredSpendData, splitBetweenEveryone, splitBetweenFilter)
+        const {
+            filteredTotalSpend,
+            filteredPeopleTotalSpend,
+            totalSpendByPerson,
+            totalSpendByType,
+            totalSpendByLocation,
+        } = processFilteredSpendData(filteredSpendData, splitBetweenFilter)
 
+        setFilteredTotalSpend(filteredTotalSpend)
+        setFilteredPeopleTotalSpend(filteredPeopleTotalSpend)
         setTotalSpendByPerson(totalSpendByPerson)
         setTotalSpendByType(totalSpendByType)
         setTotalSpendByLocation(totalSpendByLocation)
@@ -175,11 +199,18 @@ export const Gustavo = () => {
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
     return (
-        <Box>
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                maxWidth: 450,
+            }}>
             <Box
                 sx={{
                     display: 'flex',
                     width: '100%',
+                    maxWidth: 450,
                     position: 'fixed',
                     top: 0,
                     backgroundColor: '#F4D35E',
@@ -189,7 +220,9 @@ export const Gustavo = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         width: '100%',
-                        margin: 2,
+                        marginTop: 2,
+                        marginLeft: 2,
+                        marginRight: 1,
                     }}>
                     <Box
                         sx={{
@@ -210,7 +243,7 @@ export const Gustavo = () => {
                             sx={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                marginLeft: 2,
+                                marginLeft: 1,
                             }}>
                             <Typography
                                 sx={{
@@ -235,16 +268,30 @@ export const Gustavo = () => {
             </Box>
             <Box
                 sx={{
-                    marginTop: '20%',
+                    marginTop: '18%',
+                    marginBottom: 1,
+                    height: 32,
+                    maxWidth: 450,
+                }}>
+                <ActiveMenuItems />
+            </Box>
+            <Box
+                sx={{
                     maxHeight: showIconLabels
-                        ? window.innerHeight * 0.75
-                        : window.innerHeight * 0.77,
+                        ? window.innerHeight * 0.72
+                        : window.innerHeight * 0.74,
+                    maxWidth: 450,
                     overflow: 'hidden',
                     overflowY: 'scroll',
                 }}>
                 {ToolsMenuItemMap.get(activeItem)?.component}
             </Box>
-            <Menu />
+            <Box
+                sx={{
+                    maxWidth: 450,
+                }}>
+                <Menu />
+            </Box>
         </Box>
     )
 }

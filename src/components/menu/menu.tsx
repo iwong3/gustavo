@@ -51,7 +51,7 @@ const resetAllMenuItemStores = () => {
 
 export const Menu = () => {
     const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
-    const { activeItem } = useToolsMenuStore(useShallow((state) => state))
+    const { activeItem: activeView } = useToolsMenuStore(useShallow((state) => state))
 
     // menu item states
     // filters
@@ -79,7 +79,7 @@ export const Menu = () => {
             item: MenuItem.FilterSplitBetween,
             component: <FilterSplitBetween />,
             state: filterSplitBetweenState,
-            label: 'Buyer',
+            label: 'Person',
         },
         {
             item: MenuItem.FilterPaidBy,
@@ -108,21 +108,7 @@ export const Menu = () => {
         label: 'Sort',
     }
 
-    const defaultMenuItems = [sortMenuItem, ...filterMenuItems]
-
-    const [menuItems, setMenuItems] = useState<MenuItemData[]>(defaultMenuItems)
-    const [expandedMenuItem, setExpandedMenuItem] = useState(-1)
-
-    // when changing views, collapse the expanded menu item
-    useEffect(() => {
-        setExpandedMenuItem(-1)
-    }, [activeItem])
-
-    // get all menu item state resets
-    const menuItemStates = menuItems.map((item) => item.state)
-    menuItemStates.forEach((state) => {
-        menuItemStoreResets.add(state.reset)
-    })
+    const menuItems = [sortMenuItem, ...filterMenuItems]
 
     // whenever any filter and sort state changes, update the filtered spend data
     useEffect(() => {
@@ -146,6 +132,13 @@ export const Menu = () => {
     }, [...filterStates, ...sortStates])
 
     // expanded menu item state
+    const [expandedMenuItem, setExpandedMenuItem] = useState(-1)
+
+    // when changing views, collapse the expanded menu item
+    useEffect(() => {
+        setExpandedMenuItem(-1)
+    }, [activeView])
+
     const handleMenuItemClick = (index: number) => {
         if (showSettings) {
             setShowSettings(false)
@@ -158,15 +151,21 @@ export const Menu = () => {
         }
     }
 
-    const handleResetAllMenuItems = () => {
-        resetAllMenuItemStores()
-        setExpandedMenuItem(-1)
-    }
-
     const renderExpandedMenuItem = () => {
         if (expandedMenuItem !== -1) {
             return menuItems[expandedMenuItem].component
         }
+    }
+
+    // menu item resets
+    const menuItemStates = menuItems.map((item) => item.state)
+    menuItemStates.forEach((state) => {
+        menuItemStoreResets.add(state.reset)
+    })
+
+    const handleResetAllMenuItems = () => {
+        resetAllMenuItemStores()
+        setExpandedMenuItem(-1)
     }
 
     // settings
@@ -221,7 +220,7 @@ export const Menu = () => {
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            paddingY: 2,
+                            paddingY: 1,
                             width: '100%',
                             backgroundColor: 'white',
                         }}>
@@ -284,7 +283,7 @@ export const Menu = () => {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                paddingY: 2,
+                                paddingY: 1,
                                 width: '100%',
                                 borderRight: '1px solid white',
                                 borderLeft: '1px solid white',
@@ -332,7 +331,7 @@ export const Menu = () => {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        paddingY: 2,
+                                        paddingY: 1,
                                         width: '100%',
                                         borderRight:
                                             index === expandedMenuItem
@@ -381,7 +380,7 @@ export const Menu = () => {
                                 flexDirection: 'column',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                paddingY: 2,
+                                paddingY: 1,
                                 width: '100%',
                                 borderRight: '1px solid white',
                                 borderTopRightRadius:

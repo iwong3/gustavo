@@ -1,3 +1,4 @@
+import { Box } from '@mui/material'
 import dayjs from 'dayjs'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
@@ -14,7 +15,18 @@ enum Path {
 const routes = [
     {
         path: Path.HOME,
-        component: () => <Gustavo />,
+        component: () => {
+            return (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        width: '100%',
+                    }}>
+                    <Gustavo />
+                </Box>
+            )
+        },
     },
 ]
 

@@ -17,9 +17,7 @@ import { useGustavoStore } from 'views/gustavo'
 
 export const SummaryByDate = () => {
     const { filteredSpendData: spendData } = useGustavoStore(useShallow((state) => state))
-    const { everyone, filters: splitBetweenFilter } = useFilterSplitBetweenStore(
-        useShallow((state) => state)
-    )
+    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(useShallow((state) => state))
 
     const [totalSpendByDate, setTotalSpendByDate] = useState(new Map<string, number>())
     const [dateRange, setDateRange] = useState<string[]>([])
@@ -48,7 +46,8 @@ export const SummaryByDate = () => {
             const currentDateString = currentDate.format('M/D')
             const currentDateTotal = totalSpend.get(currentDateString) || 0
             let currentCost = spend.convertedCost
-            if (!everyone) {
+            const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+            if (isAnyFilterActive) {
                 const costPerPerson = getSplitCost(spend.convertedCost, spend.splitBetween)
                 // people who are included in the filter
                 const filteredPeople = Object.keys(splitBetweenFilter).filter(

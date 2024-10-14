@@ -8,6 +8,7 @@ Totals
 
 -   Total spent
 -   Compare person / spend type to total spent
+    -   Compare to absolute total? Or total of current filters?
 
 Graphs
 
@@ -19,3 +20,5 @@ UX
 
 -   Collapse all receipts
 -   Reset debt calculator
+-   Show active filters
+-   Protect against $NaN values as Google Sheets currency conversion sometimes fails

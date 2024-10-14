@@ -1,5 +1,4 @@
 import { Box, Typography } from '@mui/material'
-import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -8,21 +7,19 @@ import { getIconFromSpendType, getTablerIcon } from 'helpers/icons'
 import { Spend, SpendType } from 'helpers/spend'
 
 type FilterSpendTypeState = {
-    all: boolean
     filters: Record<SpendType, boolean>
 }
 
 type FilterSpendTypeActions = {
     filter: (spendData: Spend[]) => Spend[]
-    isActive: () => boolean
+    handleFilterClick: (type: SpendType) => void
 
-    setAll: (all: boolean) => void
+    isActive: () => boolean
     setFilters: (filters: Record<SpendType, boolean>) => void
     reset: () => void
 }
 
 const initialState: FilterSpendTypeState = {
-    all: true,
     filters: {
         [SpendType.Attraction]: false,
         [SpendType.Food]: false,
@@ -38,9 +35,10 @@ export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpend
         ...initialState,
 
         filter: (spendData: Spend[]): Spend[] => {
-            const { all, filters } = get()
+            const { filters } = get()
 
-            if (all) {
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            if (!isAnyFilterActive) {
                 return spendData
             }
 
@@ -55,48 +53,38 @@ export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpend
             })
             return filteredSpendData
         },
-
-        isActive: () => {
-            const { all } = get()
-            return !all
+        handleFilterClick: (type: SpendType) => {
+            const { filters } = get()
+            set(() => ({
+                filters: {
+                    ...filters,
+                    [type]: !filters[type],
+                },
+            }))
         },
 
-        setAll: (all: boolean) => set(() => ({ all })),
+        isActive: () => {
+            const { filters } = get()
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            return isAnyFilterActive
+        },
         setFilters: (filters: Record<SpendType, boolean>) => set(() => ({ filters })),
         reset: () => set(initialState),
     })
 )
 
 export const FilterSpendType = () => {
-    const { all, filters, setAll, setFilters } = useFilterSpendTypeStore(
+    const { filters, handleFilterClick, setFilters } = useFilterSpendTypeStore(
         useShallow((state) => state)
     )
 
-    useEffect(() => {
-        if (Object.values(filters).every((filter) => !filter)) {
-            setAll(true)
-        } else {
-            setAll(false)
-        }
-    }, [filters])
-
-    const handleAllClick = () => {
-        if (!all) {
-            setAll(true)
-            setFilters(
-                Object.keys(filters).reduce((acc, key) => {
-                    acc[key as SpendType] = false
-                    return acc
-                }, {} as Record<SpendType, boolean>)
-            )
-        }
-    }
-
-    const updateFilters = (type: SpendType) => {
-        setFilters({
-            ...filters,
-            [type]: !filters[type],
-        })
+    const resetAllFilters = () => {
+        setFilters(
+            Object.keys(filters).reduce((acc, key) => {
+                acc[key as SpendType] = false
+                return acc
+            }, {} as Record<SpendType, boolean>)
+        )
     }
 
     // settings stores
@@ -131,7 +119,7 @@ export const FilterSpendType = () => {
                         'transition': 'background-color 0.1s',
                     }}
                     onClick={() => {
-                        handleAllClick()
+                        resetAllFilters()
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
@@ -147,7 +135,7 @@ export const FilterSpendType = () => {
                             alignItems: 'center',
                         }}
                         onClick={() => {
-                            updateFilters(spendType as SpendType)
+                            handleFilterClick(spendType as SpendType)
                         }}>
                         <Box
                             sx={{

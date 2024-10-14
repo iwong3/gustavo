@@ -27,6 +27,7 @@ import {
     IconHandFingerLeft,
     IconHandFingerRight,
     IconLayoutList,
+    IconLayoutNavbarCollapse,
     IconListLetters,
     IconMap2,
     IconNotes,
@@ -101,6 +102,8 @@ export const getTablerIcon = ({
             return <IconHandFingerRight {...props} />
         case 'IconLayoutList':
             return <IconLayoutList {...props} />
+        case 'IconLayoutNavbarCollapse':
+            return <IconLayoutNavbarCollapse {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} />
         case 'IconMap2':

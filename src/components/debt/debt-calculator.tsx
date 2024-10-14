@@ -44,9 +44,7 @@ export const DebtCalculator = () => {
     const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
-    const { debtMapByPerson, spendData, filteredSpendData } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { debtMapByPerson, filteredSpendData } = useGustavoStore(useShallow((state) => state))
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
@@ -81,7 +79,7 @@ export const DebtCalculator = () => {
     }, [person1, person2, filteredSpendData])
 
     const debtAbsolute = Math.abs(debt)
-    const debtString = FormattedMoney('USD', 2).format(debtAbsolute)
+    const debtString = FormattedMoney().format(debtAbsolute)
 
     // Debt person state and style
     const debtPersonWidth = window.innerWidth * 0.3
@@ -209,7 +207,8 @@ export const DebtCalculator = () => {
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    margin: 1,
+                    marginX: 1,
+                    marginBottom: 1,
                     border: '1px solid #FBBC04',
                     borderRadius: '20px',
                     backgroundColor: 'white',
@@ -219,7 +218,8 @@ export const DebtCalculator = () => {
                 <Box
                     sx={{
                         display: 'flex',
-                        padding: 2,
+                        paddingY: 1,
+                        paddingX: 2,
                     }}>
                     {renderDebtPerson(person1, setPerson1)}
                     <Box
@@ -277,41 +277,33 @@ export const DebtCalculator = () => {
                     sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        padding: 2,
+                        padding: 1,
                         borderTop: '1px solid #FBBC04',
                     }}>
+                    <Box
+                        onClick={() => {
+                            setPerson1(undefined)
+                            setPerson2(undefined)
+                        }}
+                        sx={{
+                            'display': 'flex',
+                            'justifyContent': 'center',
+                            'alignItems': 'center',
+                            'height': 28,
+                            'width': 28,
+                            'borderRadius': '100%',
+                            '&:active': {
+                                backgroundColor: '#FBBC04',
+                            },
+                            'transition': 'background-color 0.1s',
+                        }}>
+                        {getTablerIcon({ name: 'IconX' })}
+                    </Box>
                     {people.map((person, index) => {
                         return <Box key={index}>{renderSelectPerson(person)}</Box>
                     })}
                 </Box>
             </Box>
-            {/* {debtSpendData.length > 0 && (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        marginLeft: 2,
-                        borderRadius: '10px',
-                        backgroundColor: 'white',
-                    }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            marginRight: 1,
-                        }}>
-                        {getTablerIcon({ name: 'IconLayoutList', size: 14 })}
-                    </Box>
-                    <Typography
-                        sx={{
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            fontStyle: 'italic',
-                        }}>
-                        Receipts
-                    </Typography>
-                </Box>
-            )} */}
             <ReceiptsList spendData={debtSpendData} />
         </Box>
     )

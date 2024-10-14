@@ -8,21 +8,19 @@ import { Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 
 type FilterPaidByState = {
-    everyone: boolean
     filters: Partial<Record<Person, boolean>>
 }
 
 type FilterPaidByActions = {
     filter: (spendData: Spend[]) => Spend[]
-    isActive: () => boolean
+    handleFilterClick: (person: Person) => void
 
-    setEveryone: (everyone: boolean) => void
+    isActive: () => boolean
     setFilters: (filters: Partial<Record<Person, boolean>>) => void
     reset: () => void
 }
 
 const initialState: FilterPaidByState = {
-    everyone: true,
     filters: {
         [Person.Aibek]: false,
         [Person.Angela]: false,
@@ -40,9 +38,10 @@ export const useFilterPaidByStore = create<FilterPaidByState & FilterPaidByActio
         ...initialState,
 
         filter: (spendData: Spend[]): Spend[] => {
-            const { everyone, filters } = get()
+            const { filters } = get()
 
-            if (everyone) {
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            if (!isAnyFilterActive) {
                 return spendData
             }
 
@@ -51,51 +50,38 @@ export const useFilterPaidByStore = create<FilterPaidByState & FilterPaidByActio
             })
             return filteredSpendData
         },
+        handleFilterClick: (person: Person) => {
+            const { filters } = get()
 
-        isActive: () => {
-            const { everyone } = get()
-            return !everyone
+            if (person === Person.Everyone) {
+                set(() => ({
+                    filters: Object.keys(filters).reduce((acc, key) => {
+                        acc[key as Person] = false
+                        return acc
+                    }, {} as Partial<Record<Person, boolean>>),
+                }))
+            } else {
+                set(() => ({
+                    filters: {
+                        ...filters,
+                        [person]: !filters[person],
+                    },
+                }))
+            }
         },
 
-        setEveryone: (everyone: boolean) => set(() => ({ everyone })),
+        isActive: () => {
+            const { filters } = get()
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            return isAnyFilterActive
+        },
         setFilters: (filters: Partial<Record<Person, boolean>>) => set(() => ({ filters })),
         reset: () => set(initialState),
     })
 )
 
 export const FilterPaidBy = () => {
-    const { everyone, filters, setEveryone, setFilters } = useFilterPaidByStore(
-        useShallow((state) => state)
-    )
-
-    useEffect(() => {
-        if (Object.values(filters).every((filter) => !filter)) {
-            setEveryone(true)
-        } else {
-            setEveryone(false)
-        }
-    }, [filters])
-
-    const updateFilters = (person: Person) => {
-        if (person === Person.Everyone) {
-            if (everyone) {
-                return
-            }
-
-            setEveryone(true)
-            setFilters(
-                Object.keys(filters).reduce((acc, key) => {
-                    acc[key as Person] = false
-                    return acc
-                }, {} as Partial<Record<Person, boolean>>)
-            )
-        } else {
-            setFilters({
-                ...filters,
-                [person]: !filters[person],
-            })
-        }
-    }
+    const { filters, handleFilterClick } = useFilterPaidByStore(useShallow((state) => state))
 
     return (
         <Box
@@ -119,7 +105,7 @@ export const FilterPaidBy = () => {
                     'transition': 'background-color 0.1s',
                 }}
                 onClick={() => {
-                    updateFilters(Person.Everyone)
+                    handleFilterClick(Person.Everyone)
                 }}>
                 {getTablerIcon({ name: 'IconX' })}
             </Box>
@@ -134,7 +120,7 @@ export const FilterPaidBy = () => {
                             fontSize: '12px',
                         }}
                         onClick={() => {
-                            updateFilters(person as Person)
+                            handleFilterClick(person as Person)
                         }}>
                         <InitialsIcon
                             person={person as Person}

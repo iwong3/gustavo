@@ -5,6 +5,7 @@ import { FormattedMoney } from 'helpers/currency'
 import { getIconFromSpendType } from 'helpers/icons'
 import { SpendType } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
+import { Graph } from 'components/graphs/graph'
 
 export const TotalSpendByType = () => {
     const { totalSpendByType } = useGustavoStore(useShallow((state) => state))
@@ -91,20 +92,22 @@ export const TotalSpendByType = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 margin: 1,
+                width: '100%',
             }}>
+            {renderTotalSpendByType()}
             <Box
                 sx={{
                     display: 'flex',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 0.5,
-                    marginLeft: 0.5,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fontStyle: 'italic',
+                    marginY: 2,
                 }}>
-                By Type
+                <Graph
+                    data={totalSpendByTypeArray}
+                    width={window.innerWidth * 0.9}
+                    height={window.innerWidth * 0.5}
+                />
             </Box>
-            {renderTotalSpendByType()}
         </Box>
     )
 }

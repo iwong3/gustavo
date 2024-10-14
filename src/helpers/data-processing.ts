@@ -3,10 +3,13 @@ import { Person } from 'helpers/person'
 import { getSplitCost, Spend, SpendType } from 'helpers/spend'
 
 interface ProcessSpendDataResponse {
+    totalSpend: number
     debtMap: Map<Person, Map<Person, number>>
 }
 
 export const processSpendData = (spendData: Spend[]): ProcessSpendDataResponse => {
+    let totalSpend = 0
+
     // initialize debt map
     const debtMap = new Map<Person, Map<Person, number>>()
     let persons = Object.values(Person).filter((person) => person !== Person.Everyone)
@@ -15,15 +18,20 @@ export const processSpendData = (spendData: Spend[]): ProcessSpendDataResponse =
     })
 
     spendData.forEach((spend) => {
+        totalSpend += spend.convertedCost
+
         calculateAndUpdateDebtMap(spend, debtMap)
     })
 
     return {
+        totalSpend,
         debtMap,
     }
 }
 
 interface ProcessFilteredSpendDataResponse {
+    filteredTotalSpend: number
+    filteredPeopleTotalSpend: number
     totalSpendByPerson: Map<Person, number>
     totalSpendByType: Map<SpendType, number>
     totalSpendByLocation: Map<Location, number>
@@ -31,9 +39,11 @@ interface ProcessFilteredSpendDataResponse {
 
 export const processFilteredSpendData = (
     filteredSpendData: Spend[],
-    splitBetweenEveryone: boolean,
     splitBetweenFilter: Partial<Record<Person, boolean>>
 ): ProcessFilteredSpendDataResponse => {
+    let filteredTotalSpend = 0
+    let filteredPeopleTotalSpend = 0
+
     const totalSpendByPerson = new Map<Person, number>()
     let persons = Object.values(Person).filter((person) => person !== Person.Everyone)
     persons.forEach((person) => {
@@ -51,27 +61,16 @@ export const processFilteredSpendData = (
     })
 
     filteredSpendData.forEach((spend) => {
-        calculateAndUpdateTotalSpendByPerson(
-            spend,
-            totalSpendByPerson,
-            splitBetweenEveryone,
-            splitBetweenFilter
-        )
-        calculateAndUpdateTotalSpendByType(
-            spend,
-            totalSpendByType,
-            splitBetweenEveryone,
-            splitBetweenFilter
-        )
-        calculateAndUpdateTotalSpendByLocation(
-            spend,
-            totalSpendByLocation,
-            splitBetweenEveryone,
-            splitBetweenFilter
-        )
+        filteredTotalSpend += spend.convertedCost
+        filteredPeopleTotalSpend += calculateFilteredTotalSpend(spend, splitBetweenFilter)
+        calculateAndUpdateTotalSpendByPerson(spend, totalSpendByPerson, splitBetweenFilter)
+        calculateAndUpdateTotalSpendByType(spend, totalSpendByType, splitBetweenFilter)
+        calculateAndUpdateTotalSpendByLocation(spend, totalSpendByLocation, splitBetweenFilter)
     })
 
     return {
+        filteredTotalSpend,
+        filteredPeopleTotalSpend,
         totalSpendByPerson,
         totalSpendByType,
         totalSpendByLocation,
@@ -113,10 +112,36 @@ const getOrCreateDebtMap = (person: Person, debtMap: Map<Person, Map<Person, num
     return personDebtMap
 }
 
+const calculateFilteredTotalSpend = (
+    spend: Spend,
+    splitBetweenFilter: Partial<Record<Person, boolean>>
+): number => {
+    const { convertedCost, splitBetween } = spend
+
+    let totalCost = convertedCost
+
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
+        const splitCost = getSplitCost(convertedCost, splitBetween)
+
+        // get an array of people buying the item
+        let splitters: Person[] = splitBetween
+        if (splitBetween.includes(Person.Everyone)) {
+            splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
+        }
+        // remove people who are not selected on the filter
+        splitters = splitters.filter((person) => splitBetweenFilter[person])
+
+        // total cost = split cost * number of people who are buying AND on the filter
+        totalCost = splitCost * splitters.length
+    }
+
+    return totalCost
+}
+
 const calculateAndUpdateTotalSpendByPerson = (
     spend: Spend,
     totalSpendByPerson: Map<Person, number>,
-    splitBetweenEveryone: boolean,
     splitBetweenFilter: Partial<Record<Person, boolean>>
 ) => {
     const { convertedCost, splitBetween } = spend
@@ -129,8 +154,9 @@ const calculateAndUpdateTotalSpendByPerson = (
         splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
     }
 
-    // remove people who are not selected on the filter
-    if (!splitBetweenEveryone) {
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
+        // remove people who are not selected on the filter
         splitters = splitters.filter((person) => splitBetweenFilter[person])
     }
 
@@ -143,14 +169,14 @@ const calculateAndUpdateTotalSpendByPerson = (
 const calculateAndUpdateTotalSpendByType = (
     spend: Spend,
     totalSpendByType: Map<SpendType, number>,
-    splitBetweenEveryone: boolean,
     splitBetweenFilter: Partial<Record<Person, boolean>>
 ) => {
     const { convertedCost, splitBetween, type } = spend
 
     let totalCost = convertedCost
 
-    if (!splitBetweenEveryone) {
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween)
 
         // get an array of people buying the item
@@ -180,14 +206,14 @@ const calculateAndUpdateTotalSpendByType = (
 const calculateAndUpdateTotalSpendByLocation = (
     spend: Spend,
     totalSpendByLocation: Map<Location, number>,
-    splitBetweenEveryone: boolean,
     splitBetweenFilter: Partial<Record<Person, boolean>>
 ) => {
     const { convertedCost, splitBetween, location } = spend
 
     let totalCost = convertedCost
 
-    if (!splitBetweenEveryone) {
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween)
 
         // get an array of people buying the item

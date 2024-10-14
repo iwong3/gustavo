@@ -5,6 +5,7 @@ import { FormattedMoney } from 'helpers/currency'
 import { InitialsIcon } from 'helpers/icons'
 import { Person } from 'helpers/person'
 import { useGustavoStore } from 'views/gustavo'
+import { Graph } from 'components/graphs/graph'
 
 export const TotalSpendByPerson = () => {
     const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
@@ -98,20 +99,23 @@ export const TotalSpendByPerson = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 margin: 1,
+                width: '100%',
+                height: '100%',
             }}>
+            {renderTotalSpendByPerson()}
             <Box
                 sx={{
                     display: 'flex',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 0.5,
-                    marginLeft: 0.5,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fontStyle: 'italic',
+                    marginY: 2,
                 }}>
-                By Person
+                <Graph
+                    data={totalSpendByPersonArray}
+                    width={window.innerWidth * 0.9}
+                    height={window.innerWidth * 0.5}
+                />
             </Box>
-            {renderTotalSpendByPerson()}
         </Box>
     )
 }

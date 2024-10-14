@@ -8,21 +8,19 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 type FilterLocationState = {
-    all: boolean
     filters: Record<Location, boolean>
 }
 
 type FilterLocationActions = {
     filter: (spendData: Spend[]) => Spend[]
-    isActive: () => boolean
+    handleFilterClick: (location: Location) => void
 
-    setAll: (all: boolean) => void
+    isActive: () => boolean
     setFilters: (filters: Record<Location, boolean>) => void
     reset: () => void
 }
 
 const initialState: FilterLocationState = {
-    all: true,
     filters: {
         [Location.Hakone]: false,
         [Location.Kyoto]: false,
@@ -37,9 +35,10 @@ export const useFilterLocationStore = create<FilterLocationState & FilterLocatio
         ...initialState,
 
         filter: (spendData: Spend[]): Spend[] => {
-            const { all, filters } = get()
+            const { filters } = get()
 
-            if (all) {
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            if (!isAnyFilterActive) {
                 return spendData
             }
 
@@ -54,48 +53,38 @@ export const useFilterLocationStore = create<FilterLocationState & FilterLocatio
             })
             return filteredSpendData
         },
-
-        isActive: () => {
-            const { all } = get()
-            return !all
+        handleFilterClick: (location: Location) => {
+            const { filters } = get()
+            set(() => ({
+                filters: {
+                    ...filters,
+                    [location]: !filters[location],
+                },
+            }))
         },
 
-        setAll: (all: boolean) => set(() => ({ all })),
+        isActive: () => {
+            const { filters } = get()
+            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
+            return isAnyFilterActive
+        },
         setFilters: (filters: Record<Location, boolean>) => set(() => ({ filters })),
         reset: () => set(initialState),
     })
 )
 
 export const FilterLocation = () => {
-    const { all, filters, setAll, setFilters } = useFilterLocationStore(
+    const { filters, handleFilterClick, setFilters } = useFilterLocationStore(
         useShallow((state) => state)
     )
 
-    useEffect(() => {
-        if (Object.values(filters).every((filter) => !filter)) {
-            setAll(true)
-        } else {
-            setAll(false)
-        }
-    }, [filters])
-
-    const handleAllClick = () => {
-        if (!all) {
-            setAll(true)
-            setFilters(
-                Object.keys(filters).reduce((acc, key) => {
-                    acc[key as Location] = false
-                    return acc
-                }, {} as Record<Location, boolean>)
-            )
-        }
-    }
-
-    const updateFilters = (location: Location) => {
-        setFilters({
-            ...filters,
-            [location]: !filters[location],
-        })
+    const resetAllFilters = () => {
+        setFilters(
+            Object.keys(filters).reduce((acc, key) => {
+                acc[key as Location] = false
+                return acc
+            }, {} as Record<Location, boolean>)
+        )
     }
 
     // settings stores
@@ -130,7 +119,7 @@ export const FilterLocation = () => {
                         'transition': 'background-color 0.1s',
                     }}
                     onClick={() => {
-                        handleAllClick()
+                        resetAllFilters()
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
@@ -146,7 +135,7 @@ export const FilterLocation = () => {
                             alignItems: 'center',
                         }}
                         onClick={() => {
-                            updateFilters(location as Location)
+                            handleFilterClick(location as Location)
                         }}>
                         <Box
                             sx={{

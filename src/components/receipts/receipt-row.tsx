@@ -1,10 +1,11 @@
 import { Box } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AnimateHeight from 'react-animate-height'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
@@ -17,6 +18,12 @@ interface IReceiptsRowProps {
 
 export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
     const [expanded, setExpanded] = useState(false)
+
+    const { value } = useCollapseAllStore(useShallow((state) => state))
+
+    useEffect(() => {
+        setExpanded(false)
+    }, [value])
 
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
 

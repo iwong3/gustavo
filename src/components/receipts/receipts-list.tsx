@@ -20,7 +20,8 @@ export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
                 <Box
                     key={'row-' + index}
                     sx={{
-                        margin: 1,
+                        marginX: 1,
+                        marginBottom: 1,
                         border: '1px solid #FBBC04',
                         borderRadius: 4,
                         backgroundColor: 'white',

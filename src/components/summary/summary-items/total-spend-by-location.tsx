@@ -5,13 +5,14 @@ import { Location } from 'helpers/location'
 import { useGustavoStore } from 'views/gustavo'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon } from 'helpers/icons'
+import { Graph } from 'components/graphs/graph'
 
 export const TotalSpendByLocation = () => {
     const { totalSpendByLocation } = useGustavoStore(useShallow((state) => state))
 
     const totalSpendByLocationArray = Array.from(totalSpendByLocation)
 
-    const rowLength = 2
+    const rowLength = 3
     const renderTotalSpendByLocation = () => {
         const rows = []
         let row = []
@@ -49,7 +50,7 @@ export const TotalSpendByLocation = () => {
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'space-between',
-                width: '48%',
+                width: '31%',
                 border: '1px solid #FBBC04',
                 borderRadius: '10px',
                 backgroundColor: 'white',
@@ -92,19 +93,20 @@ export const TotalSpendByLocation = () => {
                 flexDirection: 'column',
                 margin: 1,
             }}>
+            {renderTotalSpendByLocation()}
             <Box
                 sx={{
                     display: 'flex',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 0.5,
-                    marginLeft: 0.5,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fontStyle: 'italic',
+                    marginY: 2,
                 }}>
-                By Location
+                <Graph
+                    data={totalSpendByLocationArray}
+                    width={window.innerWidth * 0.9}
+                    height={window.innerWidth * 0.5}
+                />
             </Box>
-            {renderTotalSpendByLocation()}
         </Box>
     )
 }
