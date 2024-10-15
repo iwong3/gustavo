@@ -1,7 +1,11 @@
+import { Box } from '@mui/material'
+import dayjs from 'dayjs'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-import { Home } from 'views/home'
-import { TrackSpend } from 'views/track-spend'
+import { Gustavo } from 'views/gustavo'
+
+let customParseFormat = require('dayjs/plugin/customParseFormat')
+dayjs.extend(customParseFormat)
 
 enum Path {
     HOME = '/',
@@ -11,11 +15,18 @@ enum Path {
 const routes = [
     {
         path: Path.HOME,
-        component: () => <Home />,
-    },
-    {
-        path: Path.TRACK_SPEND,
-        component: () => <TrackSpend />,
+        component: () => {
+            return (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        width: '100%',
+                    }}>
+                    <Gustavo />
+                </Box>
+            )
+        },
     },
 ]
 
@@ -24,7 +35,7 @@ export const MainRouter = () => {
         <BrowserRouter basename={process.env.PUBLIC_URL}>
             <Routes>
                 {routes.map(({ path, component }) => (
-                    <Route path={path} element={component()} />
+                    <Route key={path} path={path} element={component()} />
                 ))}
             </Routes>
         </BrowserRouter>
