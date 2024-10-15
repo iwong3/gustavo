@@ -1,14 +1,16 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
+import { Graph } from 'components/graphs/graph'
+import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { FormattedMoney } from 'helpers/currency'
 import { getIconFromSpendType } from 'helpers/icons'
 import { SpendType } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
-import { Graph } from 'components/graphs/graph'
 
 export const TotalSpendByType = () => {
     const { totalSpendByType } = useGustavoStore(useShallow((state) => state))
+    const { filters, handleFilterClick } = useFilterSpendTypeStore(useShallow((state) => state))
 
     const totalSpendByTypeArray = Array.from(totalSpendByType)
 
@@ -42,49 +44,58 @@ export const TotalSpendByType = () => {
         return rows
     }
 
-    const renderSpendType = (spendType: SpendType, totalSpend: number) => (
-        <Box
-            key={'total-spend-by-type-' + spendType}
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'space-between',
-                width: '31%',
-                border: '1px solid #FBBC04',
-                borderRadius: '10px',
-                backgroundColor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-            }}>
+    const renderSpendType = (spendType: SpendType, totalSpend: number) => {
+        const isActive = filters[spendType]
+
+        return (
             <Box
+                key={'total-spend-by-type-' + spendType}
+                onClick={() => {
+                    handleFilterClick(spendType)
+                }}
                 sx={{
                     display: 'flex',
-                    alignItems: 'center',
-                    padding: 1,
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'space-between',
+                    width: '31%',
+                    border: isActive ? '1px solid #588157' : '1px solid #FBBC04',
+                    borderRadius: '10px',
+                    backgroundColor: isActive ? '#FAEDCD' : 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                    transition: 'background-color 0.1s',
                 }}>
-                {getIconFromSpendType(spendType, 18)}
                 <Box
                     sx={{
-                        marginLeft: 1,
-                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingY: 0.5,
+                        paddingX: 0.75,
                     }}>
-                    {spendType}
+                    {getIconFromSpendType(spendType, 18)}
+                    <Box
+                        sx={{
+                            marginLeft: 1,
+                            fontSize: 12,
+                        }}>
+                        {spendType}
+                    </Box>
+                </Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        padding: 1,
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        borderTop: '1px solid #FBBC04',
+                    }}>
+                    {FormattedMoney().format(totalSpend)}
                 </Box>
             </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    padding: 1,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    borderTop: '1px solid #FBBC04',
-                }}>
-                {FormattedMoney('USD', 2).format(totalSpend)}
-            </Box>
-        </Box>
-    )
+        )
+    }
 
     return (
         <Box

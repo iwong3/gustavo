@@ -27,6 +27,9 @@ type GustavoState = {
     // filtered spend
     filteredSpendData: Spend[]
     // filtered spend calculations
+    filteredSpendDataWithoutSplitBetween: Spend[]
+    filteredSpendDataWithoutSpendType: Spend[]
+    filteredSpendDataWithoutLocation: Spend[]
     filteredTotalSpend: number // total spend of the filtered items
     filteredPeopleTotalSpend: number // total spend by filtered people out of the filtered items
     totalSpendByPerson: Map<Person, number>
@@ -44,6 +47,9 @@ type GustavoActions = {
     // filtered spend
     setFilteredSpendData: (filteredSpendData: Spend[]) => void
     // filtered spend calculations
+    setFilteredSpendDataWithoutSplitBetween: (filteredSpendDataWithoutSplitBetween: Spend[]) => void
+    setFilteredSpendDataWithoutSpendType: (filteredSpendDataWithoutSpendType: Spend[]) => void
+    setFilteredSpendDataWithoutLocation: (filteredSpendDataWithoutLocation: Spend[]) => void
     setFilteredTotalSpend: (filteredTotalSpend: number) => void
     setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) => void
     setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) => void
@@ -57,6 +63,9 @@ const initialState: GustavoState = {
     debtMapByPerson: new Map<Person, Map<Person, number>>(),
 
     filteredSpendData: [],
+    filteredSpendDataWithoutSplitBetween: [],
+    filteredSpendDataWithoutSpendType: [],
+    filteredSpendDataWithoutLocation: [],
     filteredTotalSpend: 0,
     filteredPeopleTotalSpend: 0,
     totalSpendByPerson: new Map<Person, number>(),
@@ -73,6 +82,12 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
         set(() => ({ debtMapByPerson })),
 
     setFilteredTotalSpend: (filteredTotalSpend: number) => set(() => ({ filteredTotalSpend })),
+    setFilteredSpendDataWithoutSplitBetween: (filteredSpendDataWithoutSplitBetween: Spend[]) =>
+        set(() => ({ filteredSpendDataWithoutSplitBetween })),
+    setFilteredSpendDataWithoutSpendType: (filteredSpendDataWithoutSpendType: Spend[]) =>
+        set(() => ({ filteredSpendDataWithoutSpendType })),
+    setFilteredSpendDataWithoutLocation: (filteredSpendDataWithoutLocation: Spend[]) =>
+        set(() => ({ filteredSpendDataWithoutLocation })),
     setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) =>
         set(() => ({ filteredPeopleTotalSpend })),
     setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
@@ -88,10 +103,16 @@ export const Gustavo = () => {
     const {
         spendData,
         filteredSpendData,
+        filteredSpendDataWithoutSplitBetween,
+        filteredSpendDataWithoutSpendType,
+        filteredSpendDataWithoutLocation,
         setSpendData,
         setTotalSpend,
         setDebtMapByPerson,
         setFilteredSpendData,
+        setFilteredSpendDataWithoutSplitBetween,
+        setFilteredSpendDataWithoutSpendType,
+        setFilteredSpendDataWithoutLocation,
         setFilteredTotalSpend,
         setFilteredPeopleTotalSpend,
         setTotalSpendByPerson,
@@ -163,6 +184,9 @@ export const Gustavo = () => {
                     .filter((row) => row !== undefined) as Spend[]
                 setSpendData(data)
                 setFilteredSpendData(data)
+                setFilteredSpendDataWithoutSplitBetween(data)
+                setFilteredSpendDataWithoutSpendType(data)
+                setFilteredSpendDataWithoutLocation(data)
             })
         }
 
@@ -186,14 +210,20 @@ export const Gustavo = () => {
             totalSpendByPerson,
             totalSpendByType,
             totalSpendByLocation,
-        } = processFilteredSpendData(filteredSpendData, splitBetweenFilter)
+        } = processFilteredSpendData(
+            filteredSpendData,
+            filteredSpendDataWithoutSplitBetween,
+            filteredSpendDataWithoutSpendType,
+            filteredSpendDataWithoutLocation,
+            splitBetweenFilter
+        )
 
         setFilteredTotalSpend(filteredTotalSpend)
         setFilteredPeopleTotalSpend(filteredPeopleTotalSpend)
         setTotalSpendByPerson(totalSpendByPerson)
         setTotalSpendByType(totalSpendByType)
         setTotalSpendByLocation(totalSpendByLocation)
-    }, [filteredSpendData])
+    }, [filteredSpendData, filteredSpendDataWithoutSplitBetween])
 
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
@@ -270,7 +300,6 @@ export const Gustavo = () => {
                 sx={{
                     marginTop: '18%',
                     marginBottom: 1,
-                    height: 32,
                     maxWidth: 450,
                 }}>
                 <ActiveMenuItems />

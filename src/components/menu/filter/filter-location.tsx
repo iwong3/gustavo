@@ -1,11 +1,11 @@
 import { Box, Typography } from '@mui/material'
+import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
+
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { getTablerIcon, LocationIcon } from 'helpers/icons'
 import { Location } from 'helpers/location'
 import { Spend } from 'helpers/spend'
-import { useEffect } from 'react'
-import { create } from 'zustand'
-import { useShallow } from 'zustand/react/shallow'
 
 type FilterLocationState = {
     filters: Record<Location, boolean>

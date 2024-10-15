@@ -1,14 +1,16 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
-import { Location } from 'helpers/location'
-import { useGustavoStore } from 'views/gustavo'
+import { Graph } from 'components/graphs/graph'
+import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon } from 'helpers/icons'
-import { Graph } from 'components/graphs/graph'
+import { Location } from 'helpers/location'
+import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByLocation = () => {
     const { totalSpendByLocation } = useGustavoStore(useShallow((state) => state))
+    const { filters, handleFilterClick } = useFilterLocationStore(useShallow((state) => state))
 
     const totalSpendByLocationArray = Array.from(totalSpendByLocation)
 
@@ -42,49 +44,58 @@ export const TotalSpendByLocation = () => {
         return rows
     }
 
-    const renderLocation = (location: Location, totalSpend: number) => (
-        <Box
-            key={'total-spend-by-location-' + location}
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'space-between',
-                width: '31%',
-                border: '1px solid #FBBC04',
-                borderRadius: '10px',
-                backgroundColor: 'white',
-                boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-            }}>
+    const renderLocation = (location: Location, totalSpend: number) => {
+        const isActive = filters[location]
+
+        return (
             <Box
+                key={'total-spend-by-location-' + location}
+                onClick={() => {
+                    handleFilterClick(location)
+                }}
                 sx={{
                     display: 'flex',
-                    alignItems: 'center',
-                    padding: 1,
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'space-between',
+                    width: '31%',
+                    border: isActive ? '1px solid #588157' : '1px solid #FBBC04',
+                    borderRadius: '10px',
+                    backgroundColor: isActive ? '#FAEDCD' : 'white',
+                    boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                    transition: 'background-color 0.1s',
                 }}>
-                {getTablerIcon({ name: 'IconMap2', size: 18 })}
                 <Box
                     sx={{
-                        marginLeft: 1,
-                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingY: 0.5,
+                        paddingX: 0.75,
                     }}>
-                    {location}
+                    {getTablerIcon({ name: 'IconMap2', size: 18 })}
+                    <Box
+                        sx={{
+                            marginLeft: 1,
+                            fontSize: 12,
+                        }}>
+                        {location}
+                    </Box>
+                </Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        padding: 1,
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        borderTop: '1px solid #FBBC04',
+                    }}>
+                    {FormattedMoney('USD', 2).format(totalSpend)}
                 </Box>
             </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    padding: 1,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    borderTop: '1px solid #FBBC04',
-                }}>
-                {FormattedMoney('USD', 2).format(totalSpend)}
-            </Box>
-        </Box>
-    )
+        )
+    }
 
     return (
         <Box

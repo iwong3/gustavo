@@ -50,7 +50,13 @@ const resetAllMenuItemStores = () => {
 }
 
 export const Menu = () => {
-    const { spendData, setFilteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const {
+        spendData,
+        setFilteredSpendData,
+        setFilteredSpendDataWithoutSplitBetween,
+        setFilteredSpendDataWithoutSpendType,
+        setFilteredSpendDataWithoutLocation,
+    } = useGustavoStore(useShallow((state) => state))
     const { activeItem: activeView } = useToolsMenuStore(useShallow((state) => state))
 
     // menu item states
@@ -112,13 +118,45 @@ export const Menu = () => {
 
     // whenever any filter and sort state changes, update the filtered spend data
     useEffect(() => {
-        let filteredSpendData = spendData
-
         // apply filters
-        filteredSpendData = filterPaidByState.filter(filteredSpendData)
+        let filteredSpendData = spendData
         filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
+        filteredSpendData = filterPaidByState.filter(filteredSpendData)
         filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
         filteredSpendData = filterLocationState.filter(filteredSpendData)
+
+        let filteredSpendDataWithoutSplitBetween = spendData
+        filteredSpendDataWithoutSplitBetween = filterPaidByState.filter(
+            filteredSpendDataWithoutSplitBetween
+        )
+        filteredSpendDataWithoutSplitBetween = filterSpendTypeState.filter(
+            filteredSpendDataWithoutSplitBetween
+        )
+        filteredSpendDataWithoutSplitBetween = filterLocationState.filter(
+            filteredSpendDataWithoutSplitBetween
+        )
+
+        let filteredSpendDataWithoutSpendType = spendData
+        filteredSpendDataWithoutSpendType = filterSplitBetweenState.filter(
+            filteredSpendDataWithoutSpendType
+        )
+        filteredSpendDataWithoutSpendType = filterPaidByState.filter(
+            filteredSpendDataWithoutSpendType
+        )
+        filteredSpendDataWithoutSpendType = filterLocationState.filter(
+            filteredSpendDataWithoutSpendType
+        )
+
+        let filteredSpendDataWithoutLocation = spendData
+        filteredSpendDataWithoutLocation = filterSplitBetweenState.filter(
+            filteredSpendDataWithoutLocation
+        )
+        filteredSpendDataWithoutLocation = filterPaidByState.filter(
+            filteredSpendDataWithoutLocation
+        )
+        filteredSpendDataWithoutLocation = filterSpendTypeState.filter(
+            filteredSpendDataWithoutLocation
+        )
 
         // apply sorting - only one sort will be active at a time
         for (const sortState of sortStates) {
@@ -129,6 +167,9 @@ export const Menu = () => {
         }
 
         setFilteredSpendData(filteredSpendData)
+        setFilteredSpendDataWithoutSplitBetween(filteredSpendDataWithoutSplitBetween)
+        setFilteredSpendDataWithoutSpendType(filteredSpendDataWithoutSpendType)
+        setFilteredSpendDataWithoutLocation(filteredSpendDataWithoutLocation)
     }, [...filterStates, ...sortStates])
 
     // expanded menu item state

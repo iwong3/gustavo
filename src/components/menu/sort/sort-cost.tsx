@@ -6,7 +6,7 @@ import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 import { defaultIconSize, getTablerIcon } from 'helpers/icons'
 import { Spend } from 'helpers/spend'
 
-enum SortOrder {
+export enum SortOrder {
     None,
     Descending,
     Ascending,

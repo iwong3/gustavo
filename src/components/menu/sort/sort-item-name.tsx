@@ -93,8 +93,8 @@ export const SortItemName = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}>
-                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCaretDown' })}
-                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCaretUp' })}
+                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCaretUp' })}
+                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCaretDown' })}
             </Box>
         </Box>
     )

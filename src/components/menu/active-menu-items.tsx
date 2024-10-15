@@ -19,6 +19,7 @@ import { Location } from 'helpers/location'
 import { SpendType } from 'helpers/spend'
 import { CollapseAll } from 'components/menu/items/collapse-all'
 import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { SummaryViewMenu } from 'components/menu/items/summary-view-menu'
 
 type ActiveMenuItemData = {
     item: MenuItem
@@ -72,6 +73,7 @@ export const ActiveMenuItems = () => {
         if (item.state.isActive()) {
             return (
                 <Box
+                    key={'active-menu-item-' + index}
                     sx={{
                         display: 'flex',
                         marginLeft: index === 0 ? 0 : 0.5,
@@ -279,6 +281,7 @@ export const ActiveMenuItems = () => {
                     })}
             </Box>
             {collapseAllTools.includes(activeItem) && <CollapseAll />}
+            {activeItem === ToolsMenuItem.TotalSpend && <SummaryViewMenu />}
         </Box>
     )
 }

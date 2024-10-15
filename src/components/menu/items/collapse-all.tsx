@@ -38,7 +38,7 @@ export const CollapseAll = () => {
                 'alignItems': 'center',
                 'padding': 0.5,
                 'marginLeft': 1,
-                'border': '1px solid #FBBC04',
+                'border': '2px solid #FBBC04',
                 'borderRadius': '10px',
                 'backgroundColor': 'white',
                 '&:active': {

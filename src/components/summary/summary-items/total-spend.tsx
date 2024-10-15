@@ -1,11 +1,13 @@
 import { Box, LinearProgress } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
+import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { FormattedMoney } from 'helpers/currency'
-import { useEffect, useState } from 'react'
 import { useGustavoStore } from 'views/gustavo'
-import { useShallow } from 'zustand/react/shallow'
 
 export const TotalSpend = () => {
     const { totalSpend, filteredTotalSpend, filteredPeopleTotalSpend } = useGustavoStore(
@@ -36,34 +38,43 @@ export const TotalSpend = () => {
     const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(useShallow((state) => state))
     const { filters: spendTypeFilter } = useFilterSpendTypeStore(useShallow((state) => state))
     const { filters: locationFilter } = useFilterLocationStore(useShallow((state) => state))
-    const filters = [splitBetweenFilter, spendTypeFilter, locationFilter]
+    const { filters: paidByFilter } = useFilterPaidByStore(useShallow((state) => state))
+    const filters = [splitBetweenFilter, spendTypeFilter, locationFilter, paidByFilter]
 
+    const [splittersTitle, setSplittersTitle] = useState("Everyone's")
     const [totalSpendTitle, setTotalSpendTitle] = useState('Total Spend')
 
     useEffect(() => {
-        let title = ''
+        let splittersTitle = "Everyone's"
 
         const splitters = Object.entries(splitBetweenFilter).filter(([_, isActive]) => isActive)
         if (splitters.length > 0) {
-            title += splitters.map(([splitter]) => splitter).join(' & ')
-            title += "'s"
+            splittersTitle = ''
+            splittersTitle += splitters.map(([splitter]) => splitter).join(' & ')
+            splittersTitle += "'s"
         }
 
-        title += ' Total '
+        let spendTitle = 'Total '
 
         const spendTypes = Object.entries(spendTypeFilter).filter(([_, isActive]) => isActive)
         if (spendTypes.length > 0) {
-            title += ' ' + spendTypes.map(([type]) => type).join(' & ')
+            spendTitle += ' ' + spendTypes.map(([type]) => type).join(', ')
         }
 
-        title += ' Spend'
+        spendTitle += ' Spend'
 
         const locations = Object.entries(locationFilter).filter(([_, isActive]) => isActive)
         if (locations.length > 0) {
-            title += ' in ' + locations.map(([location]) => location).join(' & ')
+            spendTitle += ' in ' + locations.map(([location]) => location).join(', ')
         }
 
-        setTotalSpendTitle(title)
+        const paidBys = Object.entries(paidByFilter).filter(([_, isActive]) => isActive)
+        if (paidBys.length > 0) {
+            spendTitle += ' Covered by ' + paidBys.map(([paidBy]) => paidBy).join(', ')
+        }
+
+        setSplittersTitle(splittersTitle)
+        setTotalSpendTitle(spendTitle)
     }, [...filters])
 
     return (
@@ -76,12 +87,19 @@ export const TotalSpend = () => {
             <Box
                 sx={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
                     padding: 0.5,
                     fontSize: 12,
                     fontWeight: 500,
                 }}>
-                {totalSpendTitle}
+                {splittersTitle && <Box>{splittersTitle}&nbsp;</Box>}
+                <Box
+                    sx={{
+                        color: useFilteredTotalSpend ? '#c1121f' : 'black',
+                    }}>
+                    {totalSpendTitle}
+                </Box>
             </Box>
             <Box
                 sx={{
@@ -113,15 +131,20 @@ export const TotalSpend = () => {
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            justifyContent: 'flex-end',
                             fontSize: 14,
                             fontWeight: 500,
                         }}>
-                        <Box>{percentOfTotalSpend.toFixed(0) + '%'}</Box>
-                        <Box>
-                            {FormattedMoney().format(
-                                useFilteredTotalSpend ? filteredTotalSpend : totalSpend
-                            )}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: 12,
+                                color: useFilteredTotalSpend ? '#c1121f' : 'black',
+                                cursor: 'pointer',
+                            }}
+                            onClick={() => setUseFilteredTotalSpend(!useFilteredTotalSpend)}>
+                            {useFilteredTotalSpend ? 'Filtered Total' : 'Total'}
                         </Box>
                     </Box>
                     <LinearProgress
@@ -136,18 +159,15 @@ export const TotalSpend = () => {
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-end',
+                            justifyContent: 'space-between',
+                            fontSize: 14,
+                            fontWeight: 500,
                         }}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                fontSize: 12,
-                                cursor: 'pointer',
-                                color: 'rgba(0, 0, 0, 0.54)',
-                            }}
-                            onClick={() => setUseFilteredTotalSpend(!useFilteredTotalSpend)}>
-                            {useFilteredTotalSpend ? 'Filtered Total' : 'Total'}
+                        <Box>{percentOfTotalSpend.toFixed(0) + '%'}</Box>
+                        <Box>
+                            {FormattedMoney().format(
+                                useFilteredTotalSpend ? filteredTotalSpend : totalSpend
+                            )}
                         </Box>
                     </Box>
                 </Box>

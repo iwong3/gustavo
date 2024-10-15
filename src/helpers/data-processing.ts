@@ -39,6 +39,9 @@ interface ProcessFilteredSpendDataResponse {
 
 export const processFilteredSpendData = (
     filteredSpendData: Spend[],
+    filteredSpendDataWithoutSplitBetween: Spend[],
+    filteredSpendDataWithoutSpendType: Spend[],
+    filteredSpendDataWithoutLocation: Spend[],
     splitBetweenFilter: Partial<Record<Person, boolean>>
 ): ProcessFilteredSpendDataResponse => {
     let filteredTotalSpend = 0
@@ -61,10 +64,19 @@ export const processFilteredSpendData = (
     })
 
     filteredSpendData.forEach((spend) => {
-        filteredTotalSpend += spend.convertedCost
         filteredPeopleTotalSpend += calculateFilteredTotalSpend(spend, splitBetweenFilter)
+    })
+
+    filteredSpendDataWithoutSplitBetween.forEach((spend) => {
+        filteredTotalSpend += spend.convertedCost
         calculateAndUpdateTotalSpendByPerson(spend, totalSpendByPerson, splitBetweenFilter)
+    })
+
+    filteredSpendDataWithoutSpendType.forEach((spend) => {
         calculateAndUpdateTotalSpendByType(spend, totalSpendByType, splitBetweenFilter)
+    })
+
+    filteredSpendDataWithoutLocation.forEach((spend) => {
         calculateAndUpdateTotalSpendByLocation(spend, totalSpendByLocation, splitBetweenFilter)
     })
 
@@ -139,6 +151,7 @@ const calculateFilteredTotalSpend = (
     return totalCost
 }
 
+// calculates total spend for each person for filtered spend data (not including split between)
 const calculateAndUpdateTotalSpendByPerson = (
     spend: Spend,
     totalSpendByPerson: Map<Person, number>,
@@ -152,12 +165,6 @@ const calculateAndUpdateTotalSpendByPerson = (
     let splitters: Person[] = splitBetween
     if (splitBetween.includes(Person.Everyone)) {
         splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
-    }
-
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
-    if (isAnyFilterActive) {
-        // remove people who are not selected on the filter
-        splitters = splitters.filter((person) => splitBetweenFilter[person])
     }
 
     splitters.forEach((splitter) => {
