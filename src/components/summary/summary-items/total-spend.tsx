@@ -126,7 +126,7 @@ export const TotalSpend = () => {
                     sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        width: '50%',
+                        width: '52.5%',
                     }}>
                     <Box
                         sx={{
@@ -147,15 +147,20 @@ export const TotalSpend = () => {
                             {useFilteredTotalSpend ? 'Filtered Total' : 'Total'}
                         </Box>
                     </Box>
-                    <LinearProgress
-                        value={percentOfTotalSpend}
-                        variant="determinate"
-                        color="success"
+                    <Box
                         sx={{
-                            height: '25px',
-                            zIndex: -1,
-                        }}
-                    />
+                            color: '#5fad56', // linear progress bar color
+                        }}>
+                        <LinearProgress
+                            value={percentOfTotalSpend}
+                            variant="determinate"
+                            color="inherit"
+                            sx={{
+                                height: '25px',
+                                zIndex: -1,
+                            }}
+                        />
+                    </Box>
                     <Box
                         sx={{
                             display: 'flex',

@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -90,123 +90,126 @@ export const ToolsMenu = () => {
                 display: 'flex',
                 alignItems: 'center',
             }}>
-            <Box
-                sx={{
-                    display: 'inline-block',
-                    position: 'relative',
-                }}>
-                {/* Active tool */}
+            <ClickAwayListener onClickAway={() => setToolMenuExpanded(false)}>
                 <Box
-                    onClick={() => setToolMenuExpanded(!toolMenuExpanded)}
                     sx={{
-                        display: 'flex',
-                        // justifyContent: 'flex-start',
-                        alignItems: 'center',
-                        padding: 1,
-                        width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
-                        height: iconBoxWidth,
-                        borderTop: '1px solid #FBBC04',
-                        borderRight: '1px solid #FBBC04',
-                        borderBottom: toolMenuExpanded ? '1px solid white' : '1px solid #FBBC04',
-                        borderLeft: '1px solid #FBBC04',
-                        borderTopRightRadius: '10px',
-                        borderTopLeftRadius: '10px',
-                        borderBottomLeftRadius: toolMenuExpanded ? 0 : '10px',
-                        borderBottomRightRadius: toolMenuExpanded ? 0 : '10px',
-                        backgroundColor: 'white',
-                        transition: 'width 0.1s ease-out',
+                        display: 'inline-block',
+                        position: 'relative',
                     }}>
+                    {/* Active tool */}
+                    <Box
+                        onClick={() => setToolMenuExpanded(!toolMenuExpanded)}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: 1,
+                            width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
+                            height: iconBoxWidth,
+                            borderTop: '1px solid #FBBC04',
+                            borderRight: '1px solid #FBBC04',
+                            borderBottom: toolMenuExpanded
+                                ? '1px solid white'
+                                : '1px solid #FBBC04',
+                            borderLeft: '1px solid #FBBC04',
+                            borderTopRightRadius: '10px',
+                            borderTopLeftRadius: '10px',
+                            borderBottomLeftRadius: toolMenuExpanded ? 0 : '10px',
+                            borderBottomRightRadius: toolMenuExpanded ? 0 : '10px',
+                            backgroundColor: 'white',
+                            transition: 'width 0.1s ease-out',
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: iconBoxWidth,
+                                height: iconBoxWidth,
+                            }}>
+                            {getToolsMenuItemIcon(activeItem)}
+                        </Box>
+                        <Box
+                            sx={{
+                                maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
+                                overflow: 'hidden',
+                            }}>
+                            <Typography
+                                sx={{
+                                    marginLeft: 1,
+                                    fontSize: 12,
+                                    textAlign: 'left',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                {ToolsMenuItemMap.get(activeItem)!.label}
+                            </Typography>
+                        </Box>
+                    </Box>
+                    {/* Menu */}
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            width: iconBoxWidth,
-                            height: iconBoxWidth,
-                        }}>
-                        {getToolsMenuItemIcon(activeItem)}
-                    </Box>
-                    <Box
-                        sx={{
-                            maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
+                            position: 'absolute',
+                            maxHeight: toolMenuExpanded ? 9999 : 0,
                             overflow: 'hidden',
                         }}>
-                        <Typography
+                        <Box
                             sx={{
-                                marginLeft: 1,
-                                fontSize: 12,
-                                textAlign: 'left',
-                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                border: '1px solid #FBBC04',
+                                borderBottomLeftRadius: '10px',
+                                borderBottomRightRadius: '10px',
+                                backgroundColor: 'white',
                             }}>
-                            {ToolsMenuItemMap.get(activeItem)!.label}
-                        </Typography>
-                    </Box>
-                </Box>
-                {/* Menu */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        position: 'absolute',
-                        maxHeight: toolMenuExpanded ? 9999 : 0,
-                        overflow: 'hidden',
-                    }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            border: '1px solid #FBBC04',
-                            borderBottomLeftRadius: '10px',
-                            borderBottomRightRadius: '10px',
-                            backgroundColor: 'white',
-                        }}>
-                        {Object.values(ToolsMenuItem).map((item, index) => {
-                            return (
-                                <Box
-                                    key={'tools-menu-item-' + index}
-                                    onClick={() => handleMenuItemClick(item as ToolsMenuItem)}
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'flex-start',
-                                        alignItems: 'center',
-                                        padding: 1,
-                                        width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
-                                        height: iconBoxWidth,
-                                        transition: 'width 0.1s ease-out',
-                                    }}>
+                            {Object.values(ToolsMenuItem).map((item, index) => {
+                                return (
                                     <Box
+                                        key={'tools-menu-item-' + index}
+                                        onClick={() => handleMenuItemClick(item as ToolsMenuItem)}
                                         sx={{
                                             display: 'flex',
-                                            justifyContent: 'center',
+                                            justifyContent: 'flex-start',
                                             alignItems: 'center',
-                                            width: iconBoxWidth,
+                                            padding: 1,
+                                            width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
                                             height: iconBoxWidth,
-                                            borderRadius: '100%',
-                                            backgroundColor:
-                                                activeItem === item ? '#FBBC04' : 'white',
+                                            transition: 'width 0.1s ease-out',
                                         }}>
-                                        {getToolsMenuItemIcon(item as ToolsMenuItem)}
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
-                                            overflow: 'hidden',
-                                        }}>
-                                        <Typography
+                                        <Box
                                             sx={{
-                                                marginLeft: 1,
-                                                fontSize: 12,
-                                                textAlign: 'left',
-                                                whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                width: iconBoxWidth,
+                                                height: iconBoxWidth,
+                                                borderRadius: '100%',
+                                                backgroundColor:
+                                                    activeItem === item ? '#FBBC04' : 'white',
                                             }}>
-                                            {ToolsMenuItemMap.get(item)!.label}
-                                        </Typography>
+                                            {getToolsMenuItemIcon(item as ToolsMenuItem)}
+                                        </Box>
+                                        <Box
+                                            sx={{
+                                                maxWidth: showIconLabels ? iconBoxMaxWidth : 0,
+                                                overflow: 'hidden',
+                                            }}>
+                                            <Typography
+                                                sx={{
+                                                    marginLeft: 1,
+                                                    fontSize: 12,
+                                                    textAlign: 'left',
+                                                    whiteSpace: 'nowrap',
+                                                }}>
+                                                {ToolsMenuItemMap.get(item)!.label}
+                                            </Typography>
+                                        </Box>
                                     </Box>
-                                </Box>
-                            )
-                        })}
+                                )
+                            })}
+                        </Box>
                     </Box>
                 </Box>
-            </Box>
+            </ClickAwayListener>
         </Box>
     )
 }

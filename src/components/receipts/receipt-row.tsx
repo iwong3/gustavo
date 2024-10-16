@@ -11,6 +11,7 @@ import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-be
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getSplitCost, Spend } from 'helpers/spend'
+import { getUcUrlFromOpenUrl } from 'helpers/image'
 
 interface IReceiptsRowProps {
     spend: Spend
@@ -18,6 +19,7 @@ interface IReceiptsRowProps {
 
 export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
     const [expanded, setExpanded] = useState(false)
+    const [receiptImageExpanded, setReceiptImageExpanded] = useState(false)
 
     const { value } = useCollapseAllStore(useShallow((state) => state))
 
@@ -28,9 +30,10 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
 
     return (
-        <Box onClick={() => setExpanded(!expanded)}>
+        <Box>
             <Grid
                 container
+                onClick={() => setExpanded(!expanded)}
                 sx={{
                     paddingY: 2,
                 }}>
@@ -111,7 +114,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 justifyContent: 'center',
                                 marginTop: 1,
                                 marginX: 2,
-                                fontSize: '14px',
+                                fontSize: 14,
                             }}>
                             {/* Split Between */}
                             <Box
@@ -149,13 +152,66 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                     marginTop: 2,
                                     marginBottom: 1,
                                 }}>
+                                {/* Receipt Image */}
+                                {spend.receiptImageUrl && (
+                                    <Box
+                                        sx={{
+                                            marginBottom: 1,
+                                        }}>
+                                        <Box
+                                            onClick={() =>
+                                                setReceiptImageExpanded(!receiptImageExpanded)
+                                            }
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                fontSize: 12,
+                                                fontStyle: 'italic',
+                                            }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    marginRight: 1,
+                                                }}>
+                                                {getTablerIcon({ name: 'IconPhoto', size: 14 })}
+                                            </Box>
+                                            {!receiptImageExpanded ? 'View Image' : 'Hide Image'}
+                                        </Box>
+                                        {receiptImageExpanded && (
+                                            <AnimateHeight
+                                                duration={100}
+                                                height={receiptImageExpanded ? 'auto' : 0}>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center',
+                                                        marginTop: 1,
+                                                    }}>
+                                                    <img
+                                                        src={getUcUrlFromOpenUrl(
+                                                            spend.receiptImageUrl
+                                                        )}
+                                                        alt="Receipt"
+                                                        style={{
+                                                            maxWidth: '100%',
+                                                            maxHeight: '200px',
+                                                        }}
+                                                    />
+                                                </Box>
+                                            </AnimateHeight>
+                                        )}
+                                    </Box>
+                                )}
                                 {/* Notes */}
                                 {spend.notes && (
                                     <Box
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            fontSize: '12px',
+                                            fontSize: 12,
                                             marginBottom: 1,
                                         }}>
                                         <Box
@@ -176,7 +232,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            fontSize: '12px',
+                                            fontSize: 12,
                                             fontStyle: 'italic',
                                         }}>
                                         <Box

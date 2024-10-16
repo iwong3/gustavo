@@ -100,11 +100,12 @@ export const SummaryViewMenu = () => {
                             justifyContent: 'center',
                             alignItems: 'center',
                             padding: 0.5,
-                            borderTop: '2px solid #FBBC04',
-                            borderBottom: '2px solid #FBBC04',
+                            height: 20,
+                            borderTop: '1px solid #FBBC04',
+                            borderBottom: '1px solid #FBBC04',
                             borderLeft:
                                 index === 0
-                                    ? '2px solid #FBBC04'
+                                    ? '1px solid #FBBC04'
                                     : index === SummaryViews.length - 1
                                     ? '1px solid #FBBC04'
                                     : 'none',
@@ -112,7 +113,7 @@ export const SummaryViewMenu = () => {
                                 index === 0
                                     ? '1px solid #FBBC04'
                                     : index === SummaryViews.length - 1
-                                    ? '2px solid #FBBC04'
+                                    ? '1px solid #FBBC04'
                                     : 'none',
                             borderTopLeftRadius: index === 0 ? '10px' : 0,
                             borderBottomLeftRadius: index === 0 ? '10px' : 0,
@@ -127,7 +128,7 @@ export const SummaryViewMenu = () => {
                                 justifyContent: 'center',
                                 alignItems: 'center',
                             }}>
-                            {getMenuItemIcon(view.menuItem)}
+                            {getMenuItemIcon(view.menuItem, 20)}
                         </Box>
                     </Box>
                 )

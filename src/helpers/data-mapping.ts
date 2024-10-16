@@ -22,6 +22,7 @@ export enum Columns {
     ResponseTimestamp = 'Timestamp',
     SpendType = 'Type of Spend',
     SplitBetween = 'Split Between',
+    ReceiptImageUrl = 'Upload Receipt',
 }
 
 // given a row string, return an array of the values

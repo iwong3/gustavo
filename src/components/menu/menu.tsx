@@ -24,6 +24,7 @@ import {
     getTablerIcon,
 } from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
+import { useSearchBarStore } from 'components/menu/search/search-bar'
 
 export enum MenuItem {
     FilterLocation,
@@ -79,6 +80,9 @@ export const Menu = () => {
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
     const sortStates = [sortCostState, sortDateState, sortItemNameState]
 
+    // search
+    const searchBarState = useSearchBarStore(useShallow((state) => state))
+
     // define menu item properties, used for rendering
     const filterMenuItems: MenuItemData[] = [
         {
@@ -125,6 +129,19 @@ export const Menu = () => {
         filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
         filteredSpendData = filterLocationState.filter(filteredSpendData)
 
+        // apply sorting - only one sort will be active at a time
+        for (const sortState of sortStates) {
+            if (sortState.order !== 0) {
+                filteredSpendData = sortState.sort(filteredSpendData)
+                break
+            }
+        }
+
+        // apply search
+        filteredSpendData = searchBarState.search(filteredSpendData)
+
+        // apply filters for partial filtered spend data
+        // doesn't need sort or search as it's only used for calculating totals for graphs
         let filteredSpendDataWithoutSplitBetween = spendData
         filteredSpendDataWithoutSplitBetween = filterPaidByState.filter(
             filteredSpendDataWithoutSplitBetween
@@ -158,19 +175,11 @@ export const Menu = () => {
             filteredSpendDataWithoutLocation
         )
 
-        // apply sorting - only one sort will be active at a time
-        for (const sortState of sortStates) {
-            if (sortState.order !== 0) {
-                filteredSpendData = sortState.sort(filteredSpendData)
-                break
-            }
-        }
-
         setFilteredSpendData(filteredSpendData)
         setFilteredSpendDataWithoutSplitBetween(filteredSpendDataWithoutSplitBetween)
         setFilteredSpendDataWithoutSpendType(filteredSpendDataWithoutSpendType)
         setFilteredSpendDataWithoutLocation(filteredSpendDataWithoutLocation)
-    }, [...filterStates, ...sortStates])
+    }, [...filterStates, ...sortStates, searchBarState])
 
     // expanded menu item state
     const [expandedMenuItem, setExpandedMenuItem] = useState(-1)

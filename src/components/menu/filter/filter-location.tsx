@@ -153,11 +153,7 @@ export const FilterLocation = () => {
                                 }}>
                                 <LocationIcon
                                     location={location as Location}
-                                    sx={
-                                        !isActive
-                                            ? { backgroundColor: 'lightgray' }
-                                            : { backgroundColor: '#FBBC04' }
-                                    }
+                                    sx={!isActive ? { backgroundColor: 'lightgray' } : undefined}
                                 />
                             </Box>
                             {showIconLabels && (

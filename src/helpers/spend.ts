@@ -20,6 +20,7 @@ export interface Spend {
     notes: string
     reportedBy: Person | undefined
     reportedAt: string | undefined
+    receiptImageUrl: string | undefined
 }
 
 export enum SpendType {

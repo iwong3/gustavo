@@ -139,6 +139,7 @@ export const Gustavo = () => {
                 const notesIndex = headers.indexOf(Columns.Notes)
                 const reportedByIndex = headers.indexOf(Columns.Email)
                 const reportedAtIndex = headers.indexOf(Columns.ResponseTimestamp)
+                const receiptImageUrlIndex = headers.indexOf(Columns.ReceiptImageUrl)
 
                 const data = rows
                     .slice(1)
@@ -177,6 +178,7 @@ export const Gustavo = () => {
                                 notes: rowValues[notesIndex],
                                 reportedBy: reportedBy,
                                 reportedAt: rowValues[reportedAtIndex],
+                                receiptImageUrl: rowValues[receiptImageUrlIndex],
                             }
                             return spend
                         }
@@ -298,7 +300,7 @@ export const Gustavo = () => {
             </Box>
             <Box
                 sx={{
-                    marginTop: '18%',
+                    marginTop: '17%',
                     marginBottom: 1,
                     maxWidth: 450,
                 }}>

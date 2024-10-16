@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { Graph } from 'components/graphs/graph'
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { FormattedMoney } from 'helpers/currency'
-import { getTablerIcon } from 'helpers/icons'
+import { getLocationColors, LocationIcon } from 'helpers/icons'
 import { Location } from 'helpers/location'
 import { useGustavoStore } from 'views/gustavo'
 
@@ -13,6 +13,10 @@ export const TotalSpendByLocation = () => {
     const { filters, handleFilterClick } = useFilterLocationStore(useShallow((state) => state))
 
     const totalSpendByLocationArray = Array.from(totalSpendByLocation)
+    const locationColors = totalSpendByLocationArray.map(([location]) =>
+        getLocationColors(location)
+    )
+    const activeLocations = Object.entries(filters).map(([_, isActive]) => isActive)
 
     const rowLength = 3
     const renderTotalSpendByLocation = () => {
@@ -72,7 +76,7 @@ export const TotalSpendByLocation = () => {
                         paddingY: 0.5,
                         paddingX: 0.75,
                     }}>
-                    {getTablerIcon({ name: 'IconMap2', size: 18 })}
+                    <LocationIcon location={location} sx={{ width: 18, height: 18 }} />
                     <Box
                         sx={{
                             marginLeft: 1,
@@ -116,6 +120,8 @@ export const TotalSpendByLocation = () => {
                     data={totalSpendByLocationArray}
                     width={window.innerWidth * 0.9}
                     height={window.innerWidth * 0.5}
+                    barColors={locationColors}
+                    activeData={activeLocations}
                 />
             </Box>
         </Box>

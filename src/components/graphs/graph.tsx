@@ -14,9 +14,11 @@ interface GraphProps {
     data: [string, number][]
     width?: number
     height?: number
+    barColors?: string[]
+    activeData?: boolean[]
 }
 
-export const Graph = ({ data, width, height }: GraphProps) => {
+export const Graph = ({ data, width, height, barColors, activeData }: GraphProps) => {
     const [displayData, setDisplayData] = useState(data)
 
     const { order: costOrder } = useSortCostStore(useShallow((state) => state))
@@ -33,6 +35,7 @@ export const Graph = ({ data, width, height }: GraphProps) => {
         setDisplayData(displayData)
     }, [data, costOrder])
 
+    // graph properties
     const graphWidth = width && width !== 0 ? width : window.innerWidth * 0.9
     const graphHeight = height && height !== 0 ? height : graphWidth
     const marginY = 12
@@ -45,10 +48,14 @@ export const Graph = ({ data, width, height }: GraphProps) => {
         padding: 0.4,
     })
 
+    const yMax = Math.max(...displayData.map(([_, value]) => value))
     const yScale = scaleLinear<number>({
         range: [graphHeight, 4 * marginY],
-        domain: [0, Math.max(...displayData.map(([_, value]) => value))],
+        domain: [-(yMax * 0.05), yMax], // set negative minimum so 0 bar is always visible
     })
+
+    // aesthetic properties
+    const atLeastOneActive = activeData && activeData.some((isActive) => isActive)
 
     return (
         <Box
@@ -80,7 +87,17 @@ export const Graph = ({ data, width, height }: GraphProps) => {
                                     y={barY - marginY}
                                     width={barWidth}
                                     height={barHeight}
-                                    fill={'#F4D35E'}
+                                    fill={
+                                        barColors && barColors.length > 0
+                                            ? barColors[index]
+                                            : '#F4D35E'
+                                    }
+                                    filter={
+                                        atLeastOneActive && !activeData[index]
+                                            ? 'brightness(0.75)'
+                                            : 'none'
+                                    }
+                                    style={{ transition: 'all 0.2s' }}
                                 />
                                 <Label
                                     title={FormattedMoney('USD', 0).format(yLabel)}

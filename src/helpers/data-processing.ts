@@ -235,7 +235,7 @@ const calculateAndUpdateTotalSpendByLocation = (
         totalCost = splitCost * splitters.length
     }
 
-    if (location) {
+    if (location && Object.values(Location).includes(location)) {
         totalSpendByLocation.set(location, (totalSpendByLocation.get(location) || 0) + totalCost)
     } else {
         totalSpendByLocation.set(

@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
-import { getIconFromSpendType, getTablerIcon } from 'helpers/icons'
+import { getColorForSpendType, getIconFromSpendType, getTablerIcon } from 'helpers/icons'
 import { Spend, SpendType } from 'helpers/spend'
 
 type FilterSpendTypeState = {
@@ -149,7 +149,9 @@ export const FilterSpendType = () => {
                                     justifyContent: 'center',
                                     alignItems: 'center',
                                     borderRadius: '100%',
-                                    backgroundColor: isActive ? '#FBBC04' : 'white',
+                                    backgroundColor: isActive
+                                        ? getColorForSpendType(spendType as SpendType)
+                                        : 'white',
                                     transition: 'background-color 0.1s',
                                 }}>
                                 {getIconFromSpendType(spendType as SpendType)}

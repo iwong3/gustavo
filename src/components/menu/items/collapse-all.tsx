@@ -42,6 +42,7 @@ export const CollapseAll = () => {
                 'alignItems': 'center',
                 'padding': 0.5,
                 'width': showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
+                'height': 20,
                 'border': '1px solid #FBBC04',
                 'borderRadius': '10px',
                 'backgroundColor': 'white',
@@ -58,7 +59,7 @@ export const CollapseAll = () => {
                     width: iconBoxWidth,
                     height: iconBoxWidth,
                 }}>
-                {getTablerIcon({ name: 'IconLayoutNavbarCollapse' })}
+                {getTablerIcon({ name: 'IconLayoutNavbarCollapse', size: 20 })}
             </Box>
             <Box
                 sx={{

@@ -27,6 +27,7 @@
         "@visx/shape": "^3.5.0",
         "axios": "^1.7.7",
         "dayjs": "^1.11.13",
+        "fuse.js": "^7.0.0",
         "react": "^18.2.0",
         "react-animate-height": "^3.2.3",
         "react-dom": "^18.2.0",

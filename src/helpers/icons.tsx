@@ -31,6 +31,8 @@ import {
     IconListLetters,
     IconMap2,
     IconNotes,
+    IconPhoto,
+    IconSearch,
     IconSettings,
     IconShoppingBag,
     IconSortAscendingLetters,
@@ -111,6 +113,10 @@ export const getTablerIcon = ({
             return <IconMap2 {...props} />
         case 'IconNotes':
             return <IconNotes {...props} />
+        case 'IconPhoto':
+            return <IconPhoto {...props} />
+        case 'IconSearch':
+            return <IconSearch {...props} />
         case 'IconSettings':
             return <IconSettings {...props} />
         case 'IconShoppingBag':
@@ -226,7 +232,7 @@ type IconColors = {
     bgColor: string
 }
 
-const getInitialsIconColors = (person: Person): IconColors => {
+export const getInitialsIconColors = (person: Person): IconColors => {
     switch (person) {
         case Person.Aibek:
             return {
@@ -316,6 +322,24 @@ export const getIconFromSpendType = (
     }
 }
 
+export const getColorForSpendType = (type: SpendType | undefined) => {
+    switch (type) {
+        case SpendType.Attraction:
+            return '#ff9b85'
+        case SpendType.Transit:
+            return '#aed9e0'
+        case SpendType.Food:
+            return '#ffd97d'
+        case SpendType.Lodging:
+            return '#dac4f7'
+        case SpendType.Shopping:
+            return '#90be6d'
+        case SpendType.Other:
+        default:
+            return 'lightgray'
+    }
+}
+
 interface ILocationIconProps {
     location: Location
     sx?: SxProps<Theme>
@@ -325,9 +349,10 @@ export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
     const defaultSx = {
         width: defaultIconSize,
         height: defaultIconSize,
-        fontSize: 12,
+        fontSize: 10,
+        fontFamily: 'Spectral',
         color: 'black',
-        backgroundColor: 'lightgray',
+        backgroundColor: getLocationColors(location),
     }
 
     return (
@@ -347,4 +372,20 @@ export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
             {getLocationAbbr(location)}
         </Box>
     )
+}
+
+export const getLocationColors = (location: Location): string => {
+    switch (location) {
+        case Location.Hakone:
+            return '#f3722c'
+        case Location.Kyoto:
+            return '#739e82'
+        case Location.Osaka:
+            return '#FBBC04'
+        case Location.Tokyo:
+            return '#dac4f7'
+        case Location.Other:
+        default:
+            return '#a7bed3'
+    }
 }

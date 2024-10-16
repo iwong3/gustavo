@@ -4,11 +4,9 @@ track spending and split costs
 
 To-Do:
 
-Totals
+Receipts
 
--   Total spent
--   Compare person / spend type to total spent
-    -   Compare to absolute total? Or total of current filters?
+-   Search bar
 
 Graphs
 
@@ -18,7 +16,18 @@ Graphs
 
 UX
 
+-   Protect against $NaN values as Google Sheets currency conversion sometimes fails
+
+### Done
+
+UX
+
 -   Collapse all receipts
 -   Reset debt calculator
 -   Show active filters
--   Protect against $NaN values as Google Sheets currency conversion sometimes fails
+
+Totals
+
+-   Total spent
+-   Compare person / spend type to total spent
+    -   Compare to absolute total? Or total of current filters?

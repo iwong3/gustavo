@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { Graph } from 'components/graphs/graph'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { FormattedMoney } from 'helpers/currency'
-import { InitialsIcon } from 'helpers/icons'
+import { getInitialsIconColors, InitialsIcon } from 'helpers/icons'
 import { Person } from 'helpers/person'
 import { useGustavoStore } from 'views/gustavo'
 
@@ -12,8 +12,14 @@ export const TotalSpendByPerson = () => {
     const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
     const { filters, handleFilterClick } = useFilterSplitBetweenStore(useShallow((state) => state))
 
+    // data for graph
     const totalSpendByPersonArray = Array.from(totalSpendByPerson)
+    const personColors = totalSpendByPersonArray.map(
+        ([person]) => getInitialsIconColors(person).bgColor
+    )
+    const activePeople = Object.entries(filters).map(([_, isActive]) => isActive)
 
+    // render graph
     const rowLength = 4
     const renderTotalSpendByPerson = () => {
         const rows = []
@@ -52,7 +58,6 @@ export const TotalSpendByPerson = () => {
             <Box
                 key={key}
                 onClick={() => {
-                    // reset()
                     handleFilterClick(person)
                 }}
                 sx={{
@@ -126,6 +131,8 @@ export const TotalSpendByPerson = () => {
                     data={totalSpendByPersonArray}
                     width={window.innerWidth * 0.9}
                     height={window.innerWidth * 0.5}
+                    barColors={personColors}
+                    activeData={activePeople}
                 />
             </Box>
         </Box>

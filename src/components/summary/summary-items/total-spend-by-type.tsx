@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { Graph } from 'components/graphs/graph'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { FormattedMoney } from 'helpers/currency'
-import { getIconFromSpendType } from 'helpers/icons'
+import { getColorForSpendType, getIconFromSpendType } from 'helpers/icons'
 import { SpendType } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
 
@@ -13,6 +13,10 @@ export const TotalSpendByType = () => {
     const { filters, handleFilterClick } = useFilterSpendTypeStore(useShallow((state) => state))
 
     const totalSpendByTypeArray = Array.from(totalSpendByType)
+    const spendTypeColors = totalSpendByTypeArray.map(([spendType]) =>
+        getColorForSpendType(spendType)
+    )
+    const activeTypes = Object.entries(filters).map(([_, isActive]) => isActive)
 
     const rowLength = 3
     const renderTotalSpendByType = () => {
@@ -72,7 +76,15 @@ export const TotalSpendByType = () => {
                         paddingY: 0.5,
                         paddingX: 0.75,
                     }}>
-                    {getIconFromSpendType(spendType, 18)}
+                    <Box
+                        sx={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '100%',
+                            backgroundColor: getColorForSpendType(spendType),
+                        }}>
+                        {getIconFromSpendType(spendType, 18)}
+                    </Box>
                     <Box
                         sx={{
                             marginLeft: 1,
@@ -117,6 +129,8 @@ export const TotalSpendByType = () => {
                     data={totalSpendByTypeArray}
                     width={window.innerWidth * 0.9}
                     height={window.innerWidth * 0.5}
+                    barColors={spendTypeColors}
+                    activeData={activeTypes}
                 />
             </Box>
         </Box>

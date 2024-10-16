@@ -1,4 +1,4 @@
-import { Box } from '@mui/material'
+import { Box, InputAdornment, TextField } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -15,15 +15,18 @@ import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortItem, useSortMenuStore } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import {
+    getColorForSpendType,
     getIconFromSpendType,
     getMenuItemIcon,
     getSortMenuItemIcon,
+    getTablerIcon,
     InitialsIcon,
     LocationIcon,
 } from 'helpers/icons'
 import { Location } from 'helpers/location'
 import { Person } from 'helpers/person'
 import { SpendType } from 'helpers/spend'
+import { SearchBar } from 'components/menu/search/search-bar'
 
 type ActiveMenuItemData = {
     item: MenuItem
@@ -59,7 +62,7 @@ export const ActiveMenuItems = () => {
         },
         {
             item: MenuItem.FilterSplitBetween,
-            size: 24,
+            size: 20,
             state: filterSplitBetweenState,
         },
         {
@@ -86,6 +89,24 @@ export const ActiveMenuItems = () => {
         setAnyFilterActive(anyActive)
     }, [...filterStates, ...sortStates])
 
+    const renderActiveMenuItems = () => {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    overflowX: 'scroll',
+                    width: '100%',
+                }}>
+                {anyFilterActive &&
+                    activeMenuItems
+                        .filter((item) => item.state.isActive())
+                        .map((item, index) => {
+                            return renderActiveMenuItem(item, index)
+                        })}
+            </Box>
+        )
+    }
+
     const renderActiveMenuItem = (item: ActiveMenuItemData, index: number) => {
         if (item.state.isActive()) {
             return (
@@ -94,7 +115,7 @@ export const ActiveMenuItems = () => {
                     sx={{
                         display: 'flex',
                         marginLeft: index === 0 ? 0 : 0.5,
-                        border: '2px solid #FBBC04',
+                        border: '1px solid #FBBC04',
                         borderRadius: '10px',
                         backgroundColor: 'white',
                     }}>
@@ -115,14 +136,14 @@ export const ActiveMenuItems = () => {
                             padding: 0.5,
                             transition: 'width 1s',
                         }}>
-                        {renderActiveMenuItems(item.item)}
+                        {renderMenuItem(item.item)}
                     </Box>
                 </Box>
             )
         }
     }
 
-    const renderActiveMenuItems = (item: MenuItem) => {
+    const renderMenuItem = (item: MenuItem) => {
         switch (item) {
             case MenuItem.FilterSplitBetween:
                 return renderActiveSplitBetween()
@@ -232,6 +253,8 @@ export const ActiveMenuItems = () => {
                                 marginRight: index === activeFilterItems.length - 1 ? 0 : 0.25,
                                 height: 20,
                                 width: 20,
+                                borderRadius: '100%',
+                                backgroundColor: getColorForSpendType(spendType as SpendType),
                             }}>
                             {getIconFromSpendType(spendType as SpendType, 20)}
                         </Box>
@@ -268,7 +291,6 @@ export const ActiveMenuItems = () => {
                                     height: 20,
                                     width: 20,
                                     fontSize: 10,
-                                    backgroundColor: '#FBBC04',
                                 }}
                             />
                         </Box>
@@ -319,7 +341,11 @@ export const ActiveMenuItems = () => {
 
     // get active tool to determine if we should show 'collapse all' button
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
+
     const collapseAllTools = [ToolsMenuItem.Receipts, ToolsMenuItem.DebtCalculator]
+    const searchBarTools = [ToolsMenuItem.Receipts, ToolsMenuItem.DebtCalculator]
+
+    const isSearchBarActive = searchBarTools.includes(activeItem)
 
     return (
         <Box
@@ -327,20 +353,33 @@ export const ActiveMenuItems = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 marginX: 1,
+                overflowX: 'scroll',
             }}>
             <Box
                 sx={{
                     display: 'flex',
-                    overflowX: 'scroll',
-                    marginRight: 1,
+                    alignItems: 'center',
+                    width: '75%',
                 }}>
-                {anyFilterActive &&
-                    activeMenuItems.map((item, index) => {
-                        return renderActiveMenuItem(item, index)
-                    })}
+                {isSearchBarActive && <SearchBar />}
+                <Box
+                    sx={{
+                        marginLeft: isSearchBarActive ? 1 : 0,
+                        marginRight: 1,
+                        overflowX: 'scroll',
+                    }}>
+                    {renderActiveMenuItems()}
+                </Box>
             </Box>
-            {collapseAllTools.includes(activeItem) && <CollapseAll />}
-            {activeItem === ToolsMenuItem.TotalSpend && <SummaryViewMenu />}
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                }}>
+                {collapseAllTools.includes(activeItem) && <CollapseAll />}
+                {activeItem === ToolsMenuItem.TotalSpend && <SummaryViewMenu />}
+            </Box>
         </Box>
     )
 }
