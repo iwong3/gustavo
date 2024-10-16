@@ -100,7 +100,7 @@ export const ToolsMenu = () => {
                     onClick={() => setToolMenuExpanded(!toolMenuExpanded)}
                     sx={{
                         display: 'flex',
-                        justifyContent: 'flex-start',
+                        // justifyContent: 'flex-start',
                         alignItems: 'center',
                         padding: 1,
                         width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,

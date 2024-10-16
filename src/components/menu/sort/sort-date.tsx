@@ -18,9 +18,10 @@ type SortDateState = {
 
 type SortDateActions = {
     sort: (spendData: Spend[]) => Spend[]
-    isActive: () => boolean
 
     toggleSortOrder: () => void
+    isActive: () => boolean
+    getSortOrderIcon: (size?: number) => JSX.Element | null | undefined
     reset: () => void
 }
 
@@ -49,10 +50,6 @@ export const useSortDateStore = create<SortDateState & SortDateActions>()((set, 
         })
         return sortedSpendData
     },
-    isActive: () => {
-        const { order } = get()
-        return order !== SortOrder.None
-    },
 
     toggleSortOrder: () => {
         const { order } = get()
@@ -60,12 +57,26 @@ export const useSortDateStore = create<SortDateState & SortDateActions>()((set, 
         resetAllSortStores()
         set(() => ({ order: (currentOrder + 1) % (Object.keys(SortOrder).length / 2) }))
     },
-
+    isActive: () => {
+        const { order } = get()
+        return order !== SortOrder.None
+    },
+    getSortOrderIcon: (size: number = defaultIconSize) => {
+        const { order } = get()
+        if (order === SortOrder.Descending) {
+            return getTablerIcon({ name: 'IconCaretDown', size })
+        }
+        if (order === SortOrder.Ascending) {
+            return getTablerIcon({ name: 'IconCaretUp', size })
+        }
+    },
     reset: () => set(initialState),
 }))
 
 export const SortDate = () => {
-    const { order, toggleSortOrder } = useSortDateStore(useShallow((state) => state))
+    const { order, toggleSortOrder, getSortOrderIcon } = useSortDateStore(
+        useShallow((state) => state)
+    )
     const isActive = order !== SortOrder.None
 
     return (
@@ -96,8 +107,7 @@ export const SortDate = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}>
-                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCaretDown' })}
-                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCaretUp' })}
+                {getSortOrderIcon()}
             </Box>
         </Box>
     )

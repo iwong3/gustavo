@@ -6,20 +6,24 @@ import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import { CollapseAll } from 'components/menu/items/collapse-all'
+import { SummaryViewMenu } from 'components/menu/items/summary-view-menu'
+import { MenuItem } from 'components/menu/menu'
+import { useSortCostStore } from 'components/menu/sort/sort-cost'
+import { useSortDateStore } from 'components/menu/sort/sort-date'
+import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import { SortItem, useSortMenuStore } from 'components/menu/sort/sort-menu'
+import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import {
     getIconFromSpendType,
     getMenuItemIcon,
-    getTablerIcon,
+    getSortMenuItemIcon,
     InitialsIcon,
     LocationIcon,
 } from 'helpers/icons'
-import { MenuItem } from 'components/menu/menu'
-import { Person } from 'helpers/person'
 import { Location } from 'helpers/location'
+import { Person } from 'helpers/person'
 import { SpendType } from 'helpers/spend'
-import { CollapseAll } from 'components/menu/items/collapse-all'
-import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
-import { SummaryViewMenu } from 'components/menu/items/summary-view-menu'
 
 type ActiveMenuItemData = {
     item: MenuItem
@@ -28,6 +32,7 @@ type ActiveMenuItemData = {
 }
 
 export const ActiveMenuItems = () => {
+    // filter menu item states
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
@@ -39,7 +44,19 @@ export const ActiveMenuItems = () => {
         filterLocationState,
     ]
 
+    // sort menu item states
+    const sortMenuState = useSortMenuStore(useShallow((state) => state))
+    const sortCostState = useSortCostStore(useShallow((state) => state))
+    const sortDateState = useSortDateStore(useShallow((state) => state))
+    const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
+    const sortStates = [sortMenuState, sortCostState, sortDateState, sortItemNameState]
+
     const activeMenuItems: ActiveMenuItemData[] = [
+        {
+            item: MenuItem.Sort,
+            size: 20,
+            state: sortMenuState,
+        },
         {
             item: MenuItem.FilterSplitBetween,
             size: 24,
@@ -67,7 +84,7 @@ export const ActiveMenuItems = () => {
     useEffect(() => {
         const anyActive = activeMenuItems.some((item) => item.state.isActive())
         setAnyFilterActive(anyActive)
-    }, [...filterStates])
+    }, [...filterStates, ...sortStates])
 
     const renderActiveMenuItem = (item: ActiveMenuItemData, index: number) => {
         if (item.state.isActive()) {
@@ -115,6 +132,8 @@ export const ActiveMenuItems = () => {
                 return renderActiveSpendType()
             case MenuItem.FilterLocation:
                 return renderActiveLocation()
+            case MenuItem.Sort:
+                return renderActiveSort()
             default:
         }
     }
@@ -259,6 +278,45 @@ export const ActiveMenuItems = () => {
         )
     }
 
+    const renderActiveSort = () => {
+        const sortItems = [
+            {
+                item: SortItem.SortCost,
+                state: sortCostState,
+            },
+            {
+                item: SortItem.SortDate,
+                state: sortDateState,
+            },
+            {
+                item: SortItem.SortItemName,
+                state: sortItemNameState,
+            },
+        ]
+
+        const activeSortItem: JSX.Element[] = []
+        sortItems.some((sortItem) => {
+            if (sortItem.state.isActive()) {
+                activeSortItem.push(
+                    <Box
+                        onClick={() => {
+                            sortItem.state.reset()
+                        }}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}>
+                        {getSortMenuItemIcon(sortItem.item, 20)}
+                        {sortItem.state.getSortOrderIcon(20)}
+                    </Box>
+                )
+                return true
+            }
+        })
+
+        return activeSortItem
+    }
+
     // get active tool to determine if we should show 'collapse all' button
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
     const collapseAllTools = [ToolsMenuItem.Receipts, ToolsMenuItem.DebtCalculator]
@@ -274,6 +332,7 @@ export const ActiveMenuItems = () => {
                 sx={{
                     display: 'flex',
                     overflowX: 'scroll',
+                    marginRight: 1,
                 }}>
                 {anyFilterActive &&
                     activeMenuItems.map((item, index) => {

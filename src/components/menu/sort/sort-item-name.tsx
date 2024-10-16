@@ -17,9 +17,10 @@ type SortItemNameState = {
 
 type SortItemNameActions = {
     sort: (spendData: Spend[]) => Spend[]
-    isActive: () => boolean
 
     toggleSortOrder: () => void
+    isActive: () => boolean
+    getSortOrderIcon: (size?: number) => JSX.Element | null | undefined
     reset: () => void
 }
 
@@ -46,10 +47,6 @@ export const useSortItemNameStore = create<SortItemNameState & SortItemNameActio
             })
             return sortedSpendData
         },
-        isActive: () => {
-            const { order } = get()
-            return order !== SortOrder.None
-        },
 
         toggleSortOrder: () => {
             const { order } = get()
@@ -57,12 +54,25 @@ export const useSortItemNameStore = create<SortItemNameState & SortItemNameActio
             resetAllSortStores()
             set(() => ({ order: (currentOrder + 1) % (Object.keys(SortOrder).length / 2) }))
         },
+        isActive: () => {
+            const { order } = get()
+            return order !== SortOrder.None
+        },
+        getSortOrderIcon: (size: number = defaultIconSize) => {
+            const { order } = get()
+            if (order === SortOrder.Descending) {
+                return getTablerIcon({ name: 'IconCaretUp', size })
+            }
+            if (order === SortOrder.Ascending) {
+                return getTablerIcon({ name: 'IconCaretDown', size })
+            }
+        },
         reset: () => set(initialState),
     })
 )
 
 export const SortItemName = () => {
-    const { order, toggleSortOrder } = useSortItemNameStore((state) => state)
+    const { order, toggleSortOrder, getSortOrderIcon } = useSortItemNameStore((state) => state)
     const isActive = order !== SortOrder.None
 
     return (
@@ -93,8 +103,7 @@ export const SortItemName = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}>
-                {order === SortOrder.Descending && getTablerIcon({ name: 'IconCaretUp' })}
-                {order === SortOrder.Ascending && getTablerIcon({ name: 'IconCaretDown' })}
+                {getSortOrderIcon()}
             </Box>
         </Box>
     )

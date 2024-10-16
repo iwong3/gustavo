@@ -43,6 +43,7 @@ import {
 } from '@tabler/icons-react'
 
 import { MenuItem, MenuItemData } from 'components/menu/menu'
+import { SortItem } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
 import { getLocationAbbr, Location } from 'helpers/location'
 import { Person, getPersonInitials } from 'helpers/person'
@@ -171,6 +172,19 @@ export const getToolsMenuItemIcon = (item: ToolsMenuItem) => {
             return <HandCoins size={18} weight="fill" />
         case ToolsMenuItem.TotalSpend:
             return getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })
+        default:
+            return null
+    }
+}
+
+export const getSortMenuItemIcon = (item: SortItem, size: number = defaultIconSize) => {
+    switch (item) {
+        case SortItem.SortCost:
+            return getTablerIcon({ name: 'IconCurrencyDollar', size })
+        case SortItem.SortDate:
+            return getTablerIcon({ name: 'IconCalendarEvent', size })
+        case SortItem.SortItemName:
+            return getTablerIcon({ name: 'IconSortAZ', size })
         default:
             return null
     }

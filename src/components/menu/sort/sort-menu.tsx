@@ -9,7 +9,7 @@ import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-it
 import { getTablerIcon } from 'helpers/icons'
 import { SortCost, useSortCostStore } from 'components/menu/sort/sort-cost'
 
-enum SortItem {
+export enum SortItem {
     SortCost,
     SortDate,
     SortItemName,
