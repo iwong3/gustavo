@@ -4,20 +4,25 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { DebtCalculator } from 'components/debt/debt-calculator'
-import { ReceiptsList } from 'components/receipts/receipts-list'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
-import { Summary } from 'components/summary/summary'
+import { ReceiptsList } from 'components/receipts/receipts-list'
+import { Summary, SummaryView, useSummaryStore } from 'components/summary/summary'
 import { getToolsMenuItemIcon } from 'helpers/icons'
 
 export enum ToolsMenuItem {
     Receipts = 'Receipts',
     DebtCalculator = 'DebtCalculator',
-    TotalSpend = 'SpendByDate',
+    TotalSpend = 'TotalSpend',
+    TotalSpendByPerson = 'TotalSpendByPerson',
+    TotalSpendByType = 'TotalSpendByType',
+    TotalSpendByLocation = 'TotalSpendByLocation',
 }
 
 type ToolsMenuItemData = {
     component: JSX.Element
     label: string
+    indent: boolean
+    summaryView?: SummaryView
 }
 
 export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
@@ -26,6 +31,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
         {
             component: <ReceiptsList />,
             label: 'Receipts',
+            indent: false,
         },
     ],
     [
@@ -33,6 +39,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
         {
             component: <DebtCalculator />,
             label: 'Debt',
+            indent: false,
         },
     ],
     [
@@ -40,6 +47,34 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
         {
             component: <Summary />,
             label: 'Totals',
+            indent: false,
+        },
+    ],
+    [
+        ToolsMenuItem.TotalSpendByPerson,
+        {
+            component: <Summary />,
+            label: 'Person',
+            indent: true,
+            summaryView: SummaryView.TotalSpendByPerson,
+        },
+    ],
+    [
+        ToolsMenuItem.TotalSpendByType,
+        {
+            component: <Summary />,
+            label: 'Type',
+            indent: true,
+            summaryView: SummaryView.TotalSpendByType,
+        },
+    ],
+    [
+        ToolsMenuItem.TotalSpendByLocation,
+        {
+            component: <Summary />,
+            label: 'Location',
+            indent: true,
+            summaryView: SummaryView.TotalSpendByLocation,
         },
     ],
 ])
@@ -72,16 +107,40 @@ export const useToolsMenuStore = create<ToolsMenuState & ToolsMenuActions>((set)
 
 export const ToolsMenu = () => {
     const { activeItem, setActiveItem } = useToolsMenuStore(useShallow((state) => state))
+    const { setActiveView } = useSummaryStore(useShallow((state) => state))
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
-    const [toolMenuExpanded, setToolMenuExpanded] = useState(false)
-
-    const iconBoxWidth = 24
-    const iconBoxMaxWidth = 86
+    const [toolMenuExpanded, setToolMenuExpanded] = useState(true)
 
     const handleMenuItemClick = (item: ToolsMenuItem) => {
         setActiveItem(item)
+        if (ToolsMenuItemMap.get(item)!.summaryView) {
+            setActiveView(ToolsMenuItemMap.get(item)!.summaryView!)
+        }
+
         setToolMenuExpanded(false)
+    }
+
+    // styling
+    const iconBoxWidth = 24
+    const iconBoxMaxWidth = 86
+
+    const totalSpendSubItems = [
+        ToolsMenuItem.TotalSpendByPerson,
+        ToolsMenuItem.TotalSpendByType,
+        ToolsMenuItem.TotalSpendByLocation,
+    ]
+
+    const itemSelectedOverride = (item: ToolsMenuItem): boolean => {
+        // If any TotalSpend subitem is active, set TotalSpend as selected too
+        if (item === ToolsMenuItem.TotalSpend && totalSpendSubItems.includes(activeItem)) {
+            return true
+        }
+        // If TotalSpend selected, default subitem is TotalSpendByPerson
+        if (item === ToolsMenuItem.TotalSpendByPerson && activeItem === ToolsMenuItem.TotalSpend) {
+            return true
+        }
+        return false
     }
 
     return (
@@ -170,21 +229,38 @@ export const ToolsMenu = () => {
                                             display: 'flex',
                                             justifyContent: 'flex-start',
                                             alignItems: 'center',
-                                            padding: 1,
+                                            margin: 1,
                                             width: showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
                                             height: iconBoxWidth,
                                             transition: 'width 0.1s ease-out',
                                         }}>
+                                        {ToolsMenuItemMap.get(item as ToolsMenuItem)!.indent && (
+                                            <Box
+                                                sx={{
+                                                    marginLeft: 0.25,
+                                                    fontSize: 12,
+                                                }}>
+                                                •
+                                            </Box>
+                                        )}
                                         <Box
                                             sx={{
                                                 display: 'flex',
                                                 justifyContent: 'center',
                                                 alignItems: 'center',
+                                                marginX: ToolsMenuItemMap.get(
+                                                    item as ToolsMenuItem
+                                                )!.indent
+                                                    ? 0.5
+                                                    : 0,
                                                 width: iconBoxWidth,
                                                 height: iconBoxWidth,
                                                 borderRadius: '100%',
                                                 backgroundColor:
-                                                    activeItem === item ? '#FBBC04' : 'white',
+                                                    activeItem === item ||
+                                                    itemSelectedOverride(item)
+                                                        ? '#FBBC04'
+                                                        : 'white',
                                             }}>
                                             {getToolsMenuItemIcon(item as ToolsMenuItem)}
                                         </Box>
@@ -195,7 +271,11 @@ export const ToolsMenu = () => {
                                             }}>
                                             <Typography
                                                 sx={{
-                                                    marginLeft: 1,
+                                                    marginLeft: ToolsMenuItemMap.get(
+                                                        item as ToolsMenuItem
+                                                    )!.indent
+                                                        ? 0
+                                                        : 1,
                                                     fontSize: 12,
                                                     textAlign: 'left',
                                                     whiteSpace: 'nowrap',

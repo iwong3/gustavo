@@ -89,7 +89,7 @@ export const TotalSpend = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    padding: 0.5,
+                    paddingX: 0.5,
                     fontSize: 12,
                     fontWeight: 500,
                 }}>

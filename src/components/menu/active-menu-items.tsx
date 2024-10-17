@@ -1,4 +1,4 @@
-import { Box, InputAdornment, TextField } from '@mui/material'
+import { Box } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -7,8 +7,8 @@ import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { CollapseAll } from 'components/menu/items/collapse-all'
-import { SummaryViewMenu } from 'components/menu/items/summary-view-menu'
 import { MenuItem } from 'components/menu/menu'
+import { SearchBar } from 'components/menu/search/search-bar'
 import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
@@ -19,14 +19,12 @@ import {
     getIconFromSpendType,
     getMenuItemIcon,
     getSortMenuItemIcon,
-    getTablerIcon,
     InitialsIcon,
     LocationIcon,
 } from 'helpers/icons'
 import { Location } from 'helpers/location'
 import { Person } from 'helpers/person'
 import { SpendType } from 'helpers/spend'
-import { SearchBar } from 'components/menu/search/search-bar'
 
 type ActiveMenuItemData = {
     item: MenuItem
@@ -96,6 +94,7 @@ export const ActiveMenuItems = () => {
                     display: 'flex',
                     overflowX: 'scroll',
                     width: '100%',
+                    height: 32,
                 }}>
                 {anyFilterActive &&
                     activeMenuItems
@@ -359,7 +358,7 @@ export const ActiveMenuItems = () => {
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    width: '75%',
+                    width: '78%',
                 }}>
                 {isSearchBarActive && <SearchBar />}
                 <Box
@@ -378,7 +377,6 @@ export const ActiveMenuItems = () => {
                     alignItems: 'center',
                 }}>
                 {collapseAllTools.includes(activeItem) && <CollapseAll />}
-                {activeItem === ToolsMenuItem.TotalSpend && <SummaryViewMenu />}
             </Box>
         </Box>
     )

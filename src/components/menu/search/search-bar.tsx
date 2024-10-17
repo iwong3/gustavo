@@ -1,4 +1,4 @@
-import { Box, InputAdornment, TextField } from '@mui/material'
+import { Box, ClickAwayListener, InputAdornment, TextField } from '@mui/material'
 import Fuse from 'fuse.js'
 import { useState } from 'react'
 import { create } from 'zustand'
@@ -79,71 +79,83 @@ export const SearchBar = () => {
     const [focused, setFocused] = useState(false)
 
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: focused || isActive() ? '50%' : '12%',
-                transition: 'width 0.1s ease-out',
+        <ClickAwayListener
+            onClickAway={() => {
+                if (!isActive()) {
+                    setFocused(false)
+                }
             }}>
-            <TextField
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                slotProps={{
-                    input: {
-                        startAdornment: (
-                            <InputAdornment
-                                position="start"
-                                sx={{
-                                    margin: 0,
-                                }}>
-                                {getTablerIcon({ name: 'IconSearch', size: 16 })}
-                            </InputAdornment>
-                        ),
-                        endAdornment: isActive() && (
-                            <InputAdornment
-                                position="end"
-                                sx={{
-                                    margin: 0,
-                                }}
-                                onClick={() => setSearchInput('')}>
-                                {getTablerIcon({ name: 'IconX', size: 16 })}
-                            </InputAdornment>
-                        ),
-                    },
-                }}
+            <Box
+                onClick={() => setFocused(true)}
                 sx={{
-                    // whole component
-                    '& fieldset': {
-                        border: '1px solid #FBBC04',
-                        borderRadius: '10px',
-                        backgroundColor: 'white',
-                        zIndex: -1,
-                    },
-                    // whole component when focused
-                    '& .MuiOutlinedInput-root': {
-                        '&.Mui-focused fieldset': {
-                            borderColor: '#FBBC04',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: focused || isActive() ? '50%' : '32px',
+                    height: '32px',
+                    transition: 'width 0.1s ease-out',
+                }}>
+                <TextField
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    slotProps={{
+                        input: {
+                            startAdornment: (
+                                <InputAdornment
+                                    position="start"
+                                    sx={{
+                                        margin: 0,
+                                    }}>
+                                    {getTablerIcon({ name: 'IconSearch', size: 16 })}
+                                </InputAdornment>
+                            ),
+                            endAdornment: isActive() && (
+                                <InputAdornment
+                                    position="end"
+                                    sx={{
+                                        margin: 0,
+                                    }}
+                                    onClick={() => {
+                                        setSearchInput('')
+                                        setFocused(false)
+                                    }}>
+                                    {getTablerIcon({ name: 'IconX', size: 16 })}
+                                </InputAdornment>
+                            ),
                         },
-                    },
-                    // text input
-                    '& .MuiInputBase-input': {
-                        paddingY: 1,
-                        paddingX: 0.5,
-                        height: 14,
-                        fontSize: 12,
-                    },
-                    // start adornment
-                    '& .MuiInputBase-root': {
-                        paddingLeft: 1,
-                        paddingRight: 1,
-                    },
-                }}
-                fullWidth
-            />
-        </Box>
+                    }}
+                    sx={{
+                        // whole component
+                        '& fieldset': {
+                            border: '1px solid #FBBC04',
+                            borderRadius: '10px',
+                            backgroundColor: 'white',
+                            zIndex: -1,
+                        },
+                        // whole component when focused
+                        '& .MuiOutlinedInput-root': {
+                            '&.Mui-focused fieldset': {
+                                borderColor: '#FBBC04',
+                            },
+                        },
+                        // text input
+                        '& .MuiInputBase-input': {
+                            paddingY: 1,
+                            paddingX: 0.5,
+                            height: 14,
+                            fontSize: 12,
+                        },
+                        // start adornment
+                        '& .MuiInputBase-root': {
+                            paddingLeft: 1,
+                            paddingRight: 1,
+                        },
+                    }}
+                    fullWidth
+                />
+            </Box>
+        </ClickAwayListener>
     )
 }

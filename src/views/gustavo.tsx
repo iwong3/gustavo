@@ -225,7 +225,12 @@ export const Gustavo = () => {
         setTotalSpendByPerson(totalSpendByPerson)
         setTotalSpendByType(totalSpendByType)
         setTotalSpendByLocation(totalSpendByLocation)
-    }, [filteredSpendData, filteredSpendDataWithoutSplitBetween])
+    }, [
+        filteredSpendData,
+        filteredSpendDataWithoutSplitBetween,
+        filteredSpendDataWithoutSpendType,
+        filteredSpendDataWithoutLocation,
+    ])
 
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
@@ -319,7 +324,8 @@ export const Gustavo = () => {
             </Box>
             <Box
                 sx={{
-                    maxWidth: 450,
+                    display: 'flex',
+                    justifyContent: 'center',
                 }}>
                 <Menu />
             </Box>

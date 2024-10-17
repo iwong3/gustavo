@@ -113,6 +113,7 @@ export const DebtCalculator = () => {
                             fontSize: 32,
                             opacity: person ? 1 : 0,
                             transition: 'opacity 0.2s ease-out',
+                            boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                         }}
                     />
                     <UserCircle
@@ -304,7 +305,13 @@ export const DebtCalculator = () => {
                     })}
                 </Box>
             </Box>
-            <ReceiptsList spendData={debtSpendData} />
+            <Box
+                sx={{
+                    maxHeight: window.innerHeight * 0.5,
+                    overflowY: 'scroll',
+                }}>
+                <ReceiptsList spendData={debtSpendData} />
+            </Box>
         </Box>
     )
 }

@@ -10,6 +10,7 @@ import {
     FilterSplitBetween,
     useFilterSplitBetweenStore,
 } from 'components/menu/filter/filter-split-between'
+import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { SettingsMenu } from 'components/menu/settings/settings-menu'
 import { useSortCostStore } from 'components/menu/sort/sort-cost'
@@ -24,7 +25,6 @@ import {
     getTablerIcon,
 } from 'helpers/icons'
 import { useGustavoStore } from 'views/gustavo'
-import { useSearchBarStore } from 'components/menu/search/search-bar'
 
 export enum MenuItem {
     FilterLocation,

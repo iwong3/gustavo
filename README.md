@@ -4,10 +4,6 @@ track spending and split costs
 
 To-Do:
 
-Receipts
-
--   Search bar
-
 Graphs
 
 -   Spend by date
@@ -19,6 +15,11 @@ UX
 -   Protect against $NaN values as Google Sheets currency conversion sometimes fails
 
 ### Done
+
+Receipts
+
+-   Search bar
+-   Scroll to top
 
 UX
 

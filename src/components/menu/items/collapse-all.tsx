@@ -36,13 +36,16 @@ export const CollapseAll = () => {
 
     return (
         <Box
-            onClick={toggle}
+            onClick={() => {
+                toggle()
+                document.getElementById('receipts-list')?.scrollIntoView({ behavior: 'smooth' })
+            }}
             sx={{
                 'display': 'flex',
                 'alignItems': 'center',
-                'padding': 0.5,
+                'paddingX': 0.5,
                 'width': showIconLabels ? iconBoxMaxWidth : iconBoxWidth,
-                'height': 20,
+                'height': 30,
                 'border': '1px solid #FBBC04',
                 'borderRadius': '10px',
                 'backgroundColor': 'white',

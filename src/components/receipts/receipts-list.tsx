@@ -15,7 +15,7 @@ export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
     const useSpendData = spendData || filteredSpendData
 
     return (
-        <Box>
+        <Box id="receipts-list">
             {useSpendData.map((row, index) => (
                 <Box
                     key={'row-' + index}

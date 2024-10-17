@@ -69,7 +69,7 @@ export const processFilteredSpendData = (
 
     filteredSpendDataWithoutSplitBetween.forEach((spend) => {
         filteredTotalSpend += spend.convertedCost
-        calculateAndUpdateTotalSpendByPerson(spend, totalSpendByPerson, splitBetweenFilter)
+        calculateAndUpdateTotalSpendByPerson(spend, totalSpendByPerson)
     })
 
     filteredSpendDataWithoutSpendType.forEach((spend) => {
@@ -154,8 +154,7 @@ const calculateFilteredTotalSpend = (
 // calculates total spend for each person for filtered spend data (not including split between)
 const calculateAndUpdateTotalSpendByPerson = (
     spend: Spend,
-    totalSpendByPerson: Map<Person, number>,
-    splitBetweenFilter: Partial<Record<Person, boolean>>
+    totalSpendByPerson: Map<Person, number>
 ) => {
     const { convertedCost, splitBetween } = spend
 

@@ -170,14 +170,20 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
     return 'white'
 }
 
-export const getToolsMenuItemIcon = (item: ToolsMenuItem) => {
+export const getToolsMenuItemIcon = (item: ToolsMenuItem, size: number = 18) => {
     switch (item) {
         case ToolsMenuItem.Receipts:
-            return getTablerIcon({ name: 'IconLayoutList', size: 18, fill: 'white' })
+            return getTablerIcon({ name: 'IconLayoutList', size: size, fill: 'white' })
         case ToolsMenuItem.DebtCalculator:
-            return <HandCoins size={18} weight="fill" />
+            return <HandCoins size={size} weight="fill" />
         case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({ name: 'IconChartBar', size: 18, fill: 'white' })
+            return getTablerIcon({ name: 'IconChartBar', size: size, fill: 'white' })
+        case ToolsMenuItem.TotalSpendByPerson:
+            return <UserCircle size={size} />
+        case ToolsMenuItem.TotalSpendByType:
+            return <Tag size={size} />
+        case ToolsMenuItem.TotalSpendByLocation:
+            return getTablerIcon({ name: 'IconMap2', size: 18, fill: 'white' })
         default:
             return null
     }

@@ -1,14 +1,14 @@
+import { Box } from '@mui/material'
 import { Label } from '@visx/annotation'
 import { AxisBottom } from '@visx/axis'
 import { Group } from '@visx/group'
-import { Box } from '@mui/material'
 import { scaleBand, scaleLinear } from '@visx/scale'
 import { Bar } from '@visx/shape'
+import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { SortOrder as CostOrder, useSortCostStore } from 'components/menu/sort/sort-cost'
 import { FormattedMoney } from 'helpers/currency'
-import { useEffect, useState } from 'react'
 
 interface GraphProps {
     data: [string, number][]
@@ -18,21 +18,36 @@ interface GraphProps {
     activeData?: boolean[]
 }
 
+interface GraphData {
+    value: number
+    label: string
+    barColor: string
+    isActive: boolean
+}
+
 export const Graph = ({ data, width, height, barColors, activeData }: GraphProps) => {
-    const [displayData, setDisplayData] = useState(data)
+    const [graphData, setGraphData] = useState<GraphData[]>([])
 
     const { order: costOrder } = useSortCostStore(useShallow((state) => state))
 
     useEffect(() => {
-        let displayData = data
+        let graphData: GraphData[] = []
+        data.forEach(([label, value], index) => {
+            graphData.push({
+                value: value,
+                label: label,
+                barColor: barColors ? barColors[index] : '#F4D35E',
+                isActive: activeData ? activeData[index] : true,
+            })
+        })
 
         if (costOrder === CostOrder.Descending) {
-            displayData = data.slice().sort((a, b) => b[1] - a[1])
+            graphData = graphData.sort((a, b) => b.value - a.value)
         } else if (costOrder === CostOrder.Ascending) {
-            displayData = data.slice().sort((a, b) => a[1] - b[1])
+            graphData = graphData.sort((a, b) => a.value - b.value)
         }
 
-        setDisplayData(displayData)
+        setGraphData(graphData)
     }, [data, costOrder])
 
     // graph properties
@@ -40,7 +55,7 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
     const graphHeight = height && height !== 0 ? height : graphWidth
     const marginY = 12
 
-    const xData = displayData.map(([label]) => label)
+    const xData = graphData.map((data) => data.label)
 
     const xScale = scaleBand<string>({
         range: [0, graphWidth],
@@ -48,14 +63,14 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
         padding: 0.4,
     })
 
-    const yMax = Math.max(...displayData.map(([_, value]) => value))
+    const yMax = Math.max(...graphData.map((data) => data.value))
     const yScale = scaleLinear<number>({
         range: [graphHeight, 4 * marginY],
         domain: [-(yMax * 0.05), yMax], // set negative minimum so 0 bar is always visible
     })
 
     // aesthetic properties
-    const atLeastOneActive = activeData && activeData.some((isActive) => isActive)
+    const atLeastOneActive = graphData.some((data) => data.isActive)
 
     return (
         <Box
@@ -72,12 +87,13 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
             <svg width={width} height={height}>
                 <rect width={width} height={height} fill="none" rx={14} />
                 <Group>
-                    {displayData.map((d, index) => {
-                        const yLabel = d[1]
+                    {/* {displayData.map((d, index) => { */}
+                    {graphData.map((data, index) => {
+                        const yLabel = data.value
 
                         const barWidth = xScale.bandwidth()
                         const barHeight = graphHeight - (yScale(yLabel) ?? 0)
-                        const barX = xScale(d[0]) ?? 0
+                        const barX = xScale(data.label) ?? 0
                         const barY = graphHeight - barHeight - marginY
 
                         return (
@@ -87,17 +103,19 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                                     y={barY - marginY}
                                     width={barWidth}
                                     height={barHeight}
-                                    fill={
-                                        barColors && barColors.length > 0
-                                            ? barColors[index]
-                                            : '#F4D35E'
-                                    }
+                                    fill={data.barColor}
                                     filter={
-                                        atLeastOneActive && !activeData[index]
+                                        atLeastOneActive && !data.isActive
                                             ? 'brightness(0.75)'
                                             : 'none'
                                     }
-                                    style={{ transition: 'all 0.2s' }}
+                                    style={{
+                                        WebkitFilter:
+                                            atLeastOneActive && !data.isActive
+                                                ? 'brightness(0.75)'
+                                                : 'none',
+                                        transition: 'all 0.2s',
+                                    }}
                                 />
                                 <Label
                                     title={FormattedMoney('USD', 0).format(yLabel)}
