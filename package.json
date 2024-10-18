@@ -16,12 +16,24 @@
     "dependencies": {
         "@emotion/react": "^11.13.3",
         "@emotion/styled": "^11.13.0",
-        "@mui/material": "^6.0.0",
+        "@mui/material": "^6.1.1",
+        "@phosphor-icons/react": "^2.1.7",
+        "@tabler/icons-react": "^3.19.0",
+        "@visx/annotation": "^3.3.0",
+        "@visx/axis": "^3.10.1",
+        "@visx/brush": "^3.10.4",
+        "@visx/group": "^3.3.0",
+        "@visx/scale": "^3.5.0",
+        "@visx/shape": "^3.5.0",
         "axios": "^1.7.7",
+        "dayjs": "^1.11.13",
+        "fuse.js": "^7.0.0",
         "react": "^18.2.0",
+        "react-animate-height": "^3.2.3",
         "react-dom": "^18.2.0",
         "react-router-dom": "^6.26.2",
-        "react-scripts": "5.0.1"
+        "react-scripts": "5.0.1",
+        "zustand": "^5.0.0-rc.2"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^5.16.4",
