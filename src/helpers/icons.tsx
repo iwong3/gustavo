@@ -54,7 +54,7 @@ import { getLocationAbbr, Location } from 'helpers/location'
 import { getPersonInitials, Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
-export const defaultIconSize = 24
+export const defaultIconSize = 20
 
 type TablerIconProps = {
     name: string
@@ -305,19 +305,22 @@ export const getInitialsIconColors = (person: Person): IconColors => {
 
 interface ISpendTypeIconProps {
     spend: Spend
+    size?: number
 }
 
-export const SpendTypeIcon = ({ spend }: ISpendTypeIconProps) => {
+export const SpendTypeIcon = ({ spend, size = 32 }: ISpendTypeIconProps) => {
     return (
         <Box
             sx={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                width: '100%',
-                height: '100%',
+                width: size,
+                height: size,
+                borderRadius: '100%',
+                backgroundColor: getColorForSpendType(spend.type),
             }}>
-            {getIconFromSpendType(spend.type, 32)}
+            {getIconFromSpendType(spend.type, size)}
         </Box>
     )
 }

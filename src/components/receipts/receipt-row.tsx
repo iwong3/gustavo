@@ -37,7 +37,13 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                 sx={{
                     paddingY: 2,
                 }}>
-                <Grid size={2}>
+                <Grid
+                    size={2}
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}>
                     <SpendTypeIcon spend={spend} />
                 </Grid>
                 <Grid size={7}>
@@ -93,7 +99,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 alignItems: 'center',
                                 fontSize: '12px',
                             }}>
-                            <InitialsIcon person={spend.paidBy} />
+                            <InitialsIcon person={spend.paidBy} sx={{ width: 24, height: 24 }} />
                         </Box>
                     </Box>
                 </Grid>

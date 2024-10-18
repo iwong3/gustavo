@@ -1,7 +1,7 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
-import { BrushGraph } from 'components/graphs/brush-graph'
+import { Graph } from 'components/graphs/graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useEffect, useState } from 'react'
 import { useGustavoStore } from 'views/gustavo'
@@ -45,7 +45,7 @@ export const TotalSpendByDate = () => {
                     alignItems: 'center',
                     marginY: 2,
                 }}>
-                <BrushGraph
+                <Graph
                     data={totalSpendByDateArray}
                     width={window.innerWidth * 0.9}
                     height={window.innerWidth * 0.5}

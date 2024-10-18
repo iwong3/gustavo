@@ -98,14 +98,14 @@ export const Menu = () => {
             component: <FilterPaidBy />,
             state: filterPaidByState,
             label: 'Paid By',
-            iconSize: 20,
+            iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterSpendType,
             component: <FilterSpendType />,
             state: filterSpendTypeState,
             label: 'Type',
-            iconSize: 20,
+            iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterLocation,

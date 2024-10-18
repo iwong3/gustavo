@@ -7,12 +7,14 @@ To-Do:
 Graphs
 
 -   Spend by date
+    -   Vertical graph?
 -   Toggle between bar, line
 -   Horizontally scrollable
 
 UX
 
 -   Log errors and add view to see which rows were affected
+-   Dark mode
 
 ### Done
 

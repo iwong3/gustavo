@@ -38,7 +38,7 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
             graphData.push({
                 value: value,
                 label: label,
-                barColor: barColors ? barColors[index] : '#F4D35E',
+                barColor: barColors ? barColors[index % barColors.length] : '#F4D35E',
                 isActive: activeData ? activeData[index] : true,
             })
             totalValue += value
@@ -59,17 +59,22 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
     const graphHeight = height && height !== 0 ? height : graphWidth
     const marginY = 12
 
+    // scroll logic
+    const barsLimit = 10
+    const totalWidth = Math.max((graphData.length / barsLimit) * graphWidth, graphWidth)
+
+    // data and scales
     const xData = graphData.map((data) => data.label)
 
     const xScale = scaleBand<string>({
-        range: [0, graphWidth],
+        range: [0, totalWidth],
         domain: xData,
         padding: 0.3,
     })
 
     const yMax = Math.max(...graphData.map((data) => data.value))
     const yScale = scaleLinear<number>({
-        range: [graphHeight - 1.5 * marginY, 4 * marginY],
+        range: [graphHeight - 2 * marginY, 4 * marginY],
         domain: [0, yMax],
     })
 
@@ -79,24 +84,27 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
     return (
         <Box
             sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
                 padding: 1,
+                width: graphWidth,
                 border: '1px solid #FBBC04',
                 borderRadius: '10px',
                 backgroundColor: 'white',
                 boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                overflowX: 'scroll',
             }}>
-            <svg width={graphWidth} height={graphHeight}>
-                <rect width={graphWidth} height={graphHeight} fill="none" rx={14} />
+            <svg width={totalWidth} height={graphHeight}>
                 <Group>
                     {graphData.map((data, index) => {
                         const yLabel = data.value
                         const percentage = (yLabel / totalValue) * 100
+                        let percentageString = percentage.toFixed(0)
+                        if (percentageString === '0') {
+                            percentageString = '<1'
+                        }
 
                         const barWidth = xScale.bandwidth()
-                        const barHeight = graphHeight - (yScale(yLabel) ?? 0)
+                        const barHeight =
+                            yLabel === 0 ? marginY : graphHeight - (yScale(yLabel) ?? 0)
                         const barX = xScale(data.label) ?? 0
                         const barY = graphHeight - barHeight - marginY
 
@@ -136,24 +144,26 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                                     showAnchorLine={false}
                                 />
                                 {/* Percentage label */}
-                                <Label
-                                    title={percentage.toFixed(0) + '%'}
-                                    titleProps={{
-                                        textAnchor: 'middle',
-                                    }}
-                                    x={barX}
-                                    y={graphHeight - 14}
-                                    width={barWidth}
-                                    horizontalAnchor="start"
-                                    titleFontSize={12}
-                                    backgroundFill="none"
-                                    showAnchorLine={false}
-                                />
+                                {yLabel !== 0 && (
+                                    <Label
+                                        title={percentageString + '%'}
+                                        titleProps={{
+                                            textAnchor: 'middle',
+                                        }}
+                                        x={barX}
+                                        y={graphHeight - 14}
+                                        width={barWidth}
+                                        horizontalAnchor="start"
+                                        titleFontSize={12}
+                                        backgroundFill="none"
+                                        showAnchorLine={false}
+                                    />
+                                )}
                             </g>
                         )
                     })}
                 </Group>
-                <AxisBottom top={graphHeight - 2 * marginY} scale={xScale} />
+                <AxisBottom top={graphHeight - 2 * marginY} scale={xScale} numTicks={data.length} />
             </svg>
         </Box>
     )

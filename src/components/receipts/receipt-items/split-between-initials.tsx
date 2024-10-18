@@ -43,16 +43,16 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                fontSize: '14px',
+                fontSize: 12,
             }}>
             {Object.entries(splitters).map(([person, isSplitter], index) => {
-                const size = 28
+                const size = 24
                 const customSx = !isSplitter ? { color: 'black', backgroundColor: 'lightgray' } : {}
                 return (
                     <Box
                         key={'split-between-person-' + index}
                         sx={{
-                            marginX: 0.5,
+                            marginX: 0.75,
                         }}>
                         <InitialsIcon
                             person={person as Person}
