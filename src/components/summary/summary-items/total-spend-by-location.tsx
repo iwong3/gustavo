@@ -13,11 +13,8 @@ export const TotalSpendByLocation = () => {
     const { filters, handleFilterClick } = useFilterLocationStore(useShallow((state) => state))
 
     const totalSpendByLocationArray = Array.from(totalSpendByLocation)
-    const locationColors = totalSpendByLocationArray.map(([location]) =>
-        getLocationColors(location)
-    )
-    const activeLocations = Object.entries(filters).map(([_, isActive]) => isActive)
 
+    // cards
     const rowLength = 3
     const renderTotalSpendByLocation = () => {
         const rows = []
@@ -91,15 +88,21 @@ export const TotalSpendByLocation = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
+                        borderTop: '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
-                        borderTop: '1px solid #FBBC04',
                     }}>
-                    {FormattedMoney('USD', 2).format(totalSpend)}
+                    {FormattedMoney('USD', 0).format(totalSpend)}
                 </Box>
             </Box>
         )
     }
+
+    // graph
+    const locationColors = totalSpendByLocationArray.map(([location]) =>
+        getLocationColors(location)
+    )
+    const activeLocations = Object.entries(filters).map(([_, isActive]) => isActive)
 
     return (
         <Box

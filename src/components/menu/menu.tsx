@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { ArrowClockwise } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -42,6 +42,7 @@ export type MenuItemData = {
     component: JSX.Element
     state: any
     label: string
+    iconSize: number
 }
 
 const menuItemStoreResets = new Set<() => void>()
@@ -90,24 +91,28 @@ export const Menu = () => {
             component: <FilterSplitBetween />,
             state: filterSplitBetweenState,
             label: 'Person',
+            iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterPaidBy,
             component: <FilterPaidBy />,
             state: filterPaidByState,
             label: 'Paid By',
+            iconSize: 20,
         },
         {
             item: MenuItem.FilterSpendType,
             component: <FilterSpendType />,
             state: filterSpendTypeState,
             label: 'Type',
+            iconSize: 20,
         },
         {
             item: MenuItem.FilterLocation,
             component: <FilterLocation />,
             state: filterLocationState,
             label: 'Location',
+            iconSize: defaultIconSize,
         },
     ]
 
@@ -116,6 +121,7 @@ export const Menu = () => {
         component: <SortMenu />,
         state: sortMenuState,
         label: 'Sort',
+        iconSize: defaultIconSize,
     }
 
     const menuItems = [sortMenuItem, ...filterMenuItems]
@@ -233,232 +239,243 @@ export const Menu = () => {
     const menuLabelFontSize = 12
 
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                position: 'fixed',
-                bottom: 0,
-                fontSize: 14,
+        <ClickAwayListener
+            onClickAway={() => {
+                setExpandedMenuItem(-1)
+                setShowSettings(false)
             }}>
             <Box
                 sx={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    width: '90%',
+                    width: '100%',
+                    position: 'fixed',
+                    bottom: 0,
+                    fontSize: 14,
                 }}>
-                {/* Active filter */}
                 <Box
                     sx={{
                         display: 'flex',
-                        width: '100%',
-                        borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                        borderTopRightRadius: '10px',
-                        borderTopLeftRadius: '10px',
-                        borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                        borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                        maxHeight: expandedMenuItem !== -1 ? 'auto' : 0,
-                        opacity: expandedMenuItem !== -1 ? 1 : 0,
-                        overflow: 'hidden',
-                        transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        width: '90%',
                     }}>
+                    {/* Active filter */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            width: '100%',
+                            borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                            borderTopRightRadius: '10px',
+                            borderTopLeftRadius: '10px',
+                            borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                            borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                            maxHeight: expandedMenuItem !== -1 ? 'auto' : 0,
+                            opacity: expandedMenuItem !== -1 ? 1 : 0,
+                            overflow: 'hidden',
+                            transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                paddingY: 1,
+                                width: '100%',
+                                backgroundColor: 'white',
+                            }}>
+                            {renderExpandedMenuItem()}
+                        </Box>
+                    </Box>
+                    {/* Show settings */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignSelf: 'flex-end',
+                            borderTop: showSettings ? '1px solid #FBBC04' : 'none',
+                            borderTopRightRadius: '10px',
+                            borderTopLeftRadius: '10px',
+                            borderRight: showSettings ? '1px solid #FBBC04' : 'none',
+                            borderLeft: showSettings ? '1px solid #FBBC04' : 'none',
+                            maxHeight: showSettings ? 'auto' : 0,
+                            opacity: showSettings ? 1 : 0,
+                            overflow: 'hidden',
+                            transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                paddingY: 2,
+                                backgroundColor: 'white',
+                            }}>
+                            <SettingsMenu />
+                        </Box>
+                    </Box>
+                    {/* Menu */}
                     <Box
                         sx={{
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            paddingY: 1,
                             width: '100%',
+                            borderTopRightRadius:
+                                expandedMenuItem === -1 && !showSettings ? '10px' : 0,
+                            borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
+                            borderRight: '1px solid #FBBC04',
+                            borderBottom: '1px solid #FBBC04',
+                            borderLeft: '1px solid #FBBC04',
                             backgroundColor: 'white',
                         }}>
-                        {renderExpandedMenuItem()}
-                    </Box>
-                </Box>
-                {/* Show settings */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignSelf: 'flex-end',
-                        borderTop: showSettings ? '1px solid #FBBC04' : 'none',
-                        borderTopRightRadius: '10px',
-                        borderTopLeftRadius: '10px',
-                        borderRight: showSettings ? '1px solid #FBBC04' : 'none',
-                        borderLeft: showSettings ? '1px solid #FBBC04' : 'none',
-                        maxHeight: showSettings ? 'auto' : 0,
-                        opacity: showSettings ? 1 : 0,
-                        overflow: 'hidden',
-                        transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
-                    }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            paddingY: 2,
-                            backgroundColor: 'white',
-                        }}>
-                        <SettingsMenu />
-                    </Box>
-                </Box>
-                {/* Menu */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        width: '100%',
-                        borderTopRightRadius: expandedMenuItem === -1 && !showSettings ? '10px' : 0,
-                        borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
-                        borderRight: '1px solid #FBBC04',
-                        borderBottom: '1px solid #FBBC04',
-                        borderLeft: '1px solid #FBBC04',
-                        backgroundColor: 'white',
-                    }}>
-                    {/* Each menu item is wrapped in a box
+                        {/* Each menu item is wrapped in a box
                         The outside box has no right/left borders so the top border is continuous
                         The inside box controls right/left borders for when the menu item is expanded */}
-                    {/* Menu item - Reset all */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            width: '100%',
-                            borderTop: '1px solid #FBBC04',
-                            borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
-                        }}
-                        onClick={() => handleResetAllMenuItems()}>
-                        {/* Inside box */}
+                        {/* Menu item - Reset all */}
                         <Box
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                paddingY: 1,
                                 width: '100%',
-                                borderRight: '1px solid white',
-                                borderLeft: '1px solid white',
+                                borderTop: '1px solid #FBBC04',
                                 borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
-                            }}>
+                            }}
+                            onClick={() => handleResetAllMenuItems()}>
+                            {/* Inside box */}
                             <Box
-                                sx={{
-                                    'display': 'flex',
-                                    'justifyContent': 'center',
-                                    'alignItems': 'center',
-                                    'width': 26,
-                                    'height': 26,
-                                    'borderRadius': '100%',
-                                    '&:active': {
-                                        backgroundColor: '#FBBC04',
-                                    },
-                                    'transition': 'background-color 0.1s',
-                                }}>
-                                <ArrowClockwise size={defaultIconSize} />
-                            </Box>
-                            {showIconLabels && (
-                                <Typography sx={{ fontSize: menuLabelFontSize }}>Reset</Typography>
-                            )}
-                        </Box>
-                    </Box>
-                    {/* Menu items */}
-                    {menuItems.map((item, index) => {
-                        return (
-                            <Box
-                                key={'menu-item-' + index}
                                 sx={{
                                     display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    paddingY: 1,
                                     width: '100%',
-                                    borderTop:
-                                        index === expandedMenuItem
-                                            ? '1px solid white'
-                                            : '1px solid #FBBC04',
-                                }}
-                                onClick={() => {
-                                    handleMenuItemClick(index)
+                                    borderRight: '1px solid white',
+                                    borderLeft: '1px solid white',
+                                    borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
                                 }}>
-                                {/* Inside box */}
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        paddingY: 1,
-                                        width: '100%',
-                                        borderRight:
-                                            index === expandedMenuItem
-                                                ? '1px solid #FBBC04'
-                                                : '1px solid white',
-                                        borderLeft:
-                                            index === expandedMenuItem
-                                                ? '1px solid #FBBC04'
-                                                : '1px solid white',
+                                        'display': 'flex',
+                                        'justifyContent': 'center',
+                                        'alignItems': 'center',
+                                        'width': 26,
+                                        'height': 26,
+                                        'borderRadius': '100%',
+                                        '&:active': {
+                                            backgroundColor: '#FBBC04',
+                                        },
+                                        'transition': 'background-color 0.1s',
                                     }}>
+                                    <ArrowClockwise size={defaultIconSize} />
+                                </Box>
+                                {showIconLabels && (
+                                    <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                        Reset
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Box>
+                        {/* Menu items */}
+                        {menuItems.map((item, index) => {
+                            return (
+                                <Box
+                                    key={'menu-item-' + index}
+                                    sx={{
+                                        display: 'flex',
+                                        width: '100%',
+                                        borderTop:
+                                            index === expandedMenuItem
+                                                ? '1px solid white'
+                                                : '1px solid #FBBC04',
+                                    }}
+                                    onClick={() => {
+                                        handleMenuItemClick(index)
+                                    }}>
+                                    {/* Inside box */}
                                     <Box
                                         sx={{
                                             display: 'flex',
-                                            justifyContent: 'center',
+                                            flexDirection: 'column',
                                             alignItems: 'center',
-                                            width: 26,
-                                            height: 26,
-                                            borderRadius: '100%',
-                                            backgroundColor: getMenuItemBackgroundColor(item),
-                                            transition: 'background-color 0.1s',
+                                            paddingY: 1,
+                                            width: '100%',
+                                            borderRight:
+                                                index === expandedMenuItem
+                                                    ? '1px solid #FBBC04'
+                                                    : '1px solid white',
+                                            borderLeft:
+                                                index === expandedMenuItem
+                                                    ? '1px solid #FBBC04'
+                                                    : '1px solid white',
                                         }}>
-                                        {getMenuItemIcon(item.item)}
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                width: 26,
+                                                height: 26,
+                                                borderRadius: '100%',
+                                                backgroundColor: getMenuItemBackgroundColor(item),
+                                                transition: 'background-color 0.1s',
+                                            }}>
+                                            {getMenuItemIcon(item.item, item.iconSize)}
+                                        </Box>
+                                        {showIconLabels && (
+                                            <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                                {item.label}
+                                            </Typography>
+                                        )}
                                     </Box>
-                                    {showIconLabels && (
-                                        <Typography sx={{ fontSize: menuLabelFontSize }}>
-                                            {item.label}
-                                        </Typography>
-                                    )}
                                 </Box>
-                            </Box>
-                        )
-                    })}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            width: '100%',
-                            borderTop: showSettings ? '1px solid white' : '1px solid #FBBC04',
-                            borderTopRightRadius:
-                                expandedMenuItem === -1 && !showSettings ? '10px' : 0,
-                        }}
-                        onClick={() => handleSettingsClick()}>
-                        {/* Inside box */}
+                            )
+                        })}
                         <Box
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                paddingY: 1,
                                 width: '100%',
-                                borderRight: '1px solid white',
+                                borderTop: showSettings ? '1px solid white' : '1px solid #FBBC04',
                                 borderTopRightRadius:
                                     expandedMenuItem === -1 && !showSettings ? '10px' : 0,
-                                borderLeft: showSettings ? '1px solid #FBBC04' : '1px solid white',
-                            }}>
+                            }}
+                            onClick={() => handleSettingsClick()}>
+                            {/* Inside box */}
                             <Box
                                 sx={{
                                     display: 'flex',
+                                    flexDirection: 'column',
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    width: 26,
-                                    height: 26,
-                                    borderRadius: '100%',
-                                    backgroundColor: showSettings ? '#FBBC04' : 'white',
-                                    transition: 'background-color 0.1s',
+                                    paddingY: 1,
+                                    width: '100%',
+                                    borderRight: '1px solid white',
+                                    borderTopRightRadius:
+                                        expandedMenuItem === -1 && !showSettings ? '10px' : 0,
+                                    borderLeft: showSettings
+                                        ? '1px solid #FBBC04'
+                                        : '1px solid white',
                                 }}>
-                                {getTablerIcon({ name: 'IconSettings' })}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: 26,
+                                        height: 26,
+                                        borderRadius: '100%',
+                                        backgroundColor: showSettings ? '#FBBC04' : 'white',
+                                        transition: 'background-color 0.1s',
+                                    }}>
+                                    {getTablerIcon({ name: 'IconSettings' })}
+                                </Box>
+                                {showIconLabels && (
+                                    <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                        Settings
+                                    </Typography>
+                                )}
                             </Box>
-                            {showIconLabels && (
-                                <Typography sx={{ fontSize: menuLabelFontSize }}>
-                                    Settings
-                                </Typography>
-                            )}
                         </Box>
                     </Box>
                 </Box>
             </Box>
-        </Box>
+        </ClickAwayListener>
     )
 }

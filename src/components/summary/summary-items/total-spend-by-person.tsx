@@ -12,14 +12,9 @@ export const TotalSpendByPerson = () => {
     const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
     const { filters, handleFilterClick } = useFilterSplitBetweenStore(useShallow((state) => state))
 
-    // data for graph
     const totalSpendByPersonArray = Array.from(totalSpendByPerson)
-    const personColors = totalSpendByPersonArray.map(
-        ([person]) => getInitialsIconColors(person).bgColor
-    )
-    const activePeople = Object.entries(filters).map(([_, isActive]) => isActive)
 
-    // render graph
+    // cards
     const rowLength = 4
     const renderTotalSpendByPerson = () => {
         const rows = []
@@ -100,15 +95,21 @@ export const TotalSpendByPerson = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
+                        borderTop: '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
-                        borderTop: '1px solid #FBBC04',
                     }}>
-                    {FormattedMoney().format(totalSpend)}
+                    {FormattedMoney('USD', 0).format(totalSpend)}
                 </Box>
             </Box>
         )
     }
+
+    // graph
+    const personColors = totalSpendByPersonArray.map(
+        ([person]) => getInitialsIconColors(person).bgColor
+    )
+    const activePeople = Object.entries(filters).map(([_, isActive]) => isActive)
 
     return (
         <Box

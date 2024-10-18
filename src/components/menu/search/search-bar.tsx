@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { getTablerIcon } from 'helpers/icons'
 import { Spend } from 'helpers/spend'
 
@@ -75,6 +76,7 @@ export const SearchBar = () => {
     const { searchInput, setSearchInput, isActive } = useSearchBarStore(
         useShallow((state) => state)
     )
+    const { toggle: collapseAll } = useCollapseAllStore(useShallow((state) => state))
 
     const [focused, setFocused] = useState(false)
 
@@ -97,7 +99,10 @@ export const SearchBar = () => {
                 }}>
                 <TextField
                     value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
+                    onChange={(e) => {
+                        setSearchInput(e.target.value)
+                        collapseAll()
+                    }}
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     slotProps={{
@@ -120,6 +125,7 @@ export const SearchBar = () => {
                                     onClick={() => {
                                         setSearchInput('')
                                         setFocused(false)
+                                        collapseAll()
                                     }}>
                                     {getTablerIcon({ name: 'IconX', size: 16 })}
                                 </InputAdornment>

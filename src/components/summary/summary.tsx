@@ -3,8 +3,8 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { MenuItem } from 'components/menu/menu'
 import { TotalSpend } from 'components/summary/summary-items/total-spend'
+import { TotalSpendByDate } from 'components/summary/summary-items/total-spend-by-date'
 import { TotalSpendByLocation } from 'components/summary/summary-items/total-spend-by-location'
 import { TotalSpendByPerson } from 'components/summary/summary-items/total-spend-by-person'
 import { TotalSpendByType } from 'components/summary/summary-items/total-spend-by-type'
@@ -13,12 +13,13 @@ export enum SummaryView {
     TotalSpendByPerson = 'TotalSpendByPerson',
     TotalSpendByType = 'TotalSpendByType',
     TotalSpendByLocation = 'TotalSpendByLocation',
+    TotalSpendByDate = 'TotalSpendByDate',
 }
 
 type SummaryViewData = {
     view: SummaryView
     component: JSX.Element
-    menuItem: MenuItem
+    // menuItem: MenuItem
     label: string
 }
 
@@ -61,20 +62,26 @@ export const Summary = () => {
         {
             view: SummaryView.TotalSpendByPerson,
             component: <TotalSpendByPerson />,
-            menuItem: MenuItem.FilterSplitBetween,
+            // menuItem: MenuItem.FilterSplitBetween,
             label: 'By Person',
         },
         {
             view: SummaryView.TotalSpendByType,
             component: <TotalSpendByType />,
-            menuItem: MenuItem.FilterSpendType,
+            // menuItem: MenuItem.FilterSpendType,
             label: 'By Type',
         },
         {
             view: SummaryView.TotalSpendByLocation,
             component: <TotalSpendByLocation />,
-            menuItem: MenuItem.FilterLocation,
+            // menuItem: MenuItem.FilterLocation,
             label: 'By Location',
+        },
+        {
+            view: SummaryView.TotalSpendByDate,
+            component: <TotalSpendByDate />,
+            // menuItem: MenuItem.FilterLocation,
+            label: 'By Date',
         },
     ]
 

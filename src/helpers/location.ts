@@ -17,6 +17,6 @@ export const getLocationAbbr = (location: Location): string => {
         case Location.Tokyo:
             return 'To'
         case Location.Other:
-            return '..'
+            return '?'
     }
 }

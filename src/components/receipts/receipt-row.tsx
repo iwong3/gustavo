@@ -10,8 +10,8 @@ import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
-import { getSplitCost, Spend } from 'helpers/spend'
 import { getUcUrlFromOpenUrl } from 'helpers/image'
+import { getSplitCost, Spend } from 'helpers/spend'
 
 interface IReceiptsRowProps {
     spend: Spend

@@ -1,9 +1,9 @@
 import { Box, Typography } from '@mui/material'
 import { create } from 'zustand'
 
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { getTablerIcon } from 'helpers/icons'
 import { useShallow } from 'zustand/react/shallow'
-import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 
 type CollapseAllState = {
     value: boolean
@@ -50,7 +50,7 @@ export const CollapseAll = () => {
                 'borderRadius': '10px',
                 'backgroundColor': 'white',
                 '&:active': {
-                    backgroundColor: '#FBBC04',
+                    backgroundColor: '#FAEDCD',
                 },
                 'transition': 'background-color 0.1s, width 0.1s ease-out',
             }}>

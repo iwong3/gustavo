@@ -27,12 +27,13 @@ export enum Columns {
 
 // given a row string, return an array of the values
 export const parseRow = (row: string): string[] => {
+    const filteredRow = row.replace(/[\r]/g, '')
     const rowValues: string[] = []
 
     let currentStr = ''
     let inQuotes = false
-    for (let i = 0; i < row.length; i++) {
-        const char = row[i]
+    for (let i = 0; i < filteredRow.length; i++) {
+        const char = filteredRow[i]
         if (char === '"') {
             inQuotes = !inQuotes
             continue

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { Location } from 'helpers/location'
 import { Person } from 'helpers/person'
 import { getSplitCost, Spend, SpendType } from 'helpers/spend'
@@ -35,6 +36,7 @@ interface ProcessFilteredSpendDataResponse {
     totalSpendByPerson: Map<Person, number>
     totalSpendByType: Map<SpendType, number>
     totalSpendByLocation: Map<Location, number>
+    totalSpendByDate: Map<string, number>
 }
 
 export const processFilteredSpendData = (
@@ -63,9 +65,35 @@ export const processFilteredSpendData = (
         totalSpendByLocation.set(location, 0)
     })
 
+    const totalSpendByDate = new Map<string, number>()
+    let earliestDate = filteredSpendData.length > 0 ? dayjs(filteredSpendData[0].date) : null
+    let latestDate = earliestDate
+
     filteredSpendData.forEach((spend) => {
         filteredPeopleTotalSpend += calculateFilteredTotalSpend(spend, splitBetweenFilter)
+
+        const currentDate = dayjs(spend.date)
+        if (currentDate.isBefore(earliestDate)) {
+            earliestDate = currentDate
+        }
+        if (currentDate.isAfter(latestDate)) {
+            latestDate = currentDate
+        }
+
+        calculateAndUpdateTotalSpendByDate(spend, totalSpendByDate, splitBetweenFilter)
     })
+
+    // populate all dates between earliest and latest date
+    if (filteredSpendData.length > 0 && earliestDate) {
+        let currentDate = earliestDate
+        while (currentDate.isBefore(latestDate)) {
+            const currentDateString = currentDate.format('M/D')
+            if (!totalSpendByDate.has(currentDateString)) {
+                totalSpendByDate.set(currentDateString, 0)
+            }
+            currentDate = currentDate.add(1, 'day')
+        }
+    }
 
     filteredSpendDataWithoutSplitBetween.forEach((spend) => {
         filteredTotalSpend += spend.convertedCost
@@ -86,6 +114,7 @@ export const processFilteredSpendData = (
         totalSpendByPerson,
         totalSpendByType,
         totalSpendByLocation,
+        totalSpendByDate,
     }
 }
 
@@ -242,4 +271,37 @@ const calculateAndUpdateTotalSpendByLocation = (
             (totalSpendByLocation.get(Location.Other) || 0) + totalCost
         )
     }
+}
+
+const calculateAndUpdateTotalSpendByDate = (
+    spend: Spend,
+    totalSpendByDate: Map<string, number>,
+    splitBetweenFilter: Partial<Record<Person, boolean>>
+) => {
+    const { convertedCost, splitBetween, date } = spend
+
+    let totalCost = convertedCost
+
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
+        const splitCost = getSplitCost(convertedCost, splitBetween)
+
+        // get an array of people buying the item
+        let splitters: Person[] = splitBetween
+        if (splitBetween.includes(Person.Everyone)) {
+            splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
+        }
+        // remove people who are not selected on the filter
+        splitters = splitters.filter((person) => splitBetweenFilter[person])
+
+        // total cost = split cost * number of people who are buying AND on the filter
+        totalCost = splitCost * splitters.length
+    }
+
+    const currentDate = dayjs(date)
+    const currentDateString = currentDate.format('M/D')
+    totalSpendByDate.set(
+        currentDateString,
+        (totalSpendByDate.get(currentDateString) || 0) + totalCost
+    )
 }

@@ -13,11 +13,8 @@ export const TotalSpendByType = () => {
     const { filters, handleFilterClick } = useFilterSpendTypeStore(useShallow((state) => state))
 
     const totalSpendByTypeArray = Array.from(totalSpendByType)
-    const spendTypeColors = totalSpendByTypeArray.map(([spendType]) =>
-        getColorForSpendType(spendType)
-    )
-    const activeTypes = Object.entries(filters).map(([_, isActive]) => isActive)
 
+    // cards
     const rowLength = 3
     const renderTotalSpendByType = () => {
         const rows = []
@@ -99,15 +96,21 @@ export const TotalSpendByType = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
+                        borderTop: '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
-                        borderTop: '1px solid #FBBC04',
                     }}>
-                    {FormattedMoney().format(totalSpend)}
+                    {FormattedMoney('USD', 0).format(totalSpend)}
                 </Box>
             </Box>
         )
     }
+
+    // graph properties
+    const spendTypeColors = totalSpendByTypeArray.map(([spendType]) =>
+        getColorForSpendType(spendType)
+    )
+    const activeTypes = Object.entries(filters).map(([_, isActive]) => isActive)
 
     return (
         <Box

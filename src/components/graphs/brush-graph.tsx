@@ -25,15 +25,13 @@ interface GraphData {
     isActive: boolean
 }
 
-export const Graph = ({ data, width, height, barColors, activeData }: GraphProps) => {
+export const BrushGraph = ({ data, width, height, barColors, activeData }: GraphProps) => {
     const [graphData, setGraphData] = useState<GraphData[]>([])
-    const [totalValue, setTotalValue] = useState<number>(0)
 
     const { order: costOrder } = useSortCostStore(useShallow((state) => state))
 
     useEffect(() => {
         let graphData: GraphData[] = []
-        let totalValue = 0
         data.forEach(([label, value], index) => {
             graphData.push({
                 value: value,
@@ -41,7 +39,6 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                 barColor: barColors ? barColors[index] : '#F4D35E',
                 isActive: activeData ? activeData[index] : true,
             })
-            totalValue += value
         })
 
         if (costOrder === CostOrder.Descending) {
@@ -51,7 +48,6 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
         }
 
         setGraphData(graphData)
-        setTotalValue(totalValue)
     }, [data, costOrder])
 
     // graph properties
@@ -64,13 +60,13 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
     const xScale = scaleBand<string>({
         range: [0, graphWidth],
         domain: xData,
-        padding: 0.3,
+        padding: 0.4,
     })
 
     const yMax = Math.max(...graphData.map((data) => data.value))
     const yScale = scaleLinear<number>({
-        range: [graphHeight - 1.5 * marginY, 4 * marginY],
-        domain: [0, yMax],
+        range: [graphHeight, 4 * marginY],
+        domain: [-(yMax * 0.05), yMax], // set negative minimum so 0 bar is always visible
     })
 
     // aesthetic properties
@@ -93,7 +89,6 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                 <Group>
                     {graphData.map((data, index) => {
                         const yLabel = data.value
-                        const percentage = (yLabel / totalValue) * 100
 
                         const barWidth = xScale.bandwidth()
                         const barHeight = graphHeight - (yScale(yLabel) ?? 0)
@@ -121,31 +116,16 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                                         transition: 'all 0.2s',
                                     }}
                                 />
-                                {/* Spend label */}
                                 <Label
                                     title={FormattedMoney('USD', 0).format(yLabel)}
                                     titleProps={{
                                         textAnchor: 'middle',
                                     }}
                                     x={barX}
-                                    y={barY - 2}
+                                    y={barY}
                                     width={barWidth}
                                     horizontalAnchor="start"
-                                    titleFontSize={12}
-                                    backgroundFill="none"
-                                    showAnchorLine={false}
-                                />
-                                {/* Percentage label */}
-                                <Label
-                                    title={percentage.toFixed(0) + '%'}
-                                    titleProps={{
-                                        textAnchor: 'middle',
-                                    }}
-                                    x={barX}
-                                    y={graphHeight - 14}
-                                    width={barWidth}
-                                    horizontalAnchor="start"
-                                    titleFontSize={12}
+                                    titleFontSize={14}
                                     backgroundFill="none"
                                     showAnchorLine={false}
                                 />

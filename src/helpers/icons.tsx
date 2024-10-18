@@ -1,15 +1,13 @@
 import { Box, SxProps, Theme } from '@mui/material'
 import {
-    MapPinArea,
-    Train,
-    ForkKnife,
     Bed,
-    Tote,
+    ForkKnife,
     FunnelSimple,
-    Receipt,
-    Tag,
-    UserCircle,
     HandCoins,
+    MapPinArea,
+    Tote,
+    Train,
+    UserCircle,
 } from '@phosphor-icons/react'
 import {
     IconArrowsSplit2,
@@ -18,6 +16,7 @@ import {
     IconCalendarUp,
     IconCaretDown,
     IconCaretUp,
+    IconCategory,
     IconChartBar,
     IconChartBarOff,
     IconClock,
@@ -30,8 +29,10 @@ import {
     IconLayoutNavbarCollapse,
     IconListLetters,
     IconMap2,
+    IconMapQuestion,
     IconNotes,
     IconPhoto,
+    IconReceipt,
     IconSearch,
     IconSettings,
     IconShoppingBag,
@@ -39,8 +40,10 @@ import {
     IconSortAZ,
     IconSortDescendingLetters,
     IconSortZA,
+    IconTag,
     IconTextSize,
     IconTool,
+    IconUser,
     IconX,
 } from '@tabler/icons-react'
 
@@ -48,7 +51,7 @@ import { MenuItem, MenuItemData } from 'components/menu/menu'
 import { SortItem } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
 import { getLocationAbbr, Location } from 'helpers/location'
-import { Person, getPersonInitials } from 'helpers/person'
+import { getPersonInitials, Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
 export const defaultIconSize = 24
@@ -66,7 +69,7 @@ export const getTablerIcon = ({
     size = defaultIconSize,
     stroke = 1.5,
     color = 'black',
-    fill = 'none',
+    fill = 'white',
 }: TablerIconProps) => {
     const props = {
         size,
@@ -87,6 +90,8 @@ export const getTablerIcon = ({
             return <IconCaretUp {...props} />
         case 'IconCaretDown':
             return <IconCaretDown {...props} />
+        case 'IconCategory':
+            return <IconCategory {...props} />
         case 'IconChartBar':
             return <IconChartBar {...props} />
         case 'IconChartBarOff':
@@ -94,7 +99,7 @@ export const getTablerIcon = ({
         case 'IconClock':
             return <IconClock {...props} />
         case 'IconCurrencyDollar':
-            return <IconCurrencyDollar {...props} />
+            return <IconCurrencyDollar {...props} fill="none" />
         case 'IconDots':
             return <IconDots {...props} />
         case 'IconExternalLink':
@@ -108,13 +113,17 @@ export const getTablerIcon = ({
         case 'IconLayoutNavbarCollapse':
             return <IconLayoutNavbarCollapse {...props} />
         case 'IconListLetters':
-            return <IconListLetters {...props} />
+            return <IconListLetters {...props} fill="none" />
         case 'IconMap2':
             return <IconMap2 {...props} />
+        case 'IconMapQuestion':
+            return <IconMapQuestion {...props} fill="none" />
         case 'IconNotes':
             return <IconNotes {...props} />
         case 'IconPhoto':
             return <IconPhoto {...props} />
+        case 'IconReceipt':
+            return <IconReceipt {...props} />
         case 'IconSearch':
             return <IconSearch {...props} />
         case 'IconSettings':
@@ -122,17 +131,21 @@ export const getTablerIcon = ({
         case 'IconShoppingBag':
             return <IconShoppingBag {...props} />
         case 'IconSortAZ':
-            return <IconSortAZ {...props} />
+            return <IconSortAZ {...props} fill="none" />
         case 'IconSortZA':
-            return <IconSortZA {...props} />
+            return <IconSortZA {...props} fill="none" />
         case 'IconSortAscendingLetters':
             return <IconSortAscendingLetters {...props} />
         case 'IconSortDescendingLetters':
             return <IconSortDescendingLetters {...props} />
+        case 'IconTag':
+            return <IconTag {...props} />
         case 'IconTextSize':
             return <IconTextSize {...props} />
         case 'IconTool':
             return <IconTool {...props} />
+        case 'IconUser':
+            return <IconUser {...props} />
         case 'IconX':
             return <IconX {...props} />
         default:
@@ -143,17 +156,17 @@ export const getTablerIcon = ({
 export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
     switch (item) {
         case MenuItem.FilterLocation:
-            return getTablerIcon({ name: 'IconMap2', size })
+            return getTablerIcon({ name: 'IconMap2', size, fill: 'white' })
         case MenuItem.FilterPaidBy:
-            return <Receipt size={size} />
+            return getTablerIcon({ name: 'IconReceipt', size, fill: 'white' })
         case MenuItem.FilterSpendType:
-            return <Tag size={size} />
+            return getTablerIcon({ name: 'IconTag', size, fill: 'white' })
         case MenuItem.FilterSplitBetween:
-            return <UserCircle size={size} />
+            return getTablerIcon({ name: 'IconUser', size, fill: 'white' })
         case MenuItem.Sort:
             return <FunnelSimple size={size} />
         case MenuItem.Tools:
-            return getTablerIcon({ name: 'IconTool' })
+            return getTablerIcon({ name: 'IconTool', fill: 'white' })
         case MenuItem.ToolsDebtPerson1:
             return <UserCircle size={size} />
         case MenuItem.ToolsDebtPerson2:
@@ -173,17 +186,19 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
 export const getToolsMenuItemIcon = (item: ToolsMenuItem, size: number = 18) => {
     switch (item) {
         case ToolsMenuItem.Receipts:
-            return getTablerIcon({ name: 'IconLayoutList', size: size, fill: 'white' })
+            return getTablerIcon({ name: 'IconLayoutList', size, fill: 'white' })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
         case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({ name: 'IconChartBar', size: size, fill: 'white' })
+            return getTablerIcon({ name: 'IconChartBar', size, fill: 'white' })
         case ToolsMenuItem.TotalSpendByPerson:
-            return <UserCircle size={size} />
+            return getTablerIcon({ name: 'IconUser', size, fill: 'white' })
         case ToolsMenuItem.TotalSpendByType:
-            return <Tag size={size} />
+            return getTablerIcon({ name: 'IconTag', size, fill: 'white' })
         case ToolsMenuItem.TotalSpendByLocation:
-            return getTablerIcon({ name: 'IconMap2', size: 18, fill: 'white' })
+            return getTablerIcon({ name: 'IconMap2', size, fill: 'white' })
+        case ToolsMenuItem.TotalSpendByDate:
+            return getTablerIcon({ name: 'IconCalendarEvent', size, fill: 'white' })
         default:
             return null
     }
@@ -324,7 +339,7 @@ export const getIconFromSpendType = (
             return <Tote size={size} />
         case SpendType.Other:
         default:
-            return getTablerIcon({ name: 'IconDots', size })
+            return getTablerIcon({ name: 'IconCategory', size })
     }
 }
 
