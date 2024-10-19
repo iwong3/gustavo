@@ -109,6 +109,8 @@ export const FilterPaidBy = () => {
                 {getTablerIcon({ name: 'IconX' })}
             </Box>
             {Object.entries(filters).map(([person, isActive]) => {
+                const sx = { fontSize: 10 }
+
                 return (
                     <Box
                         key={'filter-paid-by-' + person}
@@ -125,8 +127,8 @@ export const FilterPaidBy = () => {
                             person={person as Person}
                             sx={
                                 !isActive
-                                    ? { color: 'black', backgroundColor: 'lightgray' }
-                                    : undefined
+                                    ? { ...sx, color: 'black', backgroundColor: 'lightgray' }
+                                    : sx
                             }
                         />
                     </Box>

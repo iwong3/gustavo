@@ -2,7 +2,10 @@ import { Box, Switch, Typography } from '@mui/material'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { getFromCache, saveInCache } from 'helpers/cache'
 import { CostDisplay } from 'helpers/currency'
+
+const CONVERT_TO_USD_CACHE_KEY = 'convertToUSD'
 
 type SettingsCostState = {
     costDisplay: CostDisplay
@@ -12,16 +15,18 @@ type SettingsCostActions = {
     toggleCostDisplay: () => void
 }
 
-export const useSettingsCostStore = create<SettingsCostState & SettingsCostActions>((set) => ({
-    costDisplay: CostDisplay.Original,
+export const useSettingsCostStore = create<SettingsCostState & SettingsCostActions>((set, get) => ({
+    costDisplay: parseInt(getFromCache(CONVERT_TO_USD_CACHE_KEY, CostDisplay.Original.toString())),
 
-    toggleCostDisplay: () =>
-        set((state) => ({
-            costDisplay:
-                state.costDisplay === CostDisplay.Original
-                    ? CostDisplay.Converted
-                    : CostDisplay.Original,
-        })),
+    toggleCostDisplay: () => {
+        const { costDisplay } = get()
+        const newValue =
+            costDisplay === CostDisplay.Original ? CostDisplay.Converted : CostDisplay.Original
+        set(() => ({
+            costDisplay: newValue,
+        }))
+        saveInCache(CONVERT_TO_USD_CACHE_KEY, newValue.toString())
+    },
 }))
 
 export const SettingsCost = () => {

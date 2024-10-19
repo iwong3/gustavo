@@ -22,6 +22,7 @@ import {
     IconClock,
     IconCurrencyDollar,
     IconDots,
+    IconExclamationCircle,
     IconExternalLink,
     IconHandFingerLeft,
     IconHandFingerRight,
@@ -102,6 +103,8 @@ export const getTablerIcon = ({
             return <IconCurrencyDollar {...props} fill="none" />
         case 'IconDots':
             return <IconDots {...props} />
+        case 'IconExclamationCircle':
+            return <IconExclamationCircle {...props} />
         case 'IconExternalLink':
             return <IconExternalLink {...props} />
         case 'IconHandFingerLeft':

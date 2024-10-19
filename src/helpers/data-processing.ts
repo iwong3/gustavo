@@ -305,3 +305,5 @@ const calculateAndUpdateTotalSpendByDate = (
         (totalSpendByDate.get(currentDateString) || 0) + totalCost
     )
 }
+
+export const ErrorConvertingToUSD = 'Could not convert to USD'

@@ -1,4 +1,4 @@
-import { Box } from '@mui/material'
+import { Box, Tooltip } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
+import { ErrorConvertingToUSD } from 'helpers/data-processing'
 import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getUcUrlFromOpenUrl } from 'helpers/image'
 import { getSplitCost, Spend } from 'helpers/spend'
@@ -87,6 +88,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                             sx={{
                                 display: 'flex',
                                 fontWeight: 'bold',
+                                color: spend.error ? '#C1121F' : 'black',
                             }}>
                             {costDisplay === CostDisplay.Original
                                 ? FormattedMoney(spend.currency, 0).format(spend.originalCost)
@@ -110,7 +112,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                 <Grid
                     container
                     sx={{
-                        borderTop: '1px solid #FBBC04',
+                        borderTop: spend.error ? '1px solid #C1121F' : '1px solid #FBBC04',
                     }}>
                     <Grid size={12}>
                         <Box
@@ -146,8 +148,59 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 <Box sx={{ marginX: 1 }}>
                                     {getTablerIcon({ name: 'IconArrowsSplit2', size: 12 })}
                                 </Box>
-                                {FormattedMoney().format(
-                                    getSplitCost(spend.convertedCost, spend.splitBetween)
+                                {spend.error ? (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}>
+                                        {FormattedMoney(spend.currency).format(
+                                            getSplitCost(spend.originalCost, spend.splitBetween)
+                                        )}
+                                        <Tooltip
+                                            title={ErrorConvertingToUSD}
+                                            enterTouchDelay={0}
+                                            slotProps={{
+                                                popper: {
+                                                    modifiers: [
+                                                        {
+                                                            name: 'offset',
+                                                            options: { offset: [0, -12] },
+                                                        },
+                                                    ],
+                                                },
+                                                tooltip: {
+                                                    sx: {
+                                                        padding: 1,
+                                                        border: '1px solid #C1121F',
+                                                        fontSize: 12,
+                                                        color: 'black',
+                                                        fontStyle: 'italic',
+                                                        fontWeight: 600,
+                                                        backgroundColor: '#f4d35e',
+                                                        boxShadow:
+                                                            'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                                                    },
+                                                },
+                                            }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    marginLeft: 0.5,
+                                                }}>
+                                                {getTablerIcon({
+                                                    name: 'IconExclamationCircle',
+                                                    size: 20,
+                                                    fill: '#FBBC04',
+                                                })}
+                                            </Box>
+                                        </Tooltip>
+                                    </Box>
+                                ) : (
+                                    FormattedMoney().format(
+                                        getSplitCost(spend.convertedCost, spend.splitBetween)
+                                    )
                                 )}
                             </Box>
                             <Box

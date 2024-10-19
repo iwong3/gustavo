@@ -1,6 +1,10 @@
 import { Box, Switch, Typography } from '@mui/material'
 import { create } from 'zustand'
 
+import { getFromCache, saveInCache } from 'helpers/cache'
+
+const SHOW_ICON_LABELS_CACHE_KEY = 'showIconLabels'
+
 type SettingsIconLabelsState = {
     showIconLabels: boolean
 }
@@ -11,13 +15,17 @@ type SettingsIconLabelsActions = {
 
 export const useSettingsIconLabelsStore = create<
     SettingsIconLabelsState & SettingsIconLabelsActions
->((set) => ({
-    showIconLabels: true,
+>((set, get) => ({
+    showIconLabels: getFromCache(SHOW_ICON_LABELS_CACHE_KEY, 'true') === 'true',
 
-    toggleIconLabels: () =>
-        set((state) => ({
-            showIconLabels: !state.showIconLabels,
-        })),
+    toggleIconLabels: () => {
+        const { showIconLabels } = get()
+        const newValue = !showIconLabels
+        set(() => ({
+            showIconLabels: newValue,
+        }))
+        saveInCache(SHOW_ICON_LABELS_CACHE_KEY, newValue.toString())
+    },
 }))
 
 export const SettingsIconLabels = () => {
