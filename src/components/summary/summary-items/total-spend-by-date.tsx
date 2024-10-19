@@ -1,4 +1,5 @@
 import { Box } from '@mui/material'
+import dayjs from 'dayjs'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Graph } from 'components/graphs/graph'
@@ -17,17 +18,24 @@ export const TotalSpendByDate = () => {
         if (order === 0 || order == 2) {
             // Default is ascending
             totalSpendByDateArray = totalSpendByDateArray.sort((a, b) => {
-                const dateA = new Date(a[0])
-                const dateB = new Date(b[0])
-                return dateA.getTime() - dateB.getTime()
+                const dateA = dayjs(a[0])
+                const dateB = dayjs(b[0])
+                return dateA.isAfter(dateB) ? 1 : -1
             })
         } else if (order === 1) {
             totalSpendByDateArray = totalSpendByDateArray.sort((a, b) => {
-                const dateA = new Date(a[0])
-                const dateB = new Date(b[0])
-                return dateB.getTime() - dateA.getTime()
+                const dateA = dayjs(a[0])
+                const dateB = dayjs(b[0])
+                return dateB.isAfter(dateA) ? 1 : -1
             })
         }
+
+        // format date
+        totalSpendByDateArray = totalSpendByDateArray.map(([date, value]) => [
+            dayjs(date).format('M/D'),
+            value,
+        ])
+
         setTotalSpendByDateArray(totalSpendByDateArray)
     }, [totalSpendByDate, order])
 

@@ -154,7 +154,7 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                                         y={graphHeight - 14}
                                         width={barWidth}
                                         horizontalAnchor="start"
-                                        titleFontSize={12}
+                                        titleFontSize={10}
                                         backgroundFill="none"
                                         showAnchorLine={false}
                                     />

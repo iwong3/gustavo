@@ -145,8 +145,6 @@ export const Gustavo = () => {
                     const rows = dataString.split('\n')
                     const headers = rows[0].replace(/[\r]/g, '').split(',')
 
-                    console.log(dataString)
-
                     const nameIndex = headers.indexOf(Columns.ItemName)
                     const dateIndex = headers.indexOf(Columns.Date)
                     const originalCostIndex = headers.indexOf(Columns.Cost)
@@ -166,6 +164,8 @@ export const Gustavo = () => {
                         .map((row: string) => {
                             const rowValues = parseRow(row)
                             if (rowValues) {
+                                let error = false
+
                                 const originalCost = parseFloat(
                                     rowValues[originalCostIndex].replace(/[,'"]+/g, '')
                                 )
@@ -173,6 +173,7 @@ export const Gustavo = () => {
                                 let convertedCost = parseFloat(rowValues[convertedCostIndex])
                                 if (rowValues[convertedCostIndex] === '#N/A') {
                                     convertedCost = 0
+                                    error = true
                                     setError(true)
                                 }
 
@@ -203,11 +204,13 @@ export const Gustavo = () => {
                                     reportedBy: reportedBy,
                                     reportedAt: rowValues[reportedAtIndex],
                                     receiptImageUrl: rowValues[receiptImageUrlIndex],
+                                    error: error,
                                 }
                                 return spend
                             }
                         })
                         .filter((row) => row !== undefined) as Spend[]
+
                     setSpendData(data)
                     setFilteredSpendData(data)
                     setFilteredSpendDataWithoutSplitBetween(data)

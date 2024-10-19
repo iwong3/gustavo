@@ -87,7 +87,7 @@ export const processFilteredSpendData = (
     if (filteredSpendData.length > 0 && earliestDate) {
         let currentDate = earliestDate
         while (currentDate.isBefore(latestDate)) {
-            const currentDateString = currentDate.format('M/D')
+            const currentDateString = currentDate.format('YYYY/MM/DD')
             if (!totalSpendByDate.has(currentDateString)) {
                 totalSpendByDate.set(currentDateString, 0)
             }
@@ -299,7 +299,7 @@ const calculateAndUpdateTotalSpendByDate = (
     }
 
     const currentDate = dayjs(date)
-    const currentDateString = currentDate.format('M/D')
+    const currentDateString = currentDate.format('YYYY/MM/DD')
     totalSpendByDate.set(
         currentDateString,
         (totalSpendByDate.get(currentDateString) || 0) + totalCost

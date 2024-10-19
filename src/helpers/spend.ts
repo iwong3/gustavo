@@ -21,6 +21,7 @@ export interface Spend {
     reportedBy: Person | undefined
     reportedAt: string | undefined
     receiptImageUrl: string | undefined
+    error: boolean
 }
 
 export enum SpendType {

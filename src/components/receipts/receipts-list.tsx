@@ -24,7 +24,7 @@ export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
                         marginBottom: 1,
                         border: '1px solid #FBBC04',
                         borderRadius: 4,
-                        backgroundColor: 'white',
+                        backgroundColor: row.error ? '#FCD5CE' : 'white',
                     }}>
                     <ReceiptsRow spend={row} />
                 </Box>

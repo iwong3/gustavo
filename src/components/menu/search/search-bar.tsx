@@ -93,7 +93,7 @@ export const SearchBar = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    width: focused || isActive() ? '50%' : '32px',
+                    width: focused || isActive() ? '120px' : '32px',
                     height: '32px',
                     transition: 'width 0.1s ease-out',
                 }}>

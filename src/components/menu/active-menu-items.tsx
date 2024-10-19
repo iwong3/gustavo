@@ -1,5 +1,4 @@
 import { Box } from '@mui/material'
-import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
@@ -38,19 +37,12 @@ export const ActiveMenuItems = () => {
     const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
     const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
     const filterLocationState = useFilterLocationStore(useShallow((state) => state))
-    const filterStates = [
-        filterPaidByState,
-        filterSplitBetweenState,
-        filterSpendTypeState,
-        filterLocationState,
-    ]
 
     // sort menu item states
     const sortMenuState = useSortMenuStore(useShallow((state) => state))
     const sortCostState = useSortCostStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
-    const sortStates = [sortMenuState, sortCostState, sortDateState, sortItemNameState]
 
     const activeMenuItems: ActiveMenuItemData[] = [
         {
@@ -80,13 +72,6 @@ export const ActiveMenuItems = () => {
         },
     ]
 
-    const [anyFilterActive, setAnyFilterActive] = useState(false)
-
-    useEffect(() => {
-        const anyActive = activeMenuItems.some((item) => item.state.isActive())
-        setAnyFilterActive(anyActive)
-    }, [...filterStates, ...sortStates])
-
     const renderActiveMenuItems = () => {
         return (
             <Box
@@ -96,12 +81,11 @@ export const ActiveMenuItems = () => {
                     width: '100%',
                     height: 32,
                 }}>
-                {anyFilterActive &&
-                    activeMenuItems
-                        .filter((item) => item.state.isActive())
-                        .map((item, index) => {
-                            return renderActiveMenuItem(item, index)
-                        })}
+                {activeMenuItems
+                    .filter((item) => item.state.isActive())
+                    .map((item, index) => {
+                        return renderActiveMenuItem(item, index)
+                    })}
             </Box>
         )
     }
