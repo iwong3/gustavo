@@ -160,20 +160,42 @@ export const getTablerIcon = ({
     }
 }
 
-export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
+export const getMenuItemIcon = (
+    item: MenuItem,
+    size: number = defaultIconSize
+) => {
     switch (item) {
         case MenuItem.FilterLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconMap2',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterPaidBy:
-            return getTablerIcon({ name: 'IconReceipt', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconReceipt',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterSpendType:
-            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTag',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterSplitBetween:
-            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconUser',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.Sort:
             return <FunnelSimple size={size} />
         case MenuItem.Tools:
-            return getTablerIcon({ name: 'IconTool', fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTool',
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.ToolsDebtPerson1:
             return <UserCircle size={size} />
         case MenuItem.ToolsDebtPerson2:
@@ -190,28 +212,58 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
     return defaultBackgroundColor
 }
 
-export const getToolsMenuItemIcon = (item: ToolsMenuItem, size: number = 18) => {
+export const getToolsMenuItemIcon = (
+    item: ToolsMenuItem,
+    size: number = 18
+) => {
     switch (item) {
         case ToolsMenuItem.Receipts:
-            return getTablerIcon({ name: 'IconLayoutList', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconLayoutList',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
         case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({ name: 'IconChartBar', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconChartBar',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case ToolsMenuItem.TotalSpendByPerson:
-            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconUser',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case ToolsMenuItem.TotalSpendByType:
-            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTag',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case ToolsMenuItem.TotalSpendByLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconMap2',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case ToolsMenuItem.TotalSpendByDate:
-            return getTablerIcon({ name: 'IconCalendarEvent', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconCalendarEvent',
+                size,
+                fill: defaultBackgroundColor,
+            })
         default:
             return null
     }
 }
 
-export const getSortMenuItemIcon = (item: SortItem, size: number = defaultIconSize) => {
+export const getSortMenuItemIcon = (
+    item: SortItem,
+    size: number = defaultIconSize
+) => {
     switch (item) {
         case SortItem.SortCost:
             return getTablerIcon({ name: 'IconCurrencyDollar', size })
@@ -271,6 +323,11 @@ export const getInitialsIconColors = (person: Person): IconColors => {
             return {
                 color: 'black',
                 bgColor: '#64b5f6',
+            }
+        case Person.Dennis:
+            return {
+                color: 'black',
+                bgColor: '#fca311',
             }
         case Person.Ivan:
             return {

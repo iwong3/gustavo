@@ -2,6 +2,8 @@
  * For everything used to map google sheet data
  */
 
+import { Trip } from 'helpers/trips'
+
 export const GOOGLE_FORM_URL =
     'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform'
 
@@ -10,6 +12,35 @@ export const GOOGLE_SHEET_CSV_URL =
 
 export const GOOGLE_SHEET_VIEW_ONLY_URL =
     'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/edit?usp=sharing'
+
+type Urls = {
+    GoogleFormUrl: string
+    GoogleSheetUrl: string
+}
+
+export const CsvPath = '/export?format=csv'
+export const ViewPath = '/edit?usp=sharing'
+
+export const UrlsByTrip: Map<Trip, Urls> = new Map([
+    [
+        Trip.Japan2024,
+        {
+            GoogleFormUrl:
+                'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform',
+            GoogleSheetUrl:
+                'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs',
+        },
+    ],
+    [
+        Trip.Vancouver2024,
+        {
+            GoogleFormUrl:
+                'https://docs.google.com/forms/d/e/1FAIpQLScCLM3JLZEFFnxEhhzsUe29RBVpmU9gKy649ZHUwpTFLsJJ-A/viewform',
+            GoogleSheetUrl:
+                'https://docs.google.com/spreadsheets/d/1O1xY4t9RDgKMZWIle644wH1PZEi17LqnU1DI5hJjB6c',
+        },
+    ],
+])
 
 // the google sheet columns
 export enum Columns {

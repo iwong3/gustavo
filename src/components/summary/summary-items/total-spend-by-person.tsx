@@ -11,7 +11,9 @@ import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByPerson = () => {
     const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
-    const { filters, handleFilterClick } = useFilterSplitBetweenStore(useShallow((state) => state))
+    const { filters, handleFilterClick } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
 
     const totalSpendByPersonArray = Array.from(totalSpendByPerson)
 
@@ -26,7 +28,10 @@ export const TotalSpendByPerson = () => {
             row.push(renderPerson(person as Person, totalSpend))
 
             // if row is full, push current row and start a new row
-            if (row.length === rowLength || i === totalSpendByPersonArray.length - 1) {
+            if (
+                row.length === rowLength ||
+                i === totalSpendByPersonArray.length - 1
+            ) {
                 rows.push(
                     <Box
                         key={'total-spend-by-person-row-' + rows.length}
@@ -35,7 +40,10 @@ export const TotalSpendByPerson = () => {
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             marginTop: rows.length === 0 ? 0 : 0.5,
-                            marginBottom: i === totalSpendByPersonArray.length - 1 ? 0 : 0.5,
+                            marginBottom:
+                                i === totalSpendByPersonArray.length - 1
+                                    ? 0
+                                    : 0.5,
                         }}>
                         {row}
                     </Box>
@@ -48,7 +56,7 @@ export const TotalSpendByPerson = () => {
 
     const renderPerson = (person: Person, totalSpend: number) => {
         const key = 'total-spend-by-person-' + person
-        const isActive = filters[person]
+        const isActive = filters.get(person)
 
         return (
             <Box
@@ -62,9 +70,13 @@ export const TotalSpendByPerson = () => {
                     justifyContent: 'center',
                     alignItems: 'space-between',
                     width: '23%',
-                    border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                    border: isActive
+                        ? '1px solid #A7C957'
+                        : '1px solid #FBBC04',
                     borderRadius: '10px',
-                    backgroundColor: isActive ? '#E9F5DB' : defaultBackgroundColor,
+                    backgroundColor: isActive
+                        ? '#E9F5DB'
+                        : defaultBackgroundColor,
                     boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                     transition: 'background-color 0.1s',
                 }}>
@@ -96,7 +108,9 @@ export const TotalSpendByPerson = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
-                        borderTop: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                        borderTop: isActive
+                            ? '1px solid #A7C957'
+                            : '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
                     }}>
@@ -110,7 +124,9 @@ export const TotalSpendByPerson = () => {
     const personColors = totalSpendByPersonArray.map(
         ([person]) => getInitialsIconColors(person).bgColor
     )
-    const activePeople = Object.entries(filters).map(([_, isActive]) => isActive)
+    const activePeople = Object.entries(filters).map(
+        ([_, isActive]) => isActive
+    )
 
     return (
         <Box

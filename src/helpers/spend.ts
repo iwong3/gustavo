@@ -1,6 +1,7 @@
 import { Currency } from 'helpers/currency'
 import { Location } from 'helpers/location'
-import { Person } from 'helpers/person'
+import { PeopleByTrip, Person } from 'helpers/person'
+import { Trip } from 'helpers/trips'
 
 /**
  * For everything related to spend
@@ -50,9 +51,13 @@ export const getSpendTypeLabel = (type: SpendType): string => {
     }
 }
 
-export const getSplitCost = (cost: number, splitBetween: Person[]): number => {
+export const getSplitCost = (
+    cost: number,
+    splitBetween: Person[],
+    trip: Trip
+): number => {
     if (splitBetween.includes(Person.Everyone)) {
-        return cost / 8
+        return cost / PeopleByTrip[trip].length
     }
     return cost / splitBetween.length
 }

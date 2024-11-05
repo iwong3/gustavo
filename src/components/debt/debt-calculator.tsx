@@ -8,9 +8,10 @@ import { ReceiptsList } from 'components/receipts/receipts-list'
 import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
-import { getVenmoUrl, Person } from 'helpers/person'
+import { getVenmoUrl, PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
+import { useTripsStore } from 'views/trips'
 import VenmoLogo from '../../images/venmo-icon.png'
 
 type DebtCalculatorState = {
@@ -21,6 +22,7 @@ type DebtCalculatorState = {
 type DebtCalculatorActions = {
     setPerson1: (person: Person | undefined) => void
     setPerson2: (person: Person | undefined) => void
+    reset: () => void
 }
 
 const initialState: DebtCalculatorState = {
@@ -28,24 +30,29 @@ const initialState: DebtCalculatorState = {
     person2: undefined,
 }
 
-export const useDebtCalculatorStore = create<DebtCalculatorState & DebtCalculatorActions>(
-    (set) => ({
-        ...initialState,
+export const useDebtCalculatorStore = create<
+    DebtCalculatorState & DebtCalculatorActions
+>((set) => ({
+    ...initialState,
 
-        setPerson1: (person: Person | undefined) => {
-            set(() => ({ person1: person }))
-        },
-        setPerson2: (person: Person | undefined) => {
-            set(() => ({ person2: person }))
-        },
-    })
-)
+    setPerson1: (person: Person | undefined) => {
+        set(() => ({ person1: person }))
+    },
+    setPerson2: (person: Person | undefined) => {
+        set(() => ({ person2: person }))
+    },
+    reset: () => {
+        set(() => ({ ...initialState }))
+    },
+}))
 
 export const DebtCalculator = () => {
     const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
-    const { debtMapByPerson, filteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { debtMapByPerson, filteredSpendData } = useGustavoStore(
+        useShallow((state) => state)
+    )
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
@@ -114,7 +121,8 @@ export const DebtCalculator = () => {
                             fontSize: 32,
                             opacity: person ? 1 : 0,
                             transition: 'opacity 0.2s ease-out',
-                            boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                            boxShadow:
+                                'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                         }}
                     />
                     <UserCircle
@@ -156,7 +164,8 @@ export const DebtCalculator = () => {
     }
 
     // Select person state and style
-    const people = Object.values(Person).filter((person) => person !== Person.Everyone)
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
+    const people = PeopleByTrip[currentTrip]
 
     const handleSelectPerson = (person: Person) => {
         if (person === person1) {
@@ -172,7 +181,8 @@ export const DebtCalculator = () => {
 
     const renderSelectPerson = (person: Person) => {
         const isActive = person === person1 || person === person2
-        const disabled = person1 && person2 && person !== person1 && person !== person2
+        const disabled =
+            person1 && person2 && person !== person1 && person !== person2
         const disabledSx = { color: 'black', backgroundColor: 'lightgray' }
 
         return (
@@ -188,7 +198,9 @@ export const DebtCalculator = () => {
                 <InitialsIcon
                     person={person}
                     sx={{
-                        border: isActive ? '2px solid #FBBC04' : '2px solid #FFFFEF',
+                        border: isActive
+                            ? '2px solid #FBBC04'
+                            : '2px solid #FFFFEF',
                         width: 28,
                         height: 28,
                         fontSize: 14,
@@ -254,9 +266,15 @@ export const DebtCalculator = () => {
                                     height: 28,
                                 }}>
                                 {debt < 0 &&
-                                    getTablerIcon({ name: 'IconHandFingerLeft', size: 28 })}
+                                    getTablerIcon({
+                                        name: 'IconHandFingerLeft',
+                                        size: 28,
+                                    })}
                                 {debt > 0 &&
-                                    getTablerIcon({ name: 'IconHandFingerRight', size: 28 })}
+                                    getTablerIcon({
+                                        name: 'IconHandFingerRight',
+                                        size: 28,
+                                    })}
                             </Box>
                         </Box>
                         {/* Venmo icons */}
@@ -268,8 +286,14 @@ export const DebtCalculator = () => {
                                 width: '100%',
                                 height: '100%',
                             }}>
-                            {person1 && person2 && getVenmoUrl(person1) && renderVenmoIcon(person1)}
-                            {person1 && person2 && getVenmoUrl(person2) && renderVenmoIcon(person2)}
+                            {person1 &&
+                                person2 &&
+                                getVenmoUrl(person1) &&
+                                renderVenmoIcon(person1)}
+                            {person1 &&
+                                person2 &&
+                                getVenmoUrl(person2) &&
+                                renderVenmoIcon(person2)}
                         </Box>
                     </Box>
                     {renderDebtPerson(person2, setPerson2)}
@@ -302,7 +326,9 @@ export const DebtCalculator = () => {
                         {getTablerIcon({ name: 'IconX' })}
                     </Box>
                     {people.map((person, index) => {
-                        return <Box key={index}>{renderSelectPerson(person)}</Box>
+                        return (
+                            <Box key={index}>{renderSelectPerson(person)}</Box>
+                        )
                     })}
                 </Box>
             </Box>
