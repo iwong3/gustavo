@@ -44,6 +44,7 @@ import {
     IconTag,
     IconTextSize,
     IconTool,
+    IconToolsKitchen2,
     IconUser,
     IconX,
 } from '@tabler/icons-react'
@@ -51,6 +52,7 @@ import {
 import { MenuItem, MenuItemData } from 'components/menu/menu'
 import { SortItem } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { getLocationAbbr, Location } from 'helpers/location'
 import { getPersonInitials, Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
@@ -70,7 +72,7 @@ export const getTablerIcon = ({
     size = defaultIconSize,
     stroke = 1.5,
     color = 'black',
-    fill = 'white',
+    fill = defaultBackgroundColor,
 }: TablerIconProps) => {
     const props = {
         size,
@@ -147,6 +149,8 @@ export const getTablerIcon = ({
             return <IconTextSize {...props} />
         case 'IconTool':
             return <IconTool {...props} />
+        case 'IconToolsKitchen2':
+            return <IconToolsKitchen2 {...props} />
         case 'IconUser':
             return <IconUser {...props} />
         case 'IconX':
@@ -159,17 +163,17 @@ export const getTablerIcon = ({
 export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
     switch (item) {
         case MenuItem.FilterLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
         case MenuItem.FilterPaidBy:
-            return getTablerIcon({ name: 'IconReceipt', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconReceipt', size, fill: defaultBackgroundColor })
         case MenuItem.FilterSpendType:
-            return getTablerIcon({ name: 'IconTag', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
         case MenuItem.FilterSplitBetween:
-            return getTablerIcon({ name: 'IconUser', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
         case MenuItem.Sort:
             return <FunnelSimple size={size} />
         case MenuItem.Tools:
-            return getTablerIcon({ name: 'IconTool', fill: 'white' })
+            return getTablerIcon({ name: 'IconTool', fill: defaultBackgroundColor })
         case MenuItem.ToolsDebtPerson1:
             return <UserCircle size={size} />
         case MenuItem.ToolsDebtPerson2:
@@ -183,25 +187,25 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
     if (item.state.isActive()) {
         return '#FBBC04'
     }
-    return 'white'
+    return defaultBackgroundColor
 }
 
 export const getToolsMenuItemIcon = (item: ToolsMenuItem, size: number = 18) => {
     switch (item) {
         case ToolsMenuItem.Receipts:
-            return getTablerIcon({ name: 'IconLayoutList', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconLayoutList', size, fill: defaultBackgroundColor })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
         case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({ name: 'IconChartBar', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconChartBar', size, fill: defaultBackgroundColor })
         case ToolsMenuItem.TotalSpendByPerson:
-            return getTablerIcon({ name: 'IconUser', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
         case ToolsMenuItem.TotalSpendByType:
-            return getTablerIcon({ name: 'IconTag', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
         case ToolsMenuItem.TotalSpendByLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
         case ToolsMenuItem.TotalSpendByDate:
-            return getTablerIcon({ name: 'IconCalendarEvent', size, fill: 'white' })
+            return getTablerIcon({ name: 'IconCalendarEvent', size, fill: defaultBackgroundColor })
         default:
             return null
     }

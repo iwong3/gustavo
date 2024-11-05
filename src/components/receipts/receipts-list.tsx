@@ -2,6 +2,7 @@ import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
 import { ReceiptsRow } from 'components/receipts/receipt-row'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { Spend } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
 
@@ -24,7 +25,7 @@ export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
                         marginBottom: 1,
                         border: row.error ? '1px solid #C1121F' : '1px solid #FBBC04',
                         borderRadius: 4,
-                        backgroundColor: row.error ? '#FFE3E0' : 'white',
+                        backgroundColor: row.error ? '#FFE3E0' : defaultBackgroundColor,
                     }}>
                     <ReceiptsRow spend={row} />
                 </Box>

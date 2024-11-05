@@ -13,6 +13,7 @@ import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortItem, useSortMenuStore } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { defaultBackgroundColor } from 'helpers/colors'
 import {
     getColorForSpendType,
     getIconFromSpendType,
@@ -100,7 +101,7 @@ export const ActiveMenuItems = () => {
                         marginLeft: index === 0 ? 0 : 0.5,
                         border: '1px solid #FBBC04',
                         borderRadius: '10px',
-                        backgroundColor: 'white',
+                        backgroundColor: defaultBackgroundColor,
                     }}>
                     <Box
                         sx={{

@@ -4,10 +4,10 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { SortCost, useSortCostStore } from 'components/menu/sort/sort-cost'
 import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
 import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { getTablerIcon } from 'helpers/icons'
-import { SortCost, useSortCostStore } from 'components/menu/sort/sort-cost'
 
 export enum SortItem {
     SortCost,
@@ -112,8 +112,6 @@ export const SortMenu = () => {
                 alignItems: 'center',
                 marginX: 2,
                 width: '100%',
-                border: '1px solid white',
-                borderBottomWidth: 0,
             }}>
             <Box
                 sx={{

@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useCollapseAllStore } from 'components/menu/items/collapse-all'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { getTablerIcon } from 'helpers/icons'
 import { Spend } from 'helpers/spend'
 
@@ -137,7 +138,7 @@ export const SearchBar = () => {
                         '& fieldset': {
                             border: '1px solid #FBBC04',
                             borderRadius: '10px',
-                            backgroundColor: 'white',
+                            backgroundColor: defaultBackgroundColor,
                             zIndex: -1,
                         },
                         // whole component when focused

@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material'
 import { create } from 'zustand'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { getTablerIcon } from 'helpers/icons'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -48,7 +49,7 @@ export const CollapseAll = () => {
                 'height': 30,
                 'border': '1px solid #FBBC04',
                 'borderRadius': '10px',
-                'backgroundColor': 'white',
+                'backgroundColor': defaultBackgroundColor,
                 '&:active': {
                     backgroundColor: '#FAEDCD',
                 },

@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { ReceiptsList } from 'components/receipts/receipts-list'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { getVenmoUrl, Person } from 'helpers/person'
@@ -187,7 +188,7 @@ export const DebtCalculator = () => {
                 <InitialsIcon
                     person={person}
                     sx={{
-                        border: isActive ? '2px solid #FBBC04' : '2px solid white',
+                        border: isActive ? '2px solid #FBBC04' : '2px solid #FFFFEF',
                         width: 28,
                         height: 28,
                         fontSize: 14,
@@ -212,7 +213,7 @@ export const DebtCalculator = () => {
                     marginBottom: 1,
                     border: '1px solid #FBBC04',
                     borderRadius: '20px',
-                    backgroundColor: 'white',
+                    backgroundColor: defaultBackgroundColor,
                     boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                 }}>
                 {/* Top row */}

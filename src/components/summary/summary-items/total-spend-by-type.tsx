@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { Graph } from 'components/graphs/graph'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getColorForSpendType, getIconFromSpendType } from 'helpers/icons'
 import { SpendType } from 'helpers/spend'
@@ -60,9 +61,9 @@ export const TotalSpendByType = () => {
                     justifyContent: 'center',
                     alignItems: 'space-between',
                     width: '31%',
-                    border: isActive ? '1px solid #588157' : '1px solid #FBBC04',
+                    border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
                     borderRadius: '10px',
-                    backgroundColor: isActive ? '#FAEDCD' : 'white',
+                    backgroundColor: isActive ? '#E9F5DB' : defaultBackgroundColor,
                     boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                     transition: 'background-color 0.1s',
                 }}>
@@ -96,7 +97,7 @@ export const TotalSpendByType = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
-                        borderTop: '1px solid #FBBC04',
+                        border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
                     }}>

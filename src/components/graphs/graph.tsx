@@ -83,12 +83,16 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
 
     return (
         <Box
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             sx={{
                 padding: 1,
                 width: graphWidth,
                 border: '1px solid #FBBC04',
                 borderRadius: '10px',
-                backgroundColor: 'white',
+                backgroundColor: '#FFFCEE',
+                // backgroundImage: 'linear-gradient(0.125turn, #fffcee, #fff8ef)',
                 boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                 overflowX: 'scroll',
             }}>

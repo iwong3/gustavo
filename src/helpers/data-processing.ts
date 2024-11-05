@@ -37,6 +37,7 @@ interface ProcessFilteredSpendDataResponse {
     totalSpendByType: Map<SpendType, number>
     totalSpendByLocation: Map<Location, number>
     totalSpendByDate: Map<string, number>
+    totalSpendByDateByPerson: Map<Person, Map<string, number>>
 }
 
 export const processFilteredSpendData = (
@@ -66,6 +67,12 @@ export const processFilteredSpendData = (
     })
 
     const totalSpendByDate = new Map<string, number>()
+
+    const totalSpendByDateByPerson = new Map<Person, Map<string, number>>()
+    persons.forEach((person) => {
+        totalSpendByDateByPerson.set(person, new Map<string, number>())
+    })
+
     let earliestDate = filteredSpendData.length > 0 ? dayjs(filteredSpendData[0].date) : null
     let latestDate = earliestDate
 
@@ -81,23 +88,24 @@ export const processFilteredSpendData = (
         }
 
         calculateAndUpdateTotalSpendByDate(spend, totalSpendByDate, splitBetweenFilter)
-    })
 
-    // populate all dates between earliest and latest date
-    if (filteredSpendData.length > 0 && earliestDate) {
-        let currentDate = earliestDate
-        while (currentDate.isBefore(latestDate)) {
-            const currentDateString = currentDate.format('YYYY/MM/DD')
-            if (!totalSpendByDate.has(currentDateString)) {
-                totalSpendByDate.set(currentDateString, 0)
-            }
-            currentDate = currentDate.add(1, 'day')
-        }
-    }
+        calculateAndUpdateTotalSpendByDateByPerson(
+            spend,
+            totalSpendByDateByPerson,
+            splitBetweenFilter
+        )
+    })
 
     filteredSpendDataWithoutSplitBetween.forEach((spend) => {
         filteredTotalSpend += spend.convertedCost
+
         calculateAndUpdateTotalSpendByPerson(spend, totalSpendByPerson)
+
+        // calculateAndUpdateTotalSpendByDateByPerson(
+        //     spend,
+        //     totalSpendByDateByPerson,
+        //     splitBetweenFilter
+        // )
     })
 
     filteredSpendDataWithoutSpendType.forEach((spend) => {
@@ -108,6 +116,27 @@ export const processFilteredSpendData = (
         calculateAndUpdateTotalSpendByLocation(spend, totalSpendByLocation, splitBetweenFilter)
     })
 
+    // populate all dates between earliest and latest date
+    if (filteredSpendData.length > 0 && earliestDate) {
+        let currentDate = earliestDate
+        while (currentDate.isBefore(latestDate, 'day') || currentDate.isSame(latestDate, 'day')) {
+            const currentDateString = currentDate.format('YYYY/MM/DD')
+
+            if (!totalSpendByDate.has(currentDateString)) {
+                totalSpendByDate.set(currentDateString, 0)
+            }
+
+            persons.forEach((person) => {
+                const currentSplitterTotalSpendByDate = totalSpendByDateByPerson.get(person)!
+                if (!currentSplitterTotalSpendByDate.has(currentDateString)) {
+                    currentSplitterTotalSpendByDate.set(currentDateString, 0)
+                }
+            })
+
+            currentDate = currentDate.add(1, 'day')
+        }
+    }
+
     return {
         filteredTotalSpend,
         filteredPeopleTotalSpend,
@@ -115,6 +144,7 @@ export const processFilteredSpendData = (
         totalSpendByType,
         totalSpendByLocation,
         totalSpendByDate,
+        totalSpendByDateByPerson,
     }
 }
 
@@ -304,6 +334,41 @@ const calculateAndUpdateTotalSpendByDate = (
         currentDateString,
         (totalSpendByDate.get(currentDateString) || 0) + totalCost
     )
+}
+
+const calculateAndUpdateTotalSpendByDateByPerson = (
+    spend: Spend,
+    totalSpendByDateByPerson: Map<Person, Map<string, number>>,
+    splitBetweenFilter: Partial<Record<Person, boolean>>
+) => {
+    const { convertedCost, splitBetween, date } = spend
+
+    const splitCost = getSplitCost(convertedCost, splitBetween)
+    const currentDate = dayjs(date)
+    const currentDateString = currentDate.format('YYYY/MM/DD')
+
+    // get an array of people buying the item
+    let splitters: Person[] = splitBetween
+    if (splitBetween.includes(Person.Everyone)) {
+        splitters = Object.values(Person).filter((person) => person !== Person.Everyone)
+    }
+
+    const isAnyFilterActive = Object.values(splitBetweenFilter).some((isActive) => isActive)
+    if (isAnyFilterActive) {
+        // remove people who are not selected on the filter
+        splitters = splitters.filter((person) => splitBetweenFilter[person])
+    }
+
+    splitters.forEach((splitter) => {
+        const currentSplitterTotalSpendByDate = totalSpendByDateByPerson.get(splitter)!
+        currentSplitterTotalSpendByDate.set(
+            currentDateString,
+            (currentSplitterTotalSpendByDate.get(currentDateString) || 0) + splitCost
+        )
+
+        // update splitter's total spend
+        totalSpendByDateByPerson.set(splitter, currentSplitterTotalSpendByDate)
+    })
 }
 
 export const ErrorConvertingToUSD = 'Could not convert to USD'

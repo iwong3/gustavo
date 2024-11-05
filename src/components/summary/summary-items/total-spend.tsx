@@ -6,6 +6,7 @@ import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { useGustavoStore } from 'views/gustavo'
 
@@ -117,7 +118,7 @@ export const TotalSpend = () => {
                         borderRadius: '10px',
                         fontSize: 24,
                         fontWeight: 500,
-                        backgroundColor: 'white',
+                        backgroundColor: defaultBackgroundColor,
                         boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                     }}>
                     {FormattedMoney().format(filteredPeopleTotalSpend)}

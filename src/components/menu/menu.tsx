@@ -18,6 +18,7 @@ import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortMenu, useSortMenuStore } from 'components/menu/sort/sort-menu'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { defaultBackgroundColor } from 'helpers/colors'
 import {
     defaultIconSize,
     getMenuItemBackgroundColor,
@@ -237,6 +238,7 @@ export const Menu = () => {
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
 
     const menuLabelFontSize = 12
+    const menuBackgroundColor = defaultBackgroundColor
 
     return (
         <ClickAwayListener
@@ -283,7 +285,7 @@ export const Menu = () => {
                                 alignItems: 'center',
                                 paddingY: 1,
                                 width: '100%',
-                                backgroundColor: 'white',
+                                backgroundColor: menuBackgroundColor,
                             }}>
                             {renderExpandedMenuItem()}
                         </Box>
@@ -307,7 +309,7 @@ export const Menu = () => {
                             sx={{
                                 display: 'flex',
                                 paddingY: 2,
-                                backgroundColor: 'white',
+                                backgroundColor: menuBackgroundColor,
                             }}>
                             <SettingsMenu />
                         </Box>
@@ -325,7 +327,7 @@ export const Menu = () => {
                             borderRight: '1px solid #FBBC04',
                             borderBottom: '1px solid #FBBC04',
                             borderLeft: '1px solid #FBBC04',
-                            backgroundColor: 'white',
+                            backgroundColor: menuBackgroundColor,
                         }}>
                         {/* Each menu item is wrapped in a box
                         The outside box has no right/left borders so the top border is continuous
@@ -347,8 +349,8 @@ export const Menu = () => {
                                     alignItems: 'center',
                                     paddingY: 1,
                                     width: '100%',
-                                    borderRight: '1px solid white',
-                                    borderLeft: '1px solid white',
+                                    borderRight: '1px solid #FFFFEF',
+                                    borderLeft: '1px solid #FFFFEF',
                                     borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
                                 }}>
                                 <Box
@@ -383,7 +385,7 @@ export const Menu = () => {
                                         width: '100%',
                                         borderTop:
                                             index === expandedMenuItem
-                                                ? '1px solid white'
+                                                ? '1px solid #FFFFEF'
                                                 : '1px solid #FBBC04',
                                     }}
                                     onClick={() => {
@@ -400,11 +402,11 @@ export const Menu = () => {
                                             borderRight:
                                                 index === expandedMenuItem
                                                     ? '1px solid #FBBC04'
-                                                    : '1px solid white',
+                                                    : '1px solid #FFFFEF',
                                             borderLeft:
                                                 index === expandedMenuItem
                                                     ? '1px solid #FBBC04'
-                                                    : '1px solid white',
+                                                    : '1px solid #FFFFEF',
                                         }}>
                                         <Box
                                             sx={{
@@ -432,7 +434,7 @@ export const Menu = () => {
                             sx={{
                                 display: 'flex',
                                 width: '100%',
-                                borderTop: showSettings ? '1px solid white' : '1px solid #FBBC04',
+                                borderTop: showSettings ? '1px solid #FFFFEF' : '1px solid #FBBC04',
                                 borderTopRightRadius:
                                     expandedMenuItem === -1 && !showSettings ? '10px' : 0,
                             }}
@@ -446,12 +448,12 @@ export const Menu = () => {
                                     alignItems: 'center',
                                     paddingY: 1,
                                     width: '100%',
-                                    borderRight: '1px solid white',
+                                    borderRight: '1px solid #FFFFEF',
                                     borderTopRightRadius:
                                         expandedMenuItem === -1 && !showSettings ? '10px' : 0,
                                     borderLeft: showSettings
                                         ? '1px solid #FBBC04'
-                                        : '1px solid white',
+                                        : '1px solid #FFFFEF',
                                 }}>
                                 <Box
                                     sx={{
@@ -461,7 +463,9 @@ export const Menu = () => {
                                         width: 26,
                                         height: 26,
                                         borderRadius: '100%',
-                                        backgroundColor: showSettings ? '#FBBC04' : 'white',
+                                        backgroundColor: showSettings
+                                            ? '#FBBC04'
+                                            : menuBackgroundColor,
                                         transition: 'background-color 0.1s',
                                     }}>
                                     {getTablerIcon({ name: 'IconSettings' })}

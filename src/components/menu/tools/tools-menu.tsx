@@ -7,6 +7,7 @@ import { DebtCalculator } from 'components/debt/debt-calculator'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { ReceiptsList } from 'components/receipts/receipts-list'
 import { Summary, SummaryView, useSummaryStore } from 'components/summary/summary'
+import { defaultBackgroundColor } from 'helpers/colors'
 import { getToolsMenuItemIcon } from 'helpers/icons'
 
 export enum ToolsMenuItem {
@@ -187,14 +188,14 @@ export const ToolsMenu = () => {
                             borderTop: '1px solid #FBBC04',
                             borderRight: '1px solid #FBBC04',
                             borderBottom: toolMenuExpanded
-                                ? '1px solid white'
+                                ? '1px solid #FFFFEF'
                                 : '1px solid #FBBC04',
                             borderLeft: '1px solid #FBBC04',
                             borderTopRightRadius: '10px',
                             borderTopLeftRadius: '10px',
                             borderBottomLeftRadius: toolMenuExpanded ? 0 : '10px',
                             borderBottomRightRadius: toolMenuExpanded ? 0 : '10px',
-                            backgroundColor: 'white',
+                            backgroundColor: defaultBackgroundColor,
                             transition: 'width 0.1s ease-out',
                         }}>
                         <Box
@@ -205,7 +206,11 @@ export const ToolsMenu = () => {
                                 width: iconBoxWidth,
                                 height: iconBoxWidth,
                             }}>
-                            {getToolsMenuItemIcon(activeItem)}
+                            {getToolsMenuItemIcon(
+                                activeItem === ToolsMenuItem.TotalSpend
+                                    ? ToolsMenuItem.TotalSpendByPerson
+                                    : activeItem
+                            )}
                         </Box>
                         <Box
                             sx={{
@@ -238,7 +243,7 @@ export const ToolsMenu = () => {
                                 border: '1px solid #FBBC04',
                                 borderBottomLeftRadius: '10px',
                                 borderBottomRightRadius: '10px',
-                                backgroundColor: 'white',
+                                backgroundColor: defaultBackgroundColor,
                             }}>
                             {Object.values(ToolsMenuItem).map((item, index) => {
                                 return (
@@ -282,7 +287,7 @@ export const ToolsMenu = () => {
                                                     activeItem === item ||
                                                     itemSelectedOverride(item)
                                                         ? '#FBBC04'
-                                                        : 'white',
+                                                        : defaultBackgroundColor,
                                             }}>
                                             {getToolsMenuItemIcon(item as ToolsMenuItem)}
                                         </Box>

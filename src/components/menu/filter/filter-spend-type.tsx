@@ -98,8 +98,6 @@ export const FilterSpendType = () => {
                 alignItems: 'center',
                 marginX: 2,
                 width: '100%',
-                border: '1px solid white',
-                borderBottomWidth: 0,
             }}>
             <Box
                 sx={{

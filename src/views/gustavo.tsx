@@ -1,6 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import axios from 'axios'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -8,7 +8,13 @@ import { ActiveMenuItems } from 'components/menu/active-menu-items'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
-import { ToolsMenu, ToolsMenuItemMap, useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import {
+    ToolsMenu,
+    ToolsMenuItem,
+    ToolsMenuItemMap,
+    useToolsMenuStore,
+} from 'components/menu/tools/tools-menu'
+import { useSummaryStore } from 'components/summary/summary'
 import { Currency } from 'helpers/currency'
 import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
 import { processFilteredSpendData, processSpendData } from 'helpers/data-processing'
@@ -36,6 +42,7 @@ type GustavoState = {
     totalSpendByType: Map<SpendType, number>
     totalSpendByLocation: Map<Location, number>
     totalSpendByDate: Map<string, number>
+    totalSpendByDateByPerson: Map<Person, Map<string, number>>
 
     error: boolean // error fetching or processing data
 }
@@ -59,6 +66,9 @@ type GustavoActions = {
     setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) => void
     setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) => void
     setTotalSpendByDate: (totalSpendByDate: Map<string, number>) => void
+    setTotalSpendByDateByPerson: (
+        totalSpendByDateByPerson: Map<Person, Map<string, number>>
+    ) => void
 
     setError: (error: boolean) => void
 }
@@ -78,6 +88,7 @@ const initialState: GustavoState = {
     totalSpendByType: new Map<SpendType, number>(),
     totalSpendByLocation: new Map<Location, number>(),
     totalSpendByDate: new Map<string, number>(),
+    totalSpendByDateByPerson: new Map<Person, Map<string, number>>(),
 
     error: false,
 }
@@ -108,6 +119,8 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
         set(() => ({ totalSpendByLocation })),
     setTotalSpendByDate: (totalSpendByDate: Map<string, number>) =>
         set(() => ({ totalSpendByDate })),
+    setTotalSpendByDateByPerson: (totalSpendByDateByPerson: Map<Person, Map<string, number>>) =>
+        set(() => ({ totalSpendByDateByPerson })),
 
     setError: (error: boolean) => set(() => ({ error })),
 }))
@@ -132,6 +145,7 @@ export const Gustavo = () => {
         setTotalSpendByType,
         setTotalSpendByLocation,
         setTotalSpendByDate,
+        setTotalSpendByDateByPerson,
         error,
         setError,
     } = useGustavoStore(useShallow((state) => state))
@@ -243,6 +257,7 @@ export const Gustavo = () => {
             totalSpendByType,
             totalSpendByLocation,
             totalSpendByDate,
+            totalSpendByDateByPerson,
         } = processFilteredSpendData(
             filteredSpendData,
             filteredSpendDataWithoutSplitBetween,
@@ -257,6 +272,7 @@ export const Gustavo = () => {
         setTotalSpendByType(totalSpendByType)
         setTotalSpendByLocation(totalSpendByLocation)
         setTotalSpendByDate(totalSpendByDate)
+        setTotalSpendByDateByPerson(totalSpendByDateByPerson)
     }, [
         filteredSpendData,
         filteredSpendDataWithoutSplitBetween,
@@ -264,8 +280,63 @@ export const Gustavo = () => {
         filteredSpendDataWithoutLocation,
     ])
 
-    const { activeItem } = useToolsMenuStore(useShallow((state) => state))
+    const { activeItem, setActiveItem } = useToolsMenuStore(useShallow((state) => state))
+    const { setActiveView } = useSummaryStore(useShallow((state) => state))
     const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+
+    // swipe left & right
+    const [touchStart, setTouchStart] = useState<number | null>(null)
+    const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+    const minSwipeDistance = 50
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null) // otherwise the swipe is fired even with usual touch events
+        setTouchStart(e.targetTouches[0].clientX)
+    }
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX)
+    }
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return
+
+        const distance = touchStart - touchEnd
+        const isLeftSwipe = distance > minSwipeDistance
+        const isRightSwipe = distance < -minSwipeDistance
+
+        const items = Object.values(ToolsMenuItem)
+        const currentIndex = items.indexOf(activeItem)
+
+        // next item
+        if (isLeftSwipe) {
+            const nextIndex = (currentIndex + 1) % items.length
+            let nextItem = items[nextIndex]
+
+            if (nextItem === ToolsMenuItem.TotalSpend) {
+                nextItem = items[nextIndex + 1]
+            }
+            if (ToolsMenuItemMap.get(nextItem)!.summaryView) {
+                setActiveView(ToolsMenuItemMap.get(nextItem)!.summaryView!)
+            }
+            setActiveItem(nextItem)
+        }
+
+        // previous item
+        if (isRightSwipe) {
+            const prevIndex = (currentIndex - 1 + items.length) % items.length
+            let prevItem = items[prevIndex]
+
+            if (prevItem === ToolsMenuItem.TotalSpend) {
+                prevItem = items[prevIndex - 1]
+            }
+            if (ToolsMenuItemMap.get(prevItem)!.summaryView) {
+                setActiveView(ToolsMenuItemMap.get(prevItem)!.summaryView!)
+            }
+            setActiveItem(prevItem)
+        }
+    }
 
     return (
         <Box
@@ -351,7 +422,11 @@ export const Gustavo = () => {
                 <ActiveMenuItems />
             </Box>
             <Box
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
                 sx={{
+                    height: showIconLabels ? window.innerHeight * 0.72 : window.innerHeight * 0.74,
                     maxHeight: showIconLabels
                         ? window.innerHeight * 0.72
                         : window.innerHeight * 0.74,
