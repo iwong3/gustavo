@@ -29,7 +29,6 @@ Graphs
 UX
 
 -   Dark mode
--   Link to View Only Google Sheet
 
 To-Do
 
@@ -60,3 +59,4 @@ UX
 -   Protect against $NaN values as Google Sheets currency conversion sometimes
     fails
 -   Log errors and add view to see which rows were affected
+-   Link to View Only Google Sheet

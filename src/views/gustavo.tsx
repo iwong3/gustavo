@@ -1,5 +1,4 @@
 import { Box, Typography } from '@mui/material'
-import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -15,16 +14,14 @@ import {
     useToolsMenuStore,
 } from 'components/menu/tools/tools-menu'
 import { useSummaryStore } from 'components/summary/summary'
-import { Currency } from 'helpers/currency'
-import { Columns, CsvPath, parseRow, UrlsByTrip } from 'helpers/data-mapping'
+import { clearFromCache } from 'helpers/cache'
 import {
     processFilteredSpendData,
     processSpendData,
 } from 'helpers/data-processing'
 import { Location } from 'helpers/location'
-import { getPersonFromEmail, Person } from 'helpers/person'
+import { Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
-import { Trip } from 'helpers/trips'
 import { useMainStore } from 'views/main'
 import { useTripsStore } from 'views/trips'
 import GusFringLogo from '../images/gus-fring.png'
@@ -154,13 +151,8 @@ export const Gustavo = () => {
         filteredSpendDataWithoutSplitBetween,
         filteredSpendDataWithoutSpendType,
         filteredSpendDataWithoutLocation,
-        setSpendData,
         setTotalSpend,
         setDebtMapByPerson,
-        setFilteredSpendData,
-        setFilteredSpendDataWithoutSplitBetween,
-        setFilteredSpendDataWithoutSpendType,
-        setFilteredSpendDataWithoutLocation,
         setFilteredTotalSpend,
         setFilteredPeopleTotalSpend,
         setTotalSpendByPerson,
@@ -169,112 +161,10 @@ export const Gustavo = () => {
         setTotalSpendByDate,
         setTotalSpendByDateByPerson,
         error,
-        setError,
     } = useGustavoStore(useShallow((state) => state))
     const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    const fetchData = async (trip: Trip) => {
-        axios
-            .get(UrlsByTrip.get(trip)!.GoogleSheetUrl + CsvPath)
-            .then((res: any) => {
-                const dataString: string = res.data
-                const rows = dataString.split('\n')
-                const headers = rows[0].replace(/[\r]/g, '').split(',')
-
-                const nameIndex = headers.indexOf(Columns.ItemName)
-                const dateIndex = headers.indexOf(Columns.Date)
-                const originalCostIndex = headers.indexOf(Columns.Cost)
-                const currencyIndex = headers.indexOf(Columns.Currency)
-                const convertedCostIndex = headers.indexOf(
-                    Columns.ConvertedCost
-                )
-                const paidByIndex = headers.indexOf(Columns.PaidBy)
-                const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
-                const locationIndex = headers.indexOf(Columns.Location)
-                const typeIndex = headers.indexOf(Columns.SpendType)
-                const notesIndex = headers.indexOf(Columns.Notes)
-                const reportedByIndex = headers.indexOf(Columns.Email)
-                const reportedAtIndex = headers.indexOf(
-                    Columns.ResponseTimestamp
-                )
-                const receiptImageUrlIndex = headers.indexOf(
-                    Columns.ReceiptImageUrl
-                )
-
-                const data = rows
-                    .slice(1)
-                    .map((row: string) => {
-                        const rowValues = parseRow(row)
-                        if (rowValues) {
-                            let error = false
-
-                            const originalCost = parseFloat(
-                                rowValues[originalCostIndex].replace(
-                                    /[,'"]+/g,
-                                    ''
-                                )
-                            )
-                            const currency = rowValues[
-                                currencyIndex
-                            ] as Currency
-                            let convertedCost = parseFloat(
-                                rowValues[convertedCostIndex]
-                            )
-                            if (rowValues[convertedCostIndex] === '#N/A') {
-                                convertedCost = 0
-                                error = true
-                                setError(true)
-                            }
-
-                            const splitBetween = rowValues[splitBetweenIndex]
-                                .replace(/['" ]+/g, '')
-                                .split(',') as Person[]
-                            const type =
-                                rowValues[typeIndex] === ''
-                                    ? undefined
-                                    : (rowValues[typeIndex] as SpendType)
-                            const reportedBy = getPersonFromEmail(
-                                rowValues[reportedByIndex].replace(/\s/g, '')
-                            )
-
-                            const spend: Spend = {
-                                date: rowValues[dateIndex],
-                                name: rowValues[nameIndex],
-                                originalCost: originalCost,
-                                currency: currency,
-                                convertedCost: convertedCost,
-                                paidBy: rowValues[paidByIndex] as Person,
-                                splitBetween: splitBetween,
-                                location: (rowValues[locationIndex] as Location)
-                                    ? (rowValues[locationIndex] as Location)
-                                    : Location.Other,
-                                type: type,
-                                notes: rowValues[notesIndex],
-                                reportedBy: reportedBy,
-                                reportedAt: rowValues[reportedAtIndex],
-                                receiptImageUrl:
-                                    rowValues[receiptImageUrlIndex],
-                                error: error,
-                            }
-                            return spend
-                        }
-                    })
-                    .filter((row) => row !== undefined) as Spend[]
-
-                setSpendData(data)
-                setFilteredSpendData(data)
-                setFilteredSpendDataWithoutSplitBetween(data)
-                setFilteredSpendDataWithoutSpendType(data)
-                setFilteredSpendDataWithoutLocation(data)
-            })
-            .catch((_) => {
-                setError(true)
-            })
-    }
-
-    useEffect(() => {
-        fetchData(currentTrip)
-    }, [currentTrip])
+    useEffect(() => {}, [])
 
     // calculate total spend summary data to expose to summary components
     useEffect(() => {
@@ -315,9 +205,9 @@ export const Gustavo = () => {
         setTotalSpendByDateByPerson(totalSpendByDateByPerson)
     }, [
         filteredSpendData,
-        // filteredSpendDataWithoutSplitBetween,
-        // filteredSpendDataWithoutSpendType,
-        // filteredSpendDataWithoutLocation,
+        filteredSpendDataWithoutSplitBetween,
+        filteredSpendDataWithoutSpendType,
+        filteredSpendDataWithoutLocation,
     ])
 
     const { activeItem, setActiveItem } = useToolsMenuStore(
@@ -418,7 +308,10 @@ export const Gustavo = () => {
                             alignItems: 'center',
                         }}>
                         <Box
-                            onClick={() => setShowTripsMenu(true)}
+                            onClick={() => {
+                                setShowTripsMenu(true)
+                                clearFromCache('currentTrip')
+                            }}
                             sx={{
                                 display: 'flex',
                                 justifyContent: 'center',

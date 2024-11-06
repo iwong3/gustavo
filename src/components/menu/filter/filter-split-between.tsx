@@ -82,6 +82,10 @@ export const FilterSplitBetween = () => {
     )
     const { currentTrip } = useTripsStore(useShallow((state) => state))
 
+    // useEffect(() => {
+    //     reset(currentTrip)
+    // }, [])
+
     return (
         <Box
             sx={{

@@ -2,6 +2,12 @@
  * For everything used to map google sheet data
  */
 
+import axios from 'axios'
+
+import { Currency } from 'helpers/currency'
+import { Location } from 'helpers/location'
+import { getPersonFromEmail, Person } from 'helpers/person'
+import { Spend, SpendType } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
 
 export const GOOGLE_FORM_URL =
@@ -57,6 +63,97 @@ export enum Columns {
     SpendType = 'Type of Spend',
     SplitBetween = 'Split Between',
     ReceiptImageUrl = 'Upload Receipt',
+}
+
+export const fetchData = async (trip: Trip): Promise<Spend[]> => {
+    let data: Spend[] = []
+    let anyError = false
+
+    try {
+        let res = await axios.get(
+            UrlsByTrip.get(trip)!.GoogleSheetUrl + CsvPath
+        )
+
+        const dataString: string = res.data
+        const rows = dataString.split('\n')
+        const headers = rows[0].replace(/[\r]/g, '').split(',')
+
+        const nameIndex = headers.indexOf(Columns.ItemName)
+        const dateIndex = headers.indexOf(Columns.Date)
+        const originalCostIndex = headers.indexOf(Columns.Cost)
+        const currencyIndex = headers.indexOf(Columns.Currency)
+        const convertedCostIndex = headers.indexOf(Columns.ConvertedCost)
+        const paidByIndex = headers.indexOf(Columns.PaidBy)
+        const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
+        const locationIndex = headers.indexOf(Columns.Location)
+        const typeIndex = headers.indexOf(Columns.SpendType)
+        const notesIndex = headers.indexOf(Columns.Notes)
+        const reportedByIndex = headers.indexOf(Columns.Email)
+        const reportedAtIndex = headers.indexOf(Columns.ResponseTimestamp)
+        const receiptImageUrlIndex = headers.indexOf(Columns.ReceiptImageUrl)
+
+        data = rows
+            .slice(1)
+            .map((row: string) => {
+                const rowValues = parseRow(row)
+                if (rowValues) {
+                    let error = false
+
+                    const originalCost = parseFloat(
+                        rowValues[originalCostIndex].replace(/[,'"]+/g, '')
+                    )
+                    const currency = rowValues[currencyIndex] as Currency
+                    let convertedCost = parseFloat(
+                        rowValues[convertedCostIndex]
+                    )
+                    if (rowValues[convertedCostIndex] === '#N/A') {
+                        convertedCost = 0
+                        error = true
+                        anyError = true
+                    }
+
+                    const splitBetween = rowValues[splitBetweenIndex]
+                        .replace(/['" ]+/g, '')
+                        .split(',') as Person[]
+                    const type =
+                        rowValues[typeIndex] === ''
+                            ? undefined
+                            : (rowValues[typeIndex] as SpendType)
+                    const reportedBy = getPersonFromEmail(
+                        rowValues[reportedByIndex].replace(/\s/g, '')
+                    )
+
+                    const spend: Spend = {
+                        date: rowValues[dateIndex],
+                        name: rowValues[nameIndex],
+                        originalCost: originalCost,
+                        currency: currency,
+                        convertedCost: convertedCost,
+                        paidBy: rowValues[paidByIndex] as Person,
+                        splitBetween: splitBetween,
+                        location: (rowValues[locationIndex] as Location)
+                            ? (rowValues[locationIndex] as Location)
+                            : Location.Other,
+                        type: type,
+                        notes: rowValues[notesIndex],
+                        reportedBy: reportedBy,
+                        reportedAt: rowValues[reportedAtIndex],
+                        receiptImageUrl: rowValues[receiptImageUrlIndex],
+                        error: error,
+                    }
+                    return spend
+                }
+            })
+            .filter((row) => row !== undefined) as Spend[]
+    } catch (err) {
+        throw err
+    }
+
+    if (anyError) {
+        throw new Error('Google Sheets currency conversion error')
+    }
+
+    return data
 }
 
 // given a row string, return an array of the values

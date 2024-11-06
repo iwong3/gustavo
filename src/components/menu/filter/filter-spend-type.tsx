@@ -3,8 +3,13 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
-import { getColorForSpendType, getIconFromSpendType, getTablerIcon } from 'helpers/icons'
+import {
+    getColorForSpendType,
+    getIconFromSpendType,
+    getTablerIcon,
+} from 'helpers/icons'
 import { Spend, SpendType } from 'helpers/spend'
+import { Trip } from 'helpers/trips'
 
 type FilterSpendTypeState = {
     filters: Record<SpendType, boolean>
@@ -16,7 +21,7 @@ type FilterSpendTypeActions = {
 
     isActive: () => boolean
     setFilters: (filters: Record<SpendType, boolean>) => void
-    reset: () => void
+    reset: (trip: Trip) => void
 }
 
 const initialState: FilterSpendTypeState = {
@@ -30,48 +35,53 @@ const initialState: FilterSpendTypeState = {
     },
 }
 
-export const useFilterSpendTypeStore = create<FilterSpendTypeState & FilterSpendTypeActions>()(
-    (set, get) => ({
-        ...initialState,
+export const useFilterSpendTypeStore = create<
+    FilterSpendTypeState & FilterSpendTypeActions
+>()((set, get) => ({
+    ...initialState,
 
-        filter: (spendData: Spend[]): Spend[] => {
-            const { filters } = get()
+    filter: (spendData: Spend[]): Spend[] => {
+        const { filters } = get()
 
-            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
-            if (!isAnyFilterActive) {
-                return spendData
-            }
+        const isAnyFilterActive = Object.values(filters).some(
+            (isActive) => isActive
+        )
+        if (!isAnyFilterActive) {
+            return spendData
+        }
 
-            const filteredSpendData = spendData.filter((spend) => {
-                if (spend.type === undefined) {
-                    if (filters[SpendType.Other]) {
-                        return true
-                    }
-                    return false
+        const filteredSpendData = spendData.filter((spend) => {
+            if (spend.type === undefined) {
+                if (filters[SpendType.Other]) {
+                    return true
                 }
-                return filters[spend.type]
-            })
-            return filteredSpendData
-        },
-        handleFilterClick: (type: SpendType) => {
-            const { filters } = get()
-            set(() => ({
-                filters: {
-                    ...filters,
-                    [type]: !filters[type],
-                },
-            }))
-        },
+                return false
+            }
+            return filters[spend.type]
+        })
+        return filteredSpendData
+    },
+    handleFilterClick: (type: SpendType) => {
+        const { filters } = get()
+        set(() => ({
+            filters: {
+                ...filters,
+                [type]: !filters[type],
+            },
+        }))
+    },
 
-        isActive: () => {
-            const { filters } = get()
-            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
-            return isAnyFilterActive
-        },
-        setFilters: (filters: Record<SpendType, boolean>) => set(() => ({ filters })),
-        reset: () => set(initialState),
-    })
-)
+    isActive: () => {
+        const { filters } = get()
+        const isAnyFilterActive = Object.values(filters).some(
+            (isActive) => isActive
+        )
+        return isAnyFilterActive
+    },
+    setFilters: (filters: Record<SpendType, boolean>) =>
+        set(() => ({ filters })),
+    reset: (trip: Trip) => set(initialState),
+}))
 
 export const FilterSpendType = () => {
     const { filters, handleFilterClick, setFilters } = useFilterSpendTypeStore(
@@ -88,7 +98,9 @@ export const FilterSpendType = () => {
     }
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     return (
         <Box
@@ -121,7 +133,9 @@ export const FilterSpendType = () => {
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
-                {showIconLabels && <Typography sx={{ fontSize: '10px' }}>Clear</Typography>}
+                {showIconLabels && (
+                    <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
+                )}
             </Box>
             {Object.entries(filters).map(([spendType, isActive]) => {
                 return (
@@ -148,14 +162,18 @@ export const FilterSpendType = () => {
                                     alignItems: 'center',
                                     borderRadius: '100%',
                                     backgroundColor: isActive
-                                        ? getColorForSpendType(spendType as SpendType)
+                                        ? getColorForSpendType(
+                                              spendType as SpendType
+                                          )
                                         : 'white',
                                     transition: 'background-color 0.1s',
                                 }}>
                                 {getIconFromSpendType(spendType as SpendType)}
                             </Box>
                             {showIconLabels && (
-                                <Typography sx={{ fontSize: '10px' }}>{spendType}</Typography>
+                                <Typography sx={{ fontSize: '10px' }}>
+                                    {spendType}
+                                </Typography>
                             )}
                         </Box>
                     </Box>

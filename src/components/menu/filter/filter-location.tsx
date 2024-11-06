@@ -4,11 +4,14 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { getTablerIcon, LocationIcon } from 'helpers/icons'
-import { Location } from 'helpers/location'
+import { Location, LocationByTrip } from 'helpers/location'
 import { Spend } from 'helpers/spend'
+import { Trip } from 'helpers/trips'
+import { useEffect } from 'react'
+import { useTripsStore } from 'views/trips'
 
 type FilterLocationState = {
-    filters: Record<Location, boolean>
+    filters: Map<Location, boolean>
 }
 
 type FilterLocationActions = {
@@ -16,79 +19,80 @@ type FilterLocationActions = {
     handleFilterClick: (location: Location) => void
 
     isActive: () => boolean
-    setFilters: (filters: Record<Location, boolean>) => void
-    reset: () => void
+    setFilters: (filters: Map<Location, boolean>) => void
+    reset: (trip: Trip) => void
 }
 
 const initialState: FilterLocationState = {
-    filters: {
-        [Location.Hakone]: false,
-        [Location.Kyoto]: false,
-        [Location.Osaka]: false,
-        [Location.Tokyo]: false,
-        [Location.Other]: false,
-    },
+    filters: new Map<Location, boolean>(),
 }
 
-export const useFilterLocationStore = create<FilterLocationState & FilterLocationActions>()(
-    (set, get) => ({
-        ...initialState,
-
-        filter: (spendData: Spend[]): Spend[] => {
-            const { filters } = get()
-
-            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
-            if (!isAnyFilterActive) {
-                return spendData
-            }
-
-            const filteredSpendData = spendData.filter((spend) => {
-                if (spend.location === undefined) {
-                    if (filters[Location.Other]) {
-                        return true
-                    }
-                    return false
-                }
-                return filters[spend.location]
-            })
-            return filteredSpendData
-        },
-        handleFilterClick: (location: Location) => {
-            const { filters } = get()
-            set(() => ({
-                filters: {
-                    ...filters,
-                    [location]: !filters[location],
-                },
-            }))
-        },
-
-        isActive: () => {
-            const { filters } = get()
-            const isAnyFilterActive = Object.values(filters).some((isActive) => isActive)
-            return isAnyFilterActive
-        },
-        setFilters: (filters: Record<Location, boolean>) => set(() => ({ filters })),
-        reset: () => set(initialState),
+const getInitialStateByTrip = (trip: Trip) => {
+    const filters = new Map<Location, boolean>()
+    LocationByTrip[trip].forEach((location) => {
+        filters.set(location, false)
     })
-)
+    return filters
+}
+
+export const useFilterLocationStore = create<
+    FilterLocationState & FilterLocationActions
+>()((set, get) => ({
+    ...initialState,
+
+    filter: (spendData: Spend[]): Spend[] => {
+        const { filters } = get()
+
+        const isAnyFilterActive = Array.from(filters.values()).includes(true)
+        if (!isAnyFilterActive) {
+            return spendData
+        }
+
+        const filteredSpendData = spendData.filter((spend) => {
+            if (spend.location === undefined) {
+                return filters.get(Location.Other)
+            }
+            return filters.get(spend.location)
+        })
+        return filteredSpendData
+    },
+    handleFilterClick: (location: Location) => {
+        const { filters } = get()
+
+        const newFilters = new Map(filters)
+        newFilters.set(location, !newFilters.get(location))
+        set(() => ({
+            filters: newFilters,
+        }))
+    },
+
+    isActive: () => {
+        const { filters } = get()
+        const isAnyFilterActive = Array.from(filters.values()).includes(true)
+        return isAnyFilterActive
+    },
+    setFilters: (filters: Map<Location, boolean>) => set(() => ({ filters })),
+    reset: (trip: Trip) => {
+        set(() => ({
+            filters: getInitialStateByTrip(trip),
+        }))
+    },
+}))
 
 export const FilterLocation = () => {
-    const { filters, handleFilterClick, setFilters } = useFilterLocationStore(
+    const { filters, handleFilterClick, reset } = useFilterLocationStore(
         useShallow((state) => state)
     )
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    const resetAllFilters = () => {
-        setFilters(
-            Object.keys(filters).reduce((acc, key) => {
-                acc[key as Location] = false
-                return acc
-            }, {} as Record<Location, boolean>)
-        )
-    }
+    useEffect(() => {
+        reset(currentTrip)
+    }, [])
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     return (
         <Box
@@ -117,13 +121,15 @@ export const FilterLocation = () => {
                         'transition': 'background-color 0.1s',
                     }}
                     onClick={() => {
-                        resetAllFilters()
+                        reset(currentTrip)
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
-                {showIconLabels && <Typography sx={{ fontSize: '10px' }}>Clear</Typography>}
+                {showIconLabels && (
+                    <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
+                )}
             </Box>
-            {Object.entries(filters).map(([location, isActive]) => {
+            {Array.from(filters.entries()).map(([location, isActive]) => {
                 return (
                     <Box
                         key={'filter-location-' + location}
@@ -133,7 +139,7 @@ export const FilterLocation = () => {
                             alignItems: 'center',
                         }}
                         onClick={() => {
-                            handleFilterClick(location as Location)
+                            handleFilterClick(location)
                         }}>
                         <Box
                             sx={{
@@ -150,12 +156,18 @@ export const FilterLocation = () => {
                                     transition: 'background-color 0.1s',
                                 }}>
                                 <LocationIcon
-                                    location={location as Location}
-                                    sx={!isActive ? { backgroundColor: 'lightgray' } : undefined}
+                                    location={location}
+                                    sx={
+                                        !isActive
+                                            ? { backgroundColor: 'lightgray' }
+                                            : undefined
+                                    }
                                 />
                             </Box>
                             {showIconLabels && (
-                                <Typography sx={{ fontSize: '10px' }}>{location}</Typography>
+                                <Typography sx={{ fontSize: '10px' }}>
+                                    {location}
+                                </Typography>
                             )}
                         </Box>
                     </Box>
