@@ -9,7 +9,7 @@ import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
-import { ErrorConvertingToUSD } from 'helpers/data-processing'
+import { ErrorConvertingToUSDRow } from 'helpers/data-processing'
 import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getUcUrlFromOpenUrl } from 'helpers/image'
 import { getSplitCost, Spend } from 'helpers/spend'
@@ -179,7 +179,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                             )
                                         )}
                                         <Tooltip
-                                            title={ErrorConvertingToUSD}
+                                            title={ErrorConvertingToUSDRow}
                                             enterTouchDelay={0}
                                             slotProps={{
                                                 popper: {

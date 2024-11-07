@@ -42,8 +42,6 @@ type GustavoState = {
     totalSpendByLocation: Map<Location, number>
     totalSpendByDate: Map<string, number>
     totalSpendByDateByPerson: Map<Person, Map<string, number>>
-
-    error: boolean // error fetching or processing data
 }
 
 type GustavoActions = {
@@ -78,8 +76,6 @@ type GustavoActions = {
     setTotalSpendByDateByPerson: (
         totalSpendByDateByPerson: Map<Person, Map<string, number>>
     ) => void
-
-    setError: (error: boolean) => void
 }
 
 const initialState: GustavoState = {
@@ -98,8 +94,6 @@ const initialState: GustavoState = {
     totalSpendByLocation: new Map<Location, number>(),
     totalSpendByDate: new Map<string, number>(),
     totalSpendByDateByPerson: new Map<Person, Map<string, number>>(),
-
-    error: false,
 }
 
 export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
@@ -136,8 +130,6 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
     setTotalSpendByDateByPerson: (
         totalSpendByDateByPerson: Map<Person, Map<string, number>>
     ) => set(() => ({ totalSpendByDateByPerson })),
-
-    setError: (error: boolean) => set(() => ({ error })),
 }))
 
 export const Gustavo = () => {

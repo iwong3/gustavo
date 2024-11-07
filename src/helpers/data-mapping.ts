@@ -56,9 +56,9 @@ export enum Columns {
     ReceiptImageUrl = 'Upload Receipt',
 }
 
-export const fetchData = async (trip: Trip): Promise<Spend[]> => {
+export const fetchData = async (trip: Trip): Promise<[Spend[], boolean]> => {
     let data: Spend[] = []
-    let anyError = false
+    let currencyConversionError = false
 
     try {
         let res = await axios.get(
@@ -100,7 +100,7 @@ export const fetchData = async (trip: Trip): Promise<Spend[]> => {
                     if (rowValues[convertedCostIndex] === '#N/A') {
                         convertedCost = 0
                         error = true
-                        anyError = true
+                        currencyConversionError = true
                     }
 
                     const splitBetween = rowValues[splitBetweenIndex]
@@ -115,6 +115,7 @@ export const fetchData = async (trip: Trip): Promise<Spend[]> => {
                     )
 
                     const spend: Spend = {
+                        trip: trip,
                         date: rowValues[dateIndex],
                         name: rowValues[nameIndex],
                         originalCost: originalCost,
@@ -122,9 +123,7 @@ export const fetchData = async (trip: Trip): Promise<Spend[]> => {
                         convertedCost: convertedCost,
                         paidBy: rowValues[paidByIndex] as Person,
                         splitBetween: splitBetween,
-                        location: (rowValues[locationIndex] as Location)
-                            ? (rowValues[locationIndex] as Location)
-                            : Location.Other,
+                        location: rowValues[locationIndex] as Location,
                         type: type,
                         notes: rowValues[notesIndex],
                         reportedBy: reportedBy,
@@ -140,11 +139,7 @@ export const fetchData = async (trip: Trip): Promise<Spend[]> => {
         throw err
     }
 
-    if (anyError) {
-        throw new Error('Google Sheets currency conversion error')
-    }
-
-    return data
+    return [data, currencyConversionError]
 }
 
 // given a row string, return an array of the values

@@ -9,6 +9,7 @@ import { Trip } from 'helpers/trips'
  */
 
 export interface Spend {
+    trip: Trip
     name: string
     date: string
     originalCost: number

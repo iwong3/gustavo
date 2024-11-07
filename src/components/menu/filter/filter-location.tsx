@@ -49,9 +49,15 @@ export const useFilterLocationStore = create<
         }
 
         const filteredSpendData = spendData.filter((spend) => {
+            // If location isn't a location defined for the trip or is undefined,
+            // show it in the 'Other' category
             if (spend.location === undefined) {
                 return filters.get(Location.Other)
             }
+            if (!LocationByTrip[spend.trip].includes(spend.location)) {
+                return filters.get(Location.Other)
+            }
+
             return filters.get(spend.location)
         })
         return filteredSpendData

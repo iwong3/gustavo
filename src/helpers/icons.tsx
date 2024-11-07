@@ -477,6 +477,8 @@ export const getLocationColors = (location: Location): string => {
             return '#FBBC04'
         case Location.Tokyo:
             return '#dac4f7'
+        case Location.Vancouver:
+            return '#90be6d'
         case Location.Other:
         default:
             return '#a7bed3'

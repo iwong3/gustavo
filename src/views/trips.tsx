@@ -17,30 +17,48 @@ import Vancouver2024Image from '../images/vancouver-2024.png'
 
 type TripsState = {
     currentTrip: Trip
-    isLoading: boolean
+
+    loading: boolean
+    fetchDataError: boolean
+    currencyConversionError: boolean
 }
 
 type TripsActions = {
     setCurrentTrip: (trip: Trip) => void
-    setIsLoading: (isLoading: boolean) => void
+
+    setLoading: (isLoading: boolean) => void
+    setFetchDataError: (error: boolean) => void
+    setCurrencyConversionError: (error: boolean) => void
 }
 
 const initialState: TripsState = {
     currentTrip: Trip.Japan2024,
-    isLoading: true,
+
+    loading: true,
+    fetchDataError: false,
+    currencyConversionError: false,
 }
 
 export const useTripsStore = create<TripsState & TripsActions>((set) => ({
     ...initialState,
 
     setCurrentTrip: (trip) => set({ currentTrip: trip }),
-    setIsLoading: (isLoading) => set({ isLoading }),
+
+    setLoading: (loading) => set({ loading }),
+    setFetchDataError: (fetchDataError: boolean) =>
+        set(() => ({ fetchDataError })),
+    setCurrencyConversionError: (currencyConversionError: boolean) =>
+        set(() => ({ currencyConversionError })),
 }))
 
 export const Trips = () => {
-    const { setCurrentTrip, isLoading, setIsLoading } = useTripsStore(
-        useShallow((state) => state)
-    )
+    const {
+        setCurrentTrip,
+        loading,
+        setLoading,
+        setFetchDataError,
+        setCurrencyConversionError,
+    } = useTripsStore(useShallow((state) => state))
 
     const {
         setSpendData,
@@ -48,7 +66,6 @@ export const Trips = () => {
         setFilteredSpendDataWithoutSplitBetween,
         setFilteredSpendDataWithoutSpendType,
         setFilteredSpendDataWithoutLocation,
-        setError,
     } = useGustavoStore(useShallow((state) => state))
     const { setShowTripsMenu } = useMainStore(useShallow((state) => state))
 
@@ -67,7 +84,13 @@ export const Trips = () => {
 
     const initializeCurrentTripData = async (trip: Trip) => {
         try {
-            const data = await fetchData(trip)
+            const results = await fetchData(trip)
+            const data = results[0]
+            const currencyConversionError = results[1]
+
+            if (currencyConversionError) {
+                setCurrencyConversionError(true)
+            }
 
             // set data
             setSpendData(data)
@@ -86,8 +109,7 @@ export const Trips = () => {
             resetToolsMenuStore()
             resetDebtCalculatorStore()
         } catch (err) {
-            // if error, we may still want to show gustavo
-            // setError(true)
+            throw err
         }
     }
 
@@ -102,10 +124,9 @@ export const Trips = () => {
                 setCurrentTrip(trip)
                 setShowTripsMenu(false)
             } catch (err) {
-                // if error, we may still want to show gustavo
-                // setError(true)
+                setFetchDataError(true)
             } finally {
-                setIsLoading(false)
+                setLoading(false)
             }
         }
 
@@ -113,7 +134,7 @@ export const Trips = () => {
         if (currentTrip) {
             runInitializeCurrentTripData(currentTrip as Trip)
         } else {
-            setIsLoading(false)
+            setLoading(false)
         }
     }, [])
 
@@ -126,8 +147,9 @@ export const Trips = () => {
             saveInCache('currentTrip', trip)
             setShowTripsMenu(false)
         } catch (err) {
-            // if error, we may still want to show gustavo
-            setError(true)
+            setFetchDataError(true)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -217,7 +239,7 @@ export const Trips = () => {
                 width: '100%',
                 height: '100%',
             }}>
-            {!isLoading && (
+            {!loading && (
                 <Box
                     sx={{
                         display: 'flex',
@@ -230,7 +252,7 @@ export const Trips = () => {
                     Upcoming Trips
                 </Box>
             )}
-            {!isLoading && renderTrips()}
+            {!loading && renderTrips()}
         </Box>
     )
 }

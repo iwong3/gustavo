@@ -1,11 +1,12 @@
-import { Box, Typography } from '@mui/material'
+import { Box, Tooltip, Typography } from '@mui/material'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { ToolsMenu } from 'components/menu/tools/tools-menu'
 import { clearFromCache } from 'helpers/cache'
+import { ErrorConvertingToUSDGeneral } from 'helpers/data-processing'
 import { getTablerIcon } from 'helpers/icons'
-import { Gustavo, useGustavoStore } from 'views/gustavo'
+import { Gustavo } from 'views/gustavo'
 import { Trips, useTripsStore } from 'views/trips'
 import GusFringLogo from '../images/gus-fring.png'
 
@@ -31,10 +32,8 @@ export const Main = () => {
     const { showTripsMenu, setShowTripsMenu } = useMainStore(
         useShallow((state) => state)
     )
-    const { currentTrip, isLoading } = useTripsStore(
-        useShallow((state) => state)
-    )
-    const { error } = useGustavoStore(useShallow((state) => state))
+    const { currentTrip, loading, fetchDataError, currencyConversionError } =
+        useTripsStore(useShallow((state) => state))
 
     return (
         <Box
@@ -88,7 +87,7 @@ export const Main = () => {
                                 }}
                             />
                         </Box>
-                        {!isLoading && showTripsMenu ? (
+                        {!loading && showTripsMenu ? (
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -118,24 +117,57 @@ export const Main = () => {
                                     display: 'flex',
                                     marginLeft: 2,
                                 }}>
-                                {error && (
-                                    <Box
-                                        sx={{
-                                            marginRight: 1,
+                                {currencyConversionError && (
+                                    <Tooltip
+                                        title={ErrorConvertingToUSDGeneral}
+                                        enterTouchDelay={0}
+                                        slotProps={{
+                                            popper: {
+                                                modifiers: [
+                                                    {
+                                                        name: 'offset',
+                                                        options: {
+                                                            offset: [0, -12],
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                            tooltip: {
+                                                sx: {
+                                                    padding: 1,
+                                                    border: '1px solid #C1121F',
+                                                    fontSize: 12,
+                                                    color: 'black',
+                                                    fontStyle: 'italic',
+                                                    fontWeight: 600,
+                                                    backgroundColor: '#f4d35e',
+                                                    boxShadow:
+                                                        'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                                                },
+                                            },
                                         }}>
-                                        {getTablerIcon({
-                                            name: 'IconExclamationCircle',
-                                            fill: '#D00000',
-                                            color: '#F4D35E',
-                                            size: 24,
-                                        })}
-                                    </Box>
+                                        <Box
+                                            sx={{
+                                                marginRight: 1,
+                                            }}>
+                                            {getTablerIcon({
+                                                name: 'IconExclamationCircle',
+                                                fill: '#C1121F',
+                                                color: '#F4D35E',
+                                                size: 24,
+                                            })}
+                                        </Box>
+                                    </Tooltip>
                                 )}
                                 <Typography
+                                    onClick={() => {
+                                        setShowTripsMenu(true)
+                                        clearFromCache('currentTrip')
+                                    }}
                                     sx={{
                                         fontSize: 18,
                                     }}>
-                                    {!isLoading && currentTrip}
+                                    {!loading && currentTrip}
                                 </Typography>
                             </Box>
                         )}
@@ -152,7 +184,60 @@ export const Main = () => {
                     marginTop: '17%',
                     marginBottom: 1,
                 }}>
-                {showTripsMenu ? <Trips /> : <Gustavo />}
+                {!fetchDataError && (showTripsMenu ? <Trips /> : <Gustavo />)}
+                {fetchDataError && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            margin: 5,
+                            width: '100%',
+                            border: '1px solid #C1121F',
+                            borderRadius: '10px',
+                            backgroundColor: '#FFFCEE',
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                paddingY: 4,
+                                borderTopLeftRadius: '10px',
+                                borderTopRightRadius: '10px',
+                                backgroundColor: '#f4978e',
+                            }}>
+                            {getTablerIcon({
+                                name: 'IconExclamationCircle',
+                                fill: '#f4978e',
+                                color: '#FFFCEE',
+                                size: 42,
+                            })}
+                            {/* <Typography
+                                sx={{
+                                    marginTop: 1,
+                                    fontSize: 20,
+                                    color: '#FFFCEE',
+                                }}>
+                                Error
+                            </Typography> */}
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: 2,
+                                borderBottomLeftRadius: '10px',
+                                borderBottomRightRadius: '10px',
+                                backgroundColor: '#FFFCEE',
+                                fontSize: 16,
+                                textAlign: 'center',
+                            }}>
+                            There was an error fetching data from Google Sheets.
+                            Please refresh to try again.
+                        </Box>
+                    </Box>
+                )}
             </Box>
         </Box>
     )

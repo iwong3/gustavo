@@ -437,4 +437,5 @@ const calculateAndUpdateTotalSpendByDateByPerson = (
     })
 }
 
-export const ErrorConvertingToUSD = 'Could not convert to USD'
+export const ErrorConvertingToUSDGeneral = 'Could not convert some data to USD'
+export const ErrorConvertingToUSDRow = 'Could not convert to USD'

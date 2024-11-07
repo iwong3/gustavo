@@ -4,11 +4,6 @@ track spending and split costs
 
 To-Do:
 
-Bugs
-
--   Filter values don't load on first load (from cached current trip?)
--   Location active menu item doesn't work
-
 Graphs
 
 -   Line graph by person
@@ -20,7 +15,6 @@ Graphs
 UX
 
 -   Dark mode
--   Clicking on trip name should bring user back to trip menu
 
 To-Do
 
@@ -52,3 +46,4 @@ UX
     fails
 -   Log errors and add view to see which rows were affected
 -   Link to View Only Google Sheet
+-   Clicking on trip name should bring user back to trip menu

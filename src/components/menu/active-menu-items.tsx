@@ -274,8 +274,8 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActiveLocation = () => {
-        const activeFilterItems = Object.entries(
-            filterLocationState.filters
+        const activeFilterItems = Array.from(
+            filterLocationState.filters.entries()
         ).filter(([_, isActive]) => isActive)
         return (
             <Box
