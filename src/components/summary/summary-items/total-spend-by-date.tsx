@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Graph } from 'components/graphs/graph'
-import { LineGraph } from 'components/graphs/line-graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { getInitialsIconColors } from 'helpers/icons'
 import { Person } from 'helpers/person'
@@ -16,10 +15,11 @@ export const TotalSpendByDate = () => {
     )
     const { order } = useSortDateStore(useShallow((state) => state))
 
-    const [totalSpendByDateArray, setTotalSpendByDateArray] = useState(Array.from(totalSpendByDate))
-    const [totalSpendByDateByPersonArray, setTotalSpendByDateByPersonArray] = useState<
-        [string, number][][]
-    >([])
+    const [totalSpendByDateArray, setTotalSpendByDateArray] = useState(
+        Array.from(totalSpendByDate)
+    )
+    const [totalSpendByDateByPersonArray, setTotalSpendByDateByPersonArray] =
+        useState<[string, number][][]>([])
 
     useEffect(() => {
         // total spend by date
@@ -51,7 +51,10 @@ export const TotalSpendByDate = () => {
             sortSpendByDateArray(personData, order)
 
             // format date
-            personData = personData.map(([date, value]) => [dayjs(date).format('M/D'), value])
+            personData = personData.map(([date, value]) => [
+                dayjs(date).format('M/D'),
+                value,
+            ])
 
             totalSpendByDateByPersonArray.push(personData)
         })
@@ -86,7 +89,7 @@ export const TotalSpendByDate = () => {
                     height={window.innerWidth * 0.5}
                 />
             </Box>
-            <Box
+            {/* <Box
                 sx={{
                     display: 'flex',
                     justifyContent: 'center',
@@ -99,7 +102,7 @@ export const TotalSpendByDate = () => {
                     height={window.innerWidth * 0.5}
                     lineColors={personColors}
                 />
-            </Box>
+            </Box> */}
         </Box>
     )
 }

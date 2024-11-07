@@ -3,8 +3,9 @@
  */
 
 export enum Currency {
-    USD = 'USD',
+    CAD = 'CAD',
     JPY = 'JPY',
+    USD = 'USD',
 }
 
 export enum CostDisplay {
@@ -12,7 +13,10 @@ export enum CostDisplay {
     Converted,
 }
 
-export const FormattedMoney = (currency: string = 'USD', digits: number = 2) => {
+export const FormattedMoney = (
+    currency: string = 'USD',
+    digits: number = 2
+) => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,

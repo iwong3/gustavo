@@ -108,6 +108,7 @@ export const FilterLocation = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    marginRight: 2,
                 }}>
                 <Box
                     sx={{
@@ -129,50 +130,61 @@ export const FilterLocation = () => {
                     <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
                 )}
             </Box>
-            {Array.from(filters.entries()).map(([location, isActive]) => {
-                return (
-                    <Box
-                        key={'filter-location-' + location}
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                        onClick={() => {
-                            handleFilterClick(location)
-                        }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-evenly',
+                    alignItems: 'center',
+                    width: '100%',
+                }}>
+                {Array.from(filters.entries()).map(([location, isActive]) => {
+                    return (
                         <Box
+                            key={'filter-location-' + location}
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
+                                justifyContent: 'center',
                                 alignItems: 'center',
+                            }}
+                            onClick={() => {
+                                handleFilterClick(location)
                             }}>
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    justifyContent: 'center',
+                                    flexDirection: 'column',
                                     alignItems: 'center',
-                                    borderRadius: '100%',
-                                    transition: 'background-color 0.1s',
                                 }}>
-                                <LocationIcon
-                                    location={location}
-                                    sx={
-                                        !isActive
-                                            ? { backgroundColor: 'lightgray' }
-                                            : undefined
-                                    }
-                                />
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        borderRadius: '100%',
+                                        transition: 'background-color 0.1s',
+                                    }}>
+                                    <LocationIcon
+                                        location={location}
+                                        sx={
+                                            !isActive
+                                                ? {
+                                                      backgroundColor:
+                                                          'lightgray',
+                                                  }
+                                                : undefined
+                                        }
+                                    />
+                                </Box>
+                                {showIconLabels && (
+                                    <Typography sx={{ fontSize: '10px' }}>
+                                        {location}
+                                    </Typography>
+                                )}
                             </Box>
-                            {showIconLabels && (
-                                <Typography sx={{ fontSize: '10px' }}>
-                                    {location}
-                                </Typography>
-                            )}
                         </Box>
-                    </Box>
-                )
-            })}
+                    )
+                })}
+            </Box>
         </Box>
     )
 }

@@ -6,7 +6,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { SortCost, useSortCostStore } from 'components/menu/sort/sort-cost'
 import { SortDate, useSortDateStore } from 'components/menu/sort/sort-date'
-import { SortItemName, useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import {
+    SortItemName,
+    useSortItemNameStore,
+} from 'components/menu/sort/sort-item-name'
 import { getTablerIcon } from 'helpers/icons'
 
 export enum SortItem {
@@ -37,20 +40,22 @@ const initialState: SortMenuState = {
     active: false,
 }
 
-export const useSortMenuStore = create<SortMenuState & SortMenuActions>((set, get) => ({
-    ...initialState,
+export const useSortMenuStore = create<SortMenuState & SortMenuActions>(
+    (set, get) => ({
+        ...initialState,
 
-    isActive: () => {
-        const { active } = get()
-        return active
-    },
+        isActive: () => {
+            const { active } = get()
+            return active
+        },
 
-    setActive: (active: boolean) => set({ active }),
-    reset: () => {
-        set(initialState)
-        resetAllSortStores()
-    },
-}))
+        setActive: (active: boolean) => set({ active }),
+        reset: () => {
+            set(initialState)
+            resetAllSortStores()
+        },
+    })
+)
 
 const sortStoreResets = new Set<() => void>()
 
@@ -102,7 +107,9 @@ export const SortMenu = () => {
     }, [...sortStates])
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     return (
         <Box
@@ -118,6 +125,7 @@ export const SortMenu = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    marginRight: 2,
                 }}>
                 <Box
                     sx={{
@@ -135,31 +143,43 @@ export const SortMenu = () => {
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
-                {showIconLabels && <Typography sx={{ fontSize: '10px' }}>Clear</Typography>}
+                {showIconLabels && (
+                    <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
+                )}
             </Box>
-            {sortMenuItems.map((sortItem, index) => {
-                return (
-                    <Box
-                        key={'sort-menu-item-' + index}
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                        }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-evenly',
+                    alignItems: 'center',
+                    width: '100%',
+                }}>
+                {sortMenuItems.map((sortItem, index) => {
+                    return (
                         <Box
+                            key={'sort-menu-item-' + index}
                             sx={{
                                 display: 'flex',
-                                justifyContent: 'center',
+                                flexDirection: 'column',
                                 alignItems: 'center',
                             }}>
-                            {sortItem.component}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}>
+                                {sortItem.component}
+                            </Box>
+                            {showIconLabels && (
+                                <Typography sx={{ fontSize: '10px' }}>
+                                    {sortItem.label}
+                                </Typography>
+                            )}
                         </Box>
-                        {showIconLabels && (
-                            <Typography sx={{ fontSize: '10px' }}>{sortItem.label}</Typography>
-                        )}
-                    </Box>
-                )
-            })}
+                    )
+                })}
+            </Box>
         </Box>
     )
 }

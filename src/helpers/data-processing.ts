@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 
-import { Location } from 'helpers/location'
+import { Location, LocationByTrip } from 'helpers/location'
 import { PeopleByTrip, Person } from 'helpers/person'
 import { getSplitCost, Spend, SpendType } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
@@ -68,7 +68,8 @@ export const processFilteredSpendData = (
     })
 
     const totalSpendByLocation = new Map<Location, number>()
-    Object.values(Location).forEach((location) => {
+    let locations = LocationByTrip[trip]
+    locations.forEach((location) => {
         totalSpendByLocation.set(location, 0)
     })
 

@@ -106,7 +106,7 @@ export const TotalSpendByLocation = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
-                        border: isActive
+                        borderTop: isActive
                             ? '1px solid #A7C957'
                             : '1px solid #FBBC04',
                         fontSize: 14,

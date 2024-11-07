@@ -1,4 +1,9 @@
-import { Box, ClickAwayListener, InputAdornment, TextField } from '@mui/material'
+import {
+    Box,
+    ClickAwayListener,
+    InputAdornment,
+    TextField,
+} from '@mui/material'
 import Fuse from 'fuse.js'
 import { useState } from 'react'
 import { create } from 'zustand'
@@ -41,43 +46,53 @@ type SearchBarActions = {
 
     setSearchInput: (searchInput: string) => void
     isActive: () => boolean
+    reset: () => void
 }
 
 const initialState: SearchBarState = {
     searchInput: '',
 }
 
-export const useSearchBarStore = create<SearchBarState & SearchBarActions>((set, get) => ({
-    ...initialState,
+export const useSearchBarStore = create<SearchBarState & SearchBarActions>(
+    (set, get) => ({
+        ...initialState,
 
-    search: (spendData: Spend[]): Spend[] => {
-        const { searchInput } = get()
-        if (searchInput === '') {
-            return spendData
-        }
+        search: (spendData: Spend[]): Spend[] => {
+            const { searchInput } = get()
+            if (searchInput === '') {
+                return spendData
+            }
 
-        const fuse = new Fuse(spendData, fuseOptions)
-        const searchResults = fuse.search(searchInput)
+            const fuse = new Fuse(spendData, fuseOptions)
+            const searchResults = fuse.search(searchInput)
 
-        // search results are ordered by relevance, so return spend data with same order
-        const searchResultsIndexes = searchResults.map((result) => result.refIndex)
-        const searchedAndOrderedSpendData = searchResultsIndexes.map((index) => spendData[index])
+            // search results are ordered by relevance, so return spend data with same order
+            const searchResultsIndexes = searchResults.map(
+                (result) => result.refIndex
+            )
+            const searchedAndOrderedSpendData = searchResultsIndexes.map(
+                (index) => spendData[index]
+            )
 
-        return searchedAndOrderedSpendData
-    },
+            return searchedAndOrderedSpendData
+        },
 
-    setSearchInput: (searchInput: string) => set({ searchInput }),
-    isActive: () => {
-        const { searchInput } = get()
-        return searchInput !== ''
-    },
-}))
+        setSearchInput: (searchInput: string) => set({ searchInput }),
+        isActive: () => {
+            const { searchInput } = get()
+            return searchInput !== ''
+        },
+        reset: () => set(initialState),
+    })
+)
 
 export const SearchBar = () => {
     const { searchInput, setSearchInput, isActive } = useSearchBarStore(
         useShallow((state) => state)
     )
-    const { toggle: collapseAll } = useCollapseAllStore(useShallow((state) => state))
+    const { toggle: collapseAll } = useCollapseAllStore(
+        useShallow((state) => state)
+    )
 
     const [focused, setFocused] = useState(false)
 
@@ -114,7 +129,10 @@ export const SearchBar = () => {
                                     sx={{
                                         margin: 0,
                                     }}>
-                                    {getTablerIcon({ name: 'IconSearch', size: 16 })}
+                                    {getTablerIcon({
+                                        name: 'IconSearch',
+                                        size: 16,
+                                    })}
                                 </InputAdornment>
                             ),
                             endAdornment: isActive() && (

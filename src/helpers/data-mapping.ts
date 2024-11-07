@@ -10,15 +10,6 @@ import { getPersonFromEmail, Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
 
-export const GOOGLE_FORM_URL =
-    'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform'
-
-export const GOOGLE_SHEET_CSV_URL =
-    'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
-
-export const GOOGLE_SHEET_VIEW_ONLY_URL =
-    'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/edit?usp=sharing'
-
 type Urls = {
     GoogleFormUrl: string
     GoogleSheetUrl: string

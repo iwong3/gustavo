@@ -80,10 +80,6 @@ export const FilterPaidBy = () => {
     )
     const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    // useEffect(() => {
-    //     reset(currentTrip)
-    // }, [])
-
     return (
         <Box
             sx={{
@@ -99,6 +95,7 @@ export const FilterPaidBy = () => {
                     'display': 'flex',
                     'justifyContent': 'center',
                     'alignItems': 'center',
+                    'marginRight': 2,
                     'borderRadius': '100%',
                     '&:active': {
                         backgroundColor: '#FBBC04',
@@ -110,36 +107,44 @@ export const FilterPaidBy = () => {
                 }}>
                 {getTablerIcon({ name: 'IconX' })}
             </Box>
-            {Array.from(filters.entries()).map(([person, isActive]) => {
-                const sx = { fontSize: 10 }
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-evenly',
+                    alignItems: 'center',
+                    width: '100%',
+                }}>
+                {Array.from(filters.entries()).map(([person, isActive]) => {
+                    const sx = { fontSize: 10 }
 
-                return (
-                    <Box
-                        key={'filter-paid-by-' + person}
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            fontSize: '12px',
-                        }}
-                        onClick={() => {
-                            handleFilterClick(person)
-                        }}>
-                        <InitialsIcon
-                            person={person as Person}
-                            sx={
-                                !isActive
-                                    ? {
-                                          ...sx,
-                                          color: 'black',
-                                          backgroundColor: 'lightgray',
-                                      }
-                                    : sx
-                            }
-                        />
-                    </Box>
-                )
-            })}
+                    return (
+                        <Box
+                            key={'filter-paid-by-' + person}
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                fontSize: '12px',
+                            }}
+                            onClick={() => {
+                                handleFilterClick(person)
+                            }}>
+                            <InitialsIcon
+                                person={person as Person}
+                                sx={
+                                    !isActive
+                                        ? {
+                                              ...sx,
+                                              color: 'black',
+                                              backgroundColor: 'lightgray',
+                                          }
+                                        : sx
+                                }
+                            />
+                        </Box>
+                    )
+                })}
+            </Box>
         </Box>
     )
 }

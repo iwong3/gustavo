@@ -60,7 +60,7 @@ export type MenuItemData = {
 const filterMenuItemStoreResets = new Set<(trip: Trip) => void>()
 const sortMenuItemStoreResets = new Set<() => void>()
 
-const resetAllMenuItemStores = (trip: Trip) => {
+export const resetAllMenuItemStores = (trip: Trip) => {
     filterMenuItemStoreResets.forEach((reset) => reset(trip))
     sortMenuItemStoreResets.forEach((reset) => reset())
 }

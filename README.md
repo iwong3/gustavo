@@ -4,11 +4,6 @@ track spending and split costs
 
 To-Do:
 
-Data
-
--   Look into memoizing spend data
-    -   Using useEffect() seems to be causing issues when changing trips
-
 Trips
 
 -   Update location filter by trips

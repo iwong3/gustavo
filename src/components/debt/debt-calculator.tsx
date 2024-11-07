@@ -140,29 +140,6 @@ export const DebtCalculator = () => {
         )
     }
 
-    const renderVenmoIcon = (person: Person) => {
-        return (
-            <Link
-                href={getVenmoUrl(person)}
-                target="_blank"
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}>
-                <img
-                    src={VenmoLogo}
-                    style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '100%',
-                        objectFit: 'cover',
-                    }}
-                />
-            </Link>
-        )
-    }
-
     // Select person state and style
     const { currentTrip } = useTripsStore(useShallow((state) => state))
     const people = PeopleByTrip[currentTrip]
@@ -210,6 +187,34 @@ export const DebtCalculator = () => {
             </Box>
         )
     }
+
+    // Venmo icons
+    const renderVenmoIcon = (person: Person) => {
+        return (
+            <Link
+                href={getVenmoUrl(person)}
+                target="_blank"
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}>
+                <img
+                    src={VenmoLogo}
+                    style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '100%',
+                        objectFit: 'cover',
+                    }}
+                />
+            </Link>
+        )
+    }
+
+    const showVenmoPerson1 = person1 && person2 && getVenmoUrl(person1)
+    const showVenmoPerson2 = person1 && person2 && getVenmoUrl(person2)
+    const showVenmoBoth = showVenmoPerson1 && showVenmoPerson2
 
     return (
         <Box
@@ -281,19 +286,17 @@ export const DebtCalculator = () => {
                         <Box
                             sx={{
                                 display: 'flex',
-                                justifyContent: 'space-between',
+                                justifyContent: showVenmoBoth
+                                    ? 'space-between'
+                                    : showVenmoPerson1
+                                    ? 'flex-start'
+                                    : 'flex-end',
                                 alignItems: 'flex-end',
                                 width: '100%',
                                 height: '100%',
                             }}>
-                            {person1 &&
-                                person2 &&
-                                getVenmoUrl(person1) &&
-                                renderVenmoIcon(person1)}
-                            {person1 &&
-                                person2 &&
-                                getVenmoUrl(person2) &&
-                                renderVenmoIcon(person2)}
+                            {showVenmoPerson1 && renderVenmoIcon(person1)}
+                            {showVenmoPerson2 && renderVenmoIcon(person2)}
                         </Box>
                     </Box>
                     {renderDebtPerson(person2, setPerson2)}
@@ -315,6 +318,7 @@ export const DebtCalculator = () => {
                             'display': 'flex',
                             'justifyContent': 'center',
                             'alignItems': 'center',
+                            'marginRight': 1,
                             'height': 28,
                             'width': 28,
                             'borderRadius': '100%',
@@ -325,11 +329,21 @@ export const DebtCalculator = () => {
                         }}>
                         {getTablerIcon({ name: 'IconX' })}
                     </Box>
-                    {people.map((person, index) => {
-                        return (
-                            <Box key={index}>{renderSelectPerson(person)}</Box>
-                        )
-                    })}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-evenly',
+                            alignItems: 'center',
+                            width: '100%',
+                        }}>
+                        {people.map((person, index) => {
+                            return (
+                                <Box key={index}>
+                                    {renderSelectPerson(person)}
+                                </Box>
+                            )
+                        })}
+                    </Box>
                 </Box>
             </Box>
             <Box

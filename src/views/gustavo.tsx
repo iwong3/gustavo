@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -8,13 +8,11 @@ import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import {
-    ToolsMenu,
     ToolsMenuItem,
     ToolsMenuItemMap,
     useToolsMenuStore,
 } from 'components/menu/tools/tools-menu'
 import { useSummaryStore } from 'components/summary/summary'
-import { clearFromCache } from 'helpers/cache'
 import {
     processFilteredSpendData,
     processSpendData,
@@ -22,9 +20,7 @@ import {
 import { Location } from 'helpers/location'
 import { Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
-import { useMainStore } from 'views/main'
 import { useTripsStore } from 'views/trips'
-import GusFringLogo from '../images/gus-fring.png'
 
 type GustavoState = {
     // total spend
@@ -160,7 +156,6 @@ export const Gustavo = () => {
         setTotalSpendByLocation,
         setTotalSpendByDate,
         setTotalSpendByDateByPerson,
-        error,
     } = useGustavoStore(useShallow((state) => state))
     const { currentTrip } = useTripsStore(useShallow((state) => state))
 
@@ -272,9 +267,6 @@ export const Gustavo = () => {
         }
     }
 
-    // trip selector
-    const { setShowTripsMenu } = useMainStore()
-
     return (
         <Box
             sx={{
@@ -285,87 +277,7 @@ export const Gustavo = () => {
             }}>
             <Box
                 sx={{
-                    display: 'flex',
-                    width: '100%',
-                    maxWidth: 450,
-                    position: 'fixed',
-                    top: 0,
-                    backgroundColor: '#F4D35E',
-                }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        marginTop: 2,
-                        marginLeft: 2,
-                        marginRight: 1,
-                    }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-start',
-                            alignItems: 'center',
-                        }}>
-                        <Box
-                            onClick={() => {
-                                setShowTripsMenu(true)
-                                clearFromCache('currentTrip')
-                            }}
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}>
-                            <img
-                                src={GusFringLogo}
-                                style={{
-                                    width: 42,
-                                    height: 42,
-                                    borderRadius: '100%',
-                                    objectFit: 'cover',
-                                }}
-                            />
-                        </Box>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                marginLeft: 1,
-                            }}>
-                            <Typography
-                                sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
-                                }}>
-                                {error
-                                    ? '"It appears there\'s been a... problem.'
-                                    : '"And a man, a man provides...'}
-                            </Typography>
-                            <Typography
-                                sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
-                                }}>
-                                &nbsp;
-                                {error
-                                    ? 'My apologies. I will... take care of it."'
-                                    : ' ...your spending habits."'}
-                            </Typography>
-                        </Box>
-                    </Box>
-                    <ToolsMenu />
-                </Box>
-            </Box>
-            <Box
-                sx={{
-                    marginTop: '17%',
                     marginBottom: 1,
-                    maxWidth: 450,
                 }}>
                 <ActiveMenuItems />
             </Box>

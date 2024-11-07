@@ -1,21 +1,19 @@
 import { Box } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useDebtCalculatorStore } from 'components/debt/debt-calculator'
-import { useFilterLocationStore } from 'components/menu/filter/filter-location'
-import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
-import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import { resetAllMenuItemStores } from 'components/menu/menu'
+import { useSearchBarStore } from 'components/menu/search/search-bar'
+import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { getFromCache, saveInCache } from 'helpers/cache'
 import { fetchData } from 'helpers/data-mapping'
-import { useEffect } from 'react'
+import { ActiveTrips, Trip } from 'helpers/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useMainStore } from 'views/main'
-
-enum Trip {
-    Japan2024 = 'Japan 2024',
-    Vancouver2024 = 'Vancouver 2024',
-}
+import Japan2024Image from '../images/japan-2024.jpg'
+import Vancouver2024Image from '../images/vancouver-2024.png'
 
 type TripsState = {
     currentTrip: Trip
@@ -36,9 +34,10 @@ export const useTripsStore = create<TripsState & TripsActions>((set) => ({
 }))
 
 export const Trips = () => {
-    const { currentTrip, setCurrentTrip } = useTripsStore(
-        useShallow((state) => state)
-    )
+    const { setCurrentTrip } = useTripsStore(useShallow((state) => state))
+
+    const [isLoading, setIsLoading] = useState(true)
+
     const {
         setSpendData,
         setFilteredSpendData,
@@ -49,18 +48,15 @@ export const Trips = () => {
     } = useGustavoStore(useShallow((state) => state))
     const { setShowTripsMenu } = useMainStore(useShallow((state) => state))
 
-    // filter stores
-    const { reset: resetFilterSplitBetweenStore } = useFilterSplitBetweenStore(
-        useShallow((state) => state)
-    )
-    const { reset: resetFilterPaidByStore } = useFilterPaidByStore(
-        useShallow((state) => state)
-    )
-    const { reset: resetFilterLocationStore } = useFilterLocationStore(
+    // search store
+    const { reset: resetSearchBarStore } = useSearchBarStore(
         useShallow((state) => state)
     )
 
     // tools stores
+    const { reset: resetToolsMenuStore } = useToolsMenuStore(
+        useShallow((state) => state)
+    )
     const { reset: resetDebtCalculatorStore } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
@@ -76,12 +72,14 @@ export const Trips = () => {
             setFilteredSpendDataWithoutSpendType(data)
             setFilteredSpendDataWithoutLocation(data)
 
-            // reset all filter stores
-            resetFilterSplitBetweenStore(trip)
-            resetFilterPaidByStore(trip)
-            resetFilterLocationStore(trip)
+            // reset all menu item stores
+            resetAllMenuItemStores(trip)
 
-            // // reset all tools stores
+            // reset search bar store
+            resetSearchBarStore()
+
+            // reset all tools stores
+            resetToolsMenuStore()
             resetDebtCalculatorStore()
         } catch (err) {
             // if error, we may still want to show gustavo
@@ -102,12 +100,16 @@ export const Trips = () => {
             } catch (err) {
                 // if error, we may still want to show gustavo
                 // setError(true)
+            } finally {
+                setIsLoading(false)
             }
         }
 
         const currentTrip = getFromCache('currentTrip', '')
         if (currentTrip) {
             runInitializeCurrentTripData(currentTrip as Trip)
+        } else {
+            setIsLoading(false)
         }
     }, [])
 
@@ -126,26 +128,100 @@ export const Trips = () => {
     }
 
     const renderTrips = () => {
-        return Object.values(Trip).map((trip) => {
-            return (
-                <Box
-                    key={trip}
-                    onClick={() => handleTripClick(trip)}
-                    sx={{
-                        cursor: 'pointer',
-                        color: trip === currentTrip ? 'primary.main' : 'black',
-                        border: trip === currentTrip ? '1px solid' : 'none',
-                    }}>
-                    {trip}
-                </Box>
-            )
-        })
+        const trips = []
+        let row = []
+        const rowLength = 2
+
+        for (let i = 0; i < ActiveTrips.length; i++) {
+            row.push(renderTrip(ActiveTrips[i]))
+
+            if (row.length === rowLength || i === ActiveTrips.length - 1) {
+                trips.push(
+                    <Box
+                        key={'trip-row-' + trips.length}
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            width: '100%',
+                        }}>
+                        {row}
+                    </Box>
+                )
+                row = []
+            }
+        }
+
+        return trips
+    }
+
+    const renderTrip = (trip: Trip) => {
+        const key = 'trip-' + trip
+
+        return (
+            <Box
+                key={key}
+                onClick={() => handleTripClick(trip)}
+                sx={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    padding: 2,
+                    width: '40%',
+                    height: window.innerHeight * 0.1,
+                    border: '1px solid #FBBC04',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    backgroundImage: `url(${getBackgroundImageUrlForTrip(
+                        trip
+                    )})`,
+                    backgroundSize: 'cover',
+                    backgroundBlendMode: 'darken',
+                    boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                    color: 'white',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                }}>
+                {trip}
+            </Box>
+        )
+    }
+
+    const getBackgroundImageUrlForTrip = (trip: Trip) => {
+        switch (trip) {
+            case Trip.Japan2024:
+                return Japan2024Image
+            case Trip.Vancouver2024:
+                return Vancouver2024Image
+            default:
+                return ''
+        }
     }
 
     return (
-        <Box>
-            Trips
-            {renderTrips()}
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginX: 1,
+                width: '100%',
+                height: '100%',
+            }}>
+            {!isLoading && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: 1,
+                        width: '100%',
+                        fontSize: 24,
+                        fontFamily: 'Spectral',
+                    }}>
+                    Upcoming Trips
+                </Box>
+            )}
+            {!isLoading && renderTrips()}
         </Box>
     )
 }
