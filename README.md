@@ -4,14 +4,10 @@ track spending and split costs
 
 To-Do:
 
-Trips
+Bugs
 
--   Update location filter by trips
--   Update graphs by trips
--   Update settings by trips
--   Make the current trip clear
--   Keep Gustavo visible on all pages
--   Cache current trip
+-   Filter values don't load on first load (from cached current trip?)
+-   Location active menu item doesn't work
 
 Graphs
 
@@ -24,6 +20,7 @@ Graphs
 UX
 
 -   Dark mode
+-   Clicking on trip name should bring user back to trip menu
 
 To-Do
 

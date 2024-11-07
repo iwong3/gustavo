@@ -4,8 +4,9 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { ToolsMenu } from 'components/menu/tools/tools-menu'
 import { clearFromCache } from 'helpers/cache'
+import { getTablerIcon } from 'helpers/icons'
 import { Gustavo, useGustavoStore } from 'views/gustavo'
-import { Trips } from 'views/trips'
+import { Trips, useTripsStore } from 'views/trips'
 import GusFringLogo from '../images/gus-fring.png'
 
 type MainState = {
@@ -28,6 +29,9 @@ export const useMainStore = create<MainState & MainActions>((set) => ({
 
 export const Main = () => {
     const { showTripsMenu, setShowTripsMenu } = useMainStore(
+        useShallow((state) => state)
+    )
+    const { currentTrip, isLoading } = useTripsStore(
         useShallow((state) => state)
     )
     const { error } = useGustavoStore(useShallow((state) => state))
@@ -84,36 +88,57 @@ export const Main = () => {
                                 }}
                             />
                         </Box>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                marginLeft: 1,
-                            }}>
-                            <Typography
+                        {!isLoading && showTripsMenu ? (
+                            <Box
                                 sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    marginLeft: 2,
                                 }}>
-                                {error
-                                    ? '"It appears there\'s been a... problem.'
-                                    : '"And a man, a man provides...'}
-                            </Typography>
-                            <Typography
+                                <Typography
+                                    sx={{
+                                        fontSize: 14,
+                                        fontFamily: 'Spectral',
+                                        lineHeight: '90%',
+                                    }}>
+                                    "And a man, a man provides...
+                                </Typography>
+                                <Typography
+                                    sx={{
+                                        fontSize: 14,
+                                        fontFamily: 'Spectral',
+                                        lineHeight: '90%',
+                                    }}>
+                                    &nbsp; ...your spending habits."
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box
                                 sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
+                                    display: 'flex',
+                                    marginLeft: 2,
                                 }}>
-                                &nbsp;
-                                {error
-                                    ? 'My apologies. I will... take care of it."'
-                                    : ' ...your spending habits."'}
-                            </Typography>
-                        </Box>
+                                {error && (
+                                    <Box
+                                        sx={{
+                                            marginRight: 1,
+                                        }}>
+                                        {getTablerIcon({
+                                            name: 'IconExclamationCircle',
+                                            fill: '#D00000',
+                                            color: '#F4D35E',
+                                            size: 24,
+                                        })}
+                                    </Box>
+                                )}
+                                <Typography
+                                    sx={{
+                                        fontSize: 18,
+                                    }}>
+                                    {!isLoading && currentTrip}
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                     {!showTripsMenu && <ToolsMenu />}
                 </Box>

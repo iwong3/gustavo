@@ -1,5 +1,5 @@
 import { Box } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -17,26 +17,30 @@ import Vancouver2024Image from '../images/vancouver-2024.png'
 
 type TripsState = {
     currentTrip: Trip
+    isLoading: boolean
 }
 
 type TripsActions = {
     setCurrentTrip: (trip: Trip) => void
+    setIsLoading: (isLoading: boolean) => void
 }
 
 const initialState: TripsState = {
     currentTrip: Trip.Japan2024,
+    isLoading: true,
 }
 
 export const useTripsStore = create<TripsState & TripsActions>((set) => ({
     ...initialState,
 
     setCurrentTrip: (trip) => set({ currentTrip: trip }),
+    setIsLoading: (isLoading) => set({ isLoading }),
 }))
 
 export const Trips = () => {
-    const { setCurrentTrip } = useTripsStore(useShallow((state) => state))
-
-    const [isLoading, setIsLoading] = useState(true)
+    const { setCurrentTrip, isLoading, setIsLoading } = useTripsStore(
+        useShallow((state) => state)
+    )
 
     const {
         setSpendData,
@@ -163,23 +167,27 @@ export const Trips = () => {
                 key={key}
                 onClick={() => handleTripClick(trip)}
                 sx={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    padding: 2,
-                    width: '40%',
-                    height: window.innerHeight * 0.1,
-                    border: '1px solid #FBBC04',
-                    borderRadius: '10px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                    backgroundImage: `url(${getBackgroundImageUrlForTrip(
+                    'display': 'flex',
+                    'alignItems': 'flex-end',
+                    'padding': 2,
+                    'width': '39%',
+                    'height': window.innerHeight * 0.1,
+                    'border': '1px solid #FBBC04',
+                    'borderRadius': '10px',
+                    'backgroundColor': 'rgba(0, 0, 0, 0.4)',
+                    'backgroundImage': `url(${getBackgroundImageUrlForTrip(
                         trip
                     )})`,
-                    backgroundSize: 'cover',
-                    backgroundBlendMode: 'darken',
-                    boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-                    color: 'white',
-                    fontSize: 18,
-                    fontWeight: 'bold',
+                    'backgroundSize': 'cover',
+                    'backgroundBlendMode': 'darken',
+                    'boxShadow': 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                    'color': 'white',
+                    'fontSize': 18,
+                    'fontWeight': 'bold',
+                    '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    },
+                    'transition': 'background-color 0.2s ease-out',
                 }}>
                 {trip}
             </Box>
@@ -204,7 +212,8 @@ export const Trips = () => {
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginX: 1,
+                marginX: 2,
+                marginTop: 2,
                 width: '100%',
                 height: '100%',
             }}>
@@ -213,7 +222,7 @@ export const Trips = () => {
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        marginBottom: 1,
+                        marginBottom: 2,
                         width: '100%',
                         fontSize: 24,
                         fontFamily: 'Spectral',

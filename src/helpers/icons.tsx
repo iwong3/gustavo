@@ -19,6 +19,7 @@ import {
     IconCategory,
     IconChartBar,
     IconChartBarOff,
+    IconCirclesRelation,
     IconClock,
     IconCurrencyDollar,
     IconDots,
@@ -28,6 +29,7 @@ import {
     IconHandFingerRight,
     IconLayoutList,
     IconLayoutNavbarCollapse,
+    IconLink,
     IconListLetters,
     IconMap2,
     IconMapQuestion,
@@ -99,6 +101,8 @@ export const getTablerIcon = ({
             return <IconChartBar {...props} />
         case 'IconChartBarOff':
             return <IconChartBarOff {...props} />
+        case 'IconCirclesRelation':
+            return <IconCirclesRelation {...props} />
         case 'IconClock':
             return <IconClock {...props} />
         case 'IconCurrencyDollar':
@@ -117,6 +121,8 @@ export const getTablerIcon = ({
             return <IconLayoutList {...props} />
         case 'IconLayoutNavbarCollapse':
             return <IconLayoutNavbarCollapse {...props} />
+        case 'IconLink':
+            return <IconLink {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} fill="none" />
         case 'IconMap2':
@@ -221,7 +227,6 @@ export const getToolsMenuItemIcon = (
             return getTablerIcon({
                 name: 'IconLayoutList',
                 size,
-                fill: defaultBackgroundColor,
             })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
@@ -229,31 +234,31 @@ export const getToolsMenuItemIcon = (
             return getTablerIcon({
                 name: 'IconChartBar',
                 size,
-                fill: defaultBackgroundColor,
             })
         case ToolsMenuItem.TotalSpendByPerson:
             return getTablerIcon({
                 name: 'IconUser',
                 size,
-                fill: defaultBackgroundColor,
             })
         case ToolsMenuItem.TotalSpendByType:
             return getTablerIcon({
                 name: 'IconTag',
                 size,
-                fill: defaultBackgroundColor,
             })
         case ToolsMenuItem.TotalSpendByLocation:
             return getTablerIcon({
                 name: 'IconMap2',
                 size,
-                fill: defaultBackgroundColor,
             })
         case ToolsMenuItem.TotalSpendByDate:
             return getTablerIcon({
                 name: 'IconCalendarEvent',
                 size,
-                fill: defaultBackgroundColor,
+            })
+        case ToolsMenuItem.Links:
+            return getTablerIcon({
+                name: 'IconExternalLink',
+                size,
             })
         default:
             return null

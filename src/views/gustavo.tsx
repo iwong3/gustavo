@@ -275,12 +275,14 @@ export const Gustavo = () => {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            <Box
-                sx={{
-                    marginBottom: 1,
-                }}>
-                <ActiveMenuItems />
-            </Box>
+            {activeItem != ToolsMenuItem.Links && (
+                <Box
+                    sx={{
+                        marginBottom: 1,
+                    }}>
+                    <ActiveMenuItems />
+                </Box>
+            )}
             <Box
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
