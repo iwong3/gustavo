@@ -1,7 +1,12 @@
 import { Box, Link } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 
-import { Link as LinkType, LinksByTrip } from 'helpers/links'
+import { getTablerIcon } from 'helpers/icons'
+import {
+    Link as LinkType,
+    LinksByTrip,
+    getLogoFromLinkType,
+} from 'helpers/links'
 import { useTripsStore } from 'views/trips'
 
 export const Links = () => {
@@ -30,6 +35,7 @@ export const Links = () => {
                 <Box
                     sx={{
                         'display': 'flex',
+                        'justifyContent': 'space-between',
                         'alignItems': 'center',
                         'padding': 2,
                         'marginBottom': 1,
@@ -43,7 +49,25 @@ export const Links = () => {
                         },
                         'transition': 'background-color 0.2s ease-out',
                     }}>
-                    {link.name}
+                    <Box>{link.name}</Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}>
+                        {link.type ? (
+                            <img
+                                src={getLogoFromLinkType(link.type)}
+                                style={{
+                                    width: 20,
+                                    height: 20,
+                                    objectFit: 'contain',
+                                }}
+                            />
+                        ) : (
+                            getTablerIcon({ name: 'IconExternalLink' })
+                        )}
+                    </Box>
                 </Box>
             </Link>
         )
