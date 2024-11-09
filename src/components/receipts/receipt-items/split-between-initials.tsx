@@ -1,39 +1,45 @@
 import Box from '@mui/material/Box'
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { InitialsIcon } from 'helpers/icons'
-import { Person } from 'helpers/person'
+import { PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
+import { Trip } from 'helpers/trips'
+import { useTripsStore } from 'views/trips'
 
 interface ISplitBetweenInitialsProps {
     spend: Spend
 }
 
 export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
-    const initialState = {
-        [Person.Aibek]: false,
-        [Person.Angela]: false,
-        [Person.Ivan]: false,
-        [Person.Jenny]: false,
-        [Person.Joanna]: false,
-        [Person.Lisa]: false,
-        [Person.Michelle]: false,
-        [Person.Suming]: false,
-    }
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    const [splitters, setSplitters] = useState<Partial<Record<Person, boolean>>>(initialState)
+    const getInitialStateByTrip = (trip: Trip) => {
+        const filters = new Map<Person, boolean>()
+        PeopleByTrip[trip].forEach((person) => {
+            filters.set(person, false)
+        })
+        return filters
+    }
+    const initialState = getInitialStateByTrip(currentTrip)
+
+    const [splitters, setSplitters] =
+        useState<Map<Person, boolean>>(initialState)
 
     useEffect(() => {
-        const newSplitters: Partial<Record<Person, boolean>> = { ...initialState }
+        const newSplitters = getInitialStateByTrip(currentTrip)
+
         if (spend.splitBetween[0] === Person.Everyone) {
-            Object.keys(newSplitters).forEach((key) => {
-                newSplitters[key as Person] = true
+            newSplitters.forEach((_, key) => {
+                newSplitters.set(key, true)
             })
         } else {
             spend.splitBetween.forEach((person) => {
-                newSplitters[person] = true
+                newSplitters.set(person, true)
             })
         }
+
         setSplitters(newSplitters)
     }, [spend])
 
@@ -45,22 +51,26 @@ export const SplitBetweenInitials = ({ spend }: ISplitBetweenInitialsProps) => {
                 alignItems: 'center',
                 fontSize: 12,
             }}>
-            {Object.entries(splitters).map(([person, isSplitter], index) => {
-                const size = 24
-                const customSx = !isSplitter ? { color: 'black', backgroundColor: 'lightgray' } : {}
-                return (
-                    <Box
-                        key={'split-between-person-' + index}
-                        sx={{
-                            marginX: 0.75,
-                        }}>
-                        <InitialsIcon
-                            person={person as Person}
-                            sx={{ width: size, height: size, ...customSx }}
-                        />
-                    </Box>
-                )
-            })}
+            {Array.from(splitters.entries()).map(
+                ([person, isSplitter], index) => {
+                    const size = 24
+                    const customSx = !isSplitter
+                        ? { color: 'black', backgroundColor: 'lightgray' }
+                        : {}
+                    return (
+                        <Box
+                            key={'split-between-person-' + index}
+                            sx={{
+                                marginX: 0.75,
+                            }}>
+                            <InitialsIcon
+                                person={person as Person}
+                                sx={{ width: size, height: size, ...customSx }}
+                            />
+                        </Box>
+                    )
+                }
+            )}
         </Box>
     )
 }

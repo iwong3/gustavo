@@ -7,7 +7,10 @@ import { Bar } from '@visx/shape'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import { SortOrder as CostOrder, useSortCostStore } from 'components/menu/sort/sort-cost'
+import {
+    SortOrder as CostOrder,
+    useSortCostStore,
+} from 'components/menu/sort/sort-cost'
 import { FormattedMoney } from 'helpers/currency'
 
 interface GraphProps {
@@ -25,7 +28,13 @@ interface GraphData {
     isActive: boolean
 }
 
-export const Graph = ({ data, width, height, barColors, activeData }: GraphProps) => {
+export const Graph = ({
+    data,
+    width,
+    height,
+    barColors,
+    activeData,
+}: GraphProps) => {
     const [graphData, setGraphData] = useState<GraphData[]>([])
     const [totalValue, setTotalValue] = useState<number>(0)
 
@@ -38,7 +47,9 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
             graphData.push({
                 value: value,
                 label: label,
-                barColor: barColors ? barColors[index % barColors.length] : '#F4D35E',
+                barColor: barColors
+                    ? barColors[index % barColors.length]
+                    : '#F4D35E',
                 isActive: activeData ? activeData[index] : true,
             })
             totalValue += value
@@ -61,7 +72,10 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
 
     // scroll logic
     const barsLimit = 10
-    const totalWidth = Math.max((graphData.length / barsLimit) * graphWidth, graphWidth)
+    const totalWidth = Math.max(
+        (graphData.length / barsLimit) * graphWidth,
+        graphWidth
+    )
 
     // data and scales
     const xData = graphData.map((data) => data.label)
@@ -92,7 +106,6 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                 border: '1px solid #FBBC04',
                 borderRadius: '10px',
                 backgroundColor: '#FFFCEE',
-                // backgroundImage: 'linear-gradient(0.125turn, #fffcee, #fff8ef)',
                 boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                 overflowX: 'scroll',
             }}>
@@ -108,7 +121,9 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
 
                         const barWidth = xScale.bandwidth()
                         const barHeight =
-                            yLabel === 0 ? marginY : graphHeight - (yScale(yLabel) ?? 0)
+                            yLabel === 0
+                                ? marginY
+                                : graphHeight - (yScale(yLabel) ?? 0)
                         const barX = xScale(data.label) ?? 0
                         const barY = graphHeight - barHeight - marginY
 
@@ -135,7 +150,9 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                                 />
                                 {/* Spend label */}
                                 <Label
-                                    title={FormattedMoney('USD', 0).format(yLabel)}
+                                    title={FormattedMoney('USD', 0).format(
+                                        yLabel
+                                    )}
                                     titleProps={{
                                         textAnchor: 'middle',
                                     }}
@@ -167,7 +184,11 @@ export const Graph = ({ data, width, height, barColors, activeData }: GraphProps
                         )
                     })}
                 </Group>
-                <AxisBottom top={graphHeight - 2 * marginY} scale={xScale} numTicks={data.length} />
+                <AxisBottom
+                    top={graphHeight - 2 * marginY}
+                    scale={xScale}
+                    numTicks={data.length}
+                />
             </svg>
         </Box>
     )

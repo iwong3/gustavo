@@ -1,5 +1,4 @@
-import { Box, Typography } from '@mui/material'
-import axios from 'axios'
+import { Box } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -9,19 +8,19 @@ import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import {
-    ToolsMenu,
     ToolsMenuItem,
     ToolsMenuItemMap,
     useToolsMenuStore,
 } from 'components/menu/tools/tools-menu'
 import { useSummaryStore } from 'components/summary/summary'
-import { Currency } from 'helpers/currency'
-import { Columns, GOOGLE_SHEET_CSV_URL, parseRow } from 'helpers/data-mapping'
-import { processFilteredSpendData, processSpendData } from 'helpers/data-processing'
+import {
+    processFilteredSpendData,
+    processSpendData,
+} from 'helpers/data-processing'
 import { Location } from 'helpers/location'
-import { Person, getPersonFromEmail } from 'helpers/person'
+import { Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
-import GusFringLogo from '../images/gus-fring.png'
+import { useTripsStore } from 'views/trips'
 
 type GustavoState = {
     // total spend
@@ -43,8 +42,6 @@ type GustavoState = {
     totalSpendByLocation: Map<Location, number>
     totalSpendByDate: Map<string, number>
     totalSpendByDateByPerson: Map<Person, Map<string, number>>
-
-    error: boolean // error fetching or processing data
 }
 
 type GustavoActions = {
@@ -52,25 +49,33 @@ type GustavoActions = {
     setSpendData: (spendData: Spend[]) => void
     // total spend calculations
     setTotalSpend: (totalSpend: number) => void
-    setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) => void
+    setDebtMapByPerson: (
+        debtMapByPerson: Map<Person, Map<Person, number>>
+    ) => void
 
     // filtered spend
     setFilteredSpendData: (filteredSpendData: Spend[]) => void
     // filtered spend calculations
-    setFilteredSpendDataWithoutSplitBetween: (filteredSpendDataWithoutSplitBetween: Spend[]) => void
-    setFilteredSpendDataWithoutSpendType: (filteredSpendDataWithoutSpendType: Spend[]) => void
-    setFilteredSpendDataWithoutLocation: (filteredSpendDataWithoutLocation: Spend[]) => void
+    setFilteredSpendDataWithoutSplitBetween: (
+        filteredSpendDataWithoutSplitBetween: Spend[]
+    ) => void
+    setFilteredSpendDataWithoutSpendType: (
+        filteredSpendDataWithoutSpendType: Spend[]
+    ) => void
+    setFilteredSpendDataWithoutLocation: (
+        filteredSpendDataWithoutLocation: Spend[]
+    ) => void
     setFilteredTotalSpend: (filteredTotalSpend: number) => void
     setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) => void
     setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) => void
     setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) => void
-    setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) => void
+    setTotalSpendByLocation: (
+        totalSpendByLocation: Map<Location, number>
+    ) => void
     setTotalSpendByDate: (totalSpendByDate: Map<string, number>) => void
     setTotalSpendByDateByPerson: (
         totalSpendByDateByPerson: Map<Person, Map<string, number>>
     ) => void
-
-    setError: (error: boolean) => void
 }
 
 const initialState: GustavoState = {
@@ -89,8 +94,6 @@ const initialState: GustavoState = {
     totalSpendByLocation: new Map<Location, number>(),
     totalSpendByDate: new Map<string, number>(),
     totalSpendByDateByPerson: new Map<Person, Map<string, number>>(),
-
-    error: false,
 }
 
 export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
@@ -101,16 +104,21 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
     setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) =>
         set(() => ({ debtMapByPerson })),
 
-    setFilteredTotalSpend: (filteredTotalSpend: number) => set(() => ({ filteredTotalSpend })),
-    setFilteredSpendDataWithoutSplitBetween: (filteredSpendDataWithoutSplitBetween: Spend[]) =>
-        set(() => ({ filteredSpendDataWithoutSplitBetween })),
-    setFilteredSpendDataWithoutSpendType: (filteredSpendDataWithoutSpendType: Spend[]) =>
-        set(() => ({ filteredSpendDataWithoutSpendType })),
-    setFilteredSpendDataWithoutLocation: (filteredSpendDataWithoutLocation: Spend[]) =>
-        set(() => ({ filteredSpendDataWithoutLocation })),
+    setFilteredTotalSpend: (filteredTotalSpend: number) =>
+        set(() => ({ filteredTotalSpend })),
+    setFilteredSpendDataWithoutSplitBetween: (
+        filteredSpendDataWithoutSplitBetween: Spend[]
+    ) => set(() => ({ filteredSpendDataWithoutSplitBetween })),
+    setFilteredSpendDataWithoutSpendType: (
+        filteredSpendDataWithoutSpendType: Spend[]
+    ) => set(() => ({ filteredSpendDataWithoutSpendType })),
+    setFilteredSpendDataWithoutLocation: (
+        filteredSpendDataWithoutLocation: Spend[]
+    ) => set(() => ({ filteredSpendDataWithoutLocation })),
     setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) =>
         set(() => ({ filteredPeopleTotalSpend })),
-    setFilteredSpendData: (filteredSpendData: Spend[]) => set(() => ({ filteredSpendData })),
+    setFilteredSpendData: (filteredSpendData: Spend[]) =>
+        set(() => ({ filteredSpendData })),
     setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) =>
         set(() => ({ totalSpendByPerson })),
     setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) =>
@@ -119,10 +127,9 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
         set(() => ({ totalSpendByLocation })),
     setTotalSpendByDate: (totalSpendByDate: Map<string, number>) =>
         set(() => ({ totalSpendByDate })),
-    setTotalSpendByDateByPerson: (totalSpendByDateByPerson: Map<Person, Map<string, number>>) =>
-        set(() => ({ totalSpendByDateByPerson })),
-
-    setError: (error: boolean) => set(() => ({ error })),
+    setTotalSpendByDateByPerson: (
+        totalSpendByDateByPerson: Map<Person, Map<string, number>>
+    ) => set(() => ({ totalSpendByDateByPerson })),
 }))
 
 export const Gustavo = () => {
@@ -132,13 +139,8 @@ export const Gustavo = () => {
         filteredSpendDataWithoutSplitBetween,
         filteredSpendDataWithoutSpendType,
         filteredSpendDataWithoutLocation,
-        setSpendData,
         setTotalSpend,
         setDebtMapByPerson,
-        setFilteredSpendData,
-        setFilteredSpendDataWithoutSplitBetween,
-        setFilteredSpendDataWithoutSpendType,
-        setFilteredSpendDataWithoutLocation,
         setFilteredTotalSpend,
         setFilteredPeopleTotalSpend,
         setTotalSpendByPerson,
@@ -146,109 +148,23 @@ export const Gustavo = () => {
         setTotalSpendByLocation,
         setTotalSpendByDate,
         setTotalSpendByDateByPerson,
-        error,
-        setError,
     } = useGustavoStore(useShallow((state) => state))
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    useEffect(() => {
-        async function fetchData() {
-            axios
-                .get(GOOGLE_SHEET_CSV_URL)
-                .then((res: any) => {
-                    const dataString: string = res.data
-                    const rows = dataString.split('\n')
-                    const headers = rows[0].replace(/[\r]/g, '').split(',')
-
-                    const nameIndex = headers.indexOf(Columns.ItemName)
-                    const dateIndex = headers.indexOf(Columns.Date)
-                    const originalCostIndex = headers.indexOf(Columns.Cost)
-                    const currencyIndex = headers.indexOf(Columns.Currency)
-                    const convertedCostIndex = headers.indexOf(Columns.ConvertedCost)
-                    const paidByIndex = headers.indexOf(Columns.PaidBy)
-                    const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
-                    const locationIndex = headers.indexOf(Columns.Location)
-                    const typeIndex = headers.indexOf(Columns.SpendType)
-                    const notesIndex = headers.indexOf(Columns.Notes)
-                    const reportedByIndex = headers.indexOf(Columns.Email)
-                    const reportedAtIndex = headers.indexOf(Columns.ResponseTimestamp)
-                    const receiptImageUrlIndex = headers.indexOf(Columns.ReceiptImageUrl)
-
-                    const data = rows
-                        .slice(1)
-                        .map((row: string) => {
-                            const rowValues = parseRow(row)
-                            if (rowValues) {
-                                let error = false
-
-                                const originalCost = parseFloat(
-                                    rowValues[originalCostIndex].replace(/[,'"]+/g, '')
-                                )
-                                const currency = rowValues[currencyIndex] as Currency
-                                let convertedCost = parseFloat(rowValues[convertedCostIndex])
-                                if (rowValues[convertedCostIndex] === '#N/A') {
-                                    convertedCost = 0
-                                    error = true
-                                    setError(true)
-                                }
-
-                                const splitBetween = rowValues[splitBetweenIndex]
-                                    .replace(/['" ]+/g, '')
-                                    .split(',') as Person[]
-                                const type =
-                                    rowValues[typeIndex] === ''
-                                        ? undefined
-                                        : (rowValues[typeIndex] as SpendType)
-                                const reportedBy = getPersonFromEmail(
-                                    rowValues[reportedByIndex].replace(/\s/g, '')
-                                )
-
-                                const spend: Spend = {
-                                    date: rowValues[dateIndex],
-                                    name: rowValues[nameIndex],
-                                    originalCost: originalCost,
-                                    currency: currency,
-                                    convertedCost: convertedCost,
-                                    paidBy: rowValues[paidByIndex] as Person,
-                                    splitBetween: splitBetween,
-                                    location: (rowValues[locationIndex] as Location)
-                                        ? (rowValues[locationIndex] as Location)
-                                        : Location.Other,
-                                    type: type,
-                                    notes: rowValues[notesIndex],
-                                    reportedBy: reportedBy,
-                                    reportedAt: rowValues[reportedAtIndex],
-                                    receiptImageUrl: rowValues[receiptImageUrlIndex],
-                                    error: error,
-                                }
-                                return spend
-                            }
-                        })
-                        .filter((row) => row !== undefined) as Spend[]
-
-                    setSpendData(data)
-                    setFilteredSpendData(data)
-                    setFilteredSpendDataWithoutSplitBetween(data)
-                    setFilteredSpendDataWithoutSpendType(data)
-                    setFilteredSpendDataWithoutLocation(data)
-                })
-                .catch((_) => {
-                    setError(true)
-                })
-        }
-
-        fetchData()
-    }, [])
+    useEffect(() => {}, [])
 
     // calculate total spend summary data to expose to summary components
     useEffect(() => {
-        const { totalSpend, debtMap } = processSpendData(spendData)
+        const { totalSpend, debtMap } = processSpendData(spendData, currentTrip)
 
         setTotalSpend(totalSpend)
         setDebtMapByPerson(debtMap)
     }, [spendData])
 
     // calculate filtered spend data to expose to spend components
-    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(useShallow((state) => state))
+    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
     useEffect(() => {
         const {
             filteredTotalSpend,
@@ -263,7 +179,8 @@ export const Gustavo = () => {
             filteredSpendDataWithoutSplitBetween,
             filteredSpendDataWithoutSpendType,
             filteredSpendDataWithoutLocation,
-            splitBetweenFilter
+            splitBetweenFilter,
+            currentTrip
         )
 
         setFilteredTotalSpend(filteredTotalSpend)
@@ -280,9 +197,13 @@ export const Gustavo = () => {
         filteredSpendDataWithoutLocation,
     ])
 
-    const { activeItem, setActiveItem } = useToolsMenuStore(useShallow((state) => state))
+    const { activeItem, setActiveItem } = useToolsMenuStore(
+        useShallow((state) => state)
+    )
     const { setActiveView } = useSummaryStore(useShallow((state) => state))
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     // swipe left & right
     const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -346,87 +267,22 @@ export const Gustavo = () => {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    width: '100%',
-                    maxWidth: 450,
-                    position: 'fixed',
-                    top: 0,
-                    backgroundColor: '#F4D35E',
-                }}>
+            {activeItem != ToolsMenuItem.Links && (
                 <Box
                     sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        marginTop: 2,
-                        marginLeft: 2,
-                        marginRight: 1,
+                        marginBottom: 1,
                     }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-start',
-                            alignItems: 'center',
-                        }}>
-                        <img
-                            src={GusFringLogo}
-                            style={{
-                                width: 42,
-                                height: 42,
-                                borderRadius: '100%',
-                                objectFit: 'cover',
-                            }}
-                        />
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                marginLeft: 1,
-                            }}>
-                            <Typography
-                                sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
-                                }}>
-                                {error
-                                    ? '"It appears there\'s been a... problem.'
-                                    : '"And a man, a man provides...'}
-                            </Typography>
-                            <Typography
-                                sx={{
-                                    fontSize: error ? 12 : 14,
-                                    fontFamily: 'Spectral',
-                                    color: error ? '#c1121f' : 'black',
-                                    lineHeight: error ? '100%' : '90%',
-                                }}>
-                                &nbsp;
-                                {error
-                                    ? 'My apologies. I will... take care of it."'
-                                    : ' ...your spending habits."'}
-                            </Typography>
-                        </Box>
-                    </Box>
-                    <ToolsMenu />
+                    <ActiveMenuItems />
                 </Box>
-            </Box>
-            <Box
-                sx={{
-                    marginTop: '17%',
-                    marginBottom: 1,
-                    maxWidth: 450,
-                }}>
-                <ActiveMenuItems />
-            </Box>
+            )}
             <Box
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
                 sx={{
-                    height: showIconLabels ? window.innerHeight * 0.72 : window.innerHeight * 0.74,
+                    height: showIconLabels
+                        ? window.innerHeight * 0.72
+                        : window.innerHeight * 0.74,
                     maxHeight: showIconLabels
                         ? window.innerHeight * 0.72
                         : window.innerHeight * 0.74,

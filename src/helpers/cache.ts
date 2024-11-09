@@ -5,3 +5,7 @@ export const getFromCache = (key: string, defaultValue: string) => {
 export const saveInCache = (key: string, value: string) => {
     localStorage.setItem(key, value)
 }
+
+export const clearFromCache = (key: string) => {
+    localStorage.removeItem(key)
+}

@@ -10,8 +10,12 @@ import { Location } from 'helpers/location'
 import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByLocation = () => {
-    const { totalSpendByLocation } = useGustavoStore(useShallow((state) => state))
-    const { filters, handleFilterClick } = useFilterLocationStore(useShallow((state) => state))
+    const { totalSpendByLocation } = useGustavoStore(
+        useShallow((state) => state)
+    )
+    const { filters, handleFilterClick } = useFilterLocationStore(
+        useShallow((state) => state)
+    )
 
     const totalSpendByLocationArray = Array.from(totalSpendByLocation)
 
@@ -26,7 +30,10 @@ export const TotalSpendByLocation = () => {
             row.push(renderLocation(location, totalSpend))
 
             // if row is full, push current row and start a new row
-            if (row.length === rowLength || i === totalSpendByLocationArray.length - 1) {
+            if (
+                row.length === rowLength ||
+                i === totalSpendByLocationArray.length - 1
+            ) {
                 rows.push(
                     <Box
                         key={'total-spend-by-location-row-' + rows.length}
@@ -35,7 +42,10 @@ export const TotalSpendByLocation = () => {
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             marginTop: rows.length === 0 ? 0 : 0.5,
-                            marginBottom: i === totalSpendByLocationArray.length - 1 ? 0 : 0.5,
+                            marginBottom:
+                                i === totalSpendByLocationArray.length - 1
+                                    ? 0
+                                    : 0.5,
                         }}>
                         {row}
                     </Box>
@@ -47,7 +57,7 @@ export const TotalSpendByLocation = () => {
     }
 
     const renderLocation = (location: Location, totalSpend: number) => {
-        const isActive = filters[location]
+        const isActive = filters.get(location)
 
         return (
             <Box
@@ -61,9 +71,13 @@ export const TotalSpendByLocation = () => {
                     justifyContent: 'center',
                     alignItems: 'space-between',
                     width: '31%',
-                    border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                    border: isActive
+                        ? '1px solid #A7C957'
+                        : '1px solid #FBBC04',
                     borderRadius: '10px',
-                    backgroundColor: isActive ? '#E9F5DB' : defaultBackgroundColor,
+                    backgroundColor: isActive
+                        ? '#E9F5DB'
+                        : defaultBackgroundColor,
                     boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                     transition: 'background-color 0.1s',
                 }}>
@@ -74,7 +88,10 @@ export const TotalSpendByLocation = () => {
                         paddingY: 0.5,
                         paddingX: 0.75,
                     }}>
-                    <LocationIcon location={location} sx={{ width: 18, height: 18 }} />
+                    <LocationIcon
+                        location={location}
+                        sx={{ width: 18, height: 18 }}
+                    />
                     <Box
                         sx={{
                             marginLeft: 1,
@@ -89,7 +106,9 @@ export const TotalSpendByLocation = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
-                        border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                        borderTop: isActive
+                            ? '1px solid #A7C957'
+                            : '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
                     }}>
@@ -103,7 +122,9 @@ export const TotalSpendByLocation = () => {
     const locationColors = totalSpendByLocationArray.map(([location]) =>
         getLocationColors(location)
     )
-    const activeLocations = Object.entries(filters).map(([_, isActive]) => isActive)
+    const activeLocations = Object.entries(filters).map(
+        ([_, isActive]) => isActive
+    )
 
     return (
         <Box

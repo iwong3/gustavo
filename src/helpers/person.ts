@@ -1,7 +1,10 @@
+import { Trip } from 'helpers/trips'
+
 export enum Person {
     Everyone = 'Everyone',
     Aibek = 'Aibek',
     Angela = 'Angela',
+    Dennis = 'Dennis',
     Ivan = 'Ivan',
     Jenny = 'Jenny',
     Joanna = 'Joanna',
@@ -10,12 +13,34 @@ export enum Person {
     Suming = 'Suming', // Michelle's mom
 }
 
+export const PeopleByTrip = {
+    [Trip.Japan2024]: [
+        Person.Aibek,
+        Person.Angela,
+        Person.Ivan,
+        Person.Jenny,
+        Person.Joanna,
+        Person.Lisa,
+        Person.Michelle,
+        Person.Suming,
+    ],
+    [Trip.Vancouver2024]: [
+        Person.Angela,
+        Person.Dennis,
+        Person.Ivan,
+        Person.Jenny,
+        Person.Lisa,
+    ],
+}
+
 export const getPersonFromEmail = (email: string): Person | undefined => {
     switch (email) {
         case 'aibek.asm@gmail.com':
             return Person.Aibek
         case 'angela.moy48@gmail.com':
             return Person.Angela
+        case 'dennismoy18@gmail.com':
+            return Person.Dennis
         case 'ivanwong15@gmail.com':
             return Person.Ivan
         case 'jennyjiayimei@gmail.com':
@@ -37,6 +62,8 @@ export const getPersonInitials = (person: Person): string => {
             return 'AS'
         case Person.Angela:
             return 'AM'
+        case Person.Dennis:
+            return 'DM'
         case Person.Ivan:
             return 'IW'
         case Person.Jenny:
@@ -67,12 +94,8 @@ export const getVenmoUrl = (person: Person): string => {
             return 'https://account.venmo.com/u/Jenny-Mei-1'
         case Person.Joanna:
             return 'https://account.venmo.com/u/Joanna-Mei'
-        case Person.Lisa:
-            return ''
         case Person.Michelle:
             return 'https://account.venmo.com/u/Michellec_8'
-        case Person.Suming:
-            return ''
         default:
             return ''
     }

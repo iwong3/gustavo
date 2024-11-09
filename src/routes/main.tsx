@@ -2,14 +2,13 @@ import { Box } from '@mui/material'
 import dayjs from 'dayjs'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-import { Gustavo } from 'views/gustavo'
+import { Main } from 'views/main'
 
 let customParseFormat = require('dayjs/plugin/customParseFormat')
 dayjs.extend(customParseFormat)
 
 enum Path {
     HOME = '/',
-    TRACK_SPEND = '/track-spend',
 }
 
 const routes = [
@@ -23,7 +22,7 @@ const routes = [
                         justifyContent: 'center',
                         width: '100%',
                     }}>
-                    <Gustavo />
+                    <Main />
                 </Box>
             )
         },

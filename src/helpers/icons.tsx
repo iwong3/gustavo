@@ -19,6 +19,7 @@ import {
     IconCategory,
     IconChartBar,
     IconChartBarOff,
+    IconCirclesRelation,
     IconClock,
     IconCurrencyDollar,
     IconDots,
@@ -28,6 +29,7 @@ import {
     IconHandFingerRight,
     IconLayoutList,
     IconLayoutNavbarCollapse,
+    IconLink,
     IconListLetters,
     IconMap2,
     IconMapQuestion,
@@ -99,6 +101,8 @@ export const getTablerIcon = ({
             return <IconChartBar {...props} />
         case 'IconChartBarOff':
             return <IconChartBarOff {...props} />
+        case 'IconCirclesRelation':
+            return <IconCirclesRelation {...props} />
         case 'IconClock':
             return <IconClock {...props} />
         case 'IconCurrencyDollar':
@@ -117,6 +121,8 @@ export const getTablerIcon = ({
             return <IconLayoutList {...props} />
         case 'IconLayoutNavbarCollapse':
             return <IconLayoutNavbarCollapse {...props} />
+        case 'IconLink':
+            return <IconLink {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} fill="none" />
         case 'IconMap2':
@@ -160,20 +166,42 @@ export const getTablerIcon = ({
     }
 }
 
-export const getMenuItemIcon = (item: MenuItem, size: number = defaultIconSize) => {
+export const getMenuItemIcon = (
+    item: MenuItem,
+    size: number = defaultIconSize
+) => {
     switch (item) {
         case MenuItem.FilterLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconMap2',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterPaidBy:
-            return getTablerIcon({ name: 'IconReceipt', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconReceipt',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterSpendType:
-            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTag',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.FilterSplitBetween:
-            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconUser',
+                size,
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.Sort:
             return <FunnelSimple size={size} />
         case MenuItem.Tools:
-            return getTablerIcon({ name: 'IconTool', fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTool',
+                fill: defaultBackgroundColor,
+            })
         case MenuItem.ToolsDebtPerson1:
             return <UserCircle size={size} />
         case MenuItem.ToolsDebtPerson2:
@@ -190,28 +218,57 @@ export const getMenuItemBackgroundColor = (item: MenuItemData) => {
     return defaultBackgroundColor
 }
 
-export const getToolsMenuItemIcon = (item: ToolsMenuItem, size: number = 18) => {
+export const getToolsMenuItemIcon = (
+    item: ToolsMenuItem,
+    size: number = 18
+) => {
     switch (item) {
         case ToolsMenuItem.Receipts:
-            return getTablerIcon({ name: 'IconLayoutList', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconLayoutList',
+                size,
+            })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
         case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({ name: 'IconChartBar', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconChartBar',
+                size,
+            })
         case ToolsMenuItem.TotalSpendByPerson:
-            return getTablerIcon({ name: 'IconUser', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconUser',
+                size,
+            })
         case ToolsMenuItem.TotalSpendByType:
-            return getTablerIcon({ name: 'IconTag', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconTag',
+                size,
+            })
         case ToolsMenuItem.TotalSpendByLocation:
-            return getTablerIcon({ name: 'IconMap2', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconMap2',
+                size,
+            })
         case ToolsMenuItem.TotalSpendByDate:
-            return getTablerIcon({ name: 'IconCalendarEvent', size, fill: defaultBackgroundColor })
+            return getTablerIcon({
+                name: 'IconCalendarEvent',
+                size,
+            })
+        case ToolsMenuItem.Links:
+            return getTablerIcon({
+                name: 'IconExternalLink',
+                size,
+            })
         default:
             return null
     }
 }
 
-export const getSortMenuItemIcon = (item: SortItem, size: number = defaultIconSize) => {
+export const getSortMenuItemIcon = (
+    item: SortItem,
+    size: number = defaultIconSize
+) => {
     switch (item) {
         case SortItem.SortCost:
             return getTablerIcon({ name: 'IconCurrencyDollar', size })
@@ -271,6 +328,11 @@ export const getInitialsIconColors = (person: Person): IconColors => {
             return {
                 color: 'black',
                 bgColor: '#64b5f6',
+            }
+        case Person.Dennis:
+            return {
+                color: 'black',
+                bgColor: '#fca311',
             }
         case Person.Ivan:
             return {
@@ -415,6 +477,8 @@ export const getLocationColors = (location: Location): string => {
             return '#FBBC04'
         case Location.Tokyo:
             return '#dac4f7'
+        case Location.Vancouver:
+            return '#90be6d'
         case Location.Other:
         default:
             return '#a7bed3'

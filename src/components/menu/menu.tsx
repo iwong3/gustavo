@@ -3,9 +3,18 @@ import { ArrowClockwise } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import { FilterLocation, useFilterLocationStore } from 'components/menu/filter/filter-location'
-import { FilterPaidBy, useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
-import { FilterSpendType, useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
+import {
+    FilterLocation,
+    useFilterLocationStore,
+} from 'components/menu/filter/filter-location'
+import {
+    FilterPaidBy,
+    useFilterPaidByStore,
+} from 'components/menu/filter/filter-paid-by'
+import {
+    FilterSpendType,
+    useFilterSpendTypeStore,
+} from 'components/menu/filter/filter-spend-type'
 import {
     FilterSplitBetween,
     useFilterSplitBetweenStore,
@@ -25,7 +34,9 @@ import {
     getMenuItemIcon,
     getTablerIcon,
 } from 'helpers/icons'
+import { Trip } from 'helpers/trips'
 import { useGustavoStore } from 'views/gustavo'
+import { useTripsStore } from 'views/trips'
 
 export enum MenuItem {
     FilterLocation,
@@ -46,13 +57,16 @@ export type MenuItemData = {
     iconSize: number
 }
 
-const menuItemStoreResets = new Set<() => void>()
+const filterMenuItemStoreResets = new Set<(trip: Trip) => void>()
+const sortMenuItemStoreResets = new Set<() => void>()
 
-const resetAllMenuItemStores = () => {
-    menuItemStoreResets.forEach((reset) => reset())
+export const resetAllMenuItemStores = (trip: Trip) => {
+    filterMenuItemStoreResets.forEach((reset) => reset(trip))
+    sortMenuItemStoreResets.forEach((reset) => reset())
 }
 
 export const Menu = () => {
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
     const {
         spendData,
         setFilteredSpendData,
@@ -60,14 +74,22 @@ export const Menu = () => {
         setFilteredSpendDataWithoutSpendType,
         setFilteredSpendDataWithoutLocation,
     } = useGustavoStore(useShallow((state) => state))
-    const { activeItem: activeView } = useToolsMenuStore(useShallow((state) => state))
+    const { activeItem: activeView } = useToolsMenuStore(
+        useShallow((state) => state)
+    )
 
     // menu item states
     // filters
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
-    const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
-    const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
-    const filterLocationState = useFilterLocationStore(useShallow((state) => state))
+    const filterSplitBetweenState = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
+    const filterSpendTypeState = useFilterSpendTypeStore(
+        useShallow((state) => state)
+    )
+    const filterLocationState = useFilterLocationStore(
+        useShallow((state) => state)
+    )
     const filterStates = [
         filterPaidByState,
         filterSplitBetweenState,
@@ -183,7 +205,9 @@ export const Menu = () => {
         )
 
         setFilteredSpendData(filteredSpendData)
-        setFilteredSpendDataWithoutSplitBetween(filteredSpendDataWithoutSplitBetween)
+        setFilteredSpendDataWithoutSplitBetween(
+            filteredSpendDataWithoutSplitBetween
+        )
         setFilteredSpendDataWithoutSpendType(filteredSpendDataWithoutSpendType)
         setFilteredSpendDataWithoutLocation(filteredSpendDataWithoutLocation)
     }, [...filterStates, ...sortStates, searchBarState])
@@ -215,13 +239,14 @@ export const Menu = () => {
     }
 
     // menu item resets
-    const menuItemStates = menuItems.map((item) => item.state)
-    menuItemStates.forEach((state) => {
-        menuItemStoreResets.add(state.reset)
+    const filterMenuItemStates = filterMenuItems.map((item) => item.state)
+    filterMenuItemStates.forEach((state) => {
+        filterMenuItemStoreResets.add(state.reset)
     })
+    sortMenuItemStoreResets.add(sortMenuItem.state.reset)
 
-    const handleResetAllMenuItems = () => {
-        resetAllMenuItemStores()
+    const handleResetAllMenuItems = (trip: Trip) => {
+        resetAllMenuItemStores(trip)
         setExpandedMenuItem(-1)
     }
 
@@ -235,7 +260,9 @@ export const Menu = () => {
     }
 
     // settings stores
-    const { showIconLabels } = useSettingsIconLabelsStore(useShallow((state) => state))
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     const menuLabelFontSize = 12
     const menuBackgroundColor = defaultBackgroundColor
@@ -268,15 +295,25 @@ export const Menu = () => {
                         sx={{
                             display: 'flex',
                             width: '100%',
-                            borderTop: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                            borderTop:
+                                expandedMenuItem !== -1
+                                    ? '1px solid #FBBC04'
+                                    : 'none',
                             borderTopRightRadius: '10px',
                             borderTopLeftRadius: '10px',
-                            borderRight: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
-                            borderLeft: expandedMenuItem !== -1 ? '1px solid #FBBC04' : 'none',
+                            borderRight:
+                                expandedMenuItem !== -1
+                                    ? '1px solid #FBBC04'
+                                    : 'none',
+                            borderLeft:
+                                expandedMenuItem !== -1
+                                    ? '1px solid #FBBC04'
+                                    : 'none',
                             maxHeight: expandedMenuItem !== -1 ? 'auto' : 0,
                             opacity: expandedMenuItem !== -1 ? 1 : 0,
                             overflow: 'hidden',
-                            transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                            transition:
+                                'max-height 0.05s ease-out, opacity 0.05s ease-in',
                         }}>
                         <Box
                             sx={{
@@ -295,15 +332,22 @@ export const Menu = () => {
                         sx={{
                             display: 'flex',
                             alignSelf: 'flex-end',
-                            borderTop: showSettings ? '1px solid #FBBC04' : 'none',
+                            borderTop: showSettings
+                                ? '1px solid #FBBC04'
+                                : 'none',
                             borderTopRightRadius: '10px',
                             borderTopLeftRadius: '10px',
-                            borderRight: showSettings ? '1px solid #FBBC04' : 'none',
-                            borderLeft: showSettings ? '1px solid #FBBC04' : 'none',
+                            borderRight: showSettings
+                                ? '1px solid #FBBC04'
+                                : 'none',
+                            borderLeft: showSettings
+                                ? '1px solid #FBBC04'
+                                : 'none',
                             maxHeight: showSettings ? 'auto' : 0,
                             opacity: showSettings ? 1 : 0,
                             overflow: 'hidden',
-                            transition: 'max-height 0.05s ease-out, opacity 0.05s ease-in',
+                            transition:
+                                'max-height 0.05s ease-out, opacity 0.05s ease-in',
                         }}>
                         <Box
                             sx={{
@@ -322,8 +366,11 @@ export const Menu = () => {
                             alignItems: 'center',
                             width: '100%',
                             borderTopRightRadius:
-                                expandedMenuItem === -1 && !showSettings ? '10px' : 0,
-                            borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
+                                expandedMenuItem === -1 && !showSettings
+                                    ? '10px'
+                                    : 0,
+                            borderTopLeftRadius:
+                                expandedMenuItem === -1 ? '10px' : 0,
                             borderRight: '1px solid #FBBC04',
                             borderBottom: '1px solid #FBBC04',
                             borderLeft: '1px solid #FBBC04',
@@ -338,9 +385,12 @@ export const Menu = () => {
                                 display: 'flex',
                                 width: '100%',
                                 borderTop: '1px solid #FBBC04',
-                                borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
+                                borderTopLeftRadius:
+                                    expandedMenuItem === -1 ? '10px' : 0,
                             }}
-                            onClick={() => handleResetAllMenuItems()}>
+                            onClick={() =>
+                                handleResetAllMenuItems(currentTrip)
+                            }>
                             {/* Inside box */}
                             <Box
                                 sx={{
@@ -351,7 +401,8 @@ export const Menu = () => {
                                     width: '100%',
                                     borderRight: '1px solid #FFFFEF',
                                     borderLeft: '1px solid #FFFFEF',
-                                    borderTopLeftRadius: expandedMenuItem === -1 ? '10px' : 0,
+                                    borderTopLeftRadius:
+                                        expandedMenuItem === -1 ? '10px' : 0,
                                 }}>
                                 <Box
                                     sx={{
@@ -369,7 +420,8 @@ export const Menu = () => {
                                     <ArrowClockwise size={defaultIconSize} />
                                 </Box>
                                 {showIconLabels && (
-                                    <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                    <Typography
+                                        sx={{ fontSize: menuLabelFontSize }}>
                                         Reset
                                     </Typography>
                                 )}
@@ -416,13 +468,23 @@ export const Menu = () => {
                                                 width: 26,
                                                 height: 26,
                                                 borderRadius: '100%',
-                                                backgroundColor: getMenuItemBackgroundColor(item),
-                                                transition: 'background-color 0.1s',
+                                                backgroundColor:
+                                                    getMenuItemBackgroundColor(
+                                                        item
+                                                    ),
+                                                transition:
+                                                    'background-color 0.1s',
                                             }}>
-                                            {getMenuItemIcon(item.item, item.iconSize)}
+                                            {getMenuItemIcon(
+                                                item.item,
+                                                item.iconSize
+                                            )}
                                         </Box>
                                         {showIconLabels && (
-                                            <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: menuLabelFontSize,
+                                                }}>
                                                 {item.label}
                                             </Typography>
                                         )}
@@ -434,9 +496,13 @@ export const Menu = () => {
                             sx={{
                                 display: 'flex',
                                 width: '100%',
-                                borderTop: showSettings ? '1px solid #FFFFEF' : '1px solid #FBBC04',
+                                borderTop: showSettings
+                                    ? '1px solid #FFFFEF'
+                                    : '1px solid #FBBC04',
                                 borderTopRightRadius:
-                                    expandedMenuItem === -1 && !showSettings ? '10px' : 0,
+                                    expandedMenuItem === -1 && !showSettings
+                                        ? '10px'
+                                        : 0,
                             }}
                             onClick={() => handleSettingsClick()}>
                             {/* Inside box */}
@@ -450,7 +516,9 @@ export const Menu = () => {
                                     width: '100%',
                                     borderRight: '1px solid #FFFFEF',
                                     borderTopRightRadius:
-                                        expandedMenuItem === -1 && !showSettings ? '10px' : 0,
+                                        expandedMenuItem === -1 && !showSettings
+                                            ? '10px'
+                                            : 0,
                                     borderLeft: showSettings
                                         ? '1px solid #FBBC04'
                                         : '1px solid #FFFFEF',
@@ -471,7 +539,8 @@ export const Menu = () => {
                                     {getTablerIcon({ name: 'IconSettings' })}
                                 </Box>
                                 {showIconLabels && (
-                                    <Typography sx={{ fontSize: menuLabelFontSize }}>
+                                    <Typography
+                                        sx={{ fontSize: menuLabelFontSize }}>
                                         Settings
                                     </Typography>
                                 )}

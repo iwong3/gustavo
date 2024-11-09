@@ -15,7 +15,6 @@ Graphs
 UX
 
 -   Dark mode
--   Link to View Only Google Sheet
 
 To-Do
 
@@ -43,5 +42,8 @@ UX
 -   Collapse all receipts
 -   Reset debt calculator
 -   Show active filters
--   Protect against $NaN values as Google Sheets currency conversion sometimes fails
+-   Protect against $NaN values as Google Sheets currency conversion sometimes
+    fails
 -   Log errors and add view to see which rows were affected
+-   Link to View Only Google Sheet
+-   Clicking on trip name should bring user back to trip menu

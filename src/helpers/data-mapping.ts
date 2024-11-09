@@ -2,14 +2,42 @@
  * For everything used to map google sheet data
  */
 
-export const GOOGLE_FORM_URL =
-    'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform'
+import axios from 'axios'
 
-export const GOOGLE_SHEET_CSV_URL =
-    'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/export?format=csv'
+import { Currency } from 'helpers/currency'
+import { Location } from 'helpers/location'
+import { getPersonFromEmail, Person } from 'helpers/person'
+import { Spend, SpendType } from 'helpers/spend'
+import { Trip } from 'helpers/trips'
 
-export const GOOGLE_SHEET_VIEW_ONLY_URL =
-    'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs/edit?usp=sharing'
+type Urls = {
+    GoogleFormUrl: string
+    GoogleSheetUrl: string
+}
+
+export const CsvPath = '/export?format=csv'
+export const ViewPath = '/edit?usp=sharing'
+
+export const UrlsByTrip: Map<Trip, Urls> = new Map([
+    [
+        Trip.Japan2024,
+        {
+            GoogleFormUrl:
+                'https://docs.google.com/forms/d/e/1FAIpQLSfe5IVFIuHjSET8PODYR77_S5Rrmts5XVM_7PktQT92Gs2Xwg/viewform',
+            GoogleSheetUrl:
+                'https://docs.google.com/spreadsheets/d/1kVLdZbw_aO7QuyXgHctiuyeI5s87-SgIfZoA0X8zvfs',
+        },
+    ],
+    [
+        Trip.Vancouver2024,
+        {
+            GoogleFormUrl:
+                'https://docs.google.com/forms/d/e/1FAIpQLScCLM3JLZEFFnxEhhzsUe29RBVpmU9gKy649ZHUwpTFLsJJ-A/viewform',
+            GoogleSheetUrl:
+                'https://docs.google.com/spreadsheets/d/1O1xY4t9RDgKMZWIle644wH1PZEi17LqnU1DI5hJjB6c',
+        },
+    ],
+])
 
 // the google sheet columns
 export enum Columns {
@@ -26,6 +54,92 @@ export enum Columns {
     SpendType = 'Type of Spend',
     SplitBetween = 'Split Between',
     ReceiptImageUrl = 'Upload Receipt',
+}
+
+export const fetchData = async (trip: Trip): Promise<[Spend[], boolean]> => {
+    let data: Spend[] = []
+    let currencyConversionError = false
+
+    try {
+        let res = await axios.get(
+            UrlsByTrip.get(trip)!.GoogleSheetUrl + CsvPath
+        )
+
+        const dataString: string = res.data
+        const rows = dataString.split('\n')
+        const headers = rows[0].replace(/[\r]/g, '').split(',')
+
+        const nameIndex = headers.indexOf(Columns.ItemName)
+        const dateIndex = headers.indexOf(Columns.Date)
+        const originalCostIndex = headers.indexOf(Columns.Cost)
+        const currencyIndex = headers.indexOf(Columns.Currency)
+        const convertedCostIndex = headers.indexOf(Columns.ConvertedCost)
+        const paidByIndex = headers.indexOf(Columns.PaidBy)
+        const splitBetweenIndex = headers.indexOf(Columns.SplitBetween)
+        const locationIndex = headers.indexOf(Columns.Location)
+        const typeIndex = headers.indexOf(Columns.SpendType)
+        const notesIndex = headers.indexOf(Columns.Notes)
+        const reportedByIndex = headers.indexOf(Columns.Email)
+        const reportedAtIndex = headers.indexOf(Columns.ResponseTimestamp)
+        const receiptImageUrlIndex = headers.indexOf(Columns.ReceiptImageUrl)
+
+        data = rows
+            .slice(1)
+            .map((row: string) => {
+                const rowValues = parseRow(row)
+                if (rowValues) {
+                    let error = false
+
+                    const originalCost = parseFloat(
+                        rowValues[originalCostIndex].replace(/[,'"]+/g, '')
+                    )
+                    const currency = rowValues[currencyIndex] as Currency
+                    let convertedCost = parseFloat(
+                        rowValues[convertedCostIndex]
+                    )
+                    if (rowValues[convertedCostIndex] === '#N/A') {
+                        convertedCost = 0
+                        error = true
+                        currencyConversionError = true
+                    }
+
+                    const splitBetween = rowValues[splitBetweenIndex]
+                        .replace(/['" ]+/g, '')
+                        .split(',') as Person[]
+                    const type =
+                        rowValues[typeIndex] === ''
+                            ? undefined
+                            : (rowValues[typeIndex] as SpendType)
+                    const reportedBy = getPersonFromEmail(
+                        rowValues[reportedByIndex].replace(/\s/g, '')
+                    )
+
+                    const spend: Spend = {
+                        trip: trip,
+                        date: rowValues[dateIndex],
+                        name: rowValues[nameIndex],
+                        originalCost: originalCost,
+                        currency: currency,
+                        convertedCost: convertedCost,
+                        paidBy: rowValues[paidByIndex] as Person,
+                        splitBetween: splitBetween,
+                        location: rowValues[locationIndex] as Location,
+                        type: type,
+                        notes: rowValues[notesIndex],
+                        reportedBy: reportedBy,
+                        reportedAt: rowValues[reportedAtIndex],
+                        receiptImageUrl: rowValues[receiptImageUrlIndex],
+                        error: error,
+                    }
+                    return spend
+                }
+            })
+            .filter((row) => row !== undefined) as Spend[]
+    } catch (err) {
+        throw err
+    }
+
+    return [data, currencyConversionError]
 }
 
 // given a row string, return an array of the values

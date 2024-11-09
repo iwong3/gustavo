@@ -11,7 +11,9 @@ import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByType = () => {
     const { totalSpendByType } = useGustavoStore(useShallow((state) => state))
-    const { filters, handleFilterClick } = useFilterSpendTypeStore(useShallow((state) => state))
+    const { filters, handleFilterClick } = useFilterSpendTypeStore(
+        useShallow((state) => state)
+    )
 
     const totalSpendByTypeArray = Array.from(totalSpendByType)
 
@@ -26,7 +28,10 @@ export const TotalSpendByType = () => {
             row.push(renderSpendType(spendType, totalSpend))
 
             // if row is full, push current row and start a new row
-            if (row.length === rowLength || i === totalSpendByTypeArray.length - 1) {
+            if (
+                row.length === rowLength ||
+                i === totalSpendByTypeArray.length - 1
+            ) {
                 rows.push(
                     <Box
                         key={'total-spend-by-type-row-' + rows.length}
@@ -35,7 +40,10 @@ export const TotalSpendByType = () => {
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             marginTop: rows.length === 0 ? 0 : 0.5,
-                            marginBottom: i === totalSpendByTypeArray.length - 1 ? 0 : 0.5,
+                            marginBottom:
+                                i === totalSpendByTypeArray.length - 1
+                                    ? 0
+                                    : 0.5,
                         }}>
                         {row}
                     </Box>
@@ -61,9 +69,13 @@ export const TotalSpendByType = () => {
                     justifyContent: 'center',
                     alignItems: 'space-between',
                     width: '31%',
-                    border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                    border: isActive
+                        ? '1px solid #A7C957'
+                        : '1px solid #FBBC04',
                     borderRadius: '10px',
-                    backgroundColor: isActive ? '#E9F5DB' : defaultBackgroundColor,
+                    backgroundColor: isActive
+                        ? '#E9F5DB'
+                        : defaultBackgroundColor,
                     boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                     transition: 'background-color 0.1s',
                 }}>
@@ -97,7 +109,9 @@ export const TotalSpendByType = () => {
                         justifyContent: 'flex-end',
                         alignItems: 'center',
                         padding: 1,
-                        border: isActive ? '1px solid #A7C957' : '1px solid #FBBC04',
+                        borderTop: isActive
+                            ? '1px solid #A7C957'
+                            : '1px solid #FBBC04',
                         fontSize: 14,
                         fontWeight: 'bold',
                     }}>

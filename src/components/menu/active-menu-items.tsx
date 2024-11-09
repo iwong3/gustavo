@@ -12,7 +12,10 @@ import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { SortItem, useSortMenuStore } from 'components/menu/sort/sort-menu'
-import { ToolsMenuItem, useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import {
+    ToolsMenuItem,
+    useToolsMenuStore,
+} from 'components/menu/tools/tools-menu'
 import { defaultBackgroundColor } from 'helpers/colors'
 import {
     getColorForSpendType,
@@ -23,7 +26,6 @@ import {
     LocationIcon,
 } from 'helpers/icons'
 import { Location } from 'helpers/location'
-import { Person } from 'helpers/person'
 import { SpendType } from 'helpers/spend'
 
 type ActiveMenuItemData = {
@@ -35,9 +37,15 @@ type ActiveMenuItemData = {
 export const ActiveMenuItems = () => {
     // filter menu item states
     const filterPaidByState = useFilterPaidByStore(useShallow((state) => state))
-    const filterSplitBetweenState = useFilterSplitBetweenStore(useShallow((state) => state))
-    const filterSpendTypeState = useFilterSpendTypeStore(useShallow((state) => state))
-    const filterLocationState = useFilterLocationStore(useShallow((state) => state))
+    const filterSplitBetweenState = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
+    const filterSpendTypeState = useFilterSpendTypeStore(
+        useShallow((state) => state)
+    )
+    const filterLocationState = useFilterLocationStore(
+        useShallow((state) => state)
+    )
 
     // sort menu item states
     const sortMenuState = useSortMenuStore(useShallow((state) => state))
@@ -144,9 +152,10 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActiveSplitBetween = () => {
-        const activeFilterItems = Object.entries(filterSplitBetweenState.filters).filter(
-            ([_, isActive]) => isActive
-        )
+        const activeFilterItems = Array.from(
+            filterSplitBetweenState.filters.entries()
+        ).filter(([_, isActive]) => isActive)
+
         return (
             <Box
                 sx={{
@@ -158,14 +167,19 @@ export const ActiveMenuItems = () => {
                         <Box
                             key={'active-split-between-' + index}
                             onClick={() => {
-                                filterSplitBetweenState.handleFilterClick(person as Person)
+                                filterSplitBetweenState.handleFilterClick(
+                                    person
+                                )
                             }}
                             sx={{
                                 marginLeft: index === 0 ? 0 : 0.25,
-                                marginRight: index === activeFilterItems.length - 1 ? 0 : 0.25,
+                                marginRight:
+                                    index === activeFilterItems.length - 1
+                                        ? 0
+                                        : 0.25,
                             }}>
                             <InitialsIcon
-                                person={person as Person}
+                                person={person}
                                 sx={{
                                     height: 20,
                                     width: 20,
@@ -180,9 +194,10 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActivePaidBy = () => {
-        const activeFilterItems = Object.entries(filterPaidByState.filters).filter(
-            ([_, isActive]) => isActive
-        )
+        const activeFilterItems = Array.from(
+            filterPaidByState.filters.entries()
+        ).filter(([_, isActive]) => isActive)
+
         return (
             <Box
                 sx={{
@@ -194,14 +209,17 @@ export const ActiveMenuItems = () => {
                         <Box
                             key={'active-paid-by-' + index}
                             onClick={() => {
-                                filterPaidByState.handleFilterClick(person as Person)
+                                filterPaidByState.handleFilterClick(person)
                             }}
                             sx={{
                                 marginLeft: index === 0 ? 0 : 0.25,
-                                marginRight: index === activeFilterItems.length - 1 ? 0 : 0.25,
+                                marginRight:
+                                    index === activeFilterItems.length - 1
+                                        ? 0
+                                        : 0.25,
                             }}>
                             <InitialsIcon
-                                person={person as Person}
+                                person={person}
                                 sx={{
                                     height: 20,
                                     width: 20,
@@ -216,9 +234,9 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActiveSpendType = () => {
-        const activeFilterItems = Object.entries(filterSpendTypeState.filters).filter(
-            ([_, isActive]) => isActive
-        )
+        const activeFilterItems = Object.entries(
+            filterSpendTypeState.filters
+        ).filter(([_, isActive]) => isActive)
         return (
             <Box
                 sx={{
@@ -230,15 +248,22 @@ export const ActiveMenuItems = () => {
                         <Box
                             key={'active-spend-type-' + index}
                             onClick={() => {
-                                filterSpendTypeState.handleFilterClick(spendType as SpendType)
+                                filterSpendTypeState.handleFilterClick(
+                                    spendType as SpendType
+                                )
                             }}
                             sx={{
                                 marginLeft: index === 0 ? 0 : 0.25,
-                                marginRight: index === activeFilterItems.length - 1 ? 0 : 0.25,
+                                marginRight:
+                                    index === activeFilterItems.length - 1
+                                        ? 0
+                                        : 0.25,
                                 height: 20,
                                 width: 20,
                                 borderRadius: '100%',
-                                backgroundColor: getColorForSpendType(spendType as SpendType),
+                                backgroundColor: getColorForSpendType(
+                                    spendType as SpendType
+                                ),
                             }}>
                             {getIconFromSpendType(spendType as SpendType, 20)}
                         </Box>
@@ -249,9 +274,9 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActiveLocation = () => {
-        const activeFilterItems = Object.entries(filterLocationState.filters).filter(
-            ([_, isActive]) => isActive
-        )
+        const activeFilterItems = Array.from(
+            filterLocationState.filters.entries()
+        ).filter(([_, isActive]) => isActive)
         return (
             <Box
                 sx={{
@@ -263,11 +288,16 @@ export const ActiveMenuItems = () => {
                         <Box
                             key={'active-location-' + index}
                             onClick={() => {
-                                filterLocationState.handleFilterClick(location as Location)
+                                filterLocationState.handleFilterClick(
+                                    location as Location
+                                )
                             }}
                             sx={{
                                 marginLeft: index === 0 ? 0 : 0.25,
-                                marginRight: index === activeFilterItems.length - 1 ? 0 : 0.25,
+                                marginRight:
+                                    index === activeFilterItems.length - 1
+                                        ? 0
+                                        : 0.25,
                             }}>
                             <LocationIcon
                                 location={location as Location}
@@ -326,8 +356,14 @@ export const ActiveMenuItems = () => {
     // get active tool to determine if we should show 'collapse all' button
     const { activeItem } = useToolsMenuStore(useShallow((state) => state))
 
-    const collapseAllTools = [ToolsMenuItem.Receipts, ToolsMenuItem.DebtCalculator]
-    const searchBarTools = [ToolsMenuItem.Receipts, ToolsMenuItem.DebtCalculator]
+    const collapseAllTools = [
+        ToolsMenuItem.Receipts,
+        ToolsMenuItem.DebtCalculator,
+    ]
+    const searchBarTools = [
+        ToolsMenuItem.Receipts,
+        ToolsMenuItem.DebtCalculator,
+    ]
 
     const isSearchBarActive = searchBarTools.includes(activeItem)
 

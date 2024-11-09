@@ -8,9 +8,10 @@ import { ReceiptsList } from 'components/receipts/receipts-list'
 import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
-import { getVenmoUrl, Person } from 'helpers/person'
+import { getVenmoUrl, PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 import { useGustavoStore } from 'views/gustavo'
+import { useTripsStore } from 'views/trips'
 import VenmoLogo from '../../images/venmo-icon.png'
 
 type DebtCalculatorState = {
@@ -21,6 +22,7 @@ type DebtCalculatorState = {
 type DebtCalculatorActions = {
     setPerson1: (person: Person | undefined) => void
     setPerson2: (person: Person | undefined) => void
+    reset: () => void
 }
 
 const initialState: DebtCalculatorState = {
@@ -28,24 +30,29 @@ const initialState: DebtCalculatorState = {
     person2: undefined,
 }
 
-export const useDebtCalculatorStore = create<DebtCalculatorState & DebtCalculatorActions>(
-    (set) => ({
-        ...initialState,
+export const useDebtCalculatorStore = create<
+    DebtCalculatorState & DebtCalculatorActions
+>((set) => ({
+    ...initialState,
 
-        setPerson1: (person: Person | undefined) => {
-            set(() => ({ person1: person }))
-        },
-        setPerson2: (person: Person | undefined) => {
-            set(() => ({ person2: person }))
-        },
-    })
-)
+    setPerson1: (person: Person | undefined) => {
+        set(() => ({ person1: person }))
+    },
+    setPerson2: (person: Person | undefined) => {
+        set(() => ({ person2: person }))
+    },
+    reset: () => {
+        set(() => ({ ...initialState }))
+    },
+}))
 
 export const DebtCalculator = () => {
     const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
-    const { debtMapByPerson, filteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { debtMapByPerson, filteredSpendData } = useGustavoStore(
+        useShallow((state) => state)
+    )
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
@@ -114,7 +121,8 @@ export const DebtCalculator = () => {
                             fontSize: 32,
                             opacity: person ? 1 : 0,
                             transition: 'opacity 0.2s ease-out',
-                            boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                            boxShadow:
+                                'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                         }}
                     />
                     <UserCircle
@@ -132,6 +140,55 @@ export const DebtCalculator = () => {
         )
     }
 
+    // Select person state and style
+    const { currentTrip } = useTripsStore(useShallow((state) => state))
+    const people = PeopleByTrip[currentTrip]
+
+    const handleSelectPerson = (person: Person) => {
+        if (person === person1) {
+            setPerson1(undefined)
+        } else if (person === person2) {
+            setPerson2(undefined)
+        } else if (!person1) {
+            setPerson1(person)
+        } else if (!person2) {
+            setPerson2(person)
+        }
+    }
+
+    const renderSelectPerson = (person: Person) => {
+        const isActive = person === person1 || person === person2
+        const disabled =
+            person1 && person2 && person !== person1 && person !== person2
+        const disabledSx = { color: 'black', backgroundColor: 'lightgray' }
+
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}
+                onClick={() => {
+                    handleSelectPerson(person)
+                }}>
+                <InitialsIcon
+                    person={person}
+                    sx={{
+                        border: isActive
+                            ? '2px solid #FBBC04'
+                            : '2px solid #FFFFEF',
+                        width: 28,
+                        height: 28,
+                        fontSize: 14,
+                        ...(disabled ? disabledSx : {}),
+                    }}
+                />
+            </Box>
+        )
+    }
+
+    // Venmo icons
     const renderVenmoIcon = (person: Person) => {
         return (
             <Link
@@ -155,49 +212,9 @@ export const DebtCalculator = () => {
         )
     }
 
-    // Select person state and style
-    const people = Object.values(Person).filter((person) => person !== Person.Everyone)
-
-    const handleSelectPerson = (person: Person) => {
-        if (person === person1) {
-            setPerson1(undefined)
-        } else if (person === person2) {
-            setPerson2(undefined)
-        } else if (!person1) {
-            setPerson1(person)
-        } else if (!person2) {
-            setPerson2(person)
-        }
-    }
-
-    const renderSelectPerson = (person: Person) => {
-        const isActive = person === person1 || person === person2
-        const disabled = person1 && person2 && person !== person1 && person !== person2
-        const disabledSx = { color: 'black', backgroundColor: 'lightgray' }
-
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}
-                onClick={() => {
-                    handleSelectPerson(person)
-                }}>
-                <InitialsIcon
-                    person={person}
-                    sx={{
-                        border: isActive ? '2px solid #FBBC04' : '2px solid #FFFFEF',
-                        width: 28,
-                        height: 28,
-                        fontSize: 14,
-                        ...(disabled ? disabledSx : {}),
-                    }}
-                />
-            </Box>
-        )
-    }
+    const showVenmoPerson1 = person1 && person2 && getVenmoUrl(person1)
+    const showVenmoPerson2 = person1 && person2 && getVenmoUrl(person2)
+    const showVenmoBoth = showVenmoPerson1 && showVenmoPerson2
 
     return (
         <Box
@@ -254,22 +271,32 @@ export const DebtCalculator = () => {
                                     height: 28,
                                 }}>
                                 {debt < 0 &&
-                                    getTablerIcon({ name: 'IconHandFingerLeft', size: 28 })}
+                                    getTablerIcon({
+                                        name: 'IconHandFingerLeft',
+                                        size: 28,
+                                    })}
                                 {debt > 0 &&
-                                    getTablerIcon({ name: 'IconHandFingerRight', size: 28 })}
+                                    getTablerIcon({
+                                        name: 'IconHandFingerRight',
+                                        size: 28,
+                                    })}
                             </Box>
                         </Box>
                         {/* Venmo icons */}
                         <Box
                             sx={{
                                 display: 'flex',
-                                justifyContent: 'space-between',
+                                justifyContent: showVenmoBoth
+                                    ? 'space-between'
+                                    : showVenmoPerson1
+                                    ? 'flex-start'
+                                    : 'flex-end',
                                 alignItems: 'flex-end',
                                 width: '100%',
                                 height: '100%',
                             }}>
-                            {person1 && person2 && getVenmoUrl(person1) && renderVenmoIcon(person1)}
-                            {person1 && person2 && getVenmoUrl(person2) && renderVenmoIcon(person2)}
+                            {showVenmoPerson1 && renderVenmoIcon(person1)}
+                            {showVenmoPerson2 && renderVenmoIcon(person2)}
                         </Box>
                     </Box>
                     {renderDebtPerson(person2, setPerson2)}
@@ -291,6 +318,7 @@ export const DebtCalculator = () => {
                             'display': 'flex',
                             'justifyContent': 'center',
                             'alignItems': 'center',
+                            'marginRight': 1,
                             'height': 28,
                             'width': 28,
                             'borderRadius': '100%',
@@ -301,9 +329,21 @@ export const DebtCalculator = () => {
                         }}>
                         {getTablerIcon({ name: 'IconX' })}
                     </Box>
-                    {people.map((person, index) => {
-                        return <Box key={index}>{renderSelectPerson(person)}</Box>
-                    })}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-evenly',
+                            alignItems: 'center',
+                            width: '100%',
+                        }}>
+                        {people.map((person, index) => {
+                            return (
+                                <Box key={index}>
+                                    {renderSelectPerson(person)}
+                                </Box>
+                            )
+                        })}
+                    </Box>
                 </Box>
             </Box>
             <Box
