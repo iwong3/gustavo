@@ -6,6 +6,7 @@ import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
+import { useEffect } from 'react'
 import { useTripsStore } from 'views/trips'
 
 type FilterSplitBetweenState = {
@@ -77,10 +78,15 @@ export const useFilterSplitBetweenStore = create<
 }))
 
 export const FilterSplitBetween = () => {
-    const { filters, handleFilterClick, reset } = useFilterSplitBetweenStore(
-        useShallow((state) => state)
-    )
+    const { filters, handleFilterClick, isActive, setFilters, reset } =
+        useFilterSplitBetweenStore(useShallow((state) => state))
     const { currentTrip } = useTripsStore(useShallow((state) => state))
+
+    useEffect(() => {
+        if (!isActive()) {
+            setFilters(getInitialStateByTrip(currentTrip))
+        }
+    }, [])
 
     return (
         <Box

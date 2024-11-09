@@ -61,7 +61,7 @@ export const fetchData = async (trip: Trip): Promise<[Spend[], boolean]> => {
     let currencyConversionError = false
 
     try {
-        let res = await axios.get(
+        const res = await axios.get(
             UrlsByTrip.get(trip)!.GoogleSheetUrl + CsvPath
         )
 

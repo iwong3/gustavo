@@ -6,6 +6,7 @@ import { getTablerIcon, InitialsIcon } from 'helpers/icons'
 import { PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
+import { useEffect } from 'react'
 import { useTripsStore } from 'views/trips'
 
 type FilterPaidByState = {
@@ -75,10 +76,15 @@ export const useFilterPaidByStore = create<
 }))
 
 export const FilterPaidBy = () => {
-    const { filters, handleFilterClick, reset } = useFilterPaidByStore(
-        useShallow((state) => state)
-    )
+    const { filters, handleFilterClick, isActive, setFilters, reset } =
+        useFilterPaidByStore(useShallow((state) => state))
     const { currentTrip } = useTripsStore(useShallow((state) => state))
+
+    useEffect(() => {
+        if (!isActive()) {
+            setFilters(getInitialStateByTrip(currentTrip))
+        }
+    }, [])
 
     return (
         <Box

@@ -3,13 +3,14 @@ import { Box } from '@mui/material'
 import { SettingsCost } from 'components/menu/settings/settings-cost'
 import { SettingsIconLabels } from 'components/menu/settings/settings-icon-labels'
 import { SettingsSubmitReceipt } from 'components/menu/settings/settings-submit-receipt'
+import { SettingsVersion } from 'components/menu/settings/settings-version'
 
 export const SettingsMenu = () => {
     const settingsMenuItems = [
         <SettingsIconLabels />,
         <SettingsCost />,
         <SettingsSubmitReceipt />,
-        // <SettingsViewData />,
+        <SettingsVersion />,
     ]
 
     return (
