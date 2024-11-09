@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/gustavo/static/css/main.345ef473.css",
-    "main.js": "/gustavo/static/js/main.0e29c1a0.js",
+    "main.js": "/gustavo/static/js/main.ded46207.js",
     "static/media/vancouver-2024.png": "/gustavo/static/media/vancouver-2024.ed2a7723b163d9b28c0b.png",
     "static/media/japan-2024.jpg": "/gustavo/static/media/japan-2024.5345c9da7a6e8a926559.jpg",
     "static/media/gus-fring.png": "/gustavo/static/media/gus-fring.70930d6dc17f27585539.png",
     "static/media/google-maps.png": "/gustavo/static/media/google-maps.9c4b37dd4e73358fbfb9.png",
     "index.html": "/gustavo/index.html",
     "main.345ef473.css.map": "/gustavo/static/css/main.345ef473.css.map",
-    "main.0e29c1a0.js.map": "/gustavo/static/js/main.0e29c1a0.js.map"
+    "main.ded46207.js.map": "/gustavo/static/js/main.ded46207.js.map"
   },
   "entrypoints": [
     "static/css/main.345ef473.css",
-    "static/js/main.0e29c1a0.js"
+    "static/js/main.ded46207.js"
   ]
 }
