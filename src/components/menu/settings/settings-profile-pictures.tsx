@@ -18,7 +18,7 @@ export const useSettingsProfilePicturesStore = create<
     SettingsProfilePicturesState & SettingsProfilePicturesActions
 >((set, get) => ({
     showProfilePictures:
-        getFromCache(SHOW_PROFILE_PICTURES_CACHE_KEY, 'true') === 'true',
+        getFromCache(SHOW_PROFILE_PICTURES_CACHE_KEY, 'false') === 'true',
 
     toggleProfilePictures: () => {
         const { showProfilePictures } = get()
