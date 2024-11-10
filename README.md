@@ -15,6 +15,8 @@ Graphs
 UX
 
 -   Dark mode
+-   Animation for swiping
+-   Setting for swiping
 
 To-Do
 

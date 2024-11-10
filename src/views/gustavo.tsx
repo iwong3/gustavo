@@ -151,8 +151,6 @@ export const Gustavo = () => {
     } = useGustavoStore(useShallow((state) => state))
     const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    useEffect(() => {}, [])
-
     // calculate total spend summary data to expose to summary components
     useEffect(() => {
         const { totalSpend, debtMap } = processSpendData(spendData, currentTrip)
@@ -166,6 +164,7 @@ export const Gustavo = () => {
         useShallow((state) => state)
     )
     useEffect(() => {
+        console.log('processFilteredSpendData triggered')
         const {
             filteredTotalSpend,
             filteredPeopleTotalSpend,

@@ -122,8 +122,8 @@ export const TotalSpendByLocation = () => {
     const locationColors = totalSpendByLocationArray.map(([location]) =>
         getLocationColors(location)
     )
-    const activeLocations = Object.entries(filters).map(
-        ([_, isActive]) => isActive
+    const activeLocations = Array.from(filters.values()).map(
+        (isActive) => isActive
     )
 
     return (

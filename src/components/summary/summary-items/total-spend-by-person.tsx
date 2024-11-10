@@ -124,8 +124,8 @@ export const TotalSpendByPerson = () => {
     const personColors = totalSpendByPersonArray.map(
         ([person]) => getInitialsIconColors(person).bgColor
     )
-    const activePeople = Object.entries(filters).map(
-        ([_, isActive]) => isActive
+    const activePeople = Array.from(filters.values()).map(
+        (isActive) => isActive
     )
 
     return (

@@ -231,8 +231,8 @@ const calculateFilteredTotalSpend = (
 
     let totalCost = convertedCost
 
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some(
-        (isActive) => isActive
+    const isAnyFilterActive = Array.from(splitBetweenFilter.values()).includes(
+        true
     )
     if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween, trip)
@@ -287,8 +287,8 @@ const calculateAndUpdateTotalSpendByType = (
 
     let totalCost = convertedCost
 
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some(
-        (isActive) => isActive
+    const isAnyFilterActive = Array.from(splitBetweenFilter.values()).includes(
+        true
     )
     if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween, trip)
@@ -330,8 +330,8 @@ const calculateAndUpdateTotalSpendByLocation = (
 
     let totalCost = convertedCost
 
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some(
-        (isActive) => isActive
+    const isAnyFilterActive = Array.from(splitBetweenFilter.values()).includes(
+        true
     )
     if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween, trip)
@@ -371,8 +371,8 @@ const calculateAndUpdateTotalSpendByDate = (
 
     let totalCost = convertedCost
 
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some(
-        (isActive) => isActive
+    const isAnyFilterActive = Array.from(splitBetweenFilter.values()).includes(
+        true
     )
     if (isAnyFilterActive) {
         const splitCost = getSplitCost(convertedCost, splitBetween, trip)
@@ -415,8 +415,8 @@ const calculateAndUpdateTotalSpendByDateByPerson = (
         splitters = Array.from(splitBetweenFilter.keys())
     }
 
-    const isAnyFilterActive = Object.values(splitBetweenFilter).some(
-        (isActive) => isActive
+    const isAnyFilterActive = Array.from(splitBetweenFilter.values()).includes(
+        true
     )
     if (isAnyFilterActive) {
         // remove people who are not selected on the filter

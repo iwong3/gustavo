@@ -11,9 +11,8 @@ import { FormattedMoney } from 'helpers/currency'
 import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpend = () => {
-    const { totalSpend, filteredTotalSpend, filteredPeopleTotalSpend } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { totalSpend, filteredTotalSpend, filteredPeopleTotalSpend } =
+        useGustavoStore(useShallow((state) => state))
 
     const [percentOfTotalSpend, setPercentOfTotalSpend] = useState(0)
     const [useFilteredTotalSpend, setUseFilteredTotalSpend] = useState(false)
@@ -31,47 +30,77 @@ export const TotalSpend = () => {
                 setPercentOfTotalSpend(0)
                 return
             }
-            const percent = (filteredPeopleTotalSpend / filteredTotalSpend) * 100
+            const percent =
+                (filteredPeopleTotalSpend / filteredTotalSpend) * 100
             setPercentOfTotalSpend(percent)
         }
-    }, [totalSpend, filteredTotalSpend, filteredPeopleTotalSpend, useFilteredTotalSpend])
+    }, [
+        totalSpend,
+        filteredTotalSpend,
+        filteredPeopleTotalSpend,
+        useFilteredTotalSpend,
+    ])
 
-    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(useShallow((state) => state))
-    const { filters: spendTypeFilter } = useFilterSpendTypeStore(useShallow((state) => state))
-    const { filters: locationFilter } = useFilterLocationStore(useShallow((state) => state))
-    const { filters: paidByFilter } = useFilterPaidByStore(useShallow((state) => state))
-    const filters = [splitBetweenFilter, spendTypeFilter, locationFilter, paidByFilter]
+    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
+    const { filters: spendTypeFilter } = useFilterSpendTypeStore(
+        useShallow((state) => state)
+    )
+    const { filters: locationFilter } = useFilterLocationStore(
+        useShallow((state) => state)
+    )
+    const { filters: paidByFilter } = useFilterPaidByStore(
+        useShallow((state) => state)
+    )
+    const filters = [
+        splitBetweenFilter,
+        spendTypeFilter,
+        locationFilter,
+        paidByFilter,
+    ]
 
     const [splittersTitle, setSplittersTitle] = useState("Everyone's")
     const [totalSpendTitle, setTotalSpendTitle] = useState('Total Spend')
 
     useEffect(() => {
         let splittersTitle = "Everyone's"
-
-        const splitters = Object.entries(splitBetweenFilter).filter(([_, isActive]) => isActive)
+        const splitters = Array.from(splitBetweenFilter.entries()).filter(
+            ([_, isActive]) => isActive
+        )
         if (splitters.length > 0) {
             splittersTitle = ''
-            splittersTitle += splitters.map(([splitter]) => splitter).join(' & ')
+            splittersTitle += splitters
+                .map(([splitter]) => splitter)
+                .join(' & ')
             splittersTitle += "'s"
         }
 
         let spendTitle = 'Total '
 
-        const spendTypes = Object.entries(spendTypeFilter).filter(([_, isActive]) => isActive)
+        const spendTypes = Object.entries(spendTypeFilter).filter(
+            ([_, isActive]) => isActive
+        )
         if (spendTypes.length > 0) {
             spendTitle += ' ' + spendTypes.map(([type]) => type).join(', ')
         }
 
         spendTitle += ' Spend'
 
-        const locations = Object.entries(locationFilter).filter(([_, isActive]) => isActive)
+        const locations = Array.from(locationFilter.entries()).filter(
+            ([_, isActive]) => isActive
+        )
         if (locations.length > 0) {
-            spendTitle += ' in ' + locations.map(([location]) => location).join(', ')
+            spendTitle +=
+                ' in ' + locations.map(([location]) => location).join(', ')
         }
 
-        const paidBys = Object.entries(paidByFilter).filter(([_, isActive]) => isActive)
+        const paidBys = Array.from(paidByFilter.entries()).filter(
+            ([_, isActive]) => isActive
+        )
         if (paidBys.length > 0) {
-            spendTitle += ' Covered by ' + paidBys.map(([paidBy]) => paidBy).join(', ')
+            spendTitle +=
+                ' Covered by ' + paidBys.map(([paidBy]) => paidBy).join(', ')
         }
 
         setSplittersTitle(splittersTitle)
@@ -141,10 +170,14 @@ export const TotalSpend = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 fontSize: 12,
-                                color: useFilteredTotalSpend ? '#c1121f' : 'black',
+                                color: useFilteredTotalSpend
+                                    ? '#c1121f'
+                                    : 'black',
                                 cursor: 'pointer',
                             }}
-                            onClick={() => setUseFilteredTotalSpend(!useFilteredTotalSpend)}>
+                            onClick={() =>
+                                setUseFilteredTotalSpend(!useFilteredTotalSpend)
+                            }>
                             {useFilteredTotalSpend ? 'Filtered Total' : 'Total'}
                         </Box>
                     </Box>
@@ -172,7 +205,9 @@ export const TotalSpend = () => {
                         <Box>{percentOfTotalSpend.toFixed(0) + '%'}</Box>
                         <Box>
                             {FormattedMoney().format(
-                                useFilteredTotalSpend ? filteredTotalSpend : totalSpend
+                                useFilteredTotalSpend
+                                    ? filteredTotalSpend
+                                    : totalSpend
                             )}
                         </Box>
                     </Box>

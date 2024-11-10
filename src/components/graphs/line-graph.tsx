@@ -7,7 +7,10 @@ import { LinePath } from '@visx/shape'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import { SortOrder as CostOrder, useSortCostStore } from 'components/menu/sort/sort-cost'
+import {
+    SortOrder as CostOrder,
+    useSortCostStore,
+} from 'components/menu/sort/sort-cost'
 
 interface GraphProps {
     data: [string, number][][]
@@ -23,7 +26,13 @@ interface GraphData {
     isActive: boolean
 }
 
-export const LineGraph = ({ data, width, height, lineColors, activeData }: GraphProps) => {
+export const LineGraph = ({
+    data,
+    width,
+    height,
+    lineColors,
+    activeData,
+}: GraphProps) => {
     const [graphData, setGraphData] = useState<GraphData[][]>([])
     const [yMax, setYMax] = useState<number>(0)
 
@@ -48,9 +57,13 @@ export const LineGraph = ({ data, width, height, lineColors, activeData }: Graph
             })
 
             if (costOrder === CostOrder.Descending) {
-                currentLineData = currentLineData.sort((a, b) => b.value - a.value)
+                currentLineData = currentLineData.sort(
+                    (a, b) => b.value - a.value
+                )
             } else if (costOrder === CostOrder.Ascending) {
-                currentLineData = currentLineData.sort((a, b) => a.value - b.value)
+                currentLineData = currentLineData.sort(
+                    (a, b) => a.value - b.value
+                )
             }
 
             graphData.push(currentLineData)
@@ -71,7 +84,8 @@ export const LineGraph = ({ data, width, height, lineColors, activeData }: Graph
     const totalWidth = Math.max((numTicks / barsLimit) * graphWidth, graphWidth)
 
     // data and scales
-    const xData = graphData.length > 0 ? graphData[0].map((data) => data.label) : []
+    const xData =
+        graphData.length > 0 ? graphData[0].map((data) => data.label) : []
 
     const xScale = scaleBand<string>({
         range: [0, totalWidth],
@@ -107,16 +121,25 @@ export const LineGraph = ({ data, width, height, lineColors, activeData }: Graph
                         return (
                             <LinePath
                                 curve={allCurves['curveBasis']}
-                                stroke={lineColors ? lineColors[index] : '#F4D35E'}
+                                stroke={
+                                    lineColors ? lineColors[index] : '#F4D35E'
+                                }
                                 strokeWidth={2}
                                 data={data}
-                                x={(d) => (xScale(d.label) ?? 0) + xScale.bandwidth() / 2}
+                                x={(d) =>
+                                    (xScale(d.label) ?? 0) +
+                                    xScale.bandwidth() / 2
+                                }
                                 y={(d) => (yScale(d.value) ?? 0) - 1}
                             />
                         )
                     })}
                 </Group>
-                <AxisBottom top={graphHeight - 2 * marginY} scale={xScale} numTicks={numTicks} />
+                <AxisBottom
+                    top={graphHeight - 2 * marginY}
+                    scale={xScale}
+                    numTicks={numTicks}
+                />
             </svg>
         </Box>
     )
