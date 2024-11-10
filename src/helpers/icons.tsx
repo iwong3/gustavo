@@ -59,7 +59,7 @@ import { getLocationAbbr, Location } from 'helpers/location'
 import { getPersonInitials, Person } from 'helpers/person'
 import { Spend, SpendType } from 'helpers/spend'
 
-export const defaultIconSize = 20
+export const defaultIconSize = 24
 
 type TablerIconProps = {
     name: string

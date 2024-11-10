@@ -4,12 +4,20 @@ import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { useSettingsProfilePicturesStore } from 'components/menu/settings/settings-profile-pictures'
 import { ReceiptsList } from 'components/receipts/receipts-list'
 import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
-import { getVenmoUrl, PeopleByTrip, Person } from 'helpers/person'
+import {
+    getPersonImage,
+    getVenmoUrl,
+    PeopleByTrip,
+    Person,
+} from 'helpers/person'
 import { Spend } from 'helpers/spend'
+import { Trip } from 'helpers/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 import VenmoLogo from '../../images/venmo-icon.png'
@@ -92,6 +100,14 @@ export const DebtCalculator = () => {
     // Debt person state and style
     const debtPersonWidth = window.innerWidth * 0.3
 
+    // Settings
+    const { showProfilePictures } = useSettingsProfilePicturesStore(
+        useShallow((state) => state)
+    )
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
+
     const renderDebtPerson = (
         person: Person | undefined,
         setPerson: (person: Person | undefined) => void
@@ -113,18 +129,30 @@ export const DebtCalculator = () => {
                         width: debtPersonWidth,
                         height: debtPersonWidth,
                     }}>
-                    <InitialsIcon
-                        person={person!}
-                        sx={{
-                            width: person ? 100 : 0,
-                            height: person ? 100 : 0,
-                            fontSize: 32,
-                            opacity: person ? 1 : 0,
-                            transition: 'opacity 0.2s ease-out',
-                            boxShadow:
-                                'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-                        }}
-                    />
+                    {showProfilePictures && person && getPersonImage(person) ? (
+                        <img
+                            src={getPersonImage(person)}
+                            style={{
+                                width: 100,
+                                height: 100,
+                                borderRadius: '100%',
+                                objectFit: 'cover',
+                            }}
+                        />
+                    ) : (
+                        <InitialsIcon
+                            person={person!}
+                            sx={{
+                                width: person ? 100 : 0,
+                                height: person ? 100 : 0,
+                                fontSize: 32,
+                                opacity: person ? 1 : 0,
+                                transition: 'opacity 0.2s ease-out',
+                                boxShadow:
+                                    'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                            }}
+                        />
+                    )}
                     <UserCircle
                         weight="duotone"
                         color="#495057"
@@ -172,18 +200,48 @@ export const DebtCalculator = () => {
                 onClick={() => {
                     handleSelectPerson(person)
                 }}>
-                <InitialsIcon
-                    person={person}
+                <Box
                     sx={{
-                        border: isActive
-                            ? '2px solid #FBBC04'
-                            : '2px solid #FFFFEF',
-                        width: 28,
-                        height: 28,
-                        fontSize: 14,
-                        ...(disabled ? disabledSx : {}),
-                    }}
-                />
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}>
+                    {showProfilePictures && getPersonImage(person) ? (
+                        <img
+                            src={getPersonImage(person)}
+                            style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '100%',
+                                objectFit: 'cover',
+                                border: isActive
+                                    ? '2px solid #FBBC04'
+                                    : '2px solid transparent',
+                                filter: disabled
+                                    ? 'grayscale(100%) brightness(0.75)'
+                                    : 'none',
+                            }}
+                        />
+                    ) : (
+                        <InitialsIcon
+                            person={person}
+                            sx={{
+                                border: isActive
+                                    ? '2px solid #FBBC04'
+                                    : '2px solid #FFFFEF',
+                                width: 28,
+                                height: 28,
+                                fontSize: 14,
+                                ...(disabled ? disabledSx : {}),
+                            }}
+                        />
+                    )}
+                    {showIconLabels && (
+                        <Typography sx={{ fontSize: '10px' }}>
+                            {person}
+                        </Typography>
+                    )}
+                </Box>
             </Box>
         )
     }
@@ -306,7 +364,8 @@ export const DebtCalculator = () => {
                     sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        padding: 1,
+                        paddingY: 1,
+                        paddingX: 2,
                         borderTop: '1px solid #FBBC04',
                     }}>
                     <Box
@@ -315,24 +374,39 @@ export const DebtCalculator = () => {
                             setPerson2(undefined)
                         }}
                         sx={{
-                            'display': 'flex',
-                            'justifyContent': 'center',
-                            'alignItems': 'center',
-                            'marginRight': 1,
-                            'height': 28,
-                            'width': 28,
-                            'borderRadius': '100%',
-                            '&:active': {
-                                backgroundColor: '#FBBC04',
-                            },
-                            'transition': 'background-color 0.1s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            marginRight: 1,
                         }}>
-                        {getTablerIcon({ name: 'IconX' })}
+                        <Box
+                            sx={{
+                                'display': 'flex',
+                                'justifyContent': 'center',
+                                'alignItems': 'center',
+                                'height': 32,
+                                'width': 32,
+                                'borderRadius': '100%',
+                                '&:active': {
+                                    backgroundColor: '#FBBC04',
+                                },
+                                'transition': 'background-color 0.1s',
+                            }}>
+                            {getTablerIcon({ name: 'IconX', size: 32 })}
+                        </Box>
+                        {showIconLabels && (
+                            <Typography sx={{ fontSize: '10px' }}>
+                                Clear
+                            </Typography>
+                        )}
                     </Box>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'space-evenly',
+                            justifyContent:
+                                currentTrip === Trip.Japan2024
+                                    ? 'space-between'
+                                    : 'space-evenly',
                             alignItems: 'center',
                             width: '100%',
                         }}>

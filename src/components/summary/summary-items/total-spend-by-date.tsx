@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Graph } from 'components/graphs/graph'
-import { LineGraph } from 'components/graphs/line-graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { getInitialsIconColors } from 'helpers/icons'
 import { Person } from 'helpers/person'
@@ -97,12 +96,12 @@ export const TotalSpendByDate = () => {
                     alignItems: 'center',
                     marginY: 2,
                 }}>
-                <LineGraph
+                {/* <LineGraph
                     data={totalSpendByDateByPersonArray}
                     width={window.innerWidth * 0.9}
                     height={window.innerWidth * 0.5}
                     lineColors={personColors}
-                />
+                /> */}
             </Box>
         </Box>
     )

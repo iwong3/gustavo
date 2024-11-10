@@ -1,4 +1,4 @@
-import { Box, Tooltip } from '@mui/material'
+import { Box, Tooltip, Typography } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -7,11 +7,14 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { useSettingsProfilePicturesStore } from 'components/menu/settings/settings-profile-pictures'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'helpers/currency'
 import { ErrorConvertingToUSDRow } from 'helpers/data-processing'
 import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'helpers/icons'
 import { getUcUrlFromOpenUrl } from 'helpers/image'
+import { getPersonImage } from 'helpers/person'
 import { getSplitCost, Spend } from 'helpers/spend'
 import { useTripsStore } from 'views/trips'
 
@@ -31,6 +34,13 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
         setExpanded(false)
     }, [value])
 
+    // Settings
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
+    const { showProfilePictures } = useSettingsProfilePicturesStore(
+        useShallow((state) => state)
+    )
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
 
     return (
@@ -108,11 +118,36 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 alignItems: 'center',
                                 fontSize: '12px',
                             }}>
-                            <InitialsIcon
-                                person={spend.paidBy}
-                                sx={{ width: 24, height: 24 }}
-                            />
+                            {showProfilePictures &&
+                            getPersonImage(spend.paidBy) ? (
+                                <img
+                                    src={getPersonImage(spend.paidBy)}
+                                    style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                            ) : (
+                                <InitialsIcon
+                                    person={spend.paidBy}
+                                    sx={{ width: 24, height: 24 }}
+                                />
+                            )}
                         </Box>
+                        {showIconLabels && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}>
+                                <Typography sx={{ fontSize: '10px' }}>
+                                    {spend.paidBy}
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                 </Grid>
             </Grid>

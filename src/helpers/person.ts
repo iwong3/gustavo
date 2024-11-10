@@ -1,4 +1,12 @@
 import { Trip } from 'helpers/trips'
+import AibekImage from '../images/people/aibek.jpg'
+import AngelaImage from '../images/people/angela.jpg'
+import DennisImage from '../images/people/dennis.jpg'
+import IvanImage from '../images/people/ivan.jpg'
+import JennyImage from '../images/people/jenny.jpg'
+import JoannaImage from '../images/people/joanna.jpg'
+import LisaImage from '../images/people/lisa.jpg'
+import MichelleImage from '../images/people/michelle.jpg'
 
 export enum Person {
     Everyone = 'Everyone',
@@ -33,27 +41,6 @@ export const PeopleByTrip = {
     ],
 }
 
-export const getPersonFromEmail = (email: string): Person | undefined => {
-    switch (email) {
-        case 'aibek.asm@gmail.com':
-            return Person.Aibek
-        case 'angela.moy48@gmail.com':
-            return Person.Angela
-        case 'dennismoy18@gmail.com':
-            return Person.Dennis
-        case 'ivanwong15@gmail.com':
-            return Person.Ivan
-        case 'jennyjiayimei@gmail.com':
-            return Person.Jenny
-        case 'joannamei11@gmail.com':
-            return Person.Joanna
-        case 'michellec0897@gmail.com':
-            return Person.Michelle
-        default:
-            break
-    }
-}
-
 export const getPersonInitials = (person: Person): string => {
     switch (person) {
         case Person.Everyone:
@@ -78,6 +65,50 @@ export const getPersonInitials = (person: Person): string => {
             return 'SL'
         default:
             return ''
+    }
+}
+
+export const getPersonImage = (person: Person) => {
+    switch (person) {
+        case Person.Aibek:
+            return AibekImage
+        case Person.Angela:
+            return AngelaImage
+        case Person.Dennis:
+            return DennisImage
+        case Person.Ivan:
+            return IvanImage
+        case Person.Jenny:
+            return JennyImage
+        case Person.Joanna:
+            return JoannaImage
+        case Person.Lisa:
+            return LisaImage
+        case Person.Michelle:
+            return MichelleImage
+        default:
+            return undefined
+    }
+}
+
+export const getPersonFromEmail = (email: string): Person | undefined => {
+    switch (email) {
+        case 'aibek.asm@gmail.com':
+            return Person.Aibek
+        case 'angela.moy48@gmail.com':
+            return Person.Angela
+        case 'dennismoy18@gmail.com':
+            return Person.Dennis
+        case 'ivanwong15@gmail.com':
+            return Person.Ivan
+        case 'jennyjiayimei@gmail.com':
+            return Person.Jenny
+        case 'joannamei11@gmail.com':
+            return Person.Joanna
+        case 'michellec0897@gmail.com':
+            return Person.Michelle
+        default:
+            break
     }
 }
 

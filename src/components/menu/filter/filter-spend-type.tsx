@@ -116,6 +116,7 @@ export const FilterSpendType = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    marginRight: 2,
                 }}>
                 <Box
                     sx={{
@@ -137,48 +138,58 @@ export const FilterSpendType = () => {
                     <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
                 )}
             </Box>
-            {Object.entries(filters).map(([spendType, isActive]) => {
-                return (
-                    <Box
-                        key={'filter-spend-type-' + spendType}
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                        onClick={() => {
-                            handleFilterClick(spendType as SpendType)
-                        }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                }}>
+                {Object.entries(filters).map(([spendType, isActive]) => {
+                    return (
                         <Box
+                            key={'filter-spend-type-' + spendType}
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
+                                justifyContent: 'center',
                                 alignItems: 'center',
+                            }}
+                            onClick={() => {
+                                handleFilterClick(spendType as SpendType)
                             }}>
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    justifyContent: 'center',
+                                    flexDirection: 'column',
                                     alignItems: 'center',
-                                    borderRadius: '100%',
-                                    backgroundColor: isActive
-                                        ? getColorForSpendType(
-                                              spendType as SpendType
-                                          )
-                                        : 'white',
-                                    transition: 'background-color 0.1s',
                                 }}>
-                                {getIconFromSpendType(spendType as SpendType)}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        borderRadius: '100%',
+                                        backgroundColor: isActive
+                                            ? getColorForSpendType(
+                                                  spendType as SpendType
+                                              )
+                                            : 'white',
+                                        transition: 'background-color 0.1s',
+                                    }}>
+                                    {getIconFromSpendType(
+                                        spendType as SpendType
+                                    )}
+                                </Box>
+                                {showIconLabels && (
+                                    <Typography sx={{ fontSize: '10px' }}>
+                                        {spendType}
+                                    </Typography>
+                                )}
                             </Box>
-                            {showIconLabels && (
-                                <Typography sx={{ fontSize: '10px' }}>
-                                    {spendType}
-                                </Typography>
-                            )}
                         </Box>
-                    </Box>
-                )
-            })}
+                    )
+                })}
+            </Box>
         </Box>
     )
 }

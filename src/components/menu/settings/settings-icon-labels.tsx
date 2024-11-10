@@ -2,6 +2,7 @@ import { Box, Switch, Typography } from '@mui/material'
 import { create } from 'zustand'
 
 import { getFromCache, saveInCache } from 'helpers/cache'
+import { useShallow } from 'zustand/react/shallow'
 
 const SHOW_ICON_LABELS_CACHE_KEY = 'showIconLabels'
 
@@ -29,7 +30,9 @@ export const useSettingsIconLabelsStore = create<
 }))
 
 export const SettingsIconLabels = () => {
-    const { showIconLabels, toggleIconLabels } = useSettingsIconLabelsStore()
+    const { showIconLabels, toggleIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
 
     return (
         <Box

@@ -8,6 +8,7 @@ import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-
 import { CollapseAll } from 'components/menu/items/collapse-all'
 import { MenuItem } from 'components/menu/menu'
 import { SearchBar } from 'components/menu/search/search-bar'
+import { useSettingsProfilePicturesStore } from 'components/menu/settings/settings-profile-pictures'
 import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
@@ -26,6 +27,7 @@ import {
     LocationIcon,
 } from 'helpers/icons'
 import { Location } from 'helpers/location'
+import { getPersonImage } from 'helpers/person'
 import { SpendType } from 'helpers/spend'
 
 type ActiveMenuItemData = {
@@ -52,6 +54,11 @@ export const ActiveMenuItems = () => {
     const sortCostState = useSortCostStore(useShallow((state) => state))
     const sortDateState = useSortDateStore(useShallow((state) => state))
     const sortItemNameState = useSortItemNameStore(useShallow((state) => state))
+
+    // Settings
+    const { showProfilePictures } = useSettingsProfilePicturesStore(
+        useShallow((state) => state)
+    )
 
     const activeMenuItems: ActiveMenuItemData[] = [
         {
@@ -177,15 +184,29 @@ export const ActiveMenuItems = () => {
                                     index === activeFilterItems.length - 1
                                         ? 0
                                         : 0.25,
+                                width: 20,
+                                height: 20,
                             }}>
-                            <InitialsIcon
-                                person={person}
-                                sx={{
-                                    height: 20,
-                                    width: 20,
-                                    fontSize: 10,
-                                }}
-                            />
+                            {showProfilePictures && getPersonImage(person) ? (
+                                <img
+                                    src={getPersonImage(person)}
+                                    style={{
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                            ) : (
+                                <InitialsIcon
+                                    person={person}
+                                    sx={{
+                                        height: 20,
+                                        width: 20,
+                                        fontSize: 10,
+                                    }}
+                                />
+                            )}
                         </Box>
                     )
                 })}
@@ -218,14 +239,26 @@ export const ActiveMenuItems = () => {
                                         ? 0
                                         : 0.25,
                             }}>
-                            <InitialsIcon
-                                person={person}
-                                sx={{
-                                    height: 20,
-                                    width: 20,
-                                    fontSize: 10,
-                                }}
-                            />
+                            {showProfilePictures && getPersonImage(person) ? (
+                                <img
+                                    src={getPersonImage(person)}
+                                    style={{
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                            ) : (
+                                <InitialsIcon
+                                    person={person}
+                                    sx={{
+                                        height: 20,
+                                        width: 20,
+                                        fontSize: 10,
+                                    }}
+                                />
+                            )}
                         </Box>
                     )
                 })}

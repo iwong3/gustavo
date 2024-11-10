@@ -1,12 +1,14 @@
-import { Box } from '@mui/material'
+import { Box, Typography } from '@mui/material'
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { useSettingsProfilePicturesStore } from 'components/menu/settings/settings-profile-pictures'
 import { getTablerIcon, InitialsIcon } from 'helpers/icons'
-import { PeopleByTrip, Person } from 'helpers/person'
+import { getPersonImage, PeopleByTrip, Person } from 'helpers/person'
 import { Spend } from 'helpers/spend'
 import { Trip } from 'helpers/trips'
-import { useEffect } from 'react'
 import { useTripsStore } from 'views/trips'
 
 type FilterPaidByState = {
@@ -86,6 +88,14 @@ export const FilterPaidBy = () => {
         }
     }, [])
 
+    // Settings
+    const { showProfilePictures } = useSettingsProfilePicturesStore(
+        useShallow((state) => state)
+    )
+    const { showIconLabels } = useSettingsIconLabelsStore(
+        useShallow((state) => state)
+    )
+
     return (
         <Box
             sx={{
@@ -98,25 +108,38 @@ export const FilterPaidBy = () => {
             }}>
             <Box
                 sx={{
-                    'display': 'flex',
-                    'justifyContent': 'center',
-                    'alignItems': 'center',
-                    'marginRight': 2,
-                    'borderRadius': '100%',
-                    '&:active': {
-                        backgroundColor: '#FBBC04',
-                    },
-                    'transition': 'background-color 0.1s',
-                }}
-                onClick={() => {
-                    reset(currentTrip)
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    marginRight: 2,
                 }}>
-                {getTablerIcon({ name: 'IconX' })}
+                <Box
+                    sx={{
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                        'alignItems': 'center',
+                        'borderRadius': '100%',
+                        '&:active': {
+                            backgroundColor: '#FBBC04',
+                        },
+                        'transition': 'background-color 0.1s',
+                    }}
+                    onClick={() => {
+                        reset(currentTrip)
+                    }}>
+                    {getTablerIcon({ name: 'IconX' })}
+                </Box>
+                {showIconLabels && (
+                    <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
+                )}
             </Box>
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'space-evenly',
+                    justifyContent:
+                        currentTrip === Trip.Japan2024
+                            ? 'space-between'
+                            : 'space-evenly',
                     alignItems: 'center',
                     width: '100%',
                 }}>
@@ -135,18 +158,47 @@ export const FilterPaidBy = () => {
                             onClick={() => {
                                 handleFilterClick(person)
                             }}>
-                            <InitialsIcon
-                                person={person as Person}
-                                sx={
-                                    !isActive
-                                        ? {
-                                              ...sx,
-                                              color: 'black',
-                                              backgroundColor: 'lightgray',
-                                          }
-                                        : sx
-                                }
-                            />
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                }}>
+                                {showProfilePictures &&
+                                getPersonImage(person) ? (
+                                    <img
+                                        src={getPersonImage(person)}
+                                        style={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '100%',
+                                            objectFit: 'cover',
+                                            border: isActive
+                                                ? '2px solid #FBBC04'
+                                                : '2px solid transparent',
+                                        }}
+                                    />
+                                ) : (
+                                    <InitialsIcon
+                                        person={person as Person}
+                                        sx={
+                                            !isActive
+                                                ? {
+                                                      ...sx,
+                                                      color: 'black',
+                                                      backgroundColor:
+                                                          'lightgray',
+                                                  }
+                                                : sx
+                                        }
+                                    />
+                                )}
+                                {showIconLabels && (
+                                    <Typography sx={{ fontSize: '10px' }}>
+                                        {person}
+                                    </Typography>
+                                )}
+                            </Box>
                         </Box>
                     )
                 })}

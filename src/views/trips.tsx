@@ -90,6 +90,8 @@ export const Trips = () => {
 
             if (currencyConversionError) {
                 setCurrencyConversionError(true)
+            } else {
+                setCurrencyConversionError(false)
             }
 
             // set data

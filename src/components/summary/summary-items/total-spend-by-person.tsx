@@ -3,15 +3,21 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { Graph } from 'components/graphs/graph'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import { useSettingsProfilePicturesStore } from 'components/menu/settings/settings-profile-pictures'
 import { defaultBackgroundColor } from 'helpers/colors'
 import { FormattedMoney } from 'helpers/currency'
 import { getInitialsIconColors, InitialsIcon } from 'helpers/icons'
-import { Person } from 'helpers/person'
+import { getPersonImage, Person } from 'helpers/person'
 import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByPerson = () => {
     const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
     const { filters, handleFilterClick } = useFilterSplitBetweenStore(
+        useShallow((state) => state)
+    )
+
+    // Settings
+    const { showProfilePictures } = useSettingsProfilePicturesStore(
         useShallow((state) => state)
     )
 
@@ -86,14 +92,26 @@ export const TotalSpendByPerson = () => {
                         alignItems: 'center',
                         padding: 0.5,
                     }}>
-                    <InitialsIcon
-                        person={person}
-                        sx={{
-                            width: 18,
-                            height: 18,
-                            fontSize: 10,
-                        }}
-                    />
+                    {showProfilePictures && getPersonImage(person) ? (
+                        <img
+                            src={getPersonImage(person)}
+                            style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: '100%',
+                                objectFit: 'cover',
+                            }}
+                        />
+                    ) : (
+                        <InitialsIcon
+                            person={person}
+                            sx={{
+                                width: 18,
+                                height: 18,
+                                fontSize: 10,
+                            }}
+                        />
+                    )}
                     <Box
                         sx={{
                             marginLeft: 0.5,

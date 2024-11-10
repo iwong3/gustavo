@@ -7,6 +7,12 @@ import { LinePath } from '@visx/shape'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
+import { localPoint } from '@visx/event'
+import {
+    TooltipWithBounds,
+    useTooltip,
+    useTooltipInPortal,
+} from '@visx/tooltip'
 import {
     SortOrder as CostOrder,
     useSortCostStore,
@@ -98,6 +104,32 @@ export const LineGraph = ({
         domain: [0, yMax],
     })
 
+    // tooltip
+    const {
+        tooltipData,
+        tooltipLeft,
+        tooltipTop,
+        tooltipOpen,
+        showTooltip,
+        hideTooltip,
+    } = useTooltip()
+
+    const { containerRef, TooltipInPortal } = useTooltipInPortal({
+        // use TooltipWithBounds
+        detectBounds: true,
+        // when tooltip containers are scrolled, this will correctly update the Tooltip position
+        scroll: true,
+    })
+
+    const handleMouseOver = (event: any, datum: any) => {
+        const coords = localPoint(event.target.ownerSVGElement, event)
+        showTooltip({
+            tooltipLeft: coords?.x,
+            tooltipTop: coords?.y,
+            tooltipData: datum,
+        })
+    }
+
     // aesthetic properties
     // const atLeastOneActive = graphData.some((data) => data.isActive)
 
@@ -115,7 +147,7 @@ export const LineGraph = ({
                 boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
                 overflowX: 'scroll',
             }}>
-            <svg width={totalWidth} height={graphHeight}>
+            <svg ref={containerRef} width={totalWidth} height={graphHeight}>
                 <Group>
                     {graphData.map((data, index) => {
                         return (
@@ -140,6 +172,13 @@ export const LineGraph = ({
                     scale={xScale}
                     numTicks={numTicks}
                 />
+                <TooltipWithBounds
+                    // set this to random so it correctly updates with parent bounds
+                    key={Math.random()}
+                    top={tooltipTop}
+                    left={tooltipLeft}>
+                    Data value <strong>HI</strong>
+                </TooltipWithBounds>
             </svg>
         </Box>
     )
