@@ -1,17 +1,25 @@
 {
   "files": {
     "main.css": "/gustavo/static/css/main.345ef473.css",
-    "main.js": "/gustavo/static/js/main.57c094ab.js",
+    "main.js": "/gustavo/static/js/main.c4b0c2ee.js",
     "static/media/vancouver-2024.png": "/gustavo/static/media/vancouver-2024.ed2a7723b163d9b28c0b.png",
+    "static/media/joanna.jpg": "/gustavo/static/media/joanna.cd37d5e8536a5df2947c.jpg",
     "static/media/japan-2024.jpg": "/gustavo/static/media/japan-2024.5345c9da7a6e8a926559.jpg",
+    "static/media/michelle.jpg": "/gustavo/static/media/michelle.4b438a87221d58e80e3d.jpg",
+    "static/media/aibek.jpg": "/gustavo/static/media/aibek.5b607088fd78e3b430e1.jpg",
     "static/media/gus-fring.png": "/gustavo/static/media/gus-fring.70930d6dc17f27585539.png",
+    "static/media/angela.jpg": "/gustavo/static/media/angela.510be8078ff958065e71.jpg",
+    "static/media/ivan.jpg": "/gustavo/static/media/ivan.0c8bd940387ba1d16fe9.jpg",
+    "static/media/lisa.jpg": "/gustavo/static/media/lisa.0a5617cbb999b273c17b.jpg",
+    "static/media/jenny.jpg": "/gustavo/static/media/jenny.71c2e807df79c1319996.jpg",
     "static/media/google-maps.png": "/gustavo/static/media/google-maps.9c4b37dd4e73358fbfb9.png",
+    "static/media/dennis.jpg": "/gustavo/static/media/dennis.f57b05334f1d7d27e448.jpg",
     "index.html": "/gustavo/index.html",
     "main.345ef473.css.map": "/gustavo/static/css/main.345ef473.css.map",
-    "main.57c094ab.js.map": "/gustavo/static/js/main.57c094ab.js.map"
+    "main.c4b0c2ee.js.map": "/gustavo/static/js/main.c4b0c2ee.js.map"
   },
   "entrypoints": [
     "static/css/main.345ef473.css",
-    "static/js/main.57c094ab.js"
+    "static/js/main.c4b0c2ee.js"
   ]
 }
