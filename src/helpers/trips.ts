@@ -4,8 +4,6 @@ export enum Trip {
     SouthKorea2025 = 'South Korea 2025',
 }
 
-export const ActiveTrips = [
-    Trip.Japan2024,
-    Trip.Vancouver2024,
-    Trip.SouthKorea2025,
-]
+export const ActiveTrips = [Trip.SouthKorea2025]
+
+export const PastTrips = [Trip.Japan2024, Trip.Vancouver2024]
