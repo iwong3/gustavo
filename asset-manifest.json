@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/gustavo/static/css/main.345ef473.css",
-    "main.js": "/gustavo/static/js/main.abd4c57b.js",
+    "main.js": "/gustavo/static/js/main.fac3158f.js",
     "static/media/vancouver-2024.png": "/gustavo/static/media/vancouver-2024.ed2a7723b163d9b28c0b.png",
     "static/media/japan-2024.jpg": "/gustavo/static/media/japan-2024.5345c9da7a6e8a926559.jpg",
     "static/media/gus-fring.png": "/gustavo/static/media/gus-fring.70930d6dc17f27585539.png",
@@ -9,10 +9,10 @@
     "static/media/south-korea-2025.jpg": "/gustavo/static/media/south-korea-2025.86623fe2d86f2b184a6d.jpg",
     "index.html": "/gustavo/index.html",
     "main.345ef473.css.map": "/gustavo/static/css/main.345ef473.css.map",
-    "main.abd4c57b.js.map": "/gustavo/static/js/main.abd4c57b.js.map"
+    "main.fac3158f.js.map": "/gustavo/static/js/main.fac3158f.js.map"
   },
   "entrypoints": [
     "static/css/main.345ef473.css",
-    "static/js/main.abd4c57b.js"
+    "static/js/main.fac3158f.js"
   ]
 }
