@@ -2,8 +2,8 @@ import axios from 'axios'
 import dayjs from 'dayjs'
 
 const majorVersion = 1 // major version should be updated when there are breaking changes
-const minorVersion = 0 // minor version should be updated when there are new features
-const patchVersion = 1 // patch version should be updated when there are bug fixes
+const minorVersion = 1 // minor version should be updated when there are new features
+const patchVersion = 0 // patch version should be updated when there are bug fixes
 
 export const formattedVersion = () => {
     return `v${majorVersion}.${minorVersion}.${patchVersion}`
