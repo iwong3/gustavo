@@ -13,6 +13,7 @@ import { ActiveTrips, Trip } from 'helpers/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useMainStore } from 'views/main'
 import Japan2024Image from '../images/japan-2024.jpg'
+import SouthKorea2025Image from '../images/south-korea-2025.jpg'
 import Vancouver2024Image from '../images/vancouver-2024.png'
 
 type TripsState = {
@@ -124,6 +125,7 @@ export const Trips = () => {
                 setCurrentTrip(trip)
                 setShowTripsMenu(false)
             } catch (err) {
+                console.log(err)
                 setFetchDataError(true)
             } finally {
                 setLoading(false)
@@ -222,6 +224,8 @@ export const Trips = () => {
                 return Japan2024Image
             case Trip.Vancouver2024:
                 return Vancouver2024Image
+            case Trip.SouthKorea2025:
+                return SouthKorea2025Image
             default:
                 return ''
         }

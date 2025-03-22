@@ -5,6 +5,7 @@
 export enum Currency {
     CAD = 'CAD',
     JPY = 'JPY',
+    KRW = 'KRW',
     USD = 'USD',
 }
 

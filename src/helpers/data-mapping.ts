@@ -37,6 +37,15 @@ export const UrlsByTrip: Map<Trip, Urls> = new Map([
                 'https://docs.google.com/spreadsheets/d/1O1xY4t9RDgKMZWIle644wH1PZEi17LqnU1DI5hJjB6c',
         },
     ],
+    [
+        Trip.SouthKorea2025,
+        {
+            GoogleFormUrl:
+                'https://docs.google.com/forms/d/e/1FAIpQLSd9dkTzTvlMlzY_qTjx82wzzHn7QqOgTxHyukda-aIuIzizjg/viewform',
+            GoogleSheetUrl:
+                'https://docs.google.com/spreadsheets/d/1F17bXpBHHl3sAhNx6jBipb_9BdObN63iiyLenWjL-EU',
+        },
+    ],
 ])
 
 // the google sheet columns
