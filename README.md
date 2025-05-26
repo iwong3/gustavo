@@ -2,6 +2,25 @@
 
 track spending and split costs
 
+## Deployment
+
+### GitHub Pages (Current)
+
+```bash
+npm run deploy
+```
+
+### Vercel
+
+1. Connect your GitHub repository to Vercel
+2. Vercel will automatically detect this as a React app
+3. Use the default build settings (build command: `npm run build`, output
+   directory: `build`)
+4. Deploy!
+
+The `vercel.json` configuration file is already set up to handle client-side
+routing.
+
 To-Do:
 
 Graphs
