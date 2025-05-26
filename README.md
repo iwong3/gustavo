@@ -1,27 +1,48 @@
-# gustavo
+# App Suite
 
-track spending and split costs
+A multi-feature application suite
+
+## Features
+
+### Gustavo - Spending Tracker (`/gustavo`)
+
+Track spending and split costs
+
+## Architecture
+
+This app is designed as a multi-feature suite:
+
+-   **Root (`/`)**: Landing page with feature selection
+-   **Gustavo (`/gustavo`)**: Spending tracker feature
+-   **Future features**: Will be added at their own paths (e.g., `/feature2`,
+    `/feature3`)
 
 ## Deployment
 
-### GitHub Pages (Current)
+### Vercel (Current)
+
+1. Connect your GitHub repository to Vercel
+2. Vercel will automatically detect this as a React app
+3. Deploy!
+
+The app is configured to run from the root path and `vercel.json` handles
+client-side routing.
+
+### GitHub Pages (Legacy)
+
+To re-enable GitHub Pages deployment, add this to `package.json`:
+
+```json
+"homepage": "https://iwong3.github.io/gustavo/"
+```
+
+Then run:
 
 ```bash
 npm run deploy
 ```
 
-### Vercel
-
-1. Connect your GitHub repository to Vercel
-2. Vercel will automatically detect this as a React app
-3. Use the default build settings (build command: `npm run build`, output
-   directory: `build`)
-4. Deploy!
-
-The `vercel.json` configuration file is already set up to handle client-side
-routing.
-
-To-Do:
+## Gustavo Feature To-Do:
 
 Graphs
 

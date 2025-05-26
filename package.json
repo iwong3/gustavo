@@ -4,7 +4,6 @@
     "description": "track spending and split costs",
     "author": "Ivan Wong",
     "repository": "git+https://github.com/iwong3/gustavo.git",
-    "homepage": "https://iwong3.github.io/gustavo/",
     "scripts": {
         "build": "react-scripts build",
         "deploy": "gh-pages -d build",
