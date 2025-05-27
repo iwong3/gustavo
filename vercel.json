@@ -1,4 +1,12 @@
 {
+    "functions": {
+        "api/**/*.js": {
+            "regions": ["iad1"]
+        },
+        "api/**/*.ts": {
+            "regions": ["iad1"]
+        }
+    },
     "rewrites": [
         {
             "source": "/(.*)",

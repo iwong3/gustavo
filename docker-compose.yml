@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+    postgres:
+        image: postgres:16
+        container_name: gustavo-postgres
+        environment:
+            POSTGRES_DB: gustavo_dev
+            POSTGRES_USER: gustavo_user
+            POSTGRES_PASSWORD: gustavo_dev_password
+            POSTGRES_INITDB_ARGS:
+                '--auth-host=scram-sha-256 --auth-local=scram-sha-256'
+        ports:
+            - '5432:5432'
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U gustavo_user -d gustavo_dev']
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+volumes:
+    postgres_data:
