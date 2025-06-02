@@ -1,12 +1,7 @@
 {
-    "functions": {
-        "api/**/*.js": {
-            "regions": ["iad1"]
-        },
-        "api/**/*.ts": {
-            "regions": ["iad1"]
-        }
-    },
+    "buildCommand": "npm run build",
+    "outputDirectory": "build",
+    "framework": null,
     "rewrites": [
         {
             "source": "/(.*)",
