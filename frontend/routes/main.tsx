@@ -1,10 +1,10 @@
 import { Box, Button, Typography } from '@mui/material'
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
 
 import { Main } from 'views/main'
 
-let customParseFormat = require('dayjs/plugin/customParseFormat')
 dayjs.extend(customParseFormat)
 
 enum Path {

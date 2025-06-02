@@ -12,4 +12,6 @@ const Root = () => {
     )
 }
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(<Root />)
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+    <Root />
+)

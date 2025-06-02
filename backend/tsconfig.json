@@ -1,0 +1,24 @@
+{
+    "//": "TypeScript configuration for Express backend server",
+    "compilerOptions": {
+        "target": "es2022",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "outDir": "./dist",
+        "rootDir": "./",
+        "declaration": false,
+        "sourceMap": true,
+        "removeComments": false,
+        "noEmitOnError": true,
+        "resolveJsonModule": true,
+        "lib": ["es2022"],
+        "types": ["node"]
+    },
+    "include": ["server.ts"],
+    "exclude": ["node_modules", "dist", "../api", "../frontend", "../infra"]
+}

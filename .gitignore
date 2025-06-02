@@ -11,6 +11,11 @@
 # production
 /build
 
+# TypeScript build output
+/dist
+/backend/dist
+*.tsbuildinfo
+
 # misc
 .DS_Store
 .env.local

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
     postgres:
-        image: postgres:16
+        image: postgres:17.5
         container_name: gustavo-postgres
         environment:
             POSTGRES_DB: gustavo_dev
@@ -14,13 +14,19 @@ services:
             - '5432:5432'
         volumes:
             - postgres_data:/var/lib/postgresql/data
-            - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+            - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
         restart: unless-stopped
         healthcheck:
             test: ['CMD-SHELL', 'pg_isready -U gustavo_user -d gustavo_dev']
             interval: 30s
             timeout: 10s
             retries: 3
+        networks:
+            - gustavo-network
 
 volumes:
     postgres_data:
+
+networks:
+    gustavo-network:
+        driver: bridge
