@@ -5,7 +5,7 @@
     "author": "Ivan Wong",
     "repository": "git+https://github.com/iwong3/gustavo.git",
     "scripts": {
-        "start": "npm run docker:db && echo 'Starting full development environment...' && concurrently \"npm run backend\" \"npm run react\"",
+        "start": "yarn docker:db && echo 'Starting full development environment...' && concurrently \"yarn backend\" \"yarn react\"",
         "react": "vite",
         "backend": "cd backend && ts-node server.ts",
         "docker:db": "docker-compose -f infra/docker-compose.yml up -d postgres",

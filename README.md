@@ -87,3 +87,62 @@ UX
 -   Log errors and add view to see which rows were affected
 -   Link to View Only Google Sheet
 -   Clicking on trip name should bring user back to trip menu
+
+# Gustavo - Spending Tracker
+
+## 🚀 Quick Start
+
+### Setup
+
+1. Install dependencies: `yarn install`
+2. Copy environment template: `cp config/env.example .env.local`
+3. Start database: `yarn docker:db`
+4. Start development: `yarn start`
+
+Visit [http://localhost:3000](http://localhost:3000) to view the app.
+
+## 📋 Available Scripts
+
+-   `yarn start` - Start full development environment
+-   `yarn react` - Start React development server only
+-   `yarn backend` - Start Express backend only
+-   `yarn build` - Build for production
+-   `yarn test` - Run tests
+-   `yarn deploy` - Deploy to Vercel
+
+## 🛠️ Development Setup
+
+See [infra/README-Docker.md](infra/README-Docker.md) for detailed setup
+instructions.
+
+## 📂 Project Structure
+
+```
+gustavo/
+├── frontend/          # React application
+├── backend/           # Express development server
+├── api/              # Vercel serverless functions
+├── database/         # PostgreSQL schemas
+├── infra/           # Docker configuration
+├── config/          # Environment configuration
+└── scripts/         # Utility scripts
+```
+
+## 🔧 Database
+
+Uses PostgreSQL with Docker for local development:
+
+-   Local: `yarn docker:db` (port 5432)
+-   Production: Configured via Vercel environment variables
+
+## 🚀 Deployment
+
+Automatic deployment via Vercel when pushing to main branch.
+
+Manual deployment: `yarn deploy`
+
+## 📚 Documentation
+
+-   [Docker Setup Guide](infra/README-Docker.md)
+-   [Database Configuration](config/README.md)
+-   [Project TODO](TODO.md)

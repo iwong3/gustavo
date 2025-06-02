@@ -5,14 +5,16 @@ FROM node:22-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Install dependencies
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+elif [ -f package-lock.json ]; then npm ci; \
+elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
+else echo "Lockfile not found." && exit 1; \
+fi
+
+# Copy source code
+COPY . .
 
 # Development stage
 FROM base AS dev
@@ -23,13 +25,12 @@ COPY . .
 EXPOSE 3000
 ENV PORT 3000
 
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
 
 # Build stage
-FROM base AS builder
+FROM node:18-alpine AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json yarn.lock* ./
+RUN yarn install --frozen-lockfile
 COPY . .
-
-# Build the app
-RUN npm run build 
+RUN yarn build 

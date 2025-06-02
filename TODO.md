@@ -12,8 +12,8 @@
 
 -   [ ] **Set Up Local Environment**
     -   [ ] Copy environment: `cp config/env.example .env.local`
-    -   [ ] Start PostgreSQL: `npm run docker:db`
-    -   [ ] Verify database: `npm run docker:db-logs`
+    -   [ ] Start PostgreSQL: `yarn docker:db`
+    -   [ ] Verify database: `yarn docker:db-logs`
 
 ### **Option B: Without Docker (Fallback)**
 
@@ -21,13 +21,13 @@
     -   [ ] Create database: `gustavo_dev`
     -   [ ] Create user: `gustavo_user` with password `gustavo_dev_password`
     -   [ ] Update `.env.local` to point to local PostgreSQL
-    -   [ ] Run schema: `npm run db:schema-local`
+    -   [ ] Run schema: `yarn db:schema-local`
 
 ### **Start Development Servers**
 
--   [ ] **Install dependencies**: `npm install`
--   [ ] **Start API server**: `npm run start:server` (Terminal 1)
--   [ ] **Start React app**: `npm start` (Terminal 2)
+-   [ ] **Install dependencies**: `yarn install`
+-   [ ] **Start API server**: `yarn backend` (Terminal 1)
+-   [ ] **Start React app**: `yarn start` (Terminal 2)
 -   [ ] **Test everything**:
     -   [ ] React app: http://localhost:3000
     -   [ ] API health: http://localhost:3001/api/health
@@ -63,7 +63,7 @@
 
 ### **Deploy**
 
--   [ ] **Test build locally**: `npm run build`
+-   [ ] **Test build locally**: `yarn build`
 -   [ ] **Push to GitHub**: `git push origin main`
 -   [ ] **Verify deployment** works on Vercel
 -   [ ] **Test production APIs** work with production database
@@ -74,8 +74,8 @@
 
 ### **Daily Development**
 
--   [ ] Start database: `npm run docker:db` (or use local PostgreSQL)
--   [ ] Start servers: `npm run dev:start`
+-   [ ] Start database: `yarn docker:db` (or use local PostgreSQL)
+-   [ ] Start servers: `yarn start`
 -   [ ] Code, test, commit
 -   [ ] Deploy: `git push origin main` → Auto-deploys to Vercel
 
@@ -105,7 +105,7 @@ gustavo/
 
 -   Verify PostgreSQL 17.5 is running locally
 -   Check connection settings in `.env.local`
--   Test with `npm run db:test-local`
+-   Test with `yarn db:test-local`
 
 ### **Vercel Issues**
 
@@ -144,3 +144,55 @@ gustavo/
 -   Clean up migrations
 -   Figure out schema (flexible for storing different data)
 -   Explore prisma or other ORMs
+
+## 🚀 **Quick Setup Checklist (New Developers)**
+
+### **Database Setup**
+
+-   [ ] Install PostgreSQL locally OR start Docker:
+    -   [ ] Start PostgreSQL: `yarn docker:db`
+    -   [ ] Verify database: `yarn docker:db-logs`
+-   [ ] Create local database and schema:
+    -   [ ] Create environment file: `cp config/env.example .env.local`
+    -   [ ] Set up database: `yarn db:setup-local`
+    -   [ ] Run schema: `yarn db:schema-local`
+
+### **Development**
+
+-   [ ] **Install dependencies**: `yarn install`
+-   [ ] **Start API server**: `yarn backend` (Terminal 1)
+-   [ ] **Start React app**: `yarn start` (Terminal 2)
+-   [ ] **Visit**: http://localhost:3000
+
+### **Production Database Setup (Neon)**
+
+-   [ ] **Create Neon database** at https://console.neon.tech/
+-   [ ] **Apply schema** to Neon database (copy/paste from
+        `database/schema.sql`)
+-   [ ] **Set environment variables** in Vercel Dashboard:
+    ```
+    NODE_ENV=production
+    DB_HOST=your-production-host
+    DB_PORT=5432
+    DB_NAME=your-production-db
+    DB_USER=your-production-user
+    DB_PASSWORD=your-production-password
+    ```
+
+### **Deploy**
+
+-   [ ] **Test build locally**: `yarn build`
+-   [ ] **Push to GitHub**: `git push origin main`
+-   [ ] **Verify deployment** works on Vercel
+-   [ ] **Test production APIs** work with production database
+
+---
+
+## 🚀 **Development Workflow (Once Set Up)**
+
+### **Daily Development**
+
+-   [ ] Start database: `yarn docker:db` (or use local PostgreSQL)
+-   [ ] Start servers: `yarn start`
+-   [ ] Code, test, commit
+-   [ ] Deploy: `git push origin main` → Auto-deploys to Vercel
