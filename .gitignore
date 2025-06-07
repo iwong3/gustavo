@@ -90,6 +90,12 @@ postgres_data/
 # Cursor AI
 .cursor/
 
+# PWA files
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+
 # Misc
 *.tgz
 *.tar.gz

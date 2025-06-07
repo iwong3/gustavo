@@ -7,10 +7,10 @@ import { SettingsVersion } from 'components/menu/settings/settings-version'
 
 export const SettingsMenu = () => {
     const settingsMenuItems = [
-        <SettingsIconLabels />,
-        <SettingsCost />,
-        <SettingsSubmitReceipt />,
-        <SettingsVersion />,
+        <SettingsIconLabels key="icon-labels" />,
+        <SettingsCost key="cost" />,
+        <SettingsSubmitReceipt key="submit-receipt" />,
+        <SettingsVersion key="version" />,
     ]
 
     return (

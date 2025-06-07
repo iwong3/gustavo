@@ -100,7 +100,7 @@ export const Main = () => {
                                         fontFamily: 'Spectral',
                                         lineHeight: '90%',
                                     }}>
-                                    "And a man, a man provides...
+                                    &quot;And a man, a man provides...
                                 </Typography>
                                 <Typography
                                     sx={{
@@ -108,7 +108,7 @@ export const Main = () => {
                                         fontFamily: 'Spectral',
                                         lineHeight: '90%',
                                     }}>
-                                    &nbsp; ...your spending habits."
+                                    &nbsp; ...your spending habits.&quot;
                                 </Typography>
                             </Box>
                         ) : (
