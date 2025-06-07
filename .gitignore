@@ -10,9 +10,13 @@ package-lock.json
 
 # testing
 /coverage
+*.lcov
 
-# production
-/build
+# Next.js build output
+/.next/
+/out/
+
+# Legacy build directory (removed - now using Next.js)
 
 # TypeScript build output
 /dist
@@ -28,6 +32,7 @@ package-lock.json
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
 # logs
 npm-debug.log*
@@ -35,6 +40,21 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Yarn Integrity file
+.yarn-integrity
 
 # OS generated files
 .DS_Store
@@ -52,8 +72,24 @@ Thumbs.db
 *.swo
 *~
 
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+
 # Vercel
 .vercel
 
 # Docker volumes (if any)
 postgres_data/
+
+# Personal notes
+/personal
+
+# Cursor AI
+.cursor/
+
+# Misc
+*.tgz
+*.tar.gz

@@ -196,3 +196,8 @@ gustavo/
 -   [ ] Start servers: `yarn start`
 -   [ ] Code, test, commit
 -   [ ] Deploy: `git push origin main` → Auto-deploys to Vercel
+
+## Ivan
+
+-   [ ] Consider using Next.js instead of Express
+-   [ ] Get Prisma installed
