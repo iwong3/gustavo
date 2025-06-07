@@ -2,6 +2,7 @@
 
 import { Box, Button, Typography } from '@mui/material'
 import { useRouter } from 'next/navigation'
+import PWAInstallButton from './components/PWAInstallButton'
 
 export default function HomePage() {
     const router = useRouter()
@@ -46,6 +47,11 @@ export default function HomePage() {
                     Feature 2
                 </Button>
                 */}
+            </Box>
+
+            {/* PWA Install Button */}
+            <Box sx={{ mt: 2 }}>
+                <PWAInstallButton variant="outlined" size="large" fullWidth />
             </Box>
         </Box>
     )
