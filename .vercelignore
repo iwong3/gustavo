@@ -8,20 +8,18 @@ docs/
 .prettierignore
 vitest.config.ts
 
-# Source files (only built output is needed)
-frontend/
-backend/
-
-# Development dependencies
-node_modules/
+# Development dependencies - let Vercel handle this
+# node_modules/
 
 # Build artifacts not needed for deployment
 .vite/
 coverage/
+.next/
 
 # Environment files (use Vercel's environment variables instead)
 .env.local
 .env.development.local
+.env
 
 # Git
 .git/
@@ -30,15 +28,15 @@ coverage/
 # IDE files
 .vscode/
 .idea/
+.cursor/
 
 # Docker files (not needed for Vercel)
 infra/
 *.dockerfile
 docker-compose*.yml
 
-# Database files (use Vercel's database instead)
-database/
-prisma/
+# Scripts that aren't needed for build
+scripts/reset-database.sh
 
-# Scripts (not needed for production)
-scripts/ 
+# Personal files
+personal/ 

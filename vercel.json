@@ -1,3 +1,14 @@
 {
-    "framework": "nextjs"
+    "framework": "nextjs",
+    "buildCommand": "next build",
+    "outputDirectory": ".next",
+    "installCommand": "yarn install",
+    "functions": {
+        "app/api/**/*.ts": {
+            "runtime": "nodejs18.x"
+        }
+    },
+    "env": {
+        "NODE_ENV": "production"
+    }
 }
