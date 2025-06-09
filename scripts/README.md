@@ -52,7 +52,7 @@ npm run env:create-bash
 ### Core Database Setup
 
 -   **`drop-database.sql`** - Drops the database and user (run as postgres)
--   **`create-database.sql`** - Creates database and user (run as postgres)
+-   **Docker Compose** - Creates database and user automatically
 -   **`setup-permissions.sql`** - Sets up schema permissions (run as
     gustavo_user)
 
@@ -69,7 +69,7 @@ If you need to run SQL files manually:
 psql -U postgres -f database/drop-database.sql
 
 # Create database and user
-psql -U postgres -f database/create-database.sql
+npm run docker:db  # Docker handles database creation
 
 # Set up permissions
 psql -U gustavo_user -d gustavo_dev -f database/setup-permissions.sql

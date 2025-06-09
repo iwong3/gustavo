@@ -17,6 +17,56 @@ This app is designed as a multi-feature suite:
 -   **Future features**: Will be added at their own paths (e.g., `/feature2`,
     `/feature3`)
 
+## Troubleshooting
+
+### WSL Issues on Windows
+
+If you encounter errors like
+`execvpe(/bin/bash) failed: No such file or directory` when running npm scripts:
+
+#### Problem
+
+Your WSL default distribution might be set to `docker-desktop` which doesn't
+include bash, causing bash-based npm scripts to fail.
+
+#### Solution
+
+1. Check your current WSL distributions:
+
+    ```bash
+    wsl --list --verbose
+    wsl --status
+    ```
+
+2. If the default distribution is `docker-desktop`, change it to Ubuntu:
+
+    ```bash
+    wsl --set-default Ubuntu
+    ```
+
+3. Verify bash is available:
+
+    ```bash
+    wsl bash --version
+    ```
+
+4. Confirm the change:
+    ```bash
+    wsl --status
+    ```
+
+#### Expected Output
+
+After fixing, `wsl --status` should show:
+
+```
+Default Distribution: Ubuntu
+Default Version: 2
+```
+
+This change persists after PC restarts and allows all bash-based npm scripts
+(`db:reset`, `db:migrate`, `db:seed`, etc.) to work properly.
+
 ## Deployment
 
 ### Vercel (Current)

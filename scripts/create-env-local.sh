@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Script to create .env.local file for local development
 # Run this after setting up your local PostgreSQL database
 
@@ -9,8 +9,8 @@ ENV_CONTENT="# Local Development Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=gustavo_dev
-DB_USER=gustavo_user
-DB_PASSWORD=gustavo_dev_password
+DB_USER=gus
+DB_PASSWORD=yellow_shirt_dev
 NODE_ENV=development"
 
 # Check if .env.local already exists

@@ -101,8 +101,8 @@ NODE_ENV=development
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=gustavo_dev
-DB_USER=gustavo_user
-DB_PASSWORD=gustavo_dev_password
+DB_USER=gus
+DB_PASSWORD=yellow_shirt_dev
 REACT_APP_API_URL=http://localhost:3001/api
 PORT=3001
 ```
@@ -153,7 +153,7 @@ npm run vercel:deploy
 
 ```bash
 # Connect to local database
-docker exec -it gustavo-postgres psql -U gustavo_user -d gustavo_dev
+docker exec -it gustavo-postgres psql -U gus -d gustavo_dev
 
 # Reset local database
 npm run docker:db-down

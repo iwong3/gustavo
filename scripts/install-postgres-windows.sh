@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # PostgreSQL Installation Script for Windows (using bash)
 # Works with WSL, Git Bash, or MSYS2
 

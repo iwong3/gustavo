@@ -1,31 +1,50 @@
-version: '3.8'
-
 services:
     postgres:
         image: postgres:17.5
         container_name: gustavo-postgres
         environment:
             POSTGRES_DB: gustavo_dev
-            POSTGRES_USER: gustavo_user
-            POSTGRES_PASSWORD: gustavo_dev_password
+            POSTGRES_USER: gus
+            POSTGRES_PASSWORD: yellow_shirt_dev
             POSTGRES_INITDB_ARGS:
                 '--auth-host=scram-sha-256 --auth-local=scram-sha-256'
         ports:
             - '5432:5432'
         volumes:
             - postgres_data:/var/lib/postgresql/data
-            - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+            - ../database/schema/complete_schema.sql:/docker-entrypoint-initdb.d/schema.sql
         restart: unless-stopped
         healthcheck:
-            test: ['CMD-SHELL', 'pg_isready -U gustavo_user -d gustavo_dev']
+            test: ['CMD-SHELL', 'pg_isready -U gus -d gustavo_dev']
             interval: 30s
             timeout: 10s
             retries: 3
         networks:
             - gustavo-network
 
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        container_name: gustavo-pgadmin
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@example.com
+            PGADMIN_DEFAULT_PASSWORD: admin123
+            PGADMIN_CONFIG_SERVER_MODE: 'False'
+            PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+        ports:
+            - '8080:80'
+        volumes:
+            - pgadmin_data:/var/lib/pgadmin
+            - pgadmin_config:/var/lib/pgadmin/storage
+        depends_on:
+            - postgres
+        restart: unless-stopped
+        networks:
+            - gustavo-network
+
 volumes:
     postgres_data:
+    pgadmin_data:
+    pgadmin_config:
 
 networks:
     gustavo-network:

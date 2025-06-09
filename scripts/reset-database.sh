@@ -1,10 +1,10 @@
-#!/bin/bash
-# Database Reset and Migration Script
-# This script will completely reset your local database and apply the schema
+#!/usr/bin/env bash
+# Windows-compatible Database Reset Script
+# This script works with Docker Desktop on Windows
 
 set -e  # Exit on any error
 
-echo "🔄 Resetting local database..."
+echo "🔄 Resetting local database (Windows Docker)..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,89 +14,163 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Database configuration
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_NAME="gustavo_dev"
-DB_USER="gustavo_user"
-DB_PASSWORD="gustavo_dev_password"
-POSTGRES_USER="postgres"
-POSTGRES_PASSWORD="postgres"
+DB_NAME="${DB_NAME:-gustavo_dev}"
+DB_USER="${DB_USER:-gus}"
+DB_PASSWORD="${DB_PASSWORD:-yellow_shirt_dev}"
 
-echo -e "${BLUE}📋 Database Reset Plan:${NC}"
-echo "  1. Drop existing database and user"
-echo "  2. Create database and user"
-echo "  3. Set up permissions"
-echo "  4. Apply schema"
-echo "  5. Verify setup"
+echo -e "${BLUE}📋 Database Reset Plan (Windows Docker):${NC}"
+echo "  1. Stop existing Docker container"
+echo "  2. Remove Docker volume (fresh database)"
+echo "  3. Start fresh Docker container"
+echo "  4. Wait for database to be ready"
+echo "  5. Run migrations using docker exec"
+echo "  6. Load seed data using docker exec"
+echo "  7. Verify setup"
 echo ""
 
-# Function to run SQL file as postgres user
-run_sql_as_postgres() {
-    local sql_file="$1"
-    echo -e "${YELLOW}📄 Running $sql_file as postgres user...${NC}"
-    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$POSTGRES_USER" -f "$sql_file"
+# Function to run SQL inside container
+run_sql_in_container() {
+    local sql_command="$1"
+    local description="$2"
+    echo -e "${YELLOW}📄 $description...${NC}"
+    if docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "$sql_command" > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ $description completed!${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Error: $description failed!${NC}"
+        return 1
+    fi
 }
 
-# Function to run SQL file as app user
-run_sql_as_user() {
+# Function to run SQL file inside container
+run_sql_file_in_container() {
     local sql_file="$1"
-    echo -e "${YELLOW}📄 Running $sql_file as $DB_USER...${NC}"
-    PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$sql_file"
+    local description="$2"
+    echo -e "${YELLOW}📄 $description...${NC}"
+    if [ -f "$sql_file" ]; then
+        if docker exec -i -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" < "$sql_file" > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ $description completed!${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Error: $description failed!${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}❌ Error: $sql_file not found!${NC}"
+        return 1
+    fi
 }
 
-# Step 1: Drop existing database and user
-echo -e "${YELLOW}🗑️  Dropping existing database and user...${NC}"
-if [ -f "database/drop-database.sql" ]; then
-    run_sql_as_postgres "database/drop-database.sql"
-else
-    echo -e "${RED}❌ Error: database/drop-database.sql not found!${NC}"
+# Step 1: Stop existing Docker container
+echo -e "${YELLOW}🛑 Stopping Docker container...${NC}"
+docker-compose -f infra/docker-compose.yml down 2>/dev/null || true
+
+# Step 2: Remove Docker volume for fresh database
+echo -e "${YELLOW}🗑️  Removing Docker volume for fresh database...${NC}"
+docker volume rm infra_postgres_data 2>/dev/null || true
+
+# Step 3: Start fresh Docker container
+echo -e "${YELLOW}🏗️  Starting fresh Docker container...${NC}"
+docker-compose -f infra/docker-compose.yml up -d postgres
+
+# Step 4: Wait for database to be ready
+echo -e "${YELLOW}⏳ Waiting for database to be ready...${NC}"
+max_attempts=30
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+    if docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Database is ready!${NC}"
+        break
+    fi
+    attempt=$((attempt + 1))
+    echo -n "."
+    sleep 2
+done
+
+if [ $attempt -eq $max_attempts ]; then
+    echo -e "${RED}❌ Error: Database failed to start after 60 seconds!${NC}"
+    echo -e "${YELLOW}💡 Try running: docker logs gustavo-postgres${NC}"
     exit 1
 fi
 
-# Step 2: Create database and user
-echo -e "${YELLOW}🏗️  Creating database and user...${NC}"
-if [ -f "database/create-database.sql" ]; then
-    run_sql_as_postgres "database/create-database.sql"
+# Step 5: Run migrations using docker exec
+echo -e "${YELLOW}🏗️  Running migrations...${NC}"
+
+# Find all migration files and sort them
+MIGRATION_DIR="database/migrations"
+if [ -d "$MIGRATION_DIR" ]; then
+    MIGRATION_FILES=$(find "$MIGRATION_DIR" -name "*.sql" | sort)
+    
+    if [ -z "$MIGRATION_FILES" ]; then
+        echo -e "${YELLOW}⚠️  No migration files found in $MIGRATION_DIR${NC}"
+    else
+        echo -e "${BLUE}📋 Found migrations:${NC}"
+        for migration in $MIGRATION_FILES; do
+            echo "  • $(basename "$migration")"
+        done
+        echo ""
+        
+        # Run each migration
+        for migration in $MIGRATION_FILES; do
+            migration_name=$(basename "$migration")
+            run_sql_file_in_container "$migration" "Running migration: $migration_name"
+        done
+    fi
 else
-    echo -e "${RED}❌ Error: database/create-database.sql not found!${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  Migration directory $MIGRATION_DIR not found, skipping migrations...${NC}"
 fi
 
-# Step 3: Set up permissions
-echo -e "${YELLOW}🔐 Setting up permissions...${NC}"
-if [ -f "database/setup-permissions.sql" ]; then
-    run_sql_as_user "database/setup-permissions.sql"
+# Step 6: Load seed data using docker exec
+echo -e "${YELLOW}🌱 Loading seed data...${NC}"
+
+# Find all seed files and sort them
+SEED_DIR="database/seeds"
+if [ -d "$SEED_DIR" ]; then
+    SEED_FILES=$(find "$SEED_DIR" -name "*.sql" | sort)
+    
+    if [ -z "$SEED_FILES" ]; then
+        echo -e "${YELLOW}⚠️  No seed files found in $SEED_DIR${NC}"
+    else
+        echo -e "${BLUE}📋 Found seed files:${NC}"
+        for seed in $SEED_FILES; do
+            echo "  • $(basename "$seed")"
+        done
+        echo ""
+        
+        # Run each seed file
+        for seed in $SEED_FILES; do
+            seed_name=$(basename "$seed")
+            run_sql_file_in_container "$seed" "Loading seed data: $seed_name"
+        done
+    fi
 else
-    echo -e "${RED}❌ Error: database/setup-permissions.sql not found!${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  Seed directory $SEED_DIR not found, skipping seed data...${NC}"
 fi
 
-# Step 4: Apply schema
-echo -e "${YELLOW}🏗️  Applying database schema...${NC}"
-if [ -f "database/schema.sql" ]; then
-    run_sql_as_user "database/schema.sql"
-    echo -e "${GREEN}✅ Schema applied successfully!${NC}"
-else
-    echo -e "${RED}❌ Error: database/schema.sql not found!${NC}"
-    exit 1
-fi
-
-# Step 5: Verify setup
+# Step 7: Verify setup
 echo -e "${YELLOW}🔍 Verifying database setup...${NC}"
-TABLE_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
-TRIP_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM trips;" 2>/dev/null || echo "0")
+
+# Count all tables
+ALL_TABLES=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ' || echo "0")
+
+# Count specific tables if they exist
+USER_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
+TABLE_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM tables;" 2>/dev/null | tr -d ' ' || echo "0")
+RECORD_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM records;" 2>/dev/null | tr -d ' ' || echo "0")
 
 echo -e "${GREEN}✅ Database reset completed successfully!${NC}"
 echo ""
 echo -e "${BLUE}📊 Database Summary:${NC}"
 echo "  • Database: $DB_NAME"
 echo "  • User: $DB_USER"
-echo "  • Tables created: $(echo $TABLE_COUNT | tr -d ' ')"
-echo "  • Initial trips: $(echo $TRIP_COUNT | tr -d ' ')"
+echo "  • Total tables: $ALL_TABLES"
+echo "  • Users: $USER_COUNT"
+echo "  • Dynamic tables: $TABLE_COUNT"
+echo "  • Records: $RECORD_COUNT"
 echo ""
 echo -e "${GREEN}🎉 Ready for development!${NC}"
 echo ""
 echo -e "${BLUE}💡 Next steps:${NC}"
-echo "  • Run: npm start"
+echo "  • Run: npm run dev"
 echo "  • Your app will connect to the fresh database"
-echo "  • Add data through your app or run: npm run db:seed" 
+echo "  • Database is fully reset and ready to use" 
