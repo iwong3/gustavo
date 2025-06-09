@@ -185,6 +185,48 @@ Uses PostgreSQL with Docker for local development:
 -   Local: `yarn docker:db` (port 5432)
 -   Production: Configured via Vercel environment variables
 
+### Database Operations
+
+#### Resetting the Database
+
+To completely reset your local database (removes all data and recreates from
+schema):
+
+```bash
+# Stop the database containers
+docker-compose -f infra/docker-compose.yml down
+
+# Remove database volumes (this deletes all data!)
+docker volume rm infra_postgres_data infra_pgadmin_data infra_pgadmin_config
+
+# Start fresh database
+yarn docker:db
+```
+
+**⚠️ Warning:** This will permanently delete all local database data!
+
+#### pgAdmin4 Access
+
+pgAdmin4 is included for database management and runs alongside PostgreSQL:
+
+-   **URL**: [http://localhost:8080](http://localhost:8080)
+-   **Email**: `admin@example.com`
+-   **Password**: `admin123`
+
+**Connecting to Database in pgAdmin:**
+
+1. Open [http://localhost:8080](http://localhost:8080)
+2. Login with the credentials above
+3. Right-click "Servers" → "Create" → "Server"
+4. **General Tab**: Name: `Gustavo Local`
+5. **Connection Tab**:
+    - Host: `postgres` (container name)
+    - Port: `5432`
+    - Database: `gustavo_dev`
+    - Username: `gus`
+    - Password: `yellow_shirt_dev`
+6. Click "Save"
+
 ## 🚀 Deployment
 
 Automatic deployment via Vercel when pushing to main branch.

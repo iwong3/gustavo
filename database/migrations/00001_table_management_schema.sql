@@ -4,6 +4,12 @@
 -- Ensure UUID extension is available
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Create gustavo schema for application tables
+CREATE SCHEMA IF NOT EXISTS gustavo;
+
+-- Set search path to use gustavo schema by default
+SET search_path TO gustavo, public;
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

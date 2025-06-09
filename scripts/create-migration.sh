@@ -45,6 +45,9 @@ cat > "$FILEPATH" << EOF
 -- Migration $FORMATTED_NUM: $DESCRIPTION
 -- Created: $(date '+%Y-%m-%d %H:%M:%S')
 
+-- Set search path to use gustavo schema by default
+SET search_path TO gustavo, public;
+
 -- Add your migration SQL here
 -- Example:
 -- CREATE TABLE example_table (
@@ -60,6 +63,7 @@ cat > "$FILEPATH" << EOF
 -- 2. Make the migration reversible when possible
 -- 3. Keep migrations focused and atomic
 -- 4. Update seed data if needed
+-- 5. Tables will be created in 'gustavo' schema automatically
 EOF
 
 echo -e "${GREEN}✅ Migration created: $FILEPATH${NC}"

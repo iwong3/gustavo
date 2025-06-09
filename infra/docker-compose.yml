@@ -41,10 +41,35 @@ services:
         networks:
             - gustavo-network
 
+    metabase:
+        image: metabase/metabase:latest
+        container_name: gustavo-metabase
+        environment:
+            # Metabase application database configuration
+            MB_DB_TYPE: postgres
+            MB_DB_DBNAME: gustavo_dev
+            MB_DB_PORT: 5432
+            MB_DB_USER: gus
+            MB_DB_PASS: yellow_shirt_dev
+            MB_DB_HOST: postgres
+            # Additional settings for proper persistence
+            MB_ENCRYPTION_SECRET_KEY: gustavo-metabase-secret-key-2024
+        ports:
+            - '3001:3000'
+        volumes:
+            - metabase_data:/metabase-data
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: unless-stopped
+        networks:
+            - gustavo-network
+
 volumes:
     postgres_data:
     pgadmin_data:
     pgadmin_config:
+    metabase_data:
 
 networks:
     gustavo-network:

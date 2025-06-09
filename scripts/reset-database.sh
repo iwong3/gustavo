@@ -61,16 +61,17 @@ run_sql_file_in_container() {
     fi
 }
 
-# Step 1: Stop existing Docker container
-echo -e "${YELLOW}🛑 Stopping Docker container...${NC}"
-docker-compose -f infra/docker-compose.yml down 2>/dev/null || true
+# Step 1: Stop existing PostgreSQL container only
+echo -e "${YELLOW}🛑 Stopping PostgreSQL container...${NC}"
+docker-compose -f infra/docker-compose.yml stop postgres 2>/dev/null || true
+docker-compose -f infra/docker-compose.yml rm -f postgres 2>/dev/null || true
 
 # Step 2: Remove Docker volume for fresh database
 echo -e "${YELLOW}🗑️  Removing Docker volume for fresh database...${NC}"
 docker volume rm infra_postgres_data 2>/dev/null || true
 
-# Step 3: Start fresh Docker container
-echo -e "${YELLOW}🏗️  Starting fresh Docker container...${NC}"
+# Step 3: Start fresh PostgreSQL container
+echo -e "${YELLOW}🏗️  Starting fresh PostgreSQL container...${NC}"
 docker-compose -f infra/docker-compose.yml up -d postgres
 
 # Step 4: Wait for database to be ready
