@@ -1,0 +1,42 @@
+# Development files
+README.md
+TODO.md
+docs/
+
+# Development tools
+.prettierrc.js
+.prettierignore
+vitest.config.ts
+
+# Development dependencies - let Vercel handle this
+# node_modules/
+
+# Build artifacts not needed for deployment
+.vite/
+coverage/
+.next/
+
+# Environment files (use Vercel's environment variables instead)
+.env.local
+.env.development.local
+.env
+
+# Git
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+.cursor/
+
+# Docker files (not needed for Vercel)
+infra/
+*.dockerfile
+docker-compose*.yml
+
+# Scripts that aren't needed for build
+scripts/reset-database.sh
+
+# Personal files
+personal/ 

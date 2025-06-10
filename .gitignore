@@ -5,19 +5,97 @@
 /.pnp
 .pnp.js
 
+# package managers (keep yarn.lock, ignore npm)
+package-lock.json
+
 # testing
 /coverage
+*.lcov
 
-# production
-/build
+# Next.js build output
+/.next/
+/out/
 
-# misc
-.DS_Store
+# Legacy build directory (removed - now using Next.js)
+
+# TypeScript build output
+/dist
+/backend/dist
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Environment variables
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Yarn Integrity file
+.yarn-integrity
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Vercel
+.vercel
+
+# Docker volumes (if any)
+postgres_data/
+
+# Personal notes
+/personal
+
+# Cursor AI
+.cursor/
+
+# PWA files
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+
+# Misc
+*.tgz
+*.tar.gz
