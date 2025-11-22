@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# File Permissions Rulesets
+
+## Ruleset 1
+
+Never edit these files:
+- Anything in the `personal` directory
+

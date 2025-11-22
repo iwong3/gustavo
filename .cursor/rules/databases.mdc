@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Database Rulesets
+
+## Ruleset 1
+
+When making database or SQL suggestions, have a bias towards safe practices.
+- Have a bias for soft deletes over hard deletes.
+
+
