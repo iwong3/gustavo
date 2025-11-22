@@ -86,4 +86,23 @@ export const LinksByTrip: Map<Trip, Link[]> = new Map([
             },
         ],
     ],
+    [
+        Trip.SouthKorea2025,
+        [
+            {
+                name: 'Submit Receipt',
+                url: UrlsByTrip.get(Trip.SouthKorea2025)!.GoogleFormUrl,
+                personal: true,
+                type: LinkType.GoogleForm,
+            },
+            {
+                name: 'Spend Data',
+                url:
+                    UrlsByTrip.get(Trip.SouthKorea2025)!.GoogleSheetUrl +
+                    ViewPath,
+                personal: true,
+                type: LinkType.GoogleSheet,
+            },
+        ],
+    ],
 ])
