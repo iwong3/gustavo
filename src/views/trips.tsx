@@ -13,9 +13,9 @@ import { ActiveTrips, PastTrips, Trip } from 'helpers/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useMainStore } from 'views/main'
 import Japan2024Image from '../images/japan-2024.jpg'
-// import Japan2025Image from '../images/japan-2025.jpg'
+import Japan2025Image from '../images/japan-2025.jpg'
 import SouthKorea2025Image from '../images/south-korea-2025.jpg'
-import Vancouver2024Image from '../images/vancouver-2024.png'
+import Vancouver2024Image from '../images/vancouver-2024.jpg'
 
 type TripsState = {
     currentTrip: Trip
@@ -172,6 +172,7 @@ export const Trips = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
+                            marginBottom: 1,
                             width: '100%',
                         }}>
                         {row}
@@ -228,7 +229,7 @@ export const Trips = () => {
             case Trip.SouthKorea2025:
                 return SouthKorea2025Image
             case Trip.Japan2025:
-                return Japan2024Image
+                return Japan2025Image
             default:
                 return ''
         }
