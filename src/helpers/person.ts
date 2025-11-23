@@ -32,6 +32,7 @@ export const PeopleByTrip = {
         Person.Lisa,
     ],
     [Trip.SouthKorea2025]: [Person.Angela, Person.Ivan, Person.Jenny],
+    [Trip.Japan2025]: [Person.Ivan, Person.Jenny],
 }
 
 export const getPersonFromEmail = (email: string): Person | undefined => {
