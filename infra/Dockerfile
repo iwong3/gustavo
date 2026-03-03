@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for React app
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -28,7 +28,7 @@ ENV PORT 3000
 CMD ["yarn", "start"]
 
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \

@@ -108,6 +108,16 @@ When ready to cut over: merge `fullstack` → `main`, update Vercel to track `ma
 
 ---
 
+## Model Selection Guide
+
+- **Sonnet 4.6** — default for all implementation sessions (Phases 1–4): package installs, config, writing code, debugging. Fast and capable for these tasks.
+- **Opus 4.6** — switch for complex architectural decisions (e.g., DB schema design in Phase 5), security design, or hard multi-file bugs needing deep reasoning.
+- **Haiku 4.5** — quick lookups, simple single-file edits.
+
+Running the plan past Opus before implementation is generally not worth it for a well-trodden stack. Opus adds value when the problem is novel — save it for those moments.
+
+---
+
 ## Phase Plan
 
 ### Phase 1: Tech Stack Modernization
@@ -127,15 +137,15 @@ When ready to cut over: merge `fullstack` → `main`, update Vercel to track `ma
 | `zustand` | `^5.0.0-rc.2` | `^5.0.3` | Fix: was on release candidate in production |
 | `@mui/material` | `^6.1.1` | `^7` | Reconcile branch divergence |
 | `eslint` | `^8` | `^9` | Breaking: new flat config format (`eslint.config.js`) |
-| `@types/node` | `^20` | `^22` | Match runtime Node version |
+| `@types/node` | `^20` | `^24` | Match runtime Node version |
 | `@types/react` | `^18.0` | `^19` | Match React version |
 
 **Docker fixes:**
-- Unify both Docker stages to `node:22-alpine` (builder was `node:18`, dev was `node:22` — inconsistency)
+- Unify both Docker stages to `node:24-alpine` — Node 24 is the current LTS (active until Oct 2027, maintenance until Apr 2029); longer runway than Node 22 for a low-maintenance app
 - Remove pgAdmin service from `docker-compose.yml` (use DBeaver desktop app instead)
 
 **Other:**
-- Add `.nvmrc` with `22` for local Node version pinning
+- Add `.nvmrc` with `24` for local Node version pinning
 - Port `scripts/test-db-connection.js` from `local-app-alpha`
 
 **Verification:**
@@ -282,8 +292,9 @@ Order TBD. Candidates:
 | `src/helpers/data-processing.ts` | Keep — debt calc logic reusable |
 | `src/helpers/data-mapping.ts` | Replace in Phase 5 — becomes DB queries |
 | `src/components/` | Keep all — UI components reusable |
-| `infra/docker-compose.yml` | Update: remove pgAdmin, unify Node to 22 |
+| `infra/docker-compose.yml` | Update: remove pgAdmin, unify Node to 24 |
 | `app/api/` | Evolve: add CRUD routes in Phase 5 |
 | `scripts/test-db-connection.js` | Port from `local-app-alpha` |
 | `env/.env.local` | Update for Neon + Auth.js keys |
-| `.nvmrc` | Add: `22` |
+| `.nvmrc` | Done: pinned to `24` |
+| `infra/Dockerfile` | Done: both stages on `node:24-alpine` |
