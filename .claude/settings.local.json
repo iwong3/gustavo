@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\(json.dumps\\(p.get\\(''engines'',''none''\\), indent=2\\)\\)\")",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(p.engines || ''none''\\)\")"
+    ]
+  }
+}
