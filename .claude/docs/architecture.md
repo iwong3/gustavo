@@ -10,7 +10,7 @@ Gustavo is currently a client-side React app hosted on GitHub Pages that reads e
 - Is free or nearly free to run
 - Preserves and migrates all historical Google Sheets data into a real database
 
-**Existing infra work is on the `main-backup-vercel-setup` branch** — this is the starting point, not a blank slate. It already has Docker Compose (Postgres + pgAdmin + Metabase), Next.js API routes, DB management scripts, and Vercel deployment config.
+**Starting point:** The `main-backup-vercel-setup` branch already has Docker Compose (Postgres + pgAdmin + Metabase), Next.js API routes, DB management scripts, and Vercel deployment config. The `local-app-alpha` branch adds one commit with a rough db-admin UI — worth salvaging: `test-db-connection.js` script and the pg pool connection pattern in `app/api/db-app/`.
 
 ---
 
@@ -19,60 +19,63 @@ Gustavo is currently a client-side React app hosted on GitHub Pages that reads e
 ### Mobile: PWA (not native)
 - No App Store distribution — not worth the cost/complexity for <10 users ($99/yr Apple Developer account, app review process)
 - A properly configured PWA, once "Add to Home Screen" is used, hides browser chrome and behaves like a native app
-- The UX issues previously experienced with PWA are fixable in code (see Phase 2 below)
+- UX issues from previous PWA attempt are fixable in code: `overscroll-behavior: none`, `touch-action`, safe area insets
 - React Native would require rewriting the entire UI layer in native components
 
 ### Database: Neon (not Supabase)
-- The existing Docker branch already uses plain PostgreSQL — Neon is the same thing in the cloud
-- DBeaver and Metabase connect to Neon identically to local Postgres
+- The existing Docker branch uses plain PostgreSQL — Neon is the same in the cloud
+- DBeaver and Metabase connect to Neon identically to local Postgres (same connection string format)
 - Vercel + Neon have a first-class integration (auto-injects connection string env vars)
-- Supabase's free tier pauses after 1 week of inactivity — bad for an app touched infrequently
-- Standard Postgres = easy to dump/restore, no vendor magic to debug
+- Supabase free tier **pauses after 1 week of inactivity** — bad for an app used infrequently
+- Standard Postgres = easy dump/restore, no vendor magic to debug
 
 ### Auth: Auth.js (NextAuth.js v5)
-- Neon doesn't include auth — Auth.js fills this gap
 - Open-source library, no external service, free forever, entirely self-contained
-- Has a built-in Google OAuth provider
-- Email allowlist is a callback in code (~5 lines) — to add a user, update an array and push
+- Built-in Google OAuth provider
+- Email allowlist is ~5 lines of code in a `signIn` callback — update `ALLOWED_EMAILS` array + push to add a user
 - Native Next.js App Router support (middleware, server components, route protection)
-- Sessions stored in Neon (already have it) or as signed JWT cookies
-- No 3rd party service dependency, no dashboard — just a library you own
+- Sessions stored in Neon or as signed JWT cookies
 
 ### File Storage: Vercel Blob
-- Receipt image uploads
-- 1GB free, already on Vercel so no additional service to manage
+- Receipt image uploads; 1GB free; same ecosystem as Vercel hosting
 - Simple SDK: `put()`, `get()`, `del()`
 
 ### Hosting: Vercel
-- Free tier for personal projects
-- Push to branch → auto deploy (no config after initial setup)
-- Preview deployments on every PR
-- Neon and Vercel Blob are both Vercel-ecosystem products — env vars auto-injected
+- Free tier; push to branch → auto deploy; preview deployments on every PR
+- Neon and Vercel Blob are Vercel-ecosystem products — env vars auto-injected
 
-### Framework: Next.js (already on the infra branch)
-- The `main-backup-vercel-setup` branch already migrated to Next.js
+### Framework: Next.js 15 (App Router)
+- Upgrade from Next.js 14 (on infra branch) to 15 in Phase 1
 - App Router with API routes — no separate backend server needed
-- PWA support via `next-pwa` (already configured on the branch)
-- Better Vercel support than plain Vite (API routes, server components, etc.)
+- PWA support via `next-pwa`
+- Best Vercel support of any framework
+
+### Package Manager: pnpm (replacing yarn)
+- Faster installs (hard links, shared global cache)
+- Stricter (no phantom dependencies)
+- Now the standard in the Vite/Next.js/Nuxt ecosystem
+- Migration: `pnpm import` converts yarn.lock, then delete it
 
 ---
 
-## Recommended Stack Summary
+## Recommended Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js (App Router) + TypeScript |
-| PWA | next-pwa (already configured) |
-| State | Zustand (keep existing) |
-| UI | MUI (keep existing) |
+| Frontend | Next.js 15 (App Router) + TypeScript 5.8 |
+| PWA | next-pwa |
+| State | Zustand 5 (stable) |
+| UI | MUI v7 |
+| Package manager | pnpm |
 | Database (prod) | Neon (serverless Postgres) |
 | Database (local dev) | Docker Postgres 17 |
 | Auth | Auth.js v5 (Google OAuth + email allowlist in code) |
 | File storage | Vercel Blob |
 | Hosting | Vercel |
 | CI/CD | Vercel GitHub integration |
-| DB GUI (local) | DBeaver → connects to Docker Postgres |
-| Analytics (local) | Metabase → connects to Docker Postgres |
+| DB GUI (local) | DBeaver desktop app |
+| Analytics (local) | Metabase (Docker) |
+| Component dev (future) | Storybook v8 — add during mobile UX polish phase |
 
 ---
 
@@ -86,39 +89,11 @@ Gustavo is currently a client-side React app hosted on GitHub Pages that reads e
 | Local dev story | Heavy CLI stack | Plain Docker Postgres (matches existing setup) |
 | DBeaver / Metabase | Works, extra complexity | Connects like any standard Postgres |
 | Free tier caveat | **Pauses after 1 week inactivity** | Scales to zero, never pauses |
-| Data portability | It's Postgres under the hood | Standard Postgres dump/restore |
-
-Neon chosen because: matches existing Docker setup, no pause behavior, standard Postgres everywhere.
-
----
-
-## Local Development Stack (Docker Compose)
-
-The `main-backup-vercel-setup` branch has `infra/docker-compose.yml` with:
-- **Postgres 17** (port 5432) — primary DB
-- **Metabase** (port 3001) — analytics connecting to local Postgres
-- **pgAdmin** (port 8080) — replaced by DBeaver (desktop app, no container needed)
-
-**Recommended:** Remove pgAdmin from docker-compose, keep Postgres + Metabase.
-
-**DBeaver connection:**
-- Local: `localhost:5432`, user `gus`, password `yellow_shirt_dev`, db `gustavo_dev`
-- Production: Neon connection string from Neon dashboard
-
-```bash
-docker compose -f infra/docker-compose.yml up -d   # start local stack
-npm run dev                                          # start Next.js
-```
-
-Environment vars:
-- Local dev: `DATABASE_URL=postgresql://gus:yellow_shirt_dev@localhost:5432/gustavo_dev`
-- Production: injected automatically by Vercel from Neon integration
+| Data portability | Postgres under the hood | Standard Postgres dump/restore |
 
 ---
 
 ## Branch Strategy
-
-Keep the existing GitHub Pages app live while developing the new stack in parallel.
 
 ```
 main                     ← GitHub Pages source (keep untouched)
@@ -127,111 +102,165 @@ main                     ← GitHub Pages source (keep untouched)
         └── feature/*    ← feature branches off fullstack
 ```
 
-- **`main`** stays clean — GitHub Pages keeps deploying to `iwong3.github.io/gustavo`
-- **`fullstack`** is the new stack — Vercel watches this branch
-- Trip-specific changes (Japan 2025, future trips) still branch off `main` and merge back as normal
-- When the full-stack app is ready to replace the old one: merge `fullstack` → `main`, update Vercel to track `main`, retire GitHub Pages
+GitHub Pages deploys from the `gh-pages` branch (`npm run deploy`). Vercel deploys from `fullstack`. Both run simultaneously with no conflict.
 
-**GitHub Pages and Vercel are completely independent.** GitHub Pages deploys from the `gh-pages` branch (created by `npm run deploy`). Vercel deploys from whatever branch you configure. Both can run simultaneously.
+When ready to cut over: merge `fullstack` → `main`, update Vercel to track `main`, retire GitHub Pages.
 
 ---
 
 ## Phase Plan
 
-The goal initially is to **get the infra running and a deployable app** — full DB schema and features come later.
+### Phase 1: Tech Stack Modernization
+**Goal:** Clean, modern foundation before any infra work. Create `fullstack` branch from `main-backup-vercel-setup`.
 
-### Phase 0: Baseline — Get infra branch running locally
-**Goal:** Clean working state of `main-backup-vercel-setup`.
+**Package manager:**
+- Switch yarn → pnpm: `pnpm import` → delete `yarn.lock`
+- Update all scripts in `package.json` (`yarn` → `pnpm`)
 
-1. Checkout `main-backup-vercel-setup`, review what's there
-2. Ensure `docker compose up` brings up Postgres + Metabase cleanly
-3. Remove pgAdmin from docker-compose (DBeaver replaces it)
-4. Ensure `npm run dev` starts the Next.js app without errors
-5. Connect DBeaver to local Postgres — verify connection
-6. Connect Metabase to local Postgres — verify connection
-7. Confirm existing app features still work
+**Dependency upgrades:**
 
-### Phase 1: Production infra setup
-**Goal:** Live deployment on Vercel backed by Neon with auth.
+| Package | From | To | Notes |
+|---|---|---|---|
+| `next` | `^14` | `^15` | Breaking: `fetch` caching defaults changed to opt-in |
+| `react` / `react-dom` | `^18.2` | `^19` | Upgrade together with Next.js 15 |
+| `typescript` | `^5.0` | `^5.8` | Safe, no breaking changes |
+| `zustand` | `^5.0.0-rc.2` | `^5.0.3` | Fix: was on release candidate in production |
+| `@mui/material` | `^6.1.1` | `^7` | Reconcile branch divergence |
+| `eslint` | `^8` | `^9` | Breaking: new flat config format (`eslint.config.js`) |
+| `@types/node` | `^20` | `^22` | Match runtime Node version |
+| `@types/react` | `^18.0` | `^19` | Match React version |
 
-1. Create Neon project (free tier) — copy connection string
-2. Create Vercel project, connect to GitHub repo (`fullstack` branch)
+**Docker fixes:**
+- Unify both Docker stages to `node:22-alpine` (builder was `node:18`, dev was `node:22` — inconsistency)
+- Remove pgAdmin service from `docker-compose.yml` (use DBeaver desktop app instead)
+
+**Other:**
+- Add `.nvmrc` with `22` for local Node version pinning
+- Port `scripts/test-db-connection.js` from `local-app-alpha`
+
+**Verification:**
+- [ ] `pnpm install` succeeds
+- [ ] `pnpm dev` starts without errors
+- [ ] `pnpm build` succeeds
+- [ ] `pnpm tsc --noEmit` passes
+
+---
+
+### Phase 2: Full Local Stack in Docker
+**Goal:** Frontend + backend (Next.js) + Postgres + Metabase all running locally. No DB tables required yet.
+
+Docker services (`infra/docker-compose.yml`):
+- `postgres:17` → port 5432
+- `metabase` → port 3001
+
+Steps:
+1. `pnpm docker:up` → verify both containers healthy
+2. `pnpm dev` → app loads at localhost:3000
+3. Connect DBeaver to `localhost:5432` (user: `gus`, pass: `yellow_shirt_dev`, db: `gustavo_dev`)
+4. Connect Metabase to Postgres at localhost:3001
+5. `node scripts/test-db-connection.js` → "Connection successful"
+6. Confirm existing app features work (trips, expenses, debt calculator)
+
+Local env: `DATABASE_URL=postgresql://gus:yellow_shirt_dev@localhost:5432/gustavo_dev`
+
+`package.json` scripts:
+```json
+"docker:up": "docker compose -f infra/docker-compose.yml up -d",
+"docker:down": "docker compose -f infra/docker-compose.yml down",
+"docker:logs": "docker compose -f infra/docker-compose.yml logs -f"
+```
+
+**Verification:**
+- [ ] `pnpm docker:up` → all containers healthy
+- [ ] `pnpm dev` → app loads at localhost:3000
+- [ ] DBeaver connects to localhost:5432 successfully
+- [ ] Metabase loads at localhost:3001 and connects to Postgres
+- [ ] `node scripts/test-db-connection.js` → "Connection successful"
+
+---
+
+### Phase 3: Deploy to Vercel + Neon
+**Goal:** Live production deployment — same app, cloud DB, accessible from anywhere.
+
+1. Create Neon project (free tier) at neon.tech — copy connection string
+2. Create Vercel project → connect GitHub repo → set branch to `fullstack`
 3. Add Neon integration in Vercel dashboard (auto-injects `DATABASE_URL`)
-4. Deploy to Vercel — confirm the app loads
-5. Set up Auth.js v5:
-   - Install `next-auth` and `@auth/pg-adapter`
-   - Create Google OAuth app in Google Cloud Console (free) — get client ID + secret
-   - Add `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` to Vercel env vars
-   - Configure `auth.ts` with Google provider + `signIn` callback checking allowed emails
-   - Email allowlist: array of Gmail addresses in `auth.ts` config
-6. Add auth middleware (protect all routes except `/auth/signin`)
-7. Add login page with "Sign in with Google" button
-8. Test: verify non-whitelisted emails are rejected
+4. Push to `fullstack` → Vercel auto-builds and deploys
+5. Verify `/api/health` returns 200 and confirms DB connection
 
-### Phase 2: PWA setup and mobile UX fixes
-**Goal:** App installable on iPhone/Android, browser UX issues resolved.
+**Verification:**
+- [ ] Vercel URL is live and app loads
+- [ ] `/api/health` confirms DB connection
+- [ ] Push a small change → Vercel auto-deploys within ~1 min
 
-`next-pwa` already configured. Verify and extend:
+---
 
-1. Confirm PWA manifest (`display: standalone`, correct icons, theme color `#FBBC04`)
-2. Add global CSS fixes:
-   ```css
-   html, body {
-     overscroll-behavior: none;            /* no pull-to-refresh, no swipe-back */
-     -webkit-overflow-scrolling: touch;
-   }
-   body {
-     padding-top: env(safe-area-inset-top);       /* iPhone notch */
-     padding-bottom: env(safe-area-inset-bottom); /* home indicator */
-   }
+### Phase 4: Google SSO with Email Whitelist
+**Goal:** Only whitelisted users can access the app.
+
+**Google Cloud Console (one-time, free):**
+1. Create project → enable Google Identity API
+2. Create OAuth 2.0 credentials → Client ID + Secret
+3. Add redirect URIs: `https://your-app.vercel.app/api/auth/callback/google` + `http://localhost:3000/api/auth/callback/google`
+
+**Auth.js setup:**
+1. `pnpm add next-auth @auth/pg-adapter`
+2. Create `auth.ts`:
+   ```typescript
+   import NextAuth from 'next-auth'
+   import Google from 'next-auth/providers/google'
+
+   const ALLOWED_EMAILS = [
+     'your@gmail.com',
+     'friend@gmail.com',
+     // update this array + redeploy to add users
+   ]
+
+   export const { handlers, auth, signIn, signOut } = NextAuth({
+     providers: [Google],
+     callbacks: {
+       signIn: ({ user }) => ALLOWED_EMAILS.includes(user.email ?? ''),
+     },
+   })
    ```
-3. Fix `touch-action` on swipeable components
-4. Test iPhone: Safari → Add to Home Screen → no browser chrome
-5. Test Android: Chrome → Install → no browser chrome
+3. Add `app/api/auth/[...nextauth]/route.ts`
+4. Add middleware to protect all routes except `/api/auth/*`
+5. Add login page with "Sign in with Google" button
+6. Add to Vercel env vars: `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
 
-### Phase 3: Data layer — replace Google Sheets with Neon
-**Goal:** App reads from real database, historical data migrated.
+**Verification:**
+- [ ] Whitelisted email can sign in with Google
+- [ ] Non-whitelisted email sees "Access Denied"
+- [ ] Session persists after page refresh
+- [ ] Works on local dev AND production Vercel URL
 
-1. Define minimal schema (trips + expenses + splits — details TBD)
-2. Write one-time migration script (`scripts/migrate-sheets.ts`):
-   - Reuse existing `fetchData()` CSV logic
-   - Transform rows → DB inserts into Neon
-3. Replace Google Sheets data fetching with Postgres queries via API routes
-4. Verify historical trips display correctly and debt calculator produces correct results
+---
 
-### Phase 4: In-app data entry
-**Goal:** Replace Google Forms.
+### Phase 5: Feature Development (future)
+Order TBD. Candidates:
 
-1. "Add Expense" UI — mobile-friendly bottom sheet or modal
-2. POST to `/api/expenses` → insert to Neon
-3. Expense appears immediately (optimistic update or refetch)
-4. Optional: receipt image upload to Vercel Blob
-
-### Phase 5: Mobile UX polish (ongoing)
-- Bottom navigation bar
-- Smooth page transitions
-- Keyboard handling (inputs not hidden by virtual keyboard)
-- Dark mode
+- **Data layer:** DB schema design, one-time migration script to move Google Sheets data into Neon, replace CSV fetch with API queries
+- **In-app data entry:** Mobile-friendly expense entry form (bottom sheet or modal) replacing Google Forms
+- **PWA / mobile UX:** `display: standalone`, `overscroll-behavior: none`, safe area insets, bottom nav bar, smooth transitions
+- **Storybook v8:** Add when building polished mobile UI components (great for developing in isolation)
+- **Dark mode, graph improvements, debt calculator enhancements**
 
 ---
 
 ## CI/CD
 
-- Connect GitHub repo to Vercel (one-time)
-- Push to `fullstack` → auto deploy to production Vercel URL
+- Vercel GitHub integration: push to `fullstack` → auto deploy (no config needed after initial setup)
 - Every PR → preview deployment at unique URL
-- No GitHub Actions required for basic deploys
-
-Optional quality gates (`.github/workflows/ci.yml`):
-```yaml
-- npx tsc --noEmit
-- npx eslint src/
-- npm run build
-```
+- Optional GitHub Actions quality gates:
+  ```yaml
+  - pnpm tsc --noEmit
+  - pnpm lint
+  - pnpm build
+  ```
 
 ---
 
-## Cost Estimate
+## Cost
 
 | Service | Free Tier | Cost |
 |---|---|---|
@@ -241,51 +270,20 @@ Optional quality gates (`.github/workflows/ci.yml`):
 | Vercel Blob | 1GB storage | **Free** |
 | Domain (optional) | — | ~$12/yr |
 
-**Total: $0/month**
+**Total: $0/month** — review Neon/Vercel detailed pricing and backup options separately before going live.
 
 ---
 
-## Key Existing Files
+## Key Files
 
-| File/Path | Status |
+| File/Path | Action |
 |---|---|
-| `src/helpers/spend.ts` | Keep — Spend interface stays valid |
-| `src/helpers/data-processing.ts` | Keep — debt calculation logic reusable |
-| `src/helpers/data-mapping.ts` | Replace in Phase 3 — becomes DB queries |
-| `src/helpers/trips.ts` | Evolve in Phase 3 — trip config moves to DB |
+| `src/helpers/spend.ts` | Keep — Spend interface reusable |
+| `src/helpers/data-processing.ts` | Keep — debt calc logic reusable |
+| `src/helpers/data-mapping.ts` | Replace in Phase 5 — becomes DB queries |
 | `src/components/` | Keep all — UI components reusable |
-| `infra/docker-compose.yml` | Evolve — remove pgAdmin, keep Postgres + Metabase |
-| `app/api/` | Evolve — add expense CRUD routes |
-| `backend/` | Evolve — add DB query logic |
-| `scripts/` | Add migration script here |
-| `env/.env.local` | Keep structure, update keys for Neon + Auth.js |
-
----
-
-## Verification Checklist
-
-**Phase 0:**
-- [ ] `docker compose up` → Postgres and Metabase containers healthy
-- [ ] DBeaver connects to localhost:5432 successfully
-- [ ] Metabase connects to Postgres
-- [ ] `npm run dev` → app loads, existing trips display
-
-**Phase 1:**
-- [ ] Vercel URL is live and app loads
-- [ ] Neon database connected (API health route confirms)
-- [ ] Whitelisted email can sign in with Google
-- [ ] Non-whitelisted email is rejected at login
-
-**Phase 2:**
-- [ ] iPhone: Add to Home Screen → opens without Safari chrome
-- [ ] No pull-to-refresh on scroll up
-- [ ] No accidental swipe-back navigation
-
-**Phase 3:**
-- [ ] Migration script runs without errors
-- [ ] All historical trips visible, loaded from Neon
-- [ ] Debt calculator produces correct results
-
-**Phase 4:**
-- [ ] New expense can be added from within the app
-- [ ] Expense appears in list immediately
+| `infra/docker-compose.yml` | Update: remove pgAdmin, unify Node to 22 |
+| `app/api/` | Evolve: add CRUD routes in Phase 5 |
+| `scripts/test-db-connection.js` | Port from `local-app-alpha` |
+| `env/.env.local` | Update for Neon + Auth.js keys |
+| `.nvmrc` | Add: `22` |
