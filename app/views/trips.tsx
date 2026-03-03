@@ -9,11 +9,13 @@ import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { getFromCache, saveInCache } from 'utils/cache'
 import { fetchData } from 'utils/data-mapping'
-import { ActiveTrips, Trip } from 'utils/trips'
+import { ActiveTrips, PastTrips, Trip } from 'utils/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useMainStore } from 'views/main'
-// import Japan2024Image from '../images/japan-2024.jpg'
-// import Vancouver2024Image from '../images/vancouver-2024.png'
+import Japan2024Image from '../images/japan-2024.jpg'
+import Japan2025Image from '../images/japan-2025.jpg'
+import SouthKorea2025Image from '../images/south-korea-2025.jpg'
+import Vancouver2024Image from '../images/vancouver-2024.jpg'
 
 type TripsState = {
     currentTrip: Trip
@@ -124,6 +126,7 @@ export const Trips = () => {
                 setCurrentTrip(trip)
                 setShowTripsMenu(false)
             } catch (err) {
+                console.log(err)
                 setFetchDataError(true)
             } finally {
                 setLoading(false)
@@ -153,22 +156,23 @@ export const Trips = () => {
         }
     }
 
-    const renderTrips = () => {
-        const trips = []
+    const renderTrips = (trips: Trip[]) => {
+        const renderTrips = []
         let row = []
         const rowLength = 2
 
-        for (let i = 0; i < ActiveTrips.length; i++) {
-            row.push(renderTrip(ActiveTrips[i]))
+        for (let i = 0; i < trips.length; i++) {
+            row.push(renderTrip(trips[i]))
 
-            if (row.length === rowLength || i === ActiveTrips.length - 1) {
-                trips.push(
+            if (row.length === rowLength || i === trips.length - 1) {
+                renderTrips.push(
                     <Box
-                        key={'trip-row-' + trips.length}
+                        key={'trip-row-' + renderTrips.length}
                         sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
+                            marginBottom: 1,
                             width: '100%',
                         }}>
                         {row}
@@ -178,7 +182,7 @@ export const Trips = () => {
             }
         }
 
-        return trips
+        return renderTrips
     }
 
     const renderTrip = (trip: Trip) => {
@@ -219,9 +223,13 @@ export const Trips = () => {
     const getBackgroundImageUrlForTrip = (trip: Trip) => {
         switch (trip) {
             case Trip.Japan2024:
-                return '' // Japan2024Image
+                return Japan2024Image
             case Trip.Vancouver2024:
-                return '' // Vancouver2024Image
+                return Vancouver2024Image
+            case Trip.SouthKorea2025:
+                return SouthKorea2025Image
+            case Trip.Japan2025:
+                return Japan2025Image
             default:
                 return ''
         }
@@ -252,7 +260,45 @@ export const Trips = () => {
                     Upcoming Trips
                 </Box>
             )}
-            {!loading && renderTrips()}
+            {!loading && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        width: '100%',
+                        marginBottom: 2,
+                    }}>
+                    {renderTrips(ActiveTrips)}
+                </Box>
+            )}
+            {!loading && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: 2,
+                        width: '100%',
+                        fontSize: 24,
+                        fontFamily: 'Spectral',
+                    }}>
+                    Past Trips
+                </Box>
+            )}
+            {!loading && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        width: '100%',
+                        marginBottom: 2,
+                    }}>
+                    {renderTrips(PastTrips)}
+                </Box>
+            )}
         </Box>
     )
 }

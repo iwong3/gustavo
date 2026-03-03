@@ -38,13 +38,13 @@ export const LinksByTrip: Map<Trip, Link[]> = new Map([
         [
             {
                 name: 'Itinerary',
-                url: 'https://docs.google.com/document/d/1iIY1KnyAPzlT0qmRseU8t8R58N7dUC_zzyyJ3bWafnI/edit?usp=sharing',
+                url: UrlsByTrip.get(Trip.Japan2024)!.ItineraryUrl!,
                 personal: true,
                 type: LinkType.GoogleDoc,
             },
             {
-                name: 'List of Places',
-                url: 'https://maps.app.goo.gl/v9AbZK6PaY2d7SVU9',
+                name: 'Google Maps List',
+                url: UrlsByTrip.get(Trip.Japan2024)!.GoogleMapsListUrl!,
                 personal: true,
                 type: LinkType.GoogleMap,
             },
@@ -81,6 +81,54 @@ export const LinksByTrip: Map<Trip, Link[]> = new Map([
                 url:
                     UrlsByTrip.get(Trip.Vancouver2024)!.GoogleSheetUrl +
                     ViewPath,
+                personal: true,
+                type: LinkType.GoogleSheet,
+            },
+        ],
+    ],
+    [
+        Trip.SouthKorea2025,
+        [
+            {
+                name: 'Submit Receipt',
+                url: UrlsByTrip.get(Trip.SouthKorea2025)!.GoogleFormUrl,
+                personal: true,
+                type: LinkType.GoogleForm,
+            },
+            {
+                name: 'Spend Data',
+                url:
+                    UrlsByTrip.get(Trip.SouthKorea2025)!.GoogleSheetUrl +
+                    ViewPath,
+                personal: true,
+                type: LinkType.GoogleSheet,
+            },
+        ],
+    ],
+    [
+        Trip.Japan2025,
+        [
+            {
+                name: 'Itinerary',
+                url: UrlsByTrip.get(Trip.Japan2025)!.ItineraryUrl!,
+                personal: true,
+                type: LinkType.GoogleDoc,
+            },
+            {
+                name: 'Google Maps List',
+                url: UrlsByTrip.get(Trip.Japan2025)!.GoogleMapsListUrl!,
+                personal: true,
+                type: LinkType.GoogleMap,
+            },
+            {
+                name: 'Submit Receipts',
+                url: UrlsByTrip.get(Trip.Japan2025)!.GoogleFormUrl,
+                personal: true,
+                type: LinkType.GoogleForm,
+            },
+            {
+                name: 'Spend Data',
+                url: UrlsByTrip.get(Trip.Japan2025)!.GoogleSheetUrl + ViewPath,
                 personal: true,
                 type: LinkType.GoogleSheet,
             },

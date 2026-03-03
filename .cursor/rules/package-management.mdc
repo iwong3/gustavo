@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Package Management Rulesets
+
+## Ruleset 1
+
+- Always use yarn when possible.
+
+
+
