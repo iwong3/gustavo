@@ -20,6 +20,7 @@
         "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
         "app:start": "concurrently \"pnpm docker:up\" \"pnpm dev\"",
         "app:stop": "docker compose -f infra/docker-compose.yml down",
+        "db:migrate": "node --env-file=.env.local scripts/migrate.js",
         "db:reset": "bash scripts/reset-database.sh",
         "db:create-migration": "bash scripts/create-migration.sh",
         "deploy": "vercel --prod"
