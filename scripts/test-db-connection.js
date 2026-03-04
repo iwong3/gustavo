@@ -1,21 +1,14 @@
 const { Client } = require('pg')
 
-const client = new Client({
-    host: '127.0.0.1',
-    port: 5432,
-    database: 'gustavo_dev',
-    user: 'gus',
-    password: 'yellow_shirt_dev',
-})
+const connectionString = process.env.DATABASE_URL
+if (!connectionString) {
+    console.error('❌ DATABASE_URL is not set')
+    process.exit(1)
+}
+
+const client = new Client({ connectionString })
 
 console.log('Testing database connection...')
-console.log('Connection config:', {
-    host: '127.0.0.1',
-    port: 5432,
-    database: 'gustavo_dev',
-    user: 'gus',
-    password: '***masked***',
-})
 
 client
     .connect()
@@ -36,12 +29,5 @@ client
     .catch((err) => {
         console.log('❌ Connection failed:', err.message)
         console.log('Error code:', err.code)
-        console.log('Error details:', {
-            name: err.name,
-            severity: err.severity,
-            file: err.file,
-            line: err.line,
-            routine: err.routine,
-        })
         process.exit(1)
     })

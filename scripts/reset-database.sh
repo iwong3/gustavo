@@ -18,14 +18,12 @@ DB_NAME="${DB_NAME:-gustavo_dev}"
 DB_USER="${DB_USER:-gus}"
 DB_PASSWORD="${DB_PASSWORD:-yellow_shirt_dev}"
 
-echo -e "${BLUE}📋 Database Reset Plan (Windows Docker):${NC}"
-echo "  1. Stop existing Docker container"
-echo "  2. Remove Docker volume (fresh database)"
-echo "  3. Start fresh Docker container"
-echo "  4. Wait for database to be ready"
-echo "  5. Run migrations using docker exec"
-echo "  6. Load seed data using docker exec"
-echo "  7. Verify setup"
+echo -e "${BLUE}📋 Database Reset Plan:${NC}"
+echo "  1. Ensure containers are running"
+echo "  2. Drop and recreate gustavo_dev database (metabase DB preserved)"
+echo "  3. Run migrations"
+echo "  4. Load seed data"
+echo "  5. Verify setup"
 echo ""
 
 # Function to run SQL inside container
@@ -61,25 +59,16 @@ run_sql_file_in_container() {
     fi
 }
 
-# Step 1: Stop existing PostgreSQL container only
-echo -e "${YELLOW}🛑 Stopping PostgreSQL container...${NC}"
-docker-compose -f infra/docker-compose.yml stop postgres 2>/dev/null || true
-docker-compose -f infra/docker-compose.yml rm -f postgres 2>/dev/null || true
+# Step 1: Ensure containers are running
+echo -e "${YELLOW}🏗️  Ensuring containers are running...${NC}"
+docker-compose -f infra/docker-compose.yml up -d
 
-# Step 2: Remove Docker volume for fresh database
-echo -e "${YELLOW}🗑️  Removing Docker volume for fresh database...${NC}"
-docker volume rm infra_postgres_data 2>/dev/null || true
-
-# Step 3: Start fresh PostgreSQL container
-echo -e "${YELLOW}🏗️  Starting fresh PostgreSQL container...${NC}"
-docker-compose -f infra/docker-compose.yml up -d postgres
-
-# Step 4: Wait for database to be ready
+# Step 2: Wait for database to be ready
 echo -e "${YELLOW}⏳ Waiting for database to be ready...${NC}"
 max_attempts=30
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-    if docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" > /dev/null 2>&1; then
+    if docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
         echo -e "${GREEN}✅ Database is ready!${NC}"
         break
     fi
@@ -93,6 +82,13 @@ if [ $attempt -eq $max_attempts ]; then
     echo -e "${YELLOW}💡 Try running: docker logs gustavo-postgres${NC}"
     exit 1
 fi
+
+# Step 3: Drop and recreate gustavo_dev database only (preserves metabase database)
+echo -e "${YELLOW}🗑️  Dropping and recreating ${DB_NAME}...${NC}"
+docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB_NAME}' AND pid <> pg_backend_pid();" > /dev/null 2>&1
+docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME};" > /dev/null 2>&1
+docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d postgres -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" > /dev/null 2>&1
+echo -e "${GREEN}✅ Database recreated!${NC}"
 
 # Step 5: Run migrations using docker exec
 echo -e "${YELLOW}🏗️  Running migrations...${NC}"
@@ -111,10 +107,15 @@ if [ -d "$MIGRATION_DIR" ]; then
         done
         echo ""
         
-        # Run each migration
+        # Create migration tracking table
+        run_sql_in_container "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW());" "Creating schema_migrations table"
+
+        # Run each migration and track it
         for migration in $MIGRATION_FILES; do
             migration_name=$(basename "$migration")
+            migration_version=$(basename "$migration" .sql)
             run_sql_file_in_container "$migration" "Running migration: $migration_name"
+            run_sql_in_container "INSERT INTO schema_migrations (version) VALUES ('$migration_version') ON CONFLICT DO NOTHING;" "Tracking migration: $migration_version"
         done
     fi
 else
@@ -154,10 +155,10 @@ echo -e "${YELLOW}🔍 Verifying database setup...${NC}"
 # Count all tables
 ALL_TABLES=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ' || echo "0")
 
-# Count specific tables if they exist
+# Count rows in key tables if they exist
 USER_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
-TABLE_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM tables;" 2>/dev/null | tr -d ' ' || echo "0")
-RECORD_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM records;" 2>/dev/null | tr -d ' ' || echo "0")
+TRIP_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM trips;" 2>/dev/null | tr -d ' ' || echo "0")
+LOCATION_COUNT=$(docker exec -e PGPASSWORD="$DB_PASSWORD" gustavo-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM locations;" 2>/dev/null | tr -d ' ' || echo "0")
 
 echo -e "${GREEN}✅ Database reset completed successfully!${NC}"
 echo ""
@@ -166,8 +167,8 @@ echo "  • Database: $DB_NAME"
 echo "  • User: $DB_USER"
 echo "  • Total tables: $ALL_TABLES"
 echo "  • Users: $USER_COUNT"
-echo "  • Dynamic tables: $TABLE_COUNT"
-echo "  • Records: $RECORD_COUNT"
+echo "  • Trips: $TRIP_COUNT"
+echo "  • Locations: $LOCATION_COUNT"
 echo ""
 echo -e "${GREEN}🎉 Ready for development!${NC}"
 echo ""

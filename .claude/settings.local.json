@@ -1,19 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls*)",
-      "Bash(pwd)",
-      "Bash(which *)",
       "Bash(cat *)",
-      "Bash(git status*)",
+      "Bash(cd*)",
+      "Bash(docker*)",
+      "Bash(git branch*)",
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(git show*)",
-      "Bash(git branch*)",
       "Bash(git stash list*)",
+      "Bash(git status*)",
+      "Bash(ls*)",
       "Bash(pnpm --version)",
+      "Bash(pnpm build)",
       "Bash(pnpm tsc --noEmit)",
-      "Bash(pnpm build)"
+      "Bash(pwd)",
+      "Bash(which *)",
+      "Bash(npm audit --audit-level=moderate)"
     ]
   }
 }

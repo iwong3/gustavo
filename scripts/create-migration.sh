@@ -45,25 +45,8 @@ cat > "$FILEPATH" << EOF
 -- Migration $FORMATTED_NUM: $DESCRIPTION
 -- Created: $(date '+%Y-%m-%d %H:%M:%S')
 
--- Set search path to use gustavo schema by default
-SET search_path TO gustavo, public;
-
 -- Add your migration SQL here
--- Example:
--- CREATE TABLE example_table (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     name TEXT NOT NULL,
---     created_at TIMESTAMPTZ DEFAULT NOW()
--- );
 
--- CREATE INDEX idx_example_table_name ON example_table(name);
-
--- Remember to:
--- 1. Test your migration on a copy of production data
--- 2. Make the migration reversible when possible
--- 3. Keep migrations focused and atomic
--- 4. Update seed data if needed
--- 5. Tables will be created in 'gustavo' schema automatically
 EOF
 
 echo -e "${GREEN}✅ Migration created: $FILEPATH${NC}"

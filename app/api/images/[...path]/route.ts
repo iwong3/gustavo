@@ -9,12 +9,13 @@ export async function GET(
     try {
         const { path: pathSegments } = await params
         const imagePath = pathSegments.join('/')
-        const filePath = path.join(
-            process.cwd(),
-            'frontend',
-            'images',
-            imagePath
-        )
+        const baseDir = path.resolve(process.cwd(), 'frontend', 'images')
+        const filePath = path.resolve(baseDir, imagePath)
+
+        // Prevent path traversal attacks
+        if (!filePath.startsWith(baseDir)) {
+            return new NextResponse('Forbidden', { status: 403 })
+        }
 
         const fileBuffer = await readFile(filePath)
 
