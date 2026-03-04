@@ -2,6 +2,7 @@
 
 import { Box, Button, Typography } from '@mui/material'
 import { useRouter } from 'next/navigation'
+import UserMenu from './components/auth/user-menu'
 import PWAInstallButton from './components/PWAInstallButton'
 
 export default function HomePage() {
@@ -18,6 +19,9 @@ export default function HomePage() {
                 padding: 4,
                 gap: 3,
             }}>
+            <Box sx={{ position: 'fixed', top: 16, left: 16 }}>
+                <UserMenu />
+            </Box>
             <Typography variant="h3" component="h1" gutterBottom>
                 Welcome to the App Suite
             </Typography>

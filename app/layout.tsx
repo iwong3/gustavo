@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import Providers from './components/providers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -56,8 +57,10 @@ export default function RootLayout({
                 <meta name="msapplication-tap-highlight" content="no" />
             </head>
             <body>
-                {children}
-                <PWAInstallPrompt />
+                <Providers>
+                    {children}
+                    <PWAInstallPrompt />
+                </Providers>
             </body>
         </html>
     )
