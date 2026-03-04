@@ -35,6 +35,9 @@ importers:
       '@visx/brush':
         specifier: ^3.10.4
         version: 3.10.4(react@19.2.4)
+      '@visx/curve':
+        specifier: ^3.3.0
+        version: 3.3.0
       '@visx/group':
         specifier: ^3.3.0
         version: 3.3.0(react@19.2.4)
@@ -5855,7 +5858,7 @@ snapshots:
   '@testing-library/dom@8.17.1':
     dependencies:
       '@babel/code-frame': 7.27.1
-      '@babel/runtime': 7.27.6
+      '@babel/runtime': 7.28.6
       '@types/aria-query': 4.2.2
       aria-query: 5.3.2
       chalk: 4.1.2
