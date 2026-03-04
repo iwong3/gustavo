@@ -18,7 +18,7 @@
         "docker:down:metabase": "docker compose -f infra/docker-compose.yml stop metabase",
         "docker:build": "docker compose -f infra/docker-compose.yml build",
         "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
-        "app:start": "concurrently \"pnpm docker:up\" \"pnpm dev\"",
+        "start:local": "bash scripts/start.sh",
         "app:stop": "docker compose -f infra/docker-compose.yml down",
         "db:migrate": "node --env-file=.env.local scripts/migrate.js",
         "db:reset": "bash scripts/reset-database.sh",
