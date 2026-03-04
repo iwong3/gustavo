@@ -1,3 +1,4 @@
+import type { JSX } from 'react'
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
 

@@ -1,5 +1,6 @@
 import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { ArrowClockwise } from '@phosphor-icons/react'
+import type { JSX } from 'react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 

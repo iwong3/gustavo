@@ -1,4 +1,5 @@
 import { Box, ClickAwayListener, Typography } from '@mui/material'
+import type { JSX } from 'react'
 import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'

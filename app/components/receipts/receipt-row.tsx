@@ -1,5 +1,5 @@
 import { Box, Tooltip } from '@mui/material'
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import AnimateHeight from 'react-animate-height'

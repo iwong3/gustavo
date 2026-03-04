@@ -1,44 +1,26 @@
-# Multi-stage Dockerfile for React app
+# Multi-stage Dockerfile for Next.js app
 FROM node:24-alpine AS base
+RUN corepack enable
 
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
-
-# Install dependencies
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
-elif [ -f package-lock.json ]; then npm ci; \
-elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-else echo "Lockfile not found." && exit 1; \
-fi
-
-# Copy source code
-COPY . .
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Development stage
 FROM base AS dev
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 EXPOSE 3000
-ENV PORT 3000
-
-CMD ["yarn", "start"]
+ENV PORT=3000
+CMD ["pnpm", "dev"]
 
 # Build stage
-FROM node:24-alpine AS builder
+FROM base AS builder
 WORKDIR /app
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
-    elif [ -f package-lock.json ]; then npm ci; \
-    elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm i --frozen-lockfile; \
-    else echo "Lockfile not found." && exit 1; \
-    fi
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
-RUN if [ -f yarn.lock ]; then yarn build; \
-    elif [ -f package-lock.json ]; then npm run build; \
-    elif [ -f pnpm-lock.yaml ]; then pnpm build; \
-    else yarn build; \
-    fi
+RUN pnpm build

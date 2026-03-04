@@ -10,9 +10,9 @@ const isDev = process.env.NODE_ENV !== 'production'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    swcMinify: true,
-    experimental: {
-        externalDir: true,
+    eslint: {
+        // Lint runs as a separate step (pnpm lint); not during build
+        ignoreDuringBuilds: true,
     },
     // Ensure proper asset handling for production
     assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
@@ -46,9 +46,6 @@ const nextConfig = {
             },
         ]
     },
-
-    // Add output configuration for better Vercel compatibility
-    output: 'standalone',
 
     // Ensure proper trailing slash handling
     trailingSlash: false,

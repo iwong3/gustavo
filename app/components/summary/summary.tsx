@@ -1,4 +1,5 @@
 import { Box } from '@mui/material'
+import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
