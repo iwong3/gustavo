@@ -1,5 +1,6 @@
 // Health API service - complete implementation
 import { NextRequest, NextResponse } from 'next/server'
+import pool from '../db'
 import { createApiResponse, handleApiError } from '../utils'
 
 // Backend API logic for health check
@@ -11,10 +12,18 @@ export interface HealthResponse {
 }
 
 const getHealthStatus = async (): Promise<HealthResponse> => {
+    let dbStatus = 'disconnected'
+    try {
+        await pool.query('SELECT 1')
+        dbStatus = 'connected'
+    } catch {
+        dbStatus = 'disconnected'
+    }
+
     return {
         status: 'ok',
         environment: process.env.NODE_ENV || 'development',
-        database: process.env.DATABASE_URL || 'localhost',
+        database: dbStatus,
         timestamp: new Date().toISOString(),
     }
 }
