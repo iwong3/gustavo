@@ -105,6 +105,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.14)
+      babel-loader:
+        specifier: ^8.4.1
+        version: 8.4.1(@babel/core@7.27.4)(webpack@5.105.4)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -6617,9 +6620,9 @@ snapshots:
     optionalDependencies:
       ajv: 8.17.1
 
-  ajv-keywords@3.5.2(ajv@6.12.6):
+  ajv-keywords@3.5.2(ajv@6.14.0):
     dependencies:
-      ajv: 6.12.6
+      ajv: 6.14.0
 
   ajv-keywords@5.1.0(ajv@8.17.1):
     dependencies:
@@ -8945,8 +8948,8 @@ snapshots:
   schema-utils@2.7.1:
     dependencies:
       '@types/json-schema': 7.0.15
-      ajv: 6.12.6
-      ajv-keywords: 3.5.2(ajv@6.12.6)
+      ajv: 6.14.0
+      ajv-keywords: 3.5.2(ajv@6.14.0)
 
   schema-utils@4.3.2:
     dependencies:

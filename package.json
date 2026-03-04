@@ -59,6 +59,7 @@
         "@types/pg": "^8.10.9",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "babel-loader": "^8.4.1",
         "concurrently": "^8.2.2",
         "eslint": "^9",
         "eslint-config-next": "^15",
