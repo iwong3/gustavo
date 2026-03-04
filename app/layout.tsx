@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     manifest: '/manifest.json',
     appleWebApp: {
         capable: true,
-        statusBarStyle: 'default',
+        statusBarStyle: 'black-translucent',
         title: 'Gustavo',
     },
     formatDetection: {
@@ -34,6 +34,7 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
+    viewportFit: 'cover', // Draw behind notch/home indicator on iPhone
 }
 
 export default function RootLayout({
@@ -50,7 +51,7 @@ export default function RootLayout({
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta
                     name="apple-mobile-web-app-status-bar-style"
-                    content="default"
+                    content="black-translucent"
                 />
                 <meta name="apple-mobile-web-app-title" content="Gustavo" />
                 <meta name="msapplication-TileColor" content="#1976d2" />

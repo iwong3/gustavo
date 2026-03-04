@@ -59,6 +59,9 @@ const pwaConfig = isDev
           disable: process.env.NODE_ENV === 'development',
           register: true,
           skipWaiting: true,
+          fallbacks: {
+              document: '/offline',
+          },
           runtimeCaching: [
               {
                   urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
