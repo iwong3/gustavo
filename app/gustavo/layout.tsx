@@ -10,6 +10,7 @@ import {
     IconSettings,
 } from '@tabler/icons-react'
 
+import { ClientOnly } from 'components/client-only'
 import { ToolsMenu } from 'components/menu/tools/tools-menu'
 import { ErrorConvertingToUSDGeneral } from 'utils/data-processing'
 import { getTablerIcon } from 'utils/icons'
@@ -165,6 +166,7 @@ export default function GustavoLayout({
     }
 
     return (
+        <ClientOnly>
         <Box
             sx={{
                 display: 'flex',
@@ -301,5 +303,6 @@ export default function GustavoLayout({
                 </Box>
             </Box>
         </Box>
+        </ClientOnly>
     )
 }

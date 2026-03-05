@@ -1,31 +1,39 @@
+# To-Do List
+
 ## High Priority
 
-- [ ] Add ability to enter expense
 - [ ] Once prod is working, merge to main and get rid of GH pages
 - [ ] Double check payment safeguards for Vercel, Neon, GCP OAuth
 - [ ] Improve the process of getting the updated PWA app on phone
+
+## Features
+
+- [ ] Audit log
+- [ ] Create/edit/delete a trip
+- [ ] Edit/delete expenses
+    - [ ] Add/edit/delete categories, locations, etc.
+- [ ] Currency conversion API
+
+## UX / Design
+
 - [ ] Transition off of MUI/Emotion and into Tailwind
-
-## Medium Priority
-
-- [ ] Update app documentation
+- [ ] Come up with a high level theme consistent across whole app
 - [ ] Re-design homepage
     - [ ] Welcome screen
         - [ ] Select app (currently only Travel Expenses)
 - [ ] Re-design trip selection
 - [ ] Re-design expense tracker
-- [ ] Always present menu?
-- [ ] Create a trip
-- [ ] Form to enter expenses
-    - [ ] Ability to edit options (e.g. location, category)
+- [ ] Re-design form to enter expenses
     - [ ] View options in logical way? (relevant locations for a country?)
 - [ ] Mobile first UX
 
-## Ideas
+## Tech Debt
 
-- [ ] Can we get off Zustand now that we have a DB?
-- [ ] Are there alternatives to Zustand? I find its state management a bit
-      confusing.
+- [ ] Simplify Zustand usage
+
+## Others
+
+- [ ] Update app documentation
 
 ## Errors to Fix
 
@@ -64,3 +72,5 @@ might have mixed up default and named imports.
 - [x] Get current app functionality working with DB
 - [x] Backfill prod with Google Sheets data
 - [x] Add routing
+- [x] Add ability to enter expense
+- [x] Always present app menu

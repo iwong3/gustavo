@@ -9,7 +9,22 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    reactStrictMode: true,
+    reactStrictMode: false,
+    experimental: {
+        optimizePackageImports: [
+            '@mui/material',
+            '@mui/icons-material',
+            '@tabler/icons-react',
+            '@phosphor-icons/react',
+            '@visx/annotation',
+            '@visx/axis',
+            '@visx/brush',
+            '@visx/curve',
+            '@visx/group',
+            '@visx/scale',
+            '@visx/shape',
+        ],
+    },
     eslint: {
         // Lint runs as a separate step (pnpm lint); not during build
         ignoreDuringBuilds: true,

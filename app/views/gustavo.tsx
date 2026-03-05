@@ -1,12 +1,9 @@
 import { Box, Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
-import { create } from 'zustand'
-import { useShallow } from 'zustand/react/shallow'
+import { useState } from 'react'
 
 import AddExpenseDialog from 'components/add-expense-dialog'
 import { ActiveMenuItems } from 'components/menu/active-menu-items'
-import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import {
@@ -15,124 +12,6 @@ import {
     useToolsMenuStore,
 } from 'components/menu/tools/tools-menu'
 import { useSummaryStore } from 'components/summary/summary'
-import {
-    processFilteredSpendData,
-    processSpendData,
-} from 'utils/data-processing'
-import { Location } from 'utils/location'
-import { Person } from 'utils/person'
-import { Spend, SpendType } from 'utils/spend'
-import { useTripsStore } from 'views/trips'
-
-type GustavoState = {
-    // total spend
-    spendData: Spend[]
-    // total spend calculations
-    totalSpend: number
-    debtMapByPerson: Map<Person, Map<Person, number>>
-
-    // filtered spend
-    filteredSpendData: Spend[]
-    // filtered spend calculations
-    filteredSpendDataWithoutSplitBetween: Spend[]
-    filteredSpendDataWithoutSpendType: Spend[]
-    filteredSpendDataWithoutLocation: Spend[]
-    filteredTotalSpend: number // total spend of the filtered items
-    filteredPeopleTotalSpend: number // total spend by filtered people out of the filtered items
-    totalSpendByPerson: Map<Person, number>
-    totalSpendByType: Map<SpendType, number>
-    totalSpendByLocation: Map<Location, number>
-    totalSpendByDate: Map<string, number>
-    totalSpendByDateByPerson: Map<Person, Map<string, number>>
-}
-
-type GustavoActions = {
-    // total spend
-    setSpendData: (spendData: Spend[]) => void
-    // total spend calculations
-    setTotalSpend: (totalSpend: number) => void
-    setDebtMapByPerson: (
-        debtMapByPerson: Map<Person, Map<Person, number>>
-    ) => void
-
-    // filtered spend
-    setFilteredSpendData: (filteredSpendData: Spend[]) => void
-    // filtered spend calculations
-    setFilteredSpendDataWithoutSplitBetween: (
-        filteredSpendDataWithoutSplitBetween: Spend[]
-    ) => void
-    setFilteredSpendDataWithoutSpendType: (
-        filteredSpendDataWithoutSpendType: Spend[]
-    ) => void
-    setFilteredSpendDataWithoutLocation: (
-        filteredSpendDataWithoutLocation: Spend[]
-    ) => void
-    setFilteredTotalSpend: (filteredTotalSpend: number) => void
-    setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) => void
-    setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) => void
-    setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) => void
-    setTotalSpendByLocation: (
-        totalSpendByLocation: Map<Location, number>
-    ) => void
-    setTotalSpendByDate: (totalSpendByDate: Map<string, number>) => void
-    setTotalSpendByDateByPerson: (
-        totalSpendByDateByPerson: Map<Person, Map<string, number>>
-    ) => void
-}
-
-const initialState: GustavoState = {
-    spendData: [],
-    totalSpend: 0,
-    debtMapByPerson: new Map<Person, Map<Person, number>>(),
-
-    filteredSpendData: [],
-    filteredSpendDataWithoutSplitBetween: [],
-    filteredSpendDataWithoutSpendType: [],
-    filteredSpendDataWithoutLocation: [],
-    filteredTotalSpend: 0,
-    filteredPeopleTotalSpend: 0,
-    totalSpendByPerson: new Map<Person, number>(),
-    totalSpendByType: new Map<SpendType, number>(),
-    totalSpendByLocation: new Map<Location, number>(),
-    totalSpendByDate: new Map<string, number>(),
-    totalSpendByDateByPerson: new Map<Person, Map<string, number>>(),
-}
-
-export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
-    ...initialState,
-
-    setSpendData: (spendData: Spend[]) => set(() => ({ spendData })),
-    setTotalSpend: (totalSpend: number) => set(() => ({ totalSpend })),
-    setDebtMapByPerson: (debtMapByPerson: Map<Person, Map<Person, number>>) =>
-        set(() => ({ debtMapByPerson })),
-
-    setFilteredTotalSpend: (filteredTotalSpend: number) =>
-        set(() => ({ filteredTotalSpend })),
-    setFilteredSpendDataWithoutSplitBetween: (
-        filteredSpendDataWithoutSplitBetween: Spend[]
-    ) => set(() => ({ filteredSpendDataWithoutSplitBetween })),
-    setFilteredSpendDataWithoutSpendType: (
-        filteredSpendDataWithoutSpendType: Spend[]
-    ) => set(() => ({ filteredSpendDataWithoutSpendType })),
-    setFilteredSpendDataWithoutLocation: (
-        filteredSpendDataWithoutLocation: Spend[]
-    ) => set(() => ({ filteredSpendDataWithoutLocation })),
-    setFilteredPeopleTotalSpend: (filteredPeopleTotalSpend: number) =>
-        set(() => ({ filteredPeopleTotalSpend })),
-    setFilteredSpendData: (filteredSpendData: Spend[]) =>
-        set(() => ({ filteredSpendData })),
-    setTotalSpendByPerson: (totalSpendByPerson: Map<Person, number>) =>
-        set(() => ({ totalSpendByPerson })),
-    setTotalSpendByType: (totalSpendByType: Map<SpendType, number>) =>
-        set(() => ({ totalSpendByType })),
-    setTotalSpendByLocation: (totalSpendByLocation: Map<Location, number>) =>
-        set(() => ({ totalSpendByLocation })),
-    setTotalSpendByDate: (totalSpendByDate: Map<string, number>) =>
-        set(() => ({ totalSpendByDate })),
-    setTotalSpendByDateByPerson: (
-        totalSpendByDateByPerson: Map<Person, Map<string, number>>
-    ) => set(() => ({ totalSpendByDateByPerson })),
-}))
 
 type GustavoProps = {
     onRefresh?: () => void
@@ -140,77 +19,15 @@ type GustavoProps = {
 
 export const Gustavo = ({ onRefresh }: GustavoProps) => {
     const [addDialogOpen, setAddDialogOpen] = useState(false)
-    const {
-        spendData,
-        filteredSpendData,
-        filteredSpendDataWithoutSplitBetween,
-        filteredSpendDataWithoutSpendType,
-        filteredSpendDataWithoutLocation,
-        setTotalSpend,
-        setDebtMapByPerson,
-        setFilteredTotalSpend,
-        setFilteredPeopleTotalSpend,
-        setTotalSpendByPerson,
-        setTotalSpendByType,
-        setTotalSpendByLocation,
-        setTotalSpendByDate,
-        setTotalSpendByDateByPerson,
-    } = useGustavoStore(useShallow((state) => state))
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
-    useEffect(() => {}, [])
+    const activeItem = useToolsMenuStore((s) => s.activeItem)
+    const setActiveItem = useToolsMenuStore((s) => s.setActiveItem)
+    const setActiveView = useSummaryStore((s) => s.setActiveView)
+    const showIconLabels = useSettingsIconLabelsStore((s) => s.showIconLabels)
 
-    // calculate total spend summary data to expose to summary components
-    useEffect(() => {
-        const { totalSpend, debtMap } = processSpendData(spendData, currentTrip)
+    const scrollHeightCss = showIconLabels ? '72dvh' : '74dvh'
 
-        setTotalSpend(totalSpend)
-        setDebtMapByPerson(debtMap)
-    }, [spendData])
-
-    // calculate filtered spend data to expose to spend components
-    const { filters: splitBetweenFilter } = useFilterSplitBetweenStore(
-        useShallow((state) => state)
-    )
-    useEffect(() => {
-        const {
-            filteredTotalSpend,
-            filteredPeopleTotalSpend,
-            totalSpendByPerson,
-            totalSpendByType,
-            totalSpendByLocation,
-            totalSpendByDate,
-            totalSpendByDateByPerson,
-        } = processFilteredSpendData(
-            filteredSpendData,
-            filteredSpendDataWithoutSplitBetween,
-            filteredSpendDataWithoutSpendType,
-            filteredSpendDataWithoutLocation,
-            splitBetweenFilter,
-            currentTrip
-        )
-
-        setFilteredTotalSpend(filteredTotalSpend)
-        setFilteredPeopleTotalSpend(filteredPeopleTotalSpend)
-        setTotalSpendByPerson(totalSpendByPerson)
-        setTotalSpendByType(totalSpendByType)
-        setTotalSpendByLocation(totalSpendByLocation)
-        setTotalSpendByDate(totalSpendByDate)
-        setTotalSpendByDateByPerson(totalSpendByDateByPerson)
-    }, [
-        filteredSpendData,
-        filteredSpendDataWithoutSplitBetween,
-        filteredSpendDataWithoutSpendType,
-        filteredSpendDataWithoutLocation,
-    ])
-
-    const { activeItem, setActiveItem } = useToolsMenuStore(
-        useShallow((state) => state)
-    )
-    const { setActiveView } = useSummaryStore(useShallow((state) => state))
-    const { showIconLabels } = useSettingsIconLabelsStore(
-        useShallow((state) => state)
-    )
+    const ActiveComponent = ToolsMenuItemMap.get(activeItem)?.Component ?? null
 
     // swipe left & right
     const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -287,25 +104,13 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
                 sx={{
-                    // height:
-                    //     typeof window !== 'undefined'
-                    //         ? showIconLabels
-                    //             ? window.innerHeight * 0.72
-                    //             : window.innerHeight * 0.74
-                    //         : 80,
-                    height: '80%',
-                    // maxHeight:
-                    //     typeof window !== 'undefined'
-                    //         ? showIconLabels
-                    //             ? window.innerHeight * 0.72
-                    //             : window.innerHeight * 0.74
-                    //         : 80,
-                    maxHeight: '80%',
+                    height: scrollHeightCss,
+                    maxHeight: scrollHeightCss,
                     maxWidth: 450,
                     overflow: 'hidden',
                     overflowY: 'scroll',
                 }}>
-                {ToolsMenuItemMap.get(activeItem)?.component}
+                {ActiveComponent && <ActiveComponent />}
             </Box>
             <Box
                 sx={{

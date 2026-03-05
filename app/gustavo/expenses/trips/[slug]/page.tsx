@@ -2,85 +2,85 @@
 
 import { Box } from '@mui/material'
 import { useParams, notFound } from 'next/navigation'
-import { useCallback, useEffect, useRef } from 'react'
-import { useShallow } from 'zustand/react/shallow'
-
+import { useCallback, useEffect, useState } from 'react'
 import { useDebtCalculatorStore } from 'components/debt/debt-calculator'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { TripDataProvider } from 'providers/trip-data-provider'
 import { fetchExpenses } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
+import { Spend } from 'utils/spend'
 import { slugToTrip } from 'utils/trips'
-import { Gustavo, useGustavoStore } from 'views/gustavo'
+import { Gustavo } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 
 export default function TripDetailPage() {
     const { slug } = useParams<{ slug: string }>()
     const trip = slugToTrip(slug)
-    const initialized = useRef(false)
 
-    const {
-        setCurrentTrip,
-        setLoading,
-        setFetchDataError,
-        setCurrencyConversionError,
-        fetchDataError,
-    } = useTripsStore(useShallow((state) => state))
+    // Trip data owned by React state — guaranteed re-renders on change.
+    // Passed to children via TripDataProvider (React Context).
+    const [spendData, setSpendData] = useState<Spend[]>([])
 
-    const {
-        setSpendData,
-        setFilteredSpendData,
-        setFilteredSpendDataWithoutSplitBetween,
-        setFilteredSpendDataWithoutSpendType,
-        setFilteredSpendDataWithoutLocation,
-    } = useGustavoStore(useShallow((state) => state))
+    // Zustand stores for layout display only (header title, loading spinner)
+    const setCurrentTrip = useTripsStore((s) => s.setCurrentTrip)
+    const setLoading = useTripsStore((s) => s.setLoading)
+    const setFetchDataError = useTripsStore((s) => s.setFetchDataError)
+    const setCurrencyConversionError = useTripsStore(
+        (s) => s.setCurrencyConversionError
+    )
+    const fetchDataError = useTripsStore((s) => s.fetchDataError)
 
-    const { reset: resetSearchBarStore } = useSearchBarStore(
-        useShallow((state) => state)
-    )
-    const { reset: resetToolsMenuStore } = useToolsMenuStore(
-        useShallow((state) => state)
-    )
-    const { reset: resetDebtCalculatorStore } = useDebtCalculatorStore(
-        useShallow((state) => state)
-    )
+    // Zustand stores for UI state resets
+    const resetSearchBarStore = useSearchBarStore((s) => s.reset)
+    const resetToolsMenuStore = useToolsMenuStore((s) => s.reset)
+    const resetDebtCalculatorStore = useDebtCalculatorStore((s) => s.reset)
 
     useEffect(() => {
-        if (!trip || initialized.current) return
-        initialized.current = true
+        if (!trip) return
+        let ignore = false
+
+        setLoading(true)
+        setSpendData([])
 
         async function loadTrip() {
             try {
                 const [data, currencyConversionError] =
                     await fetchExpenses(trip!)
 
+                if (ignore) return
+
                 if (currencyConversionError) {
                     setCurrencyConversionError(true)
                 }
 
-                setSpendData(data)
-                setFilteredSpendData(data)
-                setFilteredSpendDataWithoutSplitBetween(data)
-                setFilteredSpendDataWithoutSpendType(data)
-                setFilteredSpendDataWithoutLocation(data)
-
+                // Reset UI stores for the new trip
+                setCurrentTrip(trip!)
                 resetAllMenuItemStores(trip!)
                 resetSearchBarStore()
                 resetToolsMenuStore()
                 resetDebtCalculatorStore()
 
-                setCurrentTrip(trip!)
+                // Set data via React state — triggers page re-render,
+                // which updates TripDataProvider's context value,
+                // which propagates to all consumers.
+                setSpendData(data)
+                setLoading(false)
             } catch (err) {
                 console.error(err)
-                setFetchDataError(true)
-            } finally {
-                setLoading(false)
+                if (!ignore) {
+                    setFetchDataError(true)
+                }
             }
         }
 
         loadTrip()
-    }, [trip, slug])
+
+        return () => {
+            ignore = true
+        }
+    }, [trip])
 
     const refreshData = useCallback(async () => {
         if (!trip) return
@@ -88,10 +88,6 @@ export default function TripDetailPage() {
             const [data, convError] = await fetchExpenses(trip)
             if (convError) setCurrencyConversionError(true)
             setSpendData(data)
-            setFilteredSpendData(data)
-            setFilteredSpendDataWithoutSplitBetween(data)
-            setFilteredSpendDataWithoutSpendType(data)
-            setFilteredSpendDataWithoutLocation(data)
         } catch (err) {
             console.error('Error refreshing expenses:', err)
         }
@@ -149,5 +145,9 @@ export default function TripDetailPage() {
         )
     }
 
-    return <Gustavo onRefresh={refreshData} />
+    return (
+        <TripDataProvider spendData={spendData} trip={trip}>
+            <Gustavo key={slug} onRefresh={refreshData} />
+        </TripDataProvider>
+    )
 }

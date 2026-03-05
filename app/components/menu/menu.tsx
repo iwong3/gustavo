@@ -36,7 +36,6 @@ import {
     getTablerIcon,
 } from 'utils/icons'
 import { Trip } from 'utils/trips'
-import { useGustavoStore } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 
 export enum MenuItem {
@@ -68,13 +67,6 @@ export const resetAllMenuItemStores = (trip: Trip) => {
 
 export const Menu = () => {
     const { currentTrip } = useTripsStore(useShallow((state) => state))
-    const {
-        spendData,
-        setFilteredSpendData,
-        setFilteredSpendDataWithoutSplitBetween,
-        setFilteredSpendDataWithoutSpendType,
-        setFilteredSpendDataWithoutLocation,
-    } = useGustavoStore(useShallow((state) => state))
     const { activeItem: activeView } = useToolsMenuStore(
         useShallow((state) => state)
     )
@@ -149,69 +141,6 @@ export const Menu = () => {
     }
 
     const menuItems = [sortMenuItem, ...filterMenuItems]
-
-    // whenever any filter and sort state changes, update the filtered spend data
-    useEffect(() => {
-        // apply filters
-        let filteredSpendData = spendData
-        filteredSpendData = filterSplitBetweenState.filter(filteredSpendData)
-        filteredSpendData = filterPaidByState.filter(filteredSpendData)
-        filteredSpendData = filterSpendTypeState.filter(filteredSpendData)
-        filteredSpendData = filterLocationState.filter(filteredSpendData)
-
-        // apply sorting - only one sort will be active at a time
-        for (const sortState of sortStates) {
-            if (sortState.order !== 0) {
-                filteredSpendData = sortState.sort(filteredSpendData)
-                break
-            }
-        }
-
-        // apply search
-        filteredSpendData = searchBarState.search(filteredSpendData)
-
-        // apply filters for partial filtered spend data
-        // doesn't need sort or search as it's only used for calculating totals for graphs
-        let filteredSpendDataWithoutSplitBetween = spendData
-        filteredSpendDataWithoutSplitBetween = filterPaidByState.filter(
-            filteredSpendDataWithoutSplitBetween
-        )
-        filteredSpendDataWithoutSplitBetween = filterSpendTypeState.filter(
-            filteredSpendDataWithoutSplitBetween
-        )
-        filteredSpendDataWithoutSplitBetween = filterLocationState.filter(
-            filteredSpendDataWithoutSplitBetween
-        )
-
-        let filteredSpendDataWithoutSpendType = spendData
-        filteredSpendDataWithoutSpendType = filterSplitBetweenState.filter(
-            filteredSpendDataWithoutSpendType
-        )
-        filteredSpendDataWithoutSpendType = filterPaidByState.filter(
-            filteredSpendDataWithoutSpendType
-        )
-        filteredSpendDataWithoutSpendType = filterLocationState.filter(
-            filteredSpendDataWithoutSpendType
-        )
-
-        let filteredSpendDataWithoutLocation = spendData
-        filteredSpendDataWithoutLocation = filterSplitBetweenState.filter(
-            filteredSpendDataWithoutLocation
-        )
-        filteredSpendDataWithoutLocation = filterPaidByState.filter(
-            filteredSpendDataWithoutLocation
-        )
-        filteredSpendDataWithoutLocation = filterSpendTypeState.filter(
-            filteredSpendDataWithoutLocation
-        )
-
-        setFilteredSpendData(filteredSpendData)
-        setFilteredSpendDataWithoutSplitBetween(
-            filteredSpendDataWithoutSplitBetween
-        )
-        setFilteredSpendDataWithoutSpendType(filteredSpendDataWithoutSpendType)
-        setFilteredSpendDataWithoutLocation(filteredSpendDataWithoutLocation)
-    }, [...filterStates, ...sortStates, searchBarState])
 
     // expanded menu item state
     const [expandedMenuItem, setExpandedMenuItem] = useState(-1)

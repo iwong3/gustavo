@@ -1,16 +1,18 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
+import { useWindowSize } from 'hooks/useWindowSize'
 
 import { Graph } from 'components/graphs/graph'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getInitialsIconColors, InitialsIcon } from 'utils/icons'
+import { useSpendData } from 'providers/spend-data-provider'
 import { Person } from 'utils/person'
-import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByPerson = () => {
-    const { totalSpendByPerson } = useGustavoStore(useShallow((state) => state))
+    const { width: windowWidth } = useWindowSize()
+    const { totalSpendByPerson } = useSpendData()
     const { filters, handleFilterClick } = useFilterSplitBetweenStore(
         useShallow((state) => state)
     )
@@ -147,8 +149,8 @@ export const TotalSpendByPerson = () => {
                 }}>
                 <Graph
                     data={totalSpendByPersonArray}
-                    width={window.innerWidth * 0.9}
-                    height={window.innerWidth * 0.5}
+                    width={(windowWidth || 390) * 0.9}
+                    height={(windowWidth || 390) * 0.5}
                     barColors={personColors}
                     activeData={activePeople}
                 />

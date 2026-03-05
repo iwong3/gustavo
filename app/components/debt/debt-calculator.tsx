@@ -1,6 +1,7 @@
 import { Box, Link, Typography } from '@mui/material'
 import { UserCircle } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { useWindowSize } from 'hooks/useWindowSize'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -9,8 +10,8 @@ import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getTablerIcon, InitialsIcon } from 'utils/icons'
 import { getVenmoUrl, PeopleByTrip, Person } from 'utils/person'
+import { useSpendData } from 'providers/spend-data-provider'
 import { Spend } from 'utils/spend'
-import { useGustavoStore } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 // import VenmoLogo from '../../images/venmo-icon.png'
 
@@ -50,9 +51,7 @@ export const DebtCalculator = () => {
     const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
-    const { debtMapByPerson, filteredSpendData } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { debtMap, filteredSpendData } = useSpendData()
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
@@ -61,7 +60,7 @@ export const DebtCalculator = () => {
     useEffect(() => {
         if (person1 && person2) {
             // calculate debt
-            const debt = debtMapByPerson.get(person1)?.get(person2) || 0
+            const debt = debtMap.get(person1)?.get(person2) || 0
             setDebt(debt)
 
             // get spend data between the two people
@@ -90,7 +89,8 @@ export const DebtCalculator = () => {
     const debtString = FormattedMoney().format(debtAbsolute)
 
     // Debt person state and style
-    const debtPersonWidth = window.innerWidth * 0.3
+    const { width: windowWidth } = useWindowSize()
+    const debtPersonWidth = (windowWidth || 390) * 0.3
 
     const renderDebtPerson = (
         person: Person | undefined,
@@ -348,7 +348,7 @@ export const DebtCalculator = () => {
             </Box>
             <Box
                 sx={{
-                    maxHeight: window.innerHeight * 0.5,
+                    maxHeight: '50svh',
                     overflowY: 'scroll',
                 }}>
                 <ReceiptsList spendData={debtSpendData} />

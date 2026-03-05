@@ -1,16 +1,18 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
+import { useWindowSize } from 'hooks/useWindowSize'
 
 import { Graph } from 'components/graphs/graph'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getColorForSpendType, getIconFromSpendType } from 'utils/icons'
+import { useSpendData } from 'providers/spend-data-provider'
 import { SpendType } from 'utils/spend'
-import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByType = () => {
-    const { totalSpendByType } = useGustavoStore(useShallow((state) => state))
+    const { width: windowWidth } = useWindowSize()
+    const { totalSpendByType } = useSpendData()
     const { filters, handleFilterClick } = useFilterSpendTypeStore(
         useShallow((state) => state)
     )
@@ -145,8 +147,8 @@ export const TotalSpendByType = () => {
                 }}>
                 <Graph
                     data={totalSpendByTypeArray}
-                    width={window.innerWidth * 0.9}
-                    height={window.innerWidth * 0.5}
+                    width={(windowWidth || 390) * 0.9}
+                    height={(windowWidth || 390) * 0.5}
                     barColors={spendTypeColors}
                     activeData={activeTypes}
                 />

@@ -1,5 +1,5 @@
 import { Box, ClickAwayListener, Typography } from '@mui/material'
-import type { JSX } from 'react'
+import type { ComponentType } from 'react'
 import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -28,7 +28,7 @@ export enum ToolsMenuItem {
 }
 
 type ToolsMenuItemData = {
-    component: JSX.Element
+    Component: ComponentType
     label: string
     indent: boolean
     summaryView?: SummaryView
@@ -38,7 +38,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.Receipts,
         {
-            component: <ReceiptsList />,
+            Component: ReceiptsList,
             label: 'Receipts',
             indent: false,
         },
@@ -46,7 +46,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.DebtCalculator,
         {
-            component: <DebtCalculator />,
+            Component: DebtCalculator,
             label: 'Debt',
             indent: false,
         },
@@ -54,7 +54,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.TotalSpend,
         {
-            component: <Summary />,
+            Component: Summary,
             label: 'Totals',
             indent: false,
         },
@@ -62,7 +62,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.TotalSpendByPerson,
         {
-            component: <Summary />,
+            Component: Summary,
             label: 'Person',
             indent: true,
             summaryView: SummaryView.TotalSpendByPerson,
@@ -71,7 +71,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.TotalSpendByType,
         {
-            component: <Summary />,
+            Component: Summary,
             label: 'Type',
             indent: true,
             summaryView: SummaryView.TotalSpendByType,
@@ -80,7 +80,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.TotalSpendByLocation,
         {
-            component: <Summary />,
+            Component: Summary,
             label: 'Location',
             indent: true,
             summaryView: SummaryView.TotalSpendByLocation,
@@ -89,7 +89,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.TotalSpendByDate,
         {
-            component: <Summary />,
+            Component: Summary,
             label: 'Date',
             indent: true,
             summaryView: SummaryView.TotalSpendByDate,
@@ -98,7 +98,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.Links,
         {
-            component: <Links />,
+            Component: Links,
             label: 'Links',
             indent: false,
         },

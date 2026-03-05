@@ -1,18 +1,18 @@
 import { Box } from '@mui/material'
 import { useShallow } from 'zustand/react/shallow'
+import { useWindowSize } from 'hooks/useWindowSize'
 
 import { Graph } from 'components/graphs/graph'
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getLocationColors, LocationIcon } from 'utils/icons'
+import { useSpendData } from 'providers/spend-data-provider'
 import { Location } from 'utils/location'
-import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByLocation = () => {
-    const { totalSpendByLocation } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { width: windowWidth } = useWindowSize()
+    const { totalSpendByLocation } = useSpendData()
     const { filters, handleFilterClick } = useFilterLocationStore(
         useShallow((state) => state)
     )
@@ -143,8 +143,8 @@ export const TotalSpendByLocation = () => {
                 }}>
                 <Graph
                     data={totalSpendByLocationArray}
-                    width={window.innerWidth * 0.9}
-                    height={window.innerWidth * 0.5}
+                    width={(windowWidth || 390) * 0.9}
+                    height={(windowWidth || 390) * 0.5}
                     barColors={locationColors}
                     activeData={activeLocations}
                 />

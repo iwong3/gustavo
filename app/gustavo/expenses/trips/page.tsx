@@ -34,7 +34,7 @@ const TripCard = ({ trip }: { trip: Trip }) => (
             'alignItems': 'flex-end',
             'padding': 2,
             'width': '39%',
-            'height': typeof window !== 'undefined' ? window.innerHeight * 0.1 : 80,
+            'height': '10svh',
             'border': '1px solid #FBBC04',
             'borderRadius': '10px',
             'backgroundColor': 'rgba(0, 0, 0, 0.4)',

@@ -6,13 +6,13 @@ import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import { useSpendData } from 'providers/spend-data-provider'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
-import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpend = () => {
     const { totalSpend, filteredTotalSpend, filteredPeopleTotalSpend } =
-        useGustavoStore(useShallow((state) => state))
+        useSpendData()
 
     const [percentOfTotalSpend, setPercentOfTotalSpend] = useState(0)
     const [useFilteredTotalSpend, setUseFilteredTotalSpend] = useState(false)

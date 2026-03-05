@@ -1,23 +1,22 @@
 import { Box } from '@mui/material'
-import { useShallow } from 'zustand/react/shallow'
 
 import { ReceiptsRow } from 'components/receipts/receipt-row'
+import { useSpendData } from 'providers/spend-data-provider'
 import { defaultBackgroundColor } from 'utils/colors'
 import { Spend } from 'utils/spend'
-import { useGustavoStore } from 'views/gustavo'
 
 interface ReceiptsListProps {
     spendData?: Spend[] // optional override for spendData
 }
 
 export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
-    const { filteredSpendData } = useGustavoStore(useShallow((state) => state))
+    const { filteredSpendData } = useSpendData()
 
-    const useSpendData = spendData || filteredSpendData
+    const displayData = spendData || filteredSpendData
 
     return (
         <Box id="receipts-list">
-            {useSpendData.map((row, index) => (
+            {displayData.map((row, index) => (
                 <Box
                     key={'row-' + index}
                     sx={{

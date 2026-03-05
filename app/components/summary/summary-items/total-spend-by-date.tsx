@@ -2,18 +2,18 @@ import { Box } from '@mui/material'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { useWindowSize } from 'hooks/useWindowSize'
 
 import { Graph } from 'components/graphs/graph'
 import { LineGraph } from 'components/graphs/line-graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { getInitialsIconColors } from 'utils/icons'
+import { useSpendData } from 'providers/spend-data-provider'
 import { Person } from 'utils/person'
-import { useGustavoStore } from 'views/gustavo'
 
 export const TotalSpendByDate = () => {
-    const { totalSpendByDate, totalSpendByDateByPerson } = useGustavoStore(
-        useShallow((state) => state)
-    )
+    const { width: windowWidth } = useWindowSize()
+    const { totalSpendByDate, totalSpendByDateByPerson } = useSpendData()
     const { order } = useSortDateStore(useShallow((state) => state))
 
     const [totalSpendByDateArray, setTotalSpendByDateArray] = useState(
@@ -86,8 +86,8 @@ export const TotalSpendByDate = () => {
                 }}>
                 <Graph
                     data={totalSpendByDateArray}
-                    width={window.innerWidth * 0.9}
-                    height={window.innerWidth * 0.5}
+                    width={(windowWidth || 390) * 0.9}
+                    height={(windowWidth || 390) * 0.5}
                 />
             </Box>
             <Box
@@ -99,8 +99,8 @@ export const TotalSpendByDate = () => {
                 }}>
                 <LineGraph
                     data={totalSpendByDateByPersonArray}
-                    width={window.innerWidth * 0.9}
-                    height={window.innerWidth * 0.5}
+                    width={(windowWidth || 390) * 0.9}
+                    height={(windowWidth || 390) * 0.5}
                     lineColors={personColors}
                 />
             </Box>

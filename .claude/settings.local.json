@@ -11,12 +11,13 @@
       "Bash(git stash list*)",
       "Bash(git status*)",
       "Bash(ls*)",
+      "Bash(npm audit*)",
       "Bash(pnpm --version)",
       "Bash(pnpm build)",
       "Bash(pnpm tsc --noEmit)",
       "Bash(pwd)",
       "Bash(which *)",
-      "Bash(npm audit --audit-level=moderate)"
+      "Bash(npx next build)"
     ]
   }
 }

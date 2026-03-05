@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import Providers from './components/providers'
 import './globals.css'
@@ -58,10 +59,12 @@ export default function RootLayout({
                 <meta name="msapplication-tap-highlight" content="no" />
             </head>
             <body>
-                <Providers>
-                    {children}
-                    <PWAInstallPrompt />
-                </Providers>
+                <AppRouterCacheProvider>
+                    <Providers>
+                        {children}
+                        <PWAInstallPrompt />
+                    </Providers>
+                </AppRouterCacheProvider>
             </body>
         </html>
     )

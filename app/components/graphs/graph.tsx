@@ -66,7 +66,7 @@ export const Graph = ({
     }, [data, costOrder])
 
     // graph properties
-    const graphWidth = width && width !== 0 ? width : window.innerWidth * 0.9
+    const graphWidth = width && width !== 0 ? width : 350
     const graphHeight = height && height !== 0 ? height : graphWidth
     const marginY = 12
 
