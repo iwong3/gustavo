@@ -1,8 +1,16 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 
-// Add/remove emails here, then push to deploy.
-const ALLOWED_EMAILS: string[] = ['ivanwong15@gmail.com']
+// whitelist for app access
+const ALLOWED_EMAILS: string[] = [
+    'ivanwong15@gmail.com',
+    'jennyjiayimei@gmail.com',
+    'joannamei11@gmail.com',
+    'aibek.asm@gmail.com',
+    'angela.moy48@gmail.com',
+    'dennismoy18@gmail.com',
+    'michellec0897@gmail.com',
+]
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     providers: [Google],
