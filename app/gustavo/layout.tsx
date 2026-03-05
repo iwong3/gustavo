@@ -9,7 +9,6 @@ import { clearFromCache } from 'utils/cache'
 import { ErrorConvertingToUSDGeneral } from 'utils/data-processing'
 import { getTablerIcon } from 'utils/icons'
 import { useTripsStore } from 'views/trips'
-import GusFringLogo from '../images/gus-fring.png'
 
 export default function GustavoLayout({
     children,
@@ -78,7 +77,7 @@ export default function GustavoLayout({
                                     cursor: 'pointer',
                                 }}>
                                 <img
-                                    src={GusFringLogo.src}
+                                    src="/gus-fring.png"
                                     alt="Gustavo"
                                     style={{
                                         width: 42,
