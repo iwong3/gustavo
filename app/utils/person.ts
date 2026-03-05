@@ -35,6 +35,10 @@ export const PeopleByTrip = {
     [Trip.Japan2025]: [Person.Ivan, Person.Jenny],
 }
 
+export const getPersonFromFirstName = (firstName: string): Person | undefined => {
+    return Person[firstName as keyof typeof Person]
+}
+
 export const getPersonFromEmail = (email: string): Person | undefined => {
     switch (email) {
         case 'aibek.asm@gmail.com':

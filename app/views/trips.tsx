@@ -8,7 +8,7 @@ import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { getFromCache, saveInCache } from 'utils/cache'
-import { fetchData } from 'utils/data-mapping'
+import { fetchExpenses } from 'utils/api'
 import { ActiveTrips, PastTrips, Trip } from 'utils/trips'
 import { useGustavoStore } from 'views/gustavo'
 import { useMainStore } from 'views/main'
@@ -86,7 +86,7 @@ export const Trips = () => {
 
     const initializeCurrentTripData = async (trip: Trip) => {
         try {
-            const results = await fetchData(trip)
+            const results = await fetchExpenses(trip)
             const data = results[0]
             const currencyConversionError = results[1]
 

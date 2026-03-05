@@ -10,8 +10,6 @@
 
 ## Medium Priority
 
-- [ ] `node -v` is v22.14.0 - I thought we switched to 24?
-- [ ] linter
 - [ ] Update app documentation
 
 ## Ideas
@@ -19,3 +17,8 @@
 - [ ] Can we get off Zustand now that we have a DB?
 - [ ] Are there alternatives to Zustand? I find its state management a bit
       confusing.
+
+## Done
+
+- [x] `node -v` is v22.14.0 - I thought we switched to 24?
+- [x] linter (installed prettier)

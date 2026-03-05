@@ -1,5 +1,5 @@
 import { Box, Chip, Divider, Typography } from '@mui/material'
-import pool from '@/backend/db'
+import pool from '@/lib/db'
 
 type ServiceStatus = 'operational' | 'degraded' | 'down'
 
