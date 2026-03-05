@@ -1,8 +1,10 @@
-import { Box } from '@mui/material'
+import { Box, Fab } from '@mui/material'
+import { IconPlus } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import AddExpenseDialog from 'components/add-expense-dialog'
 import { ActiveMenuItems } from 'components/menu/active-menu-items'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { Menu } from 'components/menu/menu'
@@ -132,7 +134,12 @@ export const useGustavoStore = create<GustavoState & GustavoActions>((set) => ({
     ) => set(() => ({ totalSpendByDateByPerson })),
 }))
 
-export const Gustavo = () => {
+type GustavoProps = {
+    onRefresh?: () => void
+}
+
+export const Gustavo = ({ onRefresh }: GustavoProps) => {
+    const [addDialogOpen, setAddDialogOpen] = useState(false)
     const {
         spendData,
         filteredSpendData,
@@ -280,12 +287,20 @@ export const Gustavo = () => {
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
                 sx={{
-                    height: showIconLabels
-                        ? window.innerHeight * 0.72
-                        : window.innerHeight * 0.74,
-                    maxHeight: showIconLabels
-                        ? window.innerHeight * 0.72
-                        : window.innerHeight * 0.74,
+                    // height:
+                    //     typeof window !== 'undefined'
+                    //         ? showIconLabels
+                    //             ? window.innerHeight * 0.72
+                    //             : window.innerHeight * 0.74
+                    //         : 80,
+                    height: '80%',
+                    // maxHeight:
+                    //     typeof window !== 'undefined'
+                    //         ? showIconLabels
+                    //             ? window.innerHeight * 0.72
+                    //             : window.innerHeight * 0.74
+                    //         : 80,
+                    maxHeight: '80%',
                     maxWidth: 450,
                     overflow: 'hidden',
                     overflowY: 'scroll',
@@ -299,6 +314,27 @@ export const Gustavo = () => {
                 }}>
                 <Menu />
             </Box>
+
+            {/* Add expense FAB */}
+            <Fab
+                onClick={() => setAddDialogOpen(true)}
+                size="medium"
+                sx={{
+                    'position': 'fixed',
+                    'bottom': 140,
+                    'right': 16,
+                    'backgroundColor': '#FBBC04',
+                    '&:hover': { backgroundColor: '#E5A800' },
+                    'zIndex': 9,
+                }}>
+                <IconPlus size={24} />
+            </Fab>
+
+            <AddExpenseDialog
+                open={addDialogOpen}
+                onClose={() => setAddDialogOpen(false)}
+                onSuccess={() => onRefresh?.()}
+            />
         </Box>
     )
 }

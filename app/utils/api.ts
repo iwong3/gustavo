@@ -93,3 +93,28 @@ export const fetchExpenses = async (trip: Trip): Promise<[Spend[], boolean]> => 
 
     return [data, currencyConversionError]
 }
+
+export type AddExpenseData = {
+    name: string
+    date: string // YYYY-MM-DD
+    cost: number
+    currency: string
+    category?: string
+    paid_by: string // first name
+    split_between: string[] // first names, or ["Everyone"]
+    location?: string // location name
+    notes?: string
+}
+
+export const addExpense = async (trip: Trip, data: AddExpenseData): Promise<{ id: number }> => {
+    const res = await fetch(`/api/trips/${TripToId[trip]}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to add expense')
+    }
+    return res.json()
+}

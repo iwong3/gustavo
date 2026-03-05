@@ -2,7 +2,7 @@
 
 import { Box } from '@mui/material'
 import { useParams, notFound } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useDebtCalculatorStore } from 'components/debt/debt-calculator'
@@ -82,6 +82,21 @@ export default function TripDetailPage() {
         loadTrip()
     }, [trip, slug])
 
+    const refreshData = useCallback(async () => {
+        if (!trip) return
+        try {
+            const [data, convError] = await fetchExpenses(trip)
+            if (convError) setCurrencyConversionError(true)
+            setSpendData(data)
+            setFilteredSpendData(data)
+            setFilteredSpendDataWithoutSplitBetween(data)
+            setFilteredSpendDataWithoutSpendType(data)
+            setFilteredSpendDataWithoutLocation(data)
+        } catch (err) {
+            console.error('Error refreshing expenses:', err)
+        }
+    }, [trip])
+
     if (!trip) {
         notFound()
     }
@@ -134,5 +149,5 @@ export default function TripDetailPage() {
         )
     }
 
-    return <Gustavo />
+    return <Gustavo onRefresh={refreshData} />
 }
