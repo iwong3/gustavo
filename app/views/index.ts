@@ -1,2 +1,3 @@
 // View exports
-export * from './main'
+export * from './trips'
+export * from './gustavo'

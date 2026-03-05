@@ -39,7 +39,7 @@ async function migrate() {
         const applied = new Set(rows.map((r) => r.version))
 
         // Find migration files
-        const migrationsDir = path.join(__dirname, '..', 'database', 'migrations')
+        const migrationsDir = path.join(__dirname, '..', '..', 'database', 'migrations')
         const files = fs
             .readdirSync(migrationsDir)
             .filter((f) => f.endsWith('.sql'))

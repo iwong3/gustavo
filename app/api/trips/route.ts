@@ -5,6 +5,7 @@ export async function GET() {
     const { rows } = await pool.query<{
         id: number
         name: string
+        slug: string
         start_date: string
         end_date: string
         participants: string[]
@@ -12,6 +13,7 @@ export async function GET() {
         SELECT
             t.id,
             t.name,
+            t.slug,
             t.start_date,
             t.end_date,
             ARRAY_AGG(
