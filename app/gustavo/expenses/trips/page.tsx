@@ -4,10 +4,10 @@ import { Box } from '@mui/material'
 import Link from 'next/link'
 
 import { ActiveTrips, PastTrips, Trip, toSlug } from 'utils/trips'
-import Japan2024Image from '../../images/japan-2024.jpg'
-import Japan2025Image from '../../images/japan-2025.jpg'
-import SouthKorea2025Image from '../../images/south-korea-2025.jpg'
-import Vancouver2024Image from '../../images/vancouver-2024.jpg'
+import Japan2024Image from '../../../images/japan-2024.jpg'
+import Japan2025Image from '../../../images/japan-2025.jpg'
+import SouthKorea2025Image from '../../../images/south-korea-2025.jpg'
+import Vancouver2024Image from '../../../images/vancouver-2024.jpg'
 
 const getBackgroundImageUrlForTrip = (trip: Trip) => {
     switch (trip) {
@@ -27,7 +27,7 @@ const getBackgroundImageUrlForTrip = (trip: Trip) => {
 const TripCard = ({ trip }: { trip: Trip }) => (
     <Box
         component={Link}
-        href={`/gustavo/trips/${toSlug(trip)}`}
+        href={`/gustavo/expenses/trips/${toSlug(trip)}`}
         key={'trip-' + trip}
         sx={{
             'display': 'flex',

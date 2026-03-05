@@ -21,7 +21,7 @@ export default function LoginClient({ error }: { error?: string }) {
 
     const handleSignIn = async () => {
         setIsLoading(true)
-        await signIn('google', { callbackUrl: '/' })
+        await signIn('google', { callbackUrl: '/gustavo' })
         // Only reached if redirect fails
         setIsLoading(false)
     }

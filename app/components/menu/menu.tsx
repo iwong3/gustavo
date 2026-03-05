@@ -281,7 +281,7 @@ export const Menu = () => {
                     alignItems: 'center',
                     width: '100%',
                     position: 'fixed',
-                    bottom: 0,
+                    bottom: 64,
                     fontSize: 14,
                 }}>
                 <Box

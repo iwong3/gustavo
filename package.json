@@ -15,7 +15,7 @@
         "db:reset": "bash scripts/db/reset-database.sh",
         "db:seed": "node --env-file=.env.local scripts/db/seed.js",
         "deploy": "vercel --prod",
-        "dev": "next dev --turbopack",
+        "dev": "next dev",
         "dev:reset": "bash scripts/db/reset-database.sh && next dev",
         "docker:down": "docker compose -f infra/docker-compose.yml down",
         "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",

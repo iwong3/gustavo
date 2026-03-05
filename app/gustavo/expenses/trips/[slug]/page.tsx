@@ -10,7 +10,6 @@ import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { fetchExpenses } from 'utils/api'
-import { saveInCache } from 'utils/cache'
 import { getTablerIcon } from 'utils/icons'
 import { slugToTrip } from 'utils/trips'
 import { Gustavo, useGustavoStore } from 'views/gustavo'
@@ -72,7 +71,6 @@ export default function TripDetailPage() {
                 resetDebtCalculatorStore()
 
                 setCurrentTrip(trip!)
-                saveInCache('currentTrip', slug)
             } catch (err) {
                 console.error(err)
                 setFetchDataError(true)

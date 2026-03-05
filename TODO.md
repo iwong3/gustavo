@@ -3,6 +3,7 @@
 - [ ] Once prod is working, merge to main and get rid of GH pages
 - [ ] Double check payment safeguards for Vercel, Neon, GCP OAuth
 - [ ] Improve the process of getting the updated PWA app on phone
+- [ ] Transition off of MUI/Emotion and into Tailwind
 
 ## Medium Priority
 
