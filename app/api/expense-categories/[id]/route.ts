@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-async function resolveUserId(email: string): Promise<number | null> {
-    const res = await pool.query(
-        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-        [email]
-    )
-    return res.rows[0]?.id ?? null
-}
-
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
@@ -29,8 +19,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!name || typeof name !== 'string' || !name.trim()) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
-
-    const userId = await resolveUserId(session.user.email)
 
     try {
         await withAuditUser(userId, async (client) => {
@@ -53,18 +41,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
     if (isNaN(id)) {
         return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
     }
-
-    const userId = await resolveUserId(session.user.email)
 
     try {
         await withAuditUser(userId, async (client) => {

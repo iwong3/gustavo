@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
     const includeCount = request.nextUrl.searchParams.get('includeCount') === 'true'
@@ -30,10 +30,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
     const { name } = await request.json()
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -41,13 +40,6 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmed = name.trim()
-
-    // Resolve current user for audit
-    const userRes = await pool.query(
-        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-        [session.user.email]
-    )
-    const userId = userRes.rows[0]?.id ?? null
 
     try {
         const result = await withAuditUser(userId, async (client) => {

@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
-
-async function resolveUserId(email: string): Promise<number | null> {
-    const res = await pool.query(
-        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-        [email]
-    )
-    return res.rows[0]?.id ?? null
-}
 
 function parseTripId(tripId: string): number | null {
     const id = parseInt(tripId, 10)
@@ -41,10 +33,9 @@ export async function POST(
     request: NextRequest,
     { params }: RouteParams
 ) {
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
     const tripId = parseTripId((await params).tripId)
     if (!tripId) {
@@ -57,7 +48,6 @@ export async function POST(
     }
 
     const trimmed = name.trim()
-    const userId = await resolveUserId(session.user.email)
 
     try {
         const result = await withAuditUser(userId, async (client) => {

@@ -31,6 +31,20 @@
 
 - [ ] Update app documentation
 
+## Questions
+
+- How are DB connections handled by Next.js? Are they atomic? Transactional?
+- I noticed a lot of our API routes have this check:
+    ```
+    const session = await auth()
+    if (!session?.user?.email) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    ```
+    Do we have to define this for every route? Can we define this once somewhere
+    instead?
+- Is there anything we can DRY up?
+
 ## Done
 
 - [x] `node -v` is v22.14.0 - I thought we switched to 24?

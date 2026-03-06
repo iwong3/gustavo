@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
-
-async function resolveUserId(email: string): Promise<number | null> {
-    const res = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email])
-    return res.rows.length > 0 ? res.rows[0].id : null
-}
 
 // ── POST: Add participant to trip ──
 
@@ -19,17 +13,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const currentUserId = authUser.userId
 
     const body: { userId: number } = await request.json()
     if (!body.userId) {
         return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
-
-    const currentUserId = await resolveUserId(session.user.email)
 
     try {
         await withAuditUser(currentUserId, async (client) => {
@@ -72,17 +63,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const currentUserId = authUser.userId
 
     const body: { userId: number } = await request.json()
     if (!body.userId) {
         return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
-
-    const currentUserId = await resolveUserId(session.user.email)
 
     try {
         await withAuditUser(currentUserId, async (client) => {

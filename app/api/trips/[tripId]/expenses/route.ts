@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 function userSummary(row: { id: number; name: string; email: string | null; avatar_url: string | null; initials: string | null; venmo_url: string | null }) {
     return {
@@ -138,10 +138,9 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const reporterId = authUser.userId
 
     const body: CreateExpenseBody = await request.json()
 
@@ -149,13 +148,6 @@ export async function POST(
     if (!body.name || !body.date || !body.cost || !body.currency || !body.paid_by) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
-
-    // Resolve reporter (current user) ID for audit attribution
-    const reporterRes = await pool.query(
-        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-        [session.user.email]
-    )
-    const reporterId: number | null = reporterRes.rows.length > 0 ? reporterRes.rows[0].id : null
 
     try {
         const expenseId = await withAuditUser(reporterId, async (client) => {

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import Providers from './components/providers'
 import './globals.css'
 
@@ -63,6 +64,7 @@ export default function RootLayout({
                     <Providers>
                         {children}
                         <PWAInstallPrompt />
+                        <PWAUpdatePrompt />
                     </Providers>
                 </AppRouterCacheProvider>
             </body>

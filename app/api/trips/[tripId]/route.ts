@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
-
-async function resolveUserId(email: string): Promise<number | null> {
-    const res = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email])
-    return res.rows.length > 0 ? res.rows[0].id : null
-}
 
 // ── PUT: Update trip ──
 
@@ -27,12 +21,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
-    const userId = await resolveUserId(session.user.email)
     const body: UpdateTripBody = await request.json()
 
     try {
@@ -98,12 +90,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = await resolveUserId(session.user.email)
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId } = authUser
 
     try {
         await withAuditUser(userId, async (client) => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
+import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
     const slug = request.nextUrl.searchParams.get('slug')
@@ -117,18 +117,14 @@ function slugify(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const creatorId = authUser.userId
 
     const body: CreateTripBody = await request.json()
     if (!body.name || !body.startDate || !body.endDate) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
-
-    const creatorRes = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [session.user.email])
-    const creatorId: number | null = creatorRes.rows.length > 0 ? creatorRes.rows[0].id : null
 
     const slug = body.slug || slugify(body.name)
 
