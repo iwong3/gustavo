@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { Avatar, Box, Button, Typography } from '@mui/material'
+import { IconCategory, IconMapPin } from '@tabler/icons-react'
 
 export default function SettingsPage() {
     const { data: session } = useSession()
@@ -32,6 +34,48 @@ export default function SettingsPage() {
                 <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
                     {email}
                 </Typography>
+            </Box>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    width: '100%',
+                    maxWidth: 300,
+                    marginTop: 1,
+                }}>
+                <Link href="/gustavo/settings/categories" style={{ textDecoration: 'none' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            padding: 1.5,
+                            borderRadius: 1,
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        }}>
+                        <IconCategory size={20} />
+                        <Typography sx={{ fontSize: 16, color: 'text.primary' }}>
+                            Manage Categories
+                        </Typography>
+                    </Box>
+                </Link>
+                <Link href="/gustavo/settings/locations" style={{ textDecoration: 'none' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            padding: 1.5,
+                            borderRadius: 1,
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                        }}>
+                        <IconMapPin size={20} />
+                        <Typography sx={{ fontSize: 16, color: 'text.primary' }}>
+                            Manage Locations
+                        </Typography>
+                    </Box>
+                </Link>
             </Box>
             <Button
                 variant="outlined"

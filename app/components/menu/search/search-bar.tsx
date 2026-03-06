@@ -12,27 +12,15 @@ import { useShallow } from 'zustand/react/shallow'
 import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { defaultBackgroundColor } from 'utils/colors'
 import { getTablerIcon } from 'utils/icons'
-import { Spend } from 'utils/spend'
+
+import type { Expense } from '@/lib/types'
 
 const fuseOptions = {
-    // matches Spend interface
     keys: [
-        {
-            name: 'name',
-            weight: 1,
-        },
-        {
-            name: 'date',
-            weight: 1,
-        },
-        {
-            name: 'paidBy',
-            weight: 1,
-        },
-        {
-            name: 'location',
-            weight: 1,
-        },
+        { name: 'name', weight: 1 },
+        { name: 'date', weight: 1 },
+        { name: 'paidBy.firstName', weight: 1 },
+        { name: 'locationName', weight: 1 },
     ],
     includeMatches: true,
 }
@@ -42,7 +30,7 @@ type SearchBarState = {
 }
 
 type SearchBarActions = {
-    search: (spendData: Spend[]) => Spend[]
+    search: (spendData: Expense[]) => Expense[]
 
     setSearchInput: (searchInput: string) => void
     isActive: () => boolean
@@ -57,7 +45,7 @@ export const useSearchBarStore = create<SearchBarState & SearchBarActions>(
     (set, get) => ({
         ...initialState,
 
-        search: (spendData: Spend[]): Spend[] => {
+        search: (spendData: Expense[]): Expense[] => {
             const { searchInput } = get()
             if (searchInput === '') {
                 return spendData

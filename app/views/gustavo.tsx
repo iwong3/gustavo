@@ -2,7 +2,8 @@ import { Box, Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { useState } from 'react'
 
-import AddExpenseDialog from 'components/add-expense-dialog'
+import ExpenseFormDialog from 'components/expense-form-dialog'
+import { RefreshProvider } from 'providers/refresh-provider'
 import { ActiveMenuItems } from 'components/menu/active-menu-items'
 import { Menu } from 'components/menu/menu'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
@@ -99,19 +100,21 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                     <ActiveMenuItems />
                 </Box>
             )}
-            <Box
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
-                sx={{
-                    height: scrollHeightCss,
-                    maxHeight: scrollHeightCss,
-                    maxWidth: 450,
-                    overflow: 'hidden',
-                    overflowY: 'scroll',
-                }}>
-                {ActiveComponent && <ActiveComponent />}
-            </Box>
+            <RefreshProvider onRefresh={() => onRefresh?.()}>
+                <Box
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                    sx={{
+                        height: scrollHeightCss,
+                        maxHeight: scrollHeightCss,
+                        maxWidth: 450,
+                        overflow: 'hidden',
+                        overflowY: 'scroll',
+                    }}>
+                    {ActiveComponent && <ActiveComponent />}
+                </Box>
+            </RefreshProvider>
             <Box
                 sx={{
                     display: 'flex',
@@ -135,10 +138,11 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                 <IconPlus size={24} />
             </Fab>
 
-            <AddExpenseDialog
+            <ExpenseFormDialog
                 open={addDialogOpen}
                 onClose={() => setAddDialogOpen(false)}
                 onSuccess={() => onRefresh?.()}
+                mode="add"
             />
         </Box>
     )

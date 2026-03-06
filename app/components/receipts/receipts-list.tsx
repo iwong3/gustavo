@@ -2,17 +2,20 @@ import { Box } from '@mui/material'
 
 import { ReceiptsRow } from 'components/receipts/receipt-row'
 import { useSpendData } from 'providers/spend-data-provider'
+import { useRefresh } from 'providers/refresh-provider'
 import { defaultBackgroundColor } from 'utils/colors'
-import { Spend } from 'utils/spend'
+
+import type { Expense } from '@/lib/types'
 
 interface ReceiptsListProps {
-    spendData?: Spend[] // optional override for spendData
+    expenses?: Expense[]
 }
 
-export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
-    const { filteredSpendData } = useSpendData()
+export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
+    const { filteredExpenses } = useSpendData()
+    const { onRefresh } = useRefresh()
 
-    const displayData = spendData || filteredSpendData
+    const displayData = expenses || filteredExpenses
 
     return (
         <Box id="receipts-list">
@@ -22,15 +25,15 @@ export const ReceiptsList = ({ spendData }: ReceiptsListProps) => {
                     sx={{
                         marginX: 1,
                         marginBottom: 1,
-                        border: row.error
+                        border: row.conversionError
                             ? '1px solid #C1121F'
                             : '1px solid #FBBC04',
                         borderRadius: 4,
-                        backgroundColor: row.error
+                        backgroundColor: row.conversionError
                             ? '#FFE3E0'
                             : defaultBackgroundColor,
                     }}>
-                    <ReceiptsRow spend={row} />
+                    <ReceiptsRow expense={row} onRefresh={onRefresh} />
                 </Box>
             ))}
         </Box>

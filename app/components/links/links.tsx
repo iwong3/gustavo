@@ -1,20 +1,17 @@
 import { Box, Link } from '@mui/material'
-import { useShallow } from 'zustand/react/shallow'
+import { usePathname } from 'next/navigation'
 
 import { getTablerIcon } from 'utils/icons'
-import { Link as LinkType, LinksByTrip, getLogoFromLinkType } from 'utils/links'
-import { useTripsStore } from 'views/trips'
+import { Link as LinkType, LinksByTripSlug, getLogoFromLinkType } from 'utils/links'
 
 export const Links = () => {
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
+    const pathname = usePathname()
+    // Extract slug from /gustavo/expenses/trips/[slug]
+    const slug = pathname.split('/').pop() ?? ''
+    const tripLinks = LinksByTripSlug[slug] ?? []
 
-    const personalLinks = LinksByTrip.get(currentTrip)!.filter((link) => {
-        return link.personal
-    })
-
-    const externalLinks = LinksByTrip.get(currentTrip)!.filter((link) => {
-        return !link.personal
-    })
+    const personalLinks = tripLinks.filter((link) => link.personal)
+    const externalLinks = tripLinks.filter((link) => !link.personal)
 
     const renderLink = (link: LinkType) => {
         return (

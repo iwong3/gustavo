@@ -6,9 +6,8 @@ import { Graph } from 'components/graphs/graph'
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
-import { getLocationColors, LocationIcon } from 'utils/icons'
+import { getLocationColor, LocationIcon } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
-import { Location } from 'utils/location'
 
 export const TotalSpendByLocation = () => {
     const { width: windowWidth } = useWindowSize()
@@ -56,7 +55,7 @@ export const TotalSpendByLocation = () => {
         return rows
     }
 
-    const renderLocation = (location: Location, totalSpend: number) => {
+    const renderLocation = (location: string, totalSpend: number) => {
         const isActive = filters.get(location)
 
         return (
@@ -120,11 +119,9 @@ export const TotalSpendByLocation = () => {
 
     // graph
     const locationColors = totalSpendByLocationArray.map(([location]) =>
-        getLocationColors(location)
+        getLocationColor(location)
     )
-    const activeLocations = Object.entries(filters).map(
-        ([_, isActive]) => isActive
-    )
+    const activeLocations = Array.from(filters.values())
 
     return (
         <Box

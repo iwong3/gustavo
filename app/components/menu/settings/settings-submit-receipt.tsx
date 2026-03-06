@@ -1,16 +1,17 @@
 import { Box, Link } from '@mui/material'
-import { useShallow } from 'zustand/react/shallow'
+import { usePathname } from 'next/navigation'
 
-import { UrlsByTrip } from 'utils/data-mapping'
+import { UrlsByTripSlug } from 'utils/data-mapping'
 import { getTablerIcon } from 'utils/icons'
-import { useTripsStore } from 'views/trips'
 
 export const SettingsSubmitReceipt = () => {
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
+    const pathname = usePathname()
+    const slug = pathname.split('/').pop() ?? ''
+    const urls = UrlsByTripSlug[slug]
 
     return (
         <Link
-            href={UrlsByTrip.get(currentTrip)!.GoogleFormUrl}
+            href={urls?.GoogleFormUrl ?? '#'}
             target="_blank"
             color="inherit"
             underline="none">

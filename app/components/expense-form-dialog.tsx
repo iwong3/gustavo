@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
     Box,
     Button,
@@ -16,29 +16,14 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { useShallow } from 'zustand/react/shallow'
 
 import { Currency } from 'utils/currency'
-import { LocationByTrip } from 'utils/location'
-import { Person, PeopleByTrip } from 'utils/person'
-import { SpendType } from 'utils/spend'
-import { Trip } from 'utils/trips'
-import { addExpense } from 'utils/api'
-import { useTripsStore } from 'views/trips'
+import { addExpense, updateExpense } from 'utils/api'
+import { useTripData } from 'providers/trip-data-provider'
 
-const defaultCurrencyForTrip = (trip: Trip): Currency => {
-    switch (trip) {
-        case Trip.Japan2024:
-        case Trip.Japan2025:
-            return Currency.JPY
-        case Trip.SouthKorea2025:
-            return Currency.KRW
-        case Trip.Vancouver2024:
-            return Currency.CAD
-        default:
-            return Currency.USD
-    }
-}
+import type { Expense } from '@/lib/types'
+
+type Category = { id: number; name: string }
 
 const todayISO = () => {
     const d = new Date()
@@ -49,27 +34,65 @@ type Props = {
     open: boolean
     onClose: () => void
     onSuccess: () => void
+    mode: 'add' | 'edit'
+    expense?: Expense
 }
 
-export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
+export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expense }: Props) {
+    const { trip } = useTripData()
 
-    const people = currentTrip ? PeopleByTrip[currentTrip] : []
-    const locations = currentTrip ? LocationByTrip[currentTrip] : []
+    const people = trip.participants.map((p) => p.firstName)
 
+    const [categories, setCategories] = useState<Category[]>([])
     const [name, setName] = useState('')
     const [date, setDate] = useState(todayISO())
     const [cost, setCost] = useState('')
-    const [currency, setCurrency] = useState<Currency>(
-        currentTrip ? defaultCurrencyForTrip(currentTrip) : Currency.USD
-    )
-    const [category, setCategory] = useState('')
+    const [currency, setCurrency] = useState<Currency>(Currency.USD)
+    const [categoryId, setCategoryId] = useState<number | ''>('')
     const [paidBy, setPaidBy] = useState('')
     const [splitBetween, setSplitBetween] = useState<string[]>(['Everyone'])
     const [location, setLocation] = useState('')
     const [notes, setNotes] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [tripLocations, setTripLocations] = useState<string[]>([])
+
+    useEffect(() => {
+        if (open) {
+            fetch('/api/expense-categories')
+                .then((res) => res.json())
+                .then((data) => setCategories(data))
+                .catch(() => {})
+
+            fetch(`/api/trips/${trip.id}/locations`)
+                .then((res) => res.json())
+                .then((data: { id: number; name: string }[]) =>
+                    setTripLocations(data.map((l) => l.name))
+                )
+                .catch(() => {})
+        }
+    }, [open, trip.id])
+
+    useEffect(() => {
+        if (open && mode === 'edit' && expense) {
+            setName(expense.name)
+            setDate(expense.date)
+            setCost(String(expense.costOriginal))
+            setCurrency(expense.currency as Currency)
+            setCategoryId(expense.categoryId ?? '')
+            setPaidBy(expense.paidBy.firstName)
+            if (expense.isEveryone) {
+                setSplitBetween(['Everyone'])
+            } else {
+                setSplitBetween(expense.splitBetween.map((u) => u.firstName))
+            }
+            setLocation(expense.locationName ?? '')
+            setNotes(expense.notes ?? '')
+            setError('')
+        } else if (open && mode === 'add') {
+            resetForm()
+        }
+    }, [open, mode, expense])
 
     const isEveryone = splitBetween.includes('Everyone')
 
@@ -78,14 +101,12 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
             setSplitBetween(['Everyone'])
             return
         }
-        // Remove "Everyone" if selecting individual people
         let next = splitBetween.filter((p) => p !== 'Everyone')
         if (next.includes(person)) {
             next = next.filter((p) => p !== person)
         } else {
             next.push(person)
         }
-        // If all people selected, switch back to Everyone
         if (next.length === people.length) {
             setSplitBetween(['Everyone'])
         } else if (next.length === 0) {
@@ -99,8 +120,8 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
         setName('')
         setDate(todayISO())
         setCost('')
-        setCurrency(currentTrip ? defaultCurrencyForTrip(currentTrip) : Currency.USD)
-        setCategory('')
+        setCurrency(Currency.USD)
+        setCategoryId('')
         setPaidBy('')
         setSplitBetween(['Everyone'])
         setLocation('')
@@ -114,7 +135,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
     }
 
     const handleSubmit = async () => {
-        if (!currentTrip) return
         if (!name.trim() || !date || !cost || !paidBy) {
             setError('Please fill in all required fields.')
             return
@@ -128,33 +148,46 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
         setSubmitting(true)
         setError('')
 
+        const payload = {
+            name: name.trim(),
+            date,
+            cost: costNum,
+            currency,
+            category_id: categoryId || undefined,
+            paid_by: paidBy,
+            split_between: splitBetween,
+            location: location || undefined,
+            notes: notes.trim() || undefined,
+        }
+
         try {
-            await addExpense(currentTrip, {
-                name: name.trim(),
-                date,
-                cost: costNum,
-                currency,
-                category: category || undefined,
-                paid_by: paidBy,
-                split_between: splitBetween,
-                location: location || undefined,
-                notes: notes.trim() || undefined,
-            })
+            if (mode === 'edit' && expense) {
+                await updateExpense(trip.id, expense.id, payload)
+            } else {
+                await addExpense(trip.id, payload)
+            }
             resetForm()
             onClose()
             onSuccess()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to add expense')
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : mode === 'edit'
+                      ? 'Failed to update expense'
+                      : 'Failed to add expense'
+            )
         } finally {
             setSubmitting(false)
         }
     }
 
+    const isEdit = mode === 'edit'
     const selectSx = { backgroundColor: '#FFFFEF' }
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Add Expense</DialogTitle>
+            <DialogTitle>{isEdit ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
             <DialogContent
                 sx={{
                     display: 'flex',
@@ -162,7 +195,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     gap: 2,
                     paddingTop: '8px !important',
                 }}>
-                {/* Item name */}
                 <TextField
                     label="Item name"
                     value={name}
@@ -173,7 +205,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     sx={selectSx}
                 />
 
-                {/* Date */}
                 <TextField
                     label="Date"
                     type="date"
@@ -186,7 +217,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     sx={selectSx}
                 />
 
-                {/* Cost + Currency row */}
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <TextField
                         label="Cost"
@@ -215,26 +245,24 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     </FormControl>
                 </Box>
 
-                {/* Category */}
                 <FormControl size="small" fullWidth>
                     <InputLabel>Category</InputLabel>
                     <Select
-                        value={category}
+                        value={categoryId}
                         label="Category"
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={(e) => setCategoryId(e.target.value as number | '')}
                         sx={selectSx}>
                         <MenuItem value="">
                             <em>None</em>
                         </MenuItem>
-                        {Object.values(SpendType).map((t) => (
-                            <MenuItem key={t} value={t}>
-                                {t}
+                        {categories.map((c) => (
+                            <MenuItem key={c.id} value={c.id}>
+                                {c.name}
                             </MenuItem>
                         ))}
                     </Select>
                 </FormControl>
 
-                {/* Paid by */}
                 <FormControl size="small" fullWidth required>
                     <InputLabel>Paid by</InputLabel>
                     <Select
@@ -250,7 +278,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     </Select>
                 </FormControl>
 
-                {/* Split between */}
                 <Box>
                     <Typography variant="body2" sx={{ marginBottom: 0.5 }}>
                         Split between
@@ -284,7 +311,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     </Box>
                 </Box>
 
-                {/* Location */}
                 <FormControl size="small" fullWidth>
                     <InputLabel>Location</InputLabel>
                     <Select
@@ -295,7 +321,7 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                         <MenuItem value="">
                             <em>None</em>
                         </MenuItem>
-                        {locations.map((l) => (
+                        {tripLocations.map((l) => (
                             <MenuItem key={l} value={l}>
                                 {l}
                             </MenuItem>
@@ -303,7 +329,6 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     </Select>
                 </FormControl>
 
-                {/* Notes */}
                 <TextField
                     label="Notes"
                     value={notes}
@@ -329,7 +354,13 @@ export default function AddExpenseDialog({ open, onClose, onSuccess }: Props) {
                     onClick={handleSubmit}
                     variant="contained"
                     disabled={submitting}>
-                    {submitting ? 'Adding...' : 'Add'}
+                    {submitting
+                        ? isEdit
+                            ? 'Saving...'
+                            : 'Adding...'
+                        : isEdit
+                          ? 'Save'
+                          : 'Add'}
                 </Button>
             </DialogActions>
         </Dialog>

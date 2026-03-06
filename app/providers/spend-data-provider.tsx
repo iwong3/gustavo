@@ -12,39 +12,30 @@ import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { useTripData } from 'providers/trip-data-provider'
-import {
-    processFilteredSpendData,
-    processSpendData,
-} from 'utils/data-processing'
-import { Location, LocationByTrip } from 'utils/location'
-import { Person } from 'utils/person'
-import { Spend, SpendType } from 'utils/spend'
 
-// All derived spend data, computed via useMemo from React-snapshot values.
-// Reads raw data from TripDataContext (React state → Context).
-// Reads UI state from Zustand stores (filter/sort/search).
-// No store.get() calls — purely deterministic computation.
+import type { Expense, UserSummary } from '@/lib/types'
+
 type SpendDataValue = {
-    spendData: Spend[]
-    filteredSpendData: Spend[]
+    expenses: Expense[]
+    filteredExpenses: Expense[]
     totalSpend: number
-    debtMap: Map<Person, Map<Person, number>>
+    debtMap: Map<number, Map<number, number>> // userId → userId → amount
     filteredTotalSpend: number
     filteredPeopleTotalSpend: number
-    totalSpendByPerson: Map<Person, number>
-    totalSpendByType: Map<SpendType, number>
-    totalSpendByLocation: Map<Location, number>
-    totalSpendByDate: Map<string, number>
-    totalSpendByDateByPerson: Map<Person, Map<string, number>>
+    totalSpendByPerson: Map<number, number>     // userId → amount
+    totalSpendByType: Map<string, number>       // categoryName → amount
+    totalSpendByLocation: Map<string, number>   // locationName → amount
+    totalSpendByDate: Map<string, number>       // date → amount
+    totalSpendByDateByPerson: Map<number, Map<string, number>> // userId → date → amount
+    participants: UserSummary[]
 }
 
-// Fuse.js options for search
 const fuseOptions = {
     keys: [
         { name: 'name', weight: 1 },
         { name: 'date', weight: 1 },
-        { name: 'paidBy', weight: 1 },
-        { name: 'location', weight: 1 },
+        { name: 'paidBy.firstName', weight: 1 },
+        { name: 'locationName', weight: 1 },
     ],
     includeMatches: true,
 }
@@ -52,64 +43,60 @@ const fuseOptions = {
 // --- Pure filter/sort/search functions ---
 
 function filterBySplitBetween(
-    data: Spend[],
-    filters: Map<Person, boolean>
-): Spend[] {
+    data: Expense[],
+    filters: Map<string, boolean> // firstName → boolean
+): Expense[] {
     const isAnyActive = Array.from(filters.values()).includes(true)
     if (!isAnyActive) return data
-    return data.filter((spend) =>
-        spend.splitBetween.some(
-            (p) => p === Person.Everyone || filters.get(p)
-        )
+    return data.filter((exp) =>
+        exp.isEveryone || exp.splitBetween.some((u) => filters.get(u.firstName))
     )
 }
 
 function filterByPaidBy(
-    data: Spend[],
-    filters: Map<Person, boolean>
-): Spend[] {
+    data: Expense[],
+    filters: Map<string, boolean> // firstName → boolean
+): Expense[] {
     const isAnyActive = Array.from(filters.values()).includes(true)
     if (!isAnyActive) return data
-    return data.filter((spend) => filters.get(spend.paidBy))
+    return data.filter((exp) => filters.get(exp.paidBy.firstName))
 }
 
 function filterBySpendType(
-    data: Spend[],
-    filters: Record<SpendType, boolean>
-): Spend[] {
-    const isAnyActive = Object.values(filters).some((v) => v)
+    data: Expense[],
+    filters: Map<string, boolean> // categoryName → boolean
+): Expense[] {
+    const isAnyActive = Array.from(filters.values()).includes(true)
     if (!isAnyActive) return data
-    return data.filter((spend) => {
-        if (spend.type === undefined) return filters[SpendType.Other]
-        return filters[spend.type]
+    return data.filter((exp) => {
+        const cat = exp.categoryName ?? 'Other'
+        return filters.get(cat)
     })
 }
 
 function filterByLocation(
-    data: Spend[],
-    filters: Map<Location, boolean>
-): Spend[] {
+    data: Expense[],
+    filters: Map<string, boolean> // locationName → boolean
+): Expense[] {
     const isAnyActive = Array.from(filters.values()).includes(true)
     if (!isAnyActive) return data
-    return data.filter((spend) => {
-        if (spend.location === undefined) return filters.get(Location.Other)
-        if (!LocationByTrip[spend.trip].includes(spend.location))
-            return filters.get(Location.Other)
-        return filters.get(spend.location)
+    return data.filter((exp) => {
+        const loc = exp.locationName ?? 'Other'
+        return filters.get(loc)
     })
 }
 
 function applySorting(
-    data: Spend[],
+    data: Expense[],
     costOrder: number,
     dateOrder: number,
     nameOrder: number
-): Spend[] {
+): Expense[] {
     if (costOrder !== 0) {
         return data.slice().sort((a, b) =>
             costOrder === 1
-                ? b.convertedCost - a.convertedCost
-                : a.convertedCost - b.convertedCost
+                ? b.costConvertedUsd - a.costConvertedUsd
+                : a.costConvertedUsd - b.costConvertedUsd
         )
     }
     if (dateOrder !== 0) {
@@ -129,18 +116,108 @@ function applySorting(
     return data
 }
 
-function applySearch(data: Spend[], searchInput: string): Spend[] {
+function applySearch(data: Expense[], searchInput: string): Expense[] {
     if (searchInput === '') return data
     const fuse = new Fuse(data, fuseOptions)
     const results = fuse.search(searchInput)
     return results.map((r) => data[r.refIndex])
 }
 
-export function useSpendData(): SpendDataValue {
-    // Raw data from React Context (driven by React useState in page component)
-    const { spendData, trip: currentTrip } = useTripData()
+// --- Debt calculation ---
 
-    // UI state from Zustand stores (filter selections, sort orders, search text)
+function computeDebtMap(
+    expenses: Expense[],
+    participantCount: number
+): { totalSpend: number; debtMap: Map<number, Map<number, number>> } {
+    let totalSpend = 0
+    const debtMap = new Map<number, Map<number, number>>()
+
+    for (const exp of expenses) {
+        totalSpend += exp.costConvertedUsd
+        const payerId = exp.paidBy.id
+        const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
+        const splitCost = exp.costConvertedUsd / splitCount
+
+        for (const participant of exp.splitBetween) {
+            if (participant.id === payerId) continue
+            // participant owes payer
+            const owes = debtMap.get(participant.id) ?? new Map()
+            owes.set(payerId, (owes.get(payerId) ?? 0) + splitCost)
+            debtMap.set(participant.id, owes)
+        }
+    }
+
+    return { totalSpend, debtMap }
+}
+
+// --- Summary computation ---
+
+function computeSummaries(
+    expenses: Expense[],
+    splitBetweenFilters: Map<string, boolean>,
+    participantCount: number
+) {
+    let filteredTotalSpend = 0
+    let filteredPeopleTotalSpend = 0
+    const totalSpendByPerson = new Map<number, number>()
+    const totalSpendByType = new Map<string, number>()
+    const totalSpendByLocation = new Map<string, number>()
+    const totalSpendByDate = new Map<string, number>()
+    const totalSpendByDateByPerson = new Map<number, Map<string, number>>()
+
+    const isSplitFilterActive = Array.from(splitBetweenFilters.values()).includes(true)
+
+    for (const exp of expenses) {
+        filteredTotalSpend += exp.costConvertedUsd
+
+        // Per-person spend (what they paid)
+        const prev = totalSpendByPerson.get(exp.paidBy.id) ?? 0
+        totalSpendByPerson.set(exp.paidBy.id, prev + exp.costConvertedUsd)
+
+        // Per-category
+        const cat = exp.categoryName ?? 'Other'
+        totalSpendByType.set(cat, (totalSpendByType.get(cat) ?? 0) + exp.costConvertedUsd)
+
+        // Per-location
+        const loc = exp.locationName ?? 'Other'
+        totalSpendByLocation.set(loc, (totalSpendByLocation.get(loc) ?? 0) + exp.costConvertedUsd)
+
+        // Per-date
+        totalSpendByDate.set(exp.date, (totalSpendByDate.get(exp.date) ?? 0) + exp.costConvertedUsd)
+
+        // Per-person split cost (what they owe from this expense)
+        const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
+        const splitCost = exp.costConvertedUsd / splitCount
+
+        for (const participant of exp.splitBetween) {
+            if (isSplitFilterActive && !splitBetweenFilters.get(participant.firstName)) {
+                continue
+            }
+            filteredPeopleTotalSpend += splitCost
+
+            // Per-person-per-date
+            const personDateMap = totalSpendByDateByPerson.get(participant.id) ?? new Map()
+            personDateMap.set(exp.date, (personDateMap.get(exp.date) ?? 0) + splitCost)
+            totalSpendByDateByPerson.set(participant.id, personDateMap)
+        }
+    }
+
+    return {
+        filteredTotalSpend,
+        filteredPeopleTotalSpend,
+        totalSpendByPerson,
+        totalSpendByType,
+        totalSpendByLocation,
+        totalSpendByDate,
+        totalSpendByDateByPerson,
+    }
+}
+
+export function useSpendData(): SpendDataValue {
+    const { expenses, trip } = useTripData()
+    const participants = trip.participants
+
+    // UI state from Zustand stores
     const splitBetweenFilters = useFilterSplitBetweenStore((s) => s.filters)
     const paidByFilters = useFilterPaidByStore((s) => s.filters)
     const spendTypeFilters = useFilterSpendTypeStore((s) => s.filters)
@@ -150,84 +227,36 @@ export function useSpendData(): SpendDataValue {
     const nameOrder = useSortItemNameStore((s) => s.order)
     const searchInput = useSearchBarStore((s) => s.searchInput)
 
-    // Derived data — pure computation from the above snapshots
-    const {
-        filteredSpendData,
-        filteredSpendDataWithoutSplitBetween,
-        filteredSpendDataWithoutSpendType,
-        filteredSpendDataWithoutLocation,
-    } = useMemo(() => {
-        let filtered = spendData
+    const filteredExpenses = useMemo(() => {
+        let filtered = expenses
         filtered = filterBySplitBetween(filtered, splitBetweenFilters)
         filtered = filterByPaidBy(filtered, paidByFilters)
         filtered = filterBySpendType(filtered, spendTypeFilters)
         filtered = filterByLocation(filtered, locationFilters)
         filtered = applySorting(filtered, costOrder, dateOrder, nameOrder)
         filtered = applySearch(filtered, searchInput)
-
-        let withoutSplitBetween = spendData
-        withoutSplitBetween = filterByPaidBy(withoutSplitBetween, paidByFilters)
-        withoutSplitBetween = filterBySpendType(withoutSplitBetween, spendTypeFilters)
-        withoutSplitBetween = filterByLocation(withoutSplitBetween, locationFilters)
-
-        let withoutSpendType = spendData
-        withoutSpendType = filterBySplitBetween(withoutSpendType, splitBetweenFilters)
-        withoutSpendType = filterByPaidBy(withoutSpendType, paidByFilters)
-        withoutSpendType = filterByLocation(withoutSpendType, locationFilters)
-
-        let withoutLocation = spendData
-        withoutLocation = filterBySplitBetween(withoutLocation, splitBetweenFilters)
-        withoutLocation = filterByPaidBy(withoutLocation, paidByFilters)
-        withoutLocation = filterBySpendType(withoutLocation, spendTypeFilters)
-
-        return {
-            filteredSpendData: filtered,
-            filteredSpendDataWithoutSplitBetween: withoutSplitBetween,
-            filteredSpendDataWithoutSpendType: withoutSpendType,
-            filteredSpendDataWithoutLocation: withoutLocation,
-        }
+        return filtered
     }, [
-        spendData,
-        splitBetweenFilters,
-        paidByFilters,
-        spendTypeFilters,
-        locationFilters,
-        costOrder,
-        dateOrder,
-        nameOrder,
-        searchInput,
+        expenses, splitBetweenFilters, paidByFilters, spendTypeFilters,
+        locationFilters, costOrder, dateOrder, nameOrder, searchInput,
     ])
 
     const { totalSpend, debtMap } = useMemo(
-        () => processSpendData(spendData, currentTrip),
-        [spendData, currentTrip]
+        () => computeDebtMap(expenses, participants.length),
+        [expenses, participants.length]
     )
 
     const summaries = useMemo(
-        () =>
-            processFilteredSpendData(
-                filteredSpendData,
-                filteredSpendDataWithoutSplitBetween,
-                filteredSpendDataWithoutSpendType,
-                filteredSpendDataWithoutLocation,
-                splitBetweenFilters,
-                currentTrip
-            ),
-        [
-            filteredSpendData,
-            filteredSpendDataWithoutSplitBetween,
-            filteredSpendDataWithoutSpendType,
-            filteredSpendDataWithoutLocation,
-            splitBetweenFilters,
-            currentTrip,
-        ]
+        () => computeSummaries(filteredExpenses, splitBetweenFilters, participants.length),
+        [filteredExpenses, splitBetweenFilters, participants.length]
     )
 
     return {
-        spendData,
-        filteredSpendData,
+        expenses,
+        filteredExpenses,
         totalSpend,
         debtMap,
+        participants,
         ...summaries,
     }
 }

@@ -19,15 +19,13 @@ import {
 } from 'components/menu/tools/tools-menu'
 import { defaultBackgroundColor } from 'utils/colors'
 import {
-    getColorForSpendType,
-    getIconFromSpendType,
+    getColorForCategory,
+    getIconFromCategory,
     getMenuItemIcon,
     getSortMenuItemIcon,
     InitialsIcon,
     LocationIcon,
 } from 'utils/icons'
-import { Location } from 'utils/location'
-import { SpendType } from 'utils/spend'
 
 type ActiveMenuItemData = {
     item: MenuItem
@@ -180,7 +178,7 @@ export const ActiveMenuItems = () => {
                                         : 0.25,
                             }}>
                             <InitialsIcon
-                                person={person}
+                                name={person}
                                 sx={{
                                     height: 20,
                                     width: 20,
@@ -220,7 +218,7 @@ export const ActiveMenuItems = () => {
                                         : 0.25,
                             }}>
                             <InitialsIcon
-                                person={person}
+                                name={person}
                                 sx={{
                                     height: 20,
                                     width: 20,
@@ -235,8 +233,8 @@ export const ActiveMenuItems = () => {
     }
 
     const renderActiveSpendType = () => {
-        const activeFilterItems = Object.entries(
-            filterSpendTypeState.filters
+        const activeFilterItems = Array.from(
+            filterSpendTypeState.filters.entries()
         ).filter(([_, isActive]) => isActive)
         return (
             <Box
@@ -244,13 +242,13 @@ export const ActiveMenuItems = () => {
                     display: 'flex',
                     alignItems: 'center',
                 }}>
-                {activeFilterItems.map(([spendType], index) => {
+                {activeFilterItems.map(([category], index) => {
                     return (
                         <Box
                             key={'active-spend-type-' + index}
                             onClick={() => {
                                 filterSpendTypeState.handleFilterClick(
-                                    spendType as SpendType
+                                    category
                                 )
                             }}
                             sx={{
@@ -262,11 +260,11 @@ export const ActiveMenuItems = () => {
                                 height: 20,
                                 width: 20,
                                 borderRadius: '100%',
-                                backgroundColor: getColorForSpendType(
-                                    spendType as SpendType
+                                backgroundColor: getColorForCategory(
+                                    category
                                 ),
                             }}>
-                            {getIconFromSpendType(spendType as SpendType, 20)}
+                            {getIconFromCategory(category, 20)}
                         </Box>
                     )
                 })}
@@ -290,7 +288,7 @@ export const ActiveMenuItems = () => {
                             key={'active-location-' + index}
                             onClick={() => {
                                 filterLocationState.handleFilterClick(
-                                    location as Location
+                                    location
                                 )
                             }}
                             sx={{
@@ -301,7 +299,7 @@ export const ActiveMenuItems = () => {
                                         : 0.25,
                             }}>
                             <LocationIcon
-                                location={location as Location}
+                                location={location}
                                 sx={{
                                     height: 20,
                                     width: 20,

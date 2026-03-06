@@ -4,35 +4,30 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import {
-    getColorForSpendType,
-    getIconFromSpendType,
+    getColorForCategory,
+    getIconFromCategory,
     getTablerIcon,
 } from 'utils/icons'
-import { Spend, SpendType } from 'utils/spend'
-import { Trip } from 'utils/trips'
 
 type FilterSpendTypeState = {
-    filters: Record<SpendType, boolean>
+    filters: Map<string, boolean> // categoryName → boolean
 }
 
 type FilterSpendTypeActions = {
-    filter: (spendData: Spend[]) => Spend[]
-    handleFilterClick: (type: SpendType) => void
-
+    handleFilterClick: (category: string) => void
     isActive: () => boolean
-    setFilters: (filters: Record<SpendType, boolean>) => void
-    reset: (trip: Trip) => void
+    setFilters: (filters: Map<string, boolean>) => void
+    reset: (categories: string[]) => void
 }
 
 const initialState: FilterSpendTypeState = {
-    filters: {
-        [SpendType.Attraction]: false,
-        [SpendType.Food]: false,
-        [SpendType.Lodging]: false,
-        [SpendType.Shopping]: false,
-        [SpendType.Transit]: false,
-        [SpendType.Other]: false,
-    },
+    filters: new Map<string, boolean>(),
+}
+
+const filtersFromNames = (categories: string[]) => {
+    const filters = new Map<string, boolean>()
+    categories.forEach((c) => filters.set(c, false))
+    return filters
 }
 
 export const useFilterSpendTypeStore = create<
@@ -40,64 +35,40 @@ export const useFilterSpendTypeStore = create<
 >()((set, get) => ({
     ...initialState,
 
-    filter: (spendData: Spend[]): Spend[] => {
+    handleFilterClick: (category: string) => {
         const { filters } = get()
-
-        const isAnyFilterActive = Object.values(filters).some(
-            (isActive) => isActive
-        )
-        if (!isAnyFilterActive) {
-            return spendData
-        }
-
-        const filteredSpendData = spendData.filter((spend) => {
-            if (spend.type === undefined) {
-                if (filters[SpendType.Other]) {
-                    return true
-                }
-                return false
-            }
-            return filters[spend.type]
-        })
-        return filteredSpendData
-    },
-    handleFilterClick: (type: SpendType) => {
-        const { filters } = get()
-        set(() => ({
-            filters: {
-                ...filters,
-                [type]: !filters[type],
-            },
-        }))
+        const newFilters = new Map(filters)
+        newFilters.set(category, !newFilters.get(category))
+        set(() => ({ filters: newFilters }))
     },
 
     isActive: () => {
         const { filters } = get()
-        const isAnyFilterActive = Object.values(filters).some(
-            (isActive) => isActive
-        )
-        return isAnyFilterActive
+        return Array.from(filters.values()).includes(true)
     },
-    setFilters: (filters: Record<SpendType, boolean>) =>
-        set(() => ({ filters })),
-    reset: (trip: Trip) => set(initialState),
+    setFilters: (filters: Map<string, boolean>) => set(() => ({ filters })),
+    reset: (categories: string[]) => {
+        set(() => ({ filters: filtersFromNames(categories) }))
+    },
 }))
 
-export const FilterSpendType = () => {
+export const FilterSpendType = ({
+    categories,
+}: {
+    categories: string[]
+}) => {
     const { filters, handleFilterClick, setFilters } = useFilterSpendTypeStore(
         useShallow((state) => state)
     )
 
     const resetAllFilters = () => {
-        setFilters(
-            Object.keys(filters).reduce((acc, key) => {
-                acc[key as SpendType] = false
-                return acc
-            }, {} as Record<SpendType, boolean>)
-        )
+        const newFilters = new Map(filters)
+        Array.from(newFilters.keys()).forEach((key) => {
+            newFilters.set(key, false)
+        })
+        setFilters(newFilters)
     }
 
-    // settings stores
     const { showIconLabels } = useSettingsIconLabelsStore(
         useShallow((state) => state)
     )
@@ -137,17 +108,17 @@ export const FilterSpendType = () => {
                     <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
                 )}
             </Box>
-            {Object.entries(filters).map(([spendType, isActive]) => {
+            {Array.from(filters.entries()).map(([category, isActive]) => {
                 return (
                     <Box
-                        key={'filter-spend-type-' + spendType}
+                        key={'filter-spend-type-' + category}
                         sx={{
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
                         }}
                         onClick={() => {
-                            handleFilterClick(spendType as SpendType)
+                            handleFilterClick(category)
                         }}>
                         <Box
                             sx={{
@@ -162,17 +133,15 @@ export const FilterSpendType = () => {
                                     alignItems: 'center',
                                     borderRadius: '100%',
                                     backgroundColor: isActive
-                                        ? getColorForSpendType(
-                                              spendType as SpendType
-                                          )
+                                        ? getColorForCategory(category)
                                         : 'white',
                                     transition: 'background-color 0.1s',
                                 }}>
-                                {getIconFromSpendType(spendType as SpendType)}
+                                {getIconFromCategory(category)}
                             </Box>
                             {showIconLabels && (
                                 <Typography sx={{ fontSize: '10px' }}>
-                                    {spendType}
+                                    {category}
                                 </Typography>
                             )}
                         </Box>

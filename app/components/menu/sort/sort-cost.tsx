@@ -5,7 +5,8 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 import { defaultIconSize, getTablerIcon } from 'utils/icons'
-import { Spend } from 'utils/spend'
+
+import type { Expense } from '@/lib/types'
 
 export enum SortOrder {
     None,
@@ -18,7 +19,7 @@ type SortCostState = {
 }
 
 type SortCostActions = {
-    sort: (spendData: Spend[]) => Spend[]
+    sort: (spendData: Expense[]) => Expense[]
 
     toggleSortOrder: () => void
     isActive: () => boolean
@@ -34,7 +35,7 @@ export const useSortCostStore = create<SortCostState & SortCostActions>()(
     (set, get) => ({
         ...initialState,
 
-        sort: (spendData: Spend[]): Spend[] => {
+        sort: (spendData: Expense[]): Expense[] => {
             const { order } = get()
 
             if (order === SortOrder.None) {
@@ -43,9 +44,9 @@ export const useSortCostStore = create<SortCostState & SortCostActions>()(
 
             const sortedSpendData = spendData.slice().sort((a, b) => {
                 if (order === SortOrder.Descending) {
-                    return b.convertedCost - a.convertedCost
+                    return b.costConvertedUsd - a.costConvertedUsd
                 }
-                return a.convertedCost - b.convertedCost
+                return a.costConvertedUsd - b.costConvertedUsd
             })
             return sortedSpendData
         },

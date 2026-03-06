@@ -2,27 +2,26 @@
 
 import { createContext, useContext } from 'react'
 
-import { Spend } from 'utils/spend'
-import { Trip } from 'utils/trips'
+import type { TripSummary, Expense } from '@/lib/types'
 
 type TripData = {
-    spendData: Spend[]
-    trip: Trip
+    expenses: Expense[]
+    trip: TripSummary
 }
 
 const TripDataContext = createContext<TripData | null>(null)
 
 export function TripDataProvider({
-    spendData,
+    expenses,
     trip,
     children,
 }: {
-    spendData: Spend[]
-    trip: Trip
+    expenses: Expense[]
+    trip: TripSummary
     children: React.ReactNode
 }) {
     return (
-        <TripDataContext.Provider value={{ spendData, trip }}>
+        <TripDataContext.Provider value={{ expenses, trip }}>
             {children}
         </TripDataContext.Provider>
     )

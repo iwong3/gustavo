@@ -1,9 +1,7 @@
 import { create } from 'zustand'
 
-import { Trip } from 'utils/trips'
-
 type TripsState = {
-    currentTrip: Trip
+    currentTrip: string
 
     loading: boolean
     fetchDataError: boolean
@@ -11,7 +9,7 @@ type TripsState = {
 }
 
 type TripsActions = {
-    setCurrentTrip: (trip: Trip) => void
+    setCurrentTrip: (trip: string) => void
 
     setLoading: (isLoading: boolean) => void
     setFetchDataError: (error: boolean) => void
@@ -19,7 +17,7 @@ type TripsActions = {
 }
 
 const initialState: TripsState = {
-    currentTrip: Trip.Japan2024,
+    currentTrip: '',
 
     loading: true,
     fetchDataError: false,

@@ -9,7 +9,6 @@ import { LineGraph } from 'components/graphs/line-graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { getInitialsIconColors } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
-import { Person } from 'utils/person'
 
 export const TotalSpendByDate = () => {
     const { width: windowWidth } = useWindowSize()
@@ -63,12 +62,10 @@ export const TotalSpendByDate = () => {
         setTotalSpendByDateByPersonArray(totalSpendByDateByPersonArray)
     }, [totalSpendByDate, totalSpendByDateByPerson, order])
 
-    const personColors: string[] = []
-    Object.values(Person)
-        .filter((person) => person !== Person.Everyone)
-        .forEach((person) => {
-            personColors.push(getInitialsIconColors(person).bgColor)
-        })
+    const { participants } = useSpendData()
+    const personColors: string[] = participants.map(
+        (p) => getInitialsIconColors(p.firstName).bgColor
+    )
 
     return (
         <Box

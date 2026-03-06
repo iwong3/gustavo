@@ -1,29 +1,40 @@
-import { Box, Tooltip } from '@mui/material'
+import { Box, IconButton, Tooltip } from '@mui/material'
 import Grid from '@mui/material/Grid'
+import { IconEdit, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import AnimateHeight from 'react-animate-height'
 import { useShallow } from 'zustand/react/shallow'
 
+import DeleteExpenseDialog from 'components/delete-expense-dialog'
+import ExpenseFormDialog from 'components/expense-form-dialog'
 import { useCollapseAllStore } from 'components/menu/items/collapse-all'
 import { useSettingsCostStore } from 'components/menu/settings/settings-cost'
 import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-between-initials'
 import { CostDisplay, FormattedMoney } from 'utils/currency'
-import { ErrorConvertingToUSDRow } from 'utils/data-processing'
-import { getTablerIcon, InitialsIcon, SpendTypeIcon } from 'utils/icons'
+import { getTablerIcon, CategoryIcon, InitialsIcon } from 'utils/icons'
+import { deleteExpense } from 'utils/api'
+import { useTripData } from 'providers/trip-data-provider'
 import { getUcUrlFromOpenUrl } from 'utils/image'
-import { getSplitCost, Spend } from 'utils/spend'
-import { useTripsStore } from 'views/trips'
+import { useSpendData } from 'providers/spend-data-provider'
+
+import type { Expense } from '@/lib/types'
+
+const ErrorConvertingToUSDRow = 'Could not convert to USD'
 
 interface IReceiptsRowProps {
-    spend: Spend
+    expense: Expense
+    onRefresh?: () => void
 }
 
-export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
+export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
+    const { participants } = useSpendData()
+    const { trip } = useTripData()
 
     const [expanded, setExpanded] = useState(false)
     const [receiptImageExpanded, setReceiptImageExpanded] = useState(false)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
     const { value } = useCollapseAllStore(useShallow((state) => state))
 
@@ -32,6 +43,12 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
     }, [value])
 
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
+
+    const splitCount = expense.isEveryone
+        ? participants.length
+        : expense.splitBetween.length
+    const splitCost = expense.costConvertedUsd / splitCount
+    const splitCostOriginal = expense.costOriginal / splitCount
 
     return (
         <Box>
@@ -48,7 +65,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                         justifyContent: 'center',
                         alignItems: 'center',
                     }}>
-                    <SpendTypeIcon spend={spend} />
+                    <CategoryIcon expense={expense} />
                 </Grid>
                 <Grid size={7}>
                     <Box
@@ -65,15 +82,15 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 display: 'flex',
                                 fontWeight: 'bold',
                             }}>
-                            {spend.name}
+                            {expense.name}
                         </Box>
                         {/* Spend Row Bottom */}
                         <Box
                             sx={{
                                 display: 'flex',
                             }}>
-                            {dayjs(spend.date).format('M/D')}
-                            {spend.location && ' • ' + spend.location}
+                            {dayjs(expense.date).format('M/D')}
+                            {expense.locationName && ' \u2022 ' + expense.locationName}
                         </Box>
                     </Box>
                 </Grid>
@@ -91,14 +108,14 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                             sx={{
                                 display: 'flex',
                                 fontWeight: 'bold',
-                                color: spend.error ? '#C1121F' : 'black',
+                                color: expense.conversionError ? '#C1121F' : 'black',
                             }}>
                             {costDisplay === CostDisplay.Original
-                                ? FormattedMoney(spend.currency, 0).format(
-                                      spend.originalCost
+                                ? FormattedMoney(expense.currency, 0).format(
+                                      expense.costOriginal
                                   )
                                 : FormattedMoney('USD', 0).format(
-                                      spend.convertedCost
+                                      expense.costConvertedUsd
                                   )}
                         </Box>
                         <Box
@@ -109,7 +126,8 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                 fontSize: '12px',
                             }}>
                             <InitialsIcon
-                                person={spend.paidBy}
+                                name={expense.paidBy.firstName}
+                                initials={expense.paidBy.initials}
                                 sx={{ width: 24, height: 24 }}
                             />
                         </Box>
@@ -122,7 +140,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                 <Grid
                     container
                     sx={{
-                        borderTop: spend.error
+                        borderTop: expense.conversionError
                             ? '1px solid #C1121F'
                             : '1px solid #FBBC04',
                     }}>
@@ -144,7 +162,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                     width: '100%',
                                     marginY: 1,
                                 }}>
-                                <SplitBetweenInitials spend={spend} />
+                                <SplitBetweenInitials expense={expense} />
                             </Box>
                             {/* Split Cost */}
                             <Box
@@ -155,8 +173,8 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                     width: '100%',
                                 }}>
                                 <Box>
-                                    {FormattedMoney(spend.currency).format(
-                                        spend.originalCost
+                                    {FormattedMoney(expense.currency).format(
+                                        expense.costOriginal
                                     )}
                                 </Box>
                                 <Box sx={{ marginX: 1 }}>
@@ -165,18 +183,14 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                         size: 12,
                                     })}
                                 </Box>
-                                {spend.error ? (
+                                {expense.conversionError ? (
                                     <Box
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
                                         }}>
-                                        {FormattedMoney(spend.currency).format(
-                                            getSplitCost(
-                                                spend.originalCost,
-                                                spend.splitBetween,
-                                                currentTrip
-                                            )
+                                        {FormattedMoney(expense.currency).format(
+                                            splitCostOriginal
                                         )}
                                         <Tooltip
                                             title={ErrorConvertingToUSDRow}
@@ -224,13 +238,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                         </Tooltip>
                                     </Box>
                                 ) : (
-                                    FormattedMoney().format(
-                                        getSplitCost(
-                                            spend.convertedCost,
-                                            spend.splitBetween,
-                                            currentTrip
-                                        )
-                                    )
+                                    FormattedMoney().format(splitCost)
                                 )}
                             </Box>
                             <Box
@@ -242,7 +250,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                     marginBottom: 1,
                                 }}>
                                 {/* Receipt Image */}
-                                {spend.receiptImageUrl && (
+                                {expense.receiptImageUrl && (
                                     <Box
                                         sx={{
                                             marginBottom: 1,
@@ -293,7 +301,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                                     }}>
                                                     <img
                                                         src={getUcUrlFromOpenUrl(
-                                                            spend.receiptImageUrl
+                                                            expense.receiptImageUrl
                                                         )}
                                                         alt="Receipt"
                                                         style={{
@@ -307,7 +315,7 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                     </Box>
                                 )}
                                 {/* Notes */}
-                                {spend.notes && (
+                                {expense.notes && (
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -327,11 +335,11 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                                 size: 14,
                                             })}
                                         </Box>
-                                        {spend.notes}
+                                        {expense.notes}
                                     </Box>
                                 )}
                                 {/* Reported by */}
-                                {spend.reportedBy && (
+                                {expense.reportedBy && (
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -351,17 +359,54 @@ export const ReceiptsRow = ({ spend }: IReceiptsRowProps) => {
                                                 size: 14,
                                             })}
                                         </Box>
-                                        Submitted by {spend.reportedBy} at{' '}
-                                        {dayjs(spend.reportedAt).format(
+                                        Submitted by {expense.reportedBy.firstName} at{' '}
+                                        {dayjs(expense.reportedAt).format(
                                             'M/D h:mm A'
                                         )}
                                     </Box>
                                 )}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'flex-end',
+                                        gap: 0.5,
+                                        marginTop: 1,
+                                    }}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setEditDialogOpen(true)}>
+                                        <IconEdit size={18} />
+                                    </IconButton>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setDeleteDialogOpen(true)}>
+                                        <IconTrash size={18} color="#C1121F" />
+                                    </IconButton>
+                                </Box>
                             </Box>
                         </Box>
                     </Grid>
                 </Grid>
             </AnimateHeight>
+
+            <ExpenseFormDialog
+                open={editDialogOpen}
+                onClose={() => setEditDialogOpen(false)}
+                onSuccess={() => onRefresh?.()}
+                mode="edit"
+                expense={expense}
+            />
+
+            <DeleteExpenseDialog
+                open={deleteDialogOpen}
+                expense={expense}
+                onClose={() => setDeleteDialogOpen(false)}
+                onConfirm={async () => {
+                    await deleteExpense(trip.id, expense.id)
+                    setDeleteDialogOpen(false)
+                    onRefresh?.()
+                }}
+            />
         </Box>
     )
 }

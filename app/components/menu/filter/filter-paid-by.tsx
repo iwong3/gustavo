@@ -4,33 +4,25 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { useEffect } from 'react'
 import { getTablerIcon, InitialsIcon } from 'utils/icons'
-import { PeopleByTrip, Person } from 'utils/person'
-import { Spend } from 'utils/spend'
-import { Trip } from 'utils/trips'
-import { useTripsStore } from 'views/trips'
 
 type FilterPaidByState = {
-    filters: Map<Person, boolean>
+    filters: Map<string, boolean> // firstName → boolean
 }
 
 type FilterPaidByActions = {
-    filter: (spendData: Spend[]) => Spend[]
-    handleFilterClick: (person: Person) => void
-
+    handleFilterClick: (person: string) => void
     isActive: () => boolean
-    setFilters: (filters: Map<Person, boolean>) => void
-    reset: (trip: Trip) => void
+    setFilters: (filters: Map<string, boolean>) => void
+    reset: (names: string[]) => void
 }
 
 const initialState: FilterPaidByState = {
-    filters: new Map<Person, boolean>(),
+    filters: new Map<string, boolean>(),
 }
 
-const getInitialStateByTrip = (trip: Trip) => {
-    const filters = new Map<Person, boolean>()
-    PeopleByTrip[trip].forEach((person) => {
-        filters.set(person, false)
-    })
+const filtersFromNames = (names: string[]) => {
+    const filters = new Map<string, boolean>()
+    names.forEach((name) => filters.set(name, false))
     return filters
 }
 
@@ -39,50 +31,34 @@ export const useFilterPaidByStore = create<
 >()((set, get) => ({
     ...initialState,
 
-    filter: (spendData: Spend[]): Spend[] => {
+    handleFilterClick: (person: string) => {
         const { filters } = get()
-
-        const isAnyFilterActive = Array.from(filters.values()).includes(true)
-        if (!isAnyFilterActive) {
-            return spendData
-        }
-
-        const filteredSpendData = spendData.filter((spend) => {
-            return filters.get(spend.paidBy)
-        })
-        return filteredSpendData
-    },
-    handleFilterClick: (person: Person) => {
-        const { filters } = get()
-
         const newFilters = new Map(filters)
         newFilters.set(person, !newFilters.get(person))
-        set(() => ({
-            filters: newFilters,
-        }))
+        set(() => ({ filters: newFilters }))
     },
 
     isActive: () => {
         const { filters } = get()
-        const isAnyFilterActive = Array.from(filters.values()).includes(true)
-        return isAnyFilterActive
+        return Array.from(filters.values()).includes(true)
     },
-    setFilters: (filters: Map<Person, boolean>) => set(() => ({ filters })),
-    reset: (trip: Trip) => {
-        set(() => ({
-            filters: getInitialStateByTrip(trip),
-        }))
+    setFilters: (filters: Map<string, boolean>) => set(() => ({ filters })),
+    reset: (names: string[]) => {
+        set(() => ({ filters: filtersFromNames(names) }))
     },
 }))
 
-export const FilterPaidBy = () => {
+export const FilterPaidBy = ({
+    participantNames,
+}: {
+    participantNames: string[]
+}) => {
     const { filters, handleFilterClick, isActive, setFilters, reset } =
         useFilterPaidByStore(useShallow((state) => state))
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
     useEffect(() => {
         if (!isActive()) {
-            setFilters(getInitialStateByTrip(currentTrip))
+            setFilters(filtersFromNames(participantNames))
         }
     }, [])
 
@@ -109,7 +85,7 @@ export const FilterPaidBy = () => {
                     'transition': 'background-color 0.1s',
                 }}
                 onClick={() => {
-                    reset(currentTrip)
+                    reset(participantNames)
                 }}>
                 {getTablerIcon({ name: 'IconX' })}
             </Box>
@@ -120,7 +96,7 @@ export const FilterPaidBy = () => {
                     alignItems: 'center',
                     width: '100%',
                 }}>
-                {Array.from(filters.entries()).map(([person, isActive]) => {
+                {Array.from(filters.entries()).map(([person, active]) => {
                     const sx = { fontSize: 10 }
 
                     return (
@@ -136,9 +112,9 @@ export const FilterPaidBy = () => {
                                 handleFilterClick(person)
                             }}>
                             <InitialsIcon
-                                person={person as Person}
+                                name={person}
                                 sx={
-                                    !isActive
+                                    !active
                                         ? {
                                               ...sx,
                                               color: 'black',

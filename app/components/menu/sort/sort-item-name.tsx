@@ -4,7 +4,8 @@ import { create } from 'zustand'
 
 import { resetAllSortStores } from 'components/menu/sort/sort-menu'
 import { defaultIconSize, getTablerIcon } from 'utils/icons'
-import { Spend } from 'utils/spend'
+
+import type { Expense } from '@/lib/types'
 
 enum SortOrder {
     None,
@@ -17,7 +18,7 @@ type SortItemNameState = {
 }
 
 type SortItemNameActions = {
-    sort: (spendData: Spend[]) => Spend[]
+    sort: (spendData: Expense[]) => Expense[]
 
     toggleSortOrder: () => void
     isActive: () => boolean
@@ -34,7 +35,7 @@ export const useSortItemNameStore = create<
 >()((set, get) => ({
     ...initialState,
 
-    sort: (spendData: Spend[]): Spend[] => {
+    sort: (spendData: Expense[]): Expense[] => {
         const { order } = get()
 
         if (order === SortOrder.None) {

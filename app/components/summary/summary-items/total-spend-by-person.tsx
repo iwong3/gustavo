@@ -8,16 +8,28 @@ import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getInitialsIconColors, InitialsIcon } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
-import { Person } from 'utils/person'
+
+import type { UserSummary } from '@/lib/types'
 
 export const TotalSpendByPerson = () => {
     const { width: windowWidth } = useWindowSize()
-    const { totalSpendByPerson } = useSpendData()
+    const { totalSpendByPerson, participants } = useSpendData()
     const { filters, handleFilterClick } = useFilterSplitBetweenStore(
         useShallow((state) => state)
     )
 
-    const totalSpendByPersonArray = Array.from(totalSpendByPerson)
+    const participantById = new Map<number, UserSummary>()
+    for (const p of participants) {
+        participantById.set(p.id, p)
+    }
+
+    // Convert Map<number,number> to array of [firstName, totalSpend]
+    const totalSpendByPersonArray: [string, number][] = Array.from(
+        totalSpendByPerson.entries()
+    ).map(([userId, amount]) => {
+        const p = participantById.get(userId)
+        return [p?.firstName ?? String(userId), amount]
+    })
 
     // cards
     const rowLength = 4
@@ -25,11 +37,9 @@ export const TotalSpendByPerson = () => {
         const rows = []
         let row = []
         for (let i = 0; i < totalSpendByPersonArray.length; i++) {
-            // render current person
-            const [person, totalSpend] = totalSpendByPersonArray[i]
-            row.push(renderPerson(person as Person, totalSpend))
+            const [personName, totalSpend] = totalSpendByPersonArray[i]
+            row.push(renderPerson(personName, totalSpend))
 
-            // if row is full, push current row and start a new row
             if (
                 row.length === rowLength ||
                 i === totalSpendByPersonArray.length - 1
@@ -56,15 +66,15 @@ export const TotalSpendByPerson = () => {
         return rows
     }
 
-    const renderPerson = (person: Person, totalSpend: number) => {
-        const key = 'total-spend-by-person-' + person
-        const isActive = filters.get(person)
+    const renderPerson = (personName: string, totalSpend: number) => {
+        const key = 'total-spend-by-person-' + personName
+        const isActive = filters.get(personName)
 
         return (
             <Box
                 key={key}
                 onClick={() => {
-                    handleFilterClick(person)
+                    handleFilterClick(personName)
                 }}
                 sx={{
                     display: 'flex',
@@ -89,7 +99,7 @@ export const TotalSpendByPerson = () => {
                         padding: 0.5,
                     }}>
                     <InitialsIcon
-                        person={person}
+                        name={personName}
                         sx={{
                             width: 18,
                             height: 18,
@@ -101,7 +111,7 @@ export const TotalSpendByPerson = () => {
                             marginLeft: 0.5,
                             fontSize: 12,
                         }}>
-                        {person}
+                        {personName}
                     </Box>
                 </Box>
                 <Box
@@ -124,11 +134,9 @@ export const TotalSpendByPerson = () => {
 
     // graph
     const personColors = totalSpendByPersonArray.map(
-        ([person]) => getInitialsIconColors(person).bgColor
+        ([personName]) => getInitialsIconColors(personName).bgColor
     )
-    const activePeople = Object.entries(filters).map(
-        ([_, isActive]) => isActive
-    )
+    const activePeople = Array.from(filters.values())
 
     return (
         <Box

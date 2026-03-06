@@ -9,20 +9,18 @@ import { ReceiptsList } from 'components/receipts/receipts-list'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
 import { getTablerIcon, InitialsIcon } from 'utils/icons'
-import { getVenmoUrl, PeopleByTrip, Person } from 'utils/person'
 import { useSpendData } from 'providers/spend-data-provider'
-import { Spend } from 'utils/spend'
-import { useTripsStore } from 'views/trips'
-// import VenmoLogo from '../../images/venmo-icon.png'
+
+import type { Expense, UserSummary } from '@/lib/types'
 
 type DebtCalculatorState = {
-    person1: Person | undefined
-    person2: Person | undefined
+    person1: number | undefined
+    person2: number | undefined
 }
 
 type DebtCalculatorActions = {
-    setPerson1: (person: Person | undefined) => void
-    setPerson2: (person: Person | undefined) => void
+    setPerson1: (person: number | undefined) => void
+    setPerson2: (person: number | undefined) => void
     reset: () => void
 }
 
@@ -36,10 +34,10 @@ export const useDebtCalculatorStore = create<
 >((set) => ({
     ...initialState,
 
-    setPerson1: (person: Person | undefined) => {
+    setPerson1: (person: number | undefined) => {
         set(() => ({ person1: person }))
     },
-    setPerson2: (person: Person | undefined) => {
+    setPerson2: (person: number | undefined) => {
         set(() => ({ person2: person }))
     },
     reset: () => {
@@ -51,39 +49,46 @@ export const DebtCalculator = () => {
     const { person1, person2, setPerson1, setPerson2 } = useDebtCalculatorStore(
         useShallow((state) => state)
     )
-    const { debtMap, filteredSpendData } = useSpendData()
+    const { debtMap, filteredExpenses, participants } = useSpendData()
+
+    const participantById = new Map<number, UserSummary>()
+    for (const p of participants) {
+        participantById.set(p.id, p)
+    }
+
+    const person1Data = person1 != null ? participantById.get(person1) : undefined
+    const person2Data = person2 != null ? participantById.get(person2) : undefined
 
     // Debt state and style
     const [debt, setDebt] = useState(0)
-    const [debtSpendData, setDebtSpendData] = useState<Spend[]>([])
+    const [debtExpenses, setDebtExpenses] = useState<Expense[]>([])
 
     useEffect(() => {
-        if (person1 && person2) {
-            // calculate debt
+        if (person1 != null && person2 != null) {
             const debt = debtMap.get(person1)?.get(person2) || 0
             setDebt(debt)
 
-            // get spend data between the two people
-            const debtFilteredSpendData = filteredSpendData.filter((spend) => {
-                if (spend.paidBy === person1) {
+            const debtFiltered = filteredExpenses.filter((exp) => {
+                if (exp.paidBy.id === person1) {
                     return (
-                        spend.splitBetween.includes(Person.Everyone) ||
-                        spend.splitBetween.includes(person2)
+                        exp.isEveryone ||
+                        exp.splitBetween.some((u) => u.id === person2)
                     )
                 }
-                if (spend.paidBy === person2) {
+                if (exp.paidBy.id === person2) {
                     return (
-                        spend.splitBetween.includes(Person.Everyone) ||
-                        spend.splitBetween.includes(person1)
+                        exp.isEveryone ||
+                        exp.splitBetween.some((u) => u.id === person1)
                     )
                 }
+                return false
             })
-            setDebtSpendData(debtFilteredSpendData)
+            setDebtExpenses(debtFiltered)
         } else {
             setDebt(0)
-            setDebtSpendData([])
+            setDebtExpenses([])
         }
-    }, [person1, person2, filteredSpendData])
+    }, [person1, person2, filteredExpenses, debtMap])
 
     const debtAbsolute = Math.abs(debt)
     const debtString = FormattedMoney().format(debtAbsolute)
@@ -93,8 +98,9 @@ export const DebtCalculator = () => {
     const debtPersonWidth = (windowWidth || 390) * 0.3
 
     const renderDebtPerson = (
-        person: Person | undefined,
-        setPerson: (person: Person | undefined) => void
+        personId: number | undefined,
+        personData: UserSummary | undefined,
+        setPersonId: (person: number | undefined) => void
     ) => {
         return (
             <Box
@@ -104,7 +110,7 @@ export const DebtCalculator = () => {
                 }}>
                 <Box
                     onClick={() => {
-                        setPerson(undefined)
+                        setPersonId(undefined)
                     }}
                     sx={{
                         display: 'flex',
@@ -114,12 +120,13 @@ export const DebtCalculator = () => {
                         height: debtPersonWidth,
                     }}>
                     <InitialsIcon
-                        person={person!}
+                        name={personData?.firstName ?? ''}
+                        initials={personData?.initials}
                         sx={{
-                            width: person ? 100 : 0,
-                            height: person ? 100 : 0,
+                            width: personData ? 100 : 0,
+                            height: personData ? 100 : 0,
                             fontSize: 32,
-                            opacity: person ? 1 : 0,
+                            opacity: personData ? 1 : 0,
                             transition: 'opacity 0.2s ease-out',
                             boxShadow:
                                 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
@@ -129,9 +136,9 @@ export const DebtCalculator = () => {
                         weight="duotone"
                         color="#495057"
                         style={{
-                            width: person ? 0 : 120,
-                            height: person ? 0 : 120,
-                            opacity: person ? 0 : 1,
+                            width: personData ? 0 : 120,
+                            height: personData ? 0 : 120,
+                            opacity: personData ? 0 : 1,
                             transition: 'opacity 0.2s ease-out',
                         }}
                     />
@@ -140,26 +147,22 @@ export const DebtCalculator = () => {
         )
     }
 
-    // Select person state and style
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
-    const people = PeopleByTrip[currentTrip]
-
-    const handleSelectPerson = (person: Person) => {
-        if (person === person1) {
+    const handleSelectPerson = (userId: number) => {
+        if (userId === person1) {
             setPerson1(undefined)
-        } else if (person === person2) {
+        } else if (userId === person2) {
             setPerson2(undefined)
-        } else if (!person1) {
-            setPerson1(person)
-        } else if (!person2) {
-            setPerson2(person)
+        } else if (person1 == null) {
+            setPerson1(userId)
+        } else if (person2 == null) {
+            setPerson2(userId)
         }
     }
 
-    const renderSelectPerson = (person: Person) => {
-        const isActive = person === person1 || person === person2
+    const renderSelectPerson = (participant: UserSummary) => {
+        const isActive = participant.id === person1 || participant.id === person2
         const disabled =
-            person1 && person2 && person !== person1 && person !== person2
+            person1 != null && person2 != null && participant.id !== person1 && participant.id !== person2
         const disabledSx = { color: 'black', backgroundColor: 'lightgray' }
 
         return (
@@ -170,10 +173,11 @@ export const DebtCalculator = () => {
                     alignItems: 'center',
                 }}
                 onClick={() => {
-                    handleSelectPerson(person)
+                    handleSelectPerson(participant.id)
                 }}>
                 <InitialsIcon
-                    person={person}
+                    name={participant.firstName}
+                    initials={participant.initials}
                     sx={{
                         border: isActive
                             ? '2px solid #FBBC04'
@@ -189,31 +193,22 @@ export const DebtCalculator = () => {
     }
 
     // Venmo icons
-    const renderVenmoIcon = (person: Person) => {
+    const renderVenmoIcon = (personData: UserSummary) => {
         return (
             <Link
-                href={getVenmoUrl(person)}
+                href={personData.venmoUrl ?? ''}
                 target="_blank"
                 sx={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}>
-                {/* <img
-                    src={VenmoLogo}
-                    style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '100%',
-                        objectFit: 'cover',
-                    }}
-                /> */}
             </Link>
         )
     }
 
-    const showVenmoPerson1 = person1 && person2 && getVenmoUrl(person1)
-    const showVenmoPerson2 = person1 && person2 && getVenmoUrl(person2)
+    const showVenmoPerson1 = person1Data && person2Data && person1Data.venmoUrl
+    const showVenmoPerson2 = person1Data && person2Data && person2Data.venmoUrl
     const showVenmoBoth = showVenmoPerson1 && showVenmoPerson2
 
     return (
@@ -240,7 +235,7 @@ export const DebtCalculator = () => {
                         paddingY: 1,
                         paddingX: 2,
                     }}>
-                    {renderDebtPerson(person1, setPerson1)}
+                    {renderDebtPerson(person1, person1Data, setPerson1)}
                     <Box
                         sx={{
                             display: 'flex',
@@ -264,7 +259,7 @@ export const DebtCalculator = () => {
                                     fontSize: 22,
                                     fontWeight: 'bold',
                                 }}>
-                                {person1 && person2 && debtString}
+                                {person1 != null && person2 != null && debtString}
                             </Typography>
                             <Box
                                 sx={{
@@ -295,11 +290,11 @@ export const DebtCalculator = () => {
                                 width: '100%',
                                 height: '100%',
                             }}>
-                            {showVenmoPerson1 && renderVenmoIcon(person1)}
-                            {showVenmoPerson2 && renderVenmoIcon(person2)}
+                            {showVenmoPerson1 && renderVenmoIcon(person1Data)}
+                            {showVenmoPerson2 && renderVenmoIcon(person2Data)}
                         </Box>
                     </Box>
-                    {renderDebtPerson(person2, setPerson2)}
+                    {renderDebtPerson(person2, person2Data, setPerson2)}
                 </Box>
                 {/* Select person */}
                 <Box
@@ -336,10 +331,10 @@ export const DebtCalculator = () => {
                             alignItems: 'center',
                             width: '100%',
                         }}>
-                        {people.map((person, index) => {
+                        {participants.map((participant, index) => {
                             return (
                                 <Box key={index}>
-                                    {renderSelectPerson(person)}
+                                    {renderSelectPerson(participant)}
                                 </Box>
                             )
                         })}
@@ -351,7 +346,7 @@ export const DebtCalculator = () => {
                     maxHeight: '50svh',
                     overflowY: 'scroll',
                 }}>
-                <ReceiptsList spendData={debtSpendData} />
+                <ReceiptsList expenses={debtExpenses} />
             </Box>
         </Box>
     )

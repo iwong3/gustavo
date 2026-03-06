@@ -55,9 +55,8 @@ import { MenuItem, MenuItemData } from 'components/menu/menu'
 import { SortItem } from 'components/menu/sort/sort-menu'
 import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
 import { defaultBackgroundColor } from 'utils/colors'
-import { getLocationAbbr, Location } from 'utils/location'
-import { getPersonInitials, Person } from 'utils/person'
-import { Spend, SpendType } from 'utils/spend'
+
+import type { Expense } from '@/lib/types'
 
 export const defaultIconSize = 20
 
@@ -281,18 +280,31 @@ export const getSortMenuItemIcon = (
     }
 }
 
+// --- Person initials icon (string-based) ---
+
 interface IInitialsIconProps {
-    person: Person
+    name: string  // first name
+    initials?: string | null  // from DB, fallback to derived
     sx?: SxProps<Theme>
 }
 
-export const InitialsIcon = ({ person, sx }: IInitialsIconProps) => {
-    const personColors = getInitialsIconColors(person)
+function deriveInitials(name: string): string {
+    // If the name has spaces, use first letter of first two words
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.slice(0, 2).toUpperCase()
+}
+
+export const InitialsIcon = ({ name, initials, sx }: IInitialsIconProps) => {
+    const colors = getInitialsIconColors(name)
+    const displayInitials = initials || deriveInitials(name)
     const defaultSx = {
         width: defaultIconSize,
         height: defaultIconSize,
-        color: personColors.color,
-        backgroundColor: personColors.bgColor,
+        color: colors.color,
+        backgroundColor: colors.bgColor,
     }
 
     return (
@@ -307,7 +319,7 @@ export const InitialsIcon = ({ person, sx }: IInitialsIconProps) => {
                 ...defaultSx,
                 ...sx,
             }}>
-            {getPersonInitials(person)}
+            {displayInitials}
         </Box>
     )
 }
@@ -317,67 +329,32 @@ type IconColors = {
     bgColor: string
 }
 
-export const getInitialsIconColors = (person: Person): IconColors => {
-    switch (person) {
-        case Person.Aibek:
-            return {
-                color: 'black',
-                bgColor: '#c8553d',
-            }
-        case Person.Angela:
-            return {
-                color: 'black',
-                bgColor: '#64b5f6',
-            }
-        case Person.Dennis:
-            return {
-                color: 'black',
-                bgColor: '#fca311',
-            }
-        case Person.Ivan:
-            return {
-                color: 'black',
-                bgColor: '#ffc857',
-            }
-        case Person.Jenny:
-            return {
-                color: 'black',
-                bgColor: '#c8b6ff',
-            }
-        case Person.Joanna:
-            return {
-                color: 'black',
-                bgColor: '#90a955',
-            }
-        case Person.Lisa:
-            return {
-                color: 'black',
-                bgColor: '#e5989b',
-            }
-        case Person.Michelle:
-            return {
-                color: 'black',
-                bgColor: '#b8c0ff',
-            }
-        case Person.Suming:
-            return {
-                color: 'black',
-                bgColor: '#ffc09f',
-            }
-        default:
-            return {
-                color: 'black',
-                bgColor: '#FBBC04',
-            }
-    }
+// Color by first name — deterministic for known users, hashed for unknown
+const personColorMap: Record<string, string> = {
+    'Aibek': '#c8553d',
+    'Angela': '#64b5f6',
+    'Dennis': '#fca311',
+    'Ivan': '#ffc857',
+    'Jenny': '#c8b6ff',
+    'Joanna': '#90a955',
+    'Lisa': '#e5989b',
+    'Michelle': '#b8c0ff',
+    'Suming': '#ffc09f',
 }
 
-interface ISpendTypeIconProps {
-    spend: Spend
+export const getInitialsIconColors = (name: string): IconColors => {
+    const bgColor = personColorMap[name] ?? '#FBBC04'
+    return { color: 'black', bgColor }
+}
+
+// --- Spend type / category icons (string-based) ---
+
+interface ICategoryIconProps {
+    expense: Expense
     size?: number
 }
 
-export const SpendTypeIcon = ({ spend, size = 32 }: ISpendTypeIconProps) => {
+export const CategoryIcon = ({ expense, size = 32 }: ICategoryIconProps) => {
     return (
         <Box
             sx={{
@@ -387,55 +364,61 @@ export const SpendTypeIcon = ({ spend, size = 32 }: ISpendTypeIconProps) => {
                 width: size,
                 height: size,
                 borderRadius: '100%',
-                backgroundColor: getColorForSpendType(spend.type),
+                backgroundColor: getColorForCategory(expense.categoryName),
             }}>
-            {getIconFromSpendType(spend.type, size)}
+            {getIconFromCategory(expense.categoryName, size)}
         </Box>
     )
 }
 
-export const getIconFromSpendType = (
-    type: SpendType | undefined,
+export const getIconFromCategory = (
+    category: string | null | undefined,
     size: number = defaultIconSize
 ) => {
-    switch (type) {
-        case SpendType.Attraction:
+    switch (category) {
+        case 'Attraction':
             return <MapPinArea size={size} />
-        case SpendType.Transit:
+        case 'Transit':
             return <Train size={size} />
-        case SpendType.Food:
+        case 'Food':
             return <ForkKnife size={size} />
-        case SpendType.Lodging:
+        case 'Lodging':
             return <Bed size={size} />
-        case SpendType.Shopping:
+        case 'Shopping':
             return <Tote size={size} />
-        case SpendType.Other:
+        case 'Other':
         default:
             return getTablerIcon({ name: 'IconCategory', size })
     }
 }
 
-export const getColorForSpendType = (type: SpendType | undefined) => {
-    switch (type) {
-        case SpendType.Attraction:
+export const getColorForCategory = (category: string | null | undefined) => {
+    switch (category) {
+        case 'Attraction':
             return '#ff9b85'
-        case SpendType.Transit:
+        case 'Transit':
             return '#aed9e0'
-        case SpendType.Food:
+        case 'Food':
             return '#ffd97d'
-        case SpendType.Lodging:
+        case 'Lodging':
             return '#dac4f7'
-        case SpendType.Shopping:
+        case 'Shopping':
             return '#90be6d'
-        case SpendType.Other:
+        case 'Other':
         default:
             return 'lightgray'
     }
 }
 
+// --- Location icon (string-based) ---
+
 interface ILocationIconProps {
-    location: Location
+    location: string
     sx?: SxProps<Theme>
+}
+
+function getLocationAbbr(location: string): string {
+    return location.slice(0, 2).toUpperCase()
 }
 
 export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
@@ -445,7 +428,7 @@ export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
         fontSize: 10,
         fontFamily: 'Spectral',
         color: 'black',
-        backgroundColor: getLocationColors(location),
+        backgroundColor: getLocationColor(location),
     }
 
     return (
@@ -467,20 +450,14 @@ export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
     )
 }
 
-export const getLocationColors = (location: Location): string => {
-    switch (location) {
-        case Location.Hakone:
-            return '#f3722c'
-        case Location.Kyoto:
-            return '#739e82'
-        case Location.Osaka:
-            return '#FBBC04'
-        case Location.Tokyo:
-            return '#dac4f7'
-        case Location.Vancouver:
-            return '#90be6d'
-        case Location.Other:
-        default:
-            return '#a7bed3'
-    }
+const locationColorMap: Record<string, string> = {
+    'Hakone': '#f3722c',
+    'Kyoto': '#739e82',
+    'Osaka': '#FBBC04',
+    'Tokyo': '#dac4f7',
+    'Vancouver': '#90be6d',
+}
+
+export const getLocationColor = (location: string): string => {
+    return locationColorMap[location] ?? '#a7bed3'
 }

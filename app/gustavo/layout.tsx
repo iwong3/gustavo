@@ -12,8 +12,9 @@ import {
 
 import { ClientOnly } from 'components/client-only'
 import { ToolsMenu } from 'components/menu/tools/tools-menu'
-import { ErrorConvertingToUSDGeneral } from 'utils/data-processing'
 import { getTablerIcon } from 'utils/icons'
+
+const ErrorConvertingToUSDGeneral = 'Could not convert some data to USD'
 import { useTripsStore } from 'views/trips'
 
 const tabs = [

@@ -8,22 +8,19 @@ import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { TripDataProvider } from 'providers/trip-data-provider'
-import { fetchExpenses } from 'utils/api'
+import { fetchTripBySlug, fetchExpenses } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
-import { Spend } from 'utils/spend'
-import { slugToTrip } from 'utils/trips'
 import { Gustavo } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 
+import type { TripSummary, Expense } from '@/lib/types'
+
 export default function TripDetailPage() {
     const { slug } = useParams<{ slug: string }>()
-    const trip = slugToTrip(slug)
 
-    // Trip data owned by React state — guaranteed re-renders on change.
-    // Passed to children via TripDataProvider (React Context).
-    const [spendData, setSpendData] = useState<Spend[]>([])
+    const [trip, setTrip] = useState<TripSummary | null>(null)
+    const [expenses, setExpenses] = useState<Expense[]>([])
 
-    // Zustand stores for layout display only (header title, loading spinner)
     const setCurrentTrip = useTripsStore((s) => s.setCurrentTrip)
     const setLoading = useTripsStore((s) => s.setLoading)
     const setFetchDataError = useTripsStore((s) => s.setFetchDataError)
@@ -32,40 +29,54 @@ export default function TripDetailPage() {
     )
     const fetchDataError = useTripsStore((s) => s.fetchDataError)
 
-    // Zustand stores for UI state resets
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
     const resetToolsMenuStore = useToolsMenuStore((s) => s.reset)
     const resetDebtCalculatorStore = useDebtCalculatorStore((s) => s.reset)
 
     useEffect(() => {
-        if (!trip) return
+        if (!slug) return
         let ignore = false
 
         setLoading(true)
-        setSpendData([])
+        setExpenses([])
+        setTrip(null)
 
         async function loadTrip() {
             try {
-                const [data, currencyConversionError] =
-                    await fetchExpenses(trip!)
-
+                const tripData = await fetchTripBySlug(slug)
                 if (ignore) return
 
-                if (currencyConversionError) {
-                    setCurrencyConversionError(true)
-                }
+                const expensesData = await fetchExpenses(tripData.id)
+                if (ignore) return
 
-                // Reset UI stores for the new trip
-                setCurrentTrip(trip!)
-                resetAllMenuItemStores(trip!)
+                const participantNames = tripData.participants.map(
+                    (p) => p.firstName
+                )
+                const categoryNames = Array.from(
+                    new Set(
+                        expensesData.map((e) => e.categoryName ?? 'Other')
+                    )
+                )
+                const locationNames = Array.from(
+                    new Set(
+                        expensesData
+                            .map((e) => e.locationName)
+                            .filter((l): l is string => l != null)
+                    )
+                )
+
+                setCurrentTrip(tripData.name)
+                resetAllMenuItemStores({
+                    participantNames,
+                    categoryNames,
+                    locationNames,
+                })
                 resetSearchBarStore()
                 resetToolsMenuStore()
                 resetDebtCalculatorStore()
 
-                // Set data via React state — triggers page re-render,
-                // which updates TripDataProvider's context value,
-                // which propagates to all consumers.
-                setSpendData(data)
+                setTrip(tripData)
+                setExpenses(expensesData)
                 setLoading(false)
             } catch (err) {
                 console.error(err)
@@ -80,22 +91,17 @@ export default function TripDetailPage() {
         return () => {
             ignore = true
         }
-    }, [trip])
+    }, [slug])
 
     const refreshData = useCallback(async () => {
         if (!trip) return
         try {
-            const [data, convError] = await fetchExpenses(trip)
-            if (convError) setCurrencyConversionError(true)
-            setSpendData(data)
+            const data = await fetchExpenses(trip.id)
+            setExpenses(data)
         } catch (err) {
             console.error('Error refreshing expenses:', err)
         }
     }, [trip])
-
-    if (!trip) {
-        notFound()
-    }
 
     if (fetchDataError) {
         return (
@@ -145,8 +151,12 @@ export default function TripDetailPage() {
         )
     }
 
+    if (!trip) {
+        return null
+    }
+
     return (
-        <TripDataProvider spendData={spendData} trip={trip}>
+        <TripDataProvider expenses={expenses} trip={trip}>
             <Gustavo key={slug} onRefresh={refreshData} />
         </TripDataProvider>
     )

@@ -35,8 +35,7 @@ import {
     getMenuItemIcon,
     getTablerIcon,
 } from 'utils/icons'
-import { Trip } from 'utils/trips'
-import { useTripsStore } from 'views/trips'
+import { useTripData } from 'providers/trip-data-provider'
 
 export enum MenuItem {
     FilterLocation,
@@ -57,18 +56,46 @@ export type MenuItemData = {
     iconSize: number
 }
 
-const filterMenuItemStoreResets = new Set<(trip: Trip) => void>()
-const sortMenuItemStoreResets = new Set<() => void>()
+type ResetNames = {
+    participantNames: string[]
+    categoryNames: string[]
+    locationNames: string[]
+}
 
-export const resetAllMenuItemStores = (trip: Trip) => {
-    filterMenuItemStoreResets.forEach((reset) => reset(trip))
+const filterMenuItemStoreResets = new Set<(names: string[]) => void>()
+const sortMenuItemStoreResets = new Set<() => void>()
+let lastResetNames: ResetNames | null = null
+
+export const resetAllMenuItemStores = (names: ResetNames) => {
+    lastResetNames = names
+    // Each filter store's reset expects its own set of names.
+    // We call them all with the stored names below via the per-store refs.
+    useFilterSplitBetweenStore.getState().reset(names.participantNames)
+    useFilterPaidByStore.getState().reset(names.participantNames)
+    useFilterSpendTypeStore.getState().reset(names.categoryNames)
+    useFilterLocationStore.getState().reset(names.locationNames)
     sortMenuItemStoreResets.forEach((reset) => reset())
 }
 
 export const Menu = () => {
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
+    const { trip } = useTripData()
     const { activeItem: activeView } = useToolsMenuStore(
         useShallow((state) => state)
+    )
+
+    const participantNames = trip.participants.map((p) => p.firstName)
+    const categoryNames = Array.from(
+        new Set(
+            useTripData()
+                .expenses.map((e) => e.categoryName ?? 'Other')
+        )
+    )
+    const locationNames = Array.from(
+        new Set(
+            useTripData()
+                .expenses.map((e) => e.locationName)
+                .filter((l): l is string => l != null)
+        )
     )
 
     // menu item states
@@ -104,28 +131,28 @@ export const Menu = () => {
     const filterMenuItems: MenuItemData[] = [
         {
             item: MenuItem.FilterSplitBetween,
-            component: <FilterSplitBetween />,
+            component: <FilterSplitBetween participantNames={participantNames} />,
             state: filterSplitBetweenState,
             label: 'Person',
             iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterPaidBy,
-            component: <FilterPaidBy />,
+            component: <FilterPaidBy participantNames={participantNames} />,
             state: filterPaidByState,
             label: 'Paid By',
             iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterSpendType,
-            component: <FilterSpendType />,
+            component: <FilterSpendType categories={categoryNames} />,
             state: filterSpendTypeState,
             label: 'Type',
             iconSize: defaultIconSize,
         },
         {
             item: MenuItem.FilterLocation,
-            component: <FilterLocation />,
+            component: <FilterLocation locationNames={locationNames} />,
             state: filterLocationState,
             label: 'Location',
             iconSize: defaultIconSize,
@@ -169,14 +196,14 @@ export const Menu = () => {
     }
 
     // menu item resets
-    const filterMenuItemStates = filterMenuItems.map((item) => item.state)
-    filterMenuItemStates.forEach((state) => {
-        filterMenuItemStoreResets.add(state.reset)
-    })
     sortMenuItemStoreResets.add(sortMenuItem.state.reset)
 
-    const handleResetAllMenuItems = (trip: Trip) => {
-        resetAllMenuItemStores(trip)
+    const handleResetAllMenuItems = () => {
+        resetAllMenuItemStores({
+            participantNames,
+            categoryNames,
+            locationNames,
+        })
         setExpandedMenuItem(-1)
     }
 
@@ -319,7 +346,7 @@ export const Menu = () => {
                                     expandedMenuItem === -1 ? '10px' : 0,
                             }}
                             onClick={() =>
-                                handleResetAllMenuItems(currentTrip)
+                                handleResetAllMenuItems()
                             }>
                             {/* Inside box */}
                             <Box

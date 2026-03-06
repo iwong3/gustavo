@@ -6,9 +6,8 @@ import { Graph } from 'components/graphs/graph'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
-import { getColorForSpendType, getIconFromSpendType } from 'utils/icons'
+import { getColorForCategory, getIconFromCategory } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
-import { SpendType } from 'utils/spend'
 
 export const TotalSpendByType = () => {
     const { width: windowWidth } = useWindowSize()
@@ -56,8 +55,8 @@ export const TotalSpendByType = () => {
         return rows
     }
 
-    const renderSpendType = (spendType: SpendType, totalSpend: number) => {
-        const isActive = filters[spendType]
+    const renderSpendType = (spendType: string, totalSpend: number) => {
+        const isActive = filters.get(spendType)
 
         return (
             <Box
@@ -93,9 +92,9 @@ export const TotalSpendByType = () => {
                             width: 18,
                             height: 18,
                             borderRadius: '100%',
-                            backgroundColor: getColorForSpendType(spendType),
+                            backgroundColor: getColorForCategory(spendType),
                         }}>
-                        {getIconFromSpendType(spendType, 18)}
+                        {getIconFromCategory(spendType, 18)}
                     </Box>
                     <Box
                         sx={{
@@ -125,9 +124,9 @@ export const TotalSpendByType = () => {
 
     // graph properties
     const spendTypeColors = totalSpendByTypeArray.map(([spendType]) =>
-        getColorForSpendType(spendType)
+        getColorForCategory(spendType)
     )
-    const activeTypes = Object.entries(filters).map(([_, isActive]) => isActive)
+    const activeTypes = Array.from(filters.values())
 
     return (
         <Box

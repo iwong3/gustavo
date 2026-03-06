@@ -5,33 +5,25 @@ import { useShallow } from 'zustand/react/shallow'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { useEffect } from 'react'
 import { getTablerIcon, LocationIcon } from 'utils/icons'
-import { Location, LocationByTrip } from 'utils/location'
-import { Spend } from 'utils/spend'
-import { Trip } from 'utils/trips'
-import { useTripsStore } from 'views/trips'
 
 type FilterLocationState = {
-    filters: Map<Location, boolean>
+    filters: Map<string, boolean> // locationName → boolean
 }
 
 type FilterLocationActions = {
-    filter: (spendData: Spend[]) => Spend[]
-    handleFilterClick: (location: Location) => void
-
+    handleFilterClick: (location: string) => void
     isActive: () => boolean
-    setFilters: (filters: Map<Location, boolean>) => void
-    reset: (trip: Trip) => void
+    setFilters: (filters: Map<string, boolean>) => void
+    reset: (locationNames: string[]) => void
 }
 
 const initialState: FilterLocationState = {
-    filters: new Map<Location, boolean>(),
+    filters: new Map<string, boolean>(),
 }
 
-const getInitialStateByTrip = (trip: Trip) => {
-    const filters = new Map<Location, boolean>()
-    LocationByTrip[trip].forEach((location) => {
-        filters.set(location, false)
-    })
+const filtersFromNames = (names: string[]) => {
+    const filters = new Map<string, boolean>()
+    names.forEach((name) => filters.set(name, false))
     return filters
 }
 
@@ -40,62 +32,36 @@ export const useFilterLocationStore = create<
 >()((set, get) => ({
     ...initialState,
 
-    filter: (spendData: Spend[]): Spend[] => {
+    handleFilterClick: (location: string) => {
         const { filters } = get()
-
-        const isAnyFilterActive = Array.from(filters.values()).includes(true)
-        if (!isAnyFilterActive) {
-            return spendData
-        }
-
-        const filteredSpendData = spendData.filter((spend) => {
-            // If location isn't a location defined for the trip or is undefined,
-            // show it in the 'Other' category
-            if (spend.location === undefined) {
-                return filters.get(Location.Other)
-            }
-            if (!LocationByTrip[spend.trip].includes(spend.location)) {
-                return filters.get(Location.Other)
-            }
-
-            return filters.get(spend.location)
-        })
-        return filteredSpendData
-    },
-    handleFilterClick: (location: Location) => {
-        const { filters } = get()
-
         const newFilters = new Map(filters)
         newFilters.set(location, !newFilters.get(location))
-        set(() => ({
-            filters: newFilters,
-        }))
+        set(() => ({ filters: newFilters }))
     },
 
     isActive: () => {
         const { filters } = get()
-        const isAnyFilterActive = Array.from(filters.values()).includes(true)
-        return isAnyFilterActive
+        return Array.from(filters.values()).includes(true)
     },
-    setFilters: (filters: Map<Location, boolean>) => set(() => ({ filters })),
-    reset: (trip: Trip) => {
-        set(() => ({
-            filters: getInitialStateByTrip(trip),
-        }))
+    setFilters: (filters: Map<string, boolean>) => set(() => ({ filters })),
+    reset: (locationNames: string[]) => {
+        set(() => ({ filters: filtersFromNames(locationNames) }))
     },
 }))
 
-export const FilterLocation = () => {
+export const FilterLocation = ({
+    locationNames,
+}: {
+    locationNames: string[]
+}) => {
     const { filters, handleFilterClick, reset } = useFilterLocationStore(
         useShallow((state) => state)
     )
-    const { currentTrip } = useTripsStore(useShallow((state) => state))
 
     useEffect(() => {
-        reset(currentTrip)
+        reset(locationNames)
     }, [])
 
-    // settings stores
     const { showIconLabels } = useSettingsIconLabelsStore(
         useShallow((state) => state)
     )
@@ -128,7 +94,7 @@ export const FilterLocation = () => {
                         'transition': 'background-color 0.1s',
                     }}
                     onClick={() => {
-                        reset(currentTrip)
+                        reset(locationNames)
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
