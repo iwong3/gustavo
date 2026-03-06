@@ -125,7 +125,7 @@ export default function GustavoLayout({
                     sx={{
                         position: 'fixed',
                         top: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
-                        bottom: `calc(64px + env(safe-area-inset-bottom, 0px))`,
+                        bottom: `calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))`,
                         left: 0,
                         right: 0,
                         overflowY: 'auto',
@@ -143,7 +143,7 @@ export default function GustavoLayout({
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        height: 'env(safe-area-inset-bottom, 0px)',
+                        height: 'max(env(safe-area-inset-bottom, 0px), 8px)',
                         backgroundColor: colors.primaryYellow,
                         zIndex: 9,
                     }}
@@ -158,8 +158,8 @@ export default function GustavoLayout({
                         position: 'fixed',
                         bottom: 0,
                         width: '100%',
-                        height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
-                        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                        height: `calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))`,
+                        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
                         backgroundColor: colors.primaryYellow,
                         borderTopLeftRadius: '12px',
                         borderTopRightRadius: '12px',
