@@ -1,9 +1,9 @@
 import { Box } from '@mui/material'
 
+import { colors } from '@/lib/colors'
 import { ReceiptsRow } from 'components/receipts/receipt-row'
-import { useSpendData } from 'providers/spend-data-provider'
 import { useRefresh } from 'providers/refresh-provider'
-import { defaultBackgroundColor } from 'utils/colors'
+import { useSpendData } from 'providers/spend-data-provider'
 
 import type { Expense } from '@/lib/types'
 
@@ -26,12 +26,13 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                         marginX: 1,
                         marginBottom: 1,
                         border: row.conversionError
-                            ? '1px solid #C1121F'
-                            : '1px solid #FBBC04',
+                            ? `1.5px solid ${colors.primaryRed}`
+                            : `1.5px solid ${colors.primaryBlack}`,
                         borderRadius: 4,
                         backgroundColor: row.conversionError
-                            ? '#FFE3E0'
-                            : defaultBackgroundColor,
+                            ? '#ffe8e5'
+                            : colors.primaryWhite,
+                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                     }}>
                     <ReceiptsRow expense={row} onRefresh={onRefresh} />
                 </Box>

@@ -1,15 +1,23 @@
 'use client'
 
+import { colors } from '@/lib/colors'
 import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
 import { getTablerIcon } from 'utils/icons'
+
+function getGreeting(): string {
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) return 'morning'
+    if (hour >= 12 && hour < 17) return 'afternoon'
+    return 'evening'
+}
 
 const apps = [
     {
         name: 'Expenses',
         href: '/gustavo/expenses/trips',
-        icon: 'IconCash',
-        color: '#4CAF50',
+        icon: 'IconReceipt',
+        color: colors.primaryGreen,
     },
 ]
 
@@ -21,24 +29,40 @@ export default function GustavoHomePage() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 width: '100%',
-                paddingX: 3,
-                paddingTop: 4,
-                gap: 3,
+                paddingX: 4,
             }}>
+            {/* Gus Fring avatar */}
+            <Box sx={{ paddingBottom: 1 }}>
+                <img
+                    src="/gus-fring.png"
+                    alt="Gustavo"
+                    style={{
+                        width: 96,
+                        height: 96,
+                        borderRadius: '100%',
+                        objectFit: 'cover',
+                    }}
+                />
+            </Box>
+
+            {/* Greeting */}
             <Typography
                 sx={{
-                    fontSize: 22,
+                    fontSize: 20,
                     fontFamily: 'Spectral',
                     textAlign: 'center',
+                    paddingBottom: 4,
                 }}>
-                What would you like to do?
+                Good {getGreeting()}. We have work to do.
             </Typography>
+
+            {/* App grid — 2 square cards per row */}
             <Box
                 sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    width: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
                     gap: 2,
+                    width: '100%',
                 }}>
                 {apps.map((app) => (
                     <Box
@@ -47,27 +71,29 @@ export default function GustavoHomePage() {
                         href={app.href}
                         sx={{
                             'display': 'flex',
+                            'flexDirection': 'column',
                             'alignItems': 'center',
-                            'gap': 2,
-                            'padding': 2.5,
-                            'borderRadius': '12px',
-                            'backgroundColor': '#FFFCEE',
-                            'border': '1px solid #FBBC04',
-                            'boxShadow':
-                                'rgba(0, 0, 0, 0.1) 0px 1px 3px 0px',
+                            'justifyContent': 'center',
+                            'gap': 1.5,
+                            'aspectRatio': '1',
+                            'borderRadius': '4px',
+                            'backgroundColor': colors.primaryWhite,
+                            'border': `1px solid ${colors.primaryBlack}`,
+                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                             'textDecoration': 'none',
-                            'color': 'inherit',
-                            '&:hover': {
-                                backgroundColor: '#FFF8D6',
+                            'color': colors.primaryBlack,
+                            '&:active': {
+                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                transform: 'translate(1px, 1px)',
                             },
-                            'transition': 'background-color 0.2s ease-out',
+                            'transition': 'box-shadow 0.1s, transform 0.1s',
                         }}>
                         {getTablerIcon({
                             name: app.icon,
-                            size: 28,
+                            size: 52,
                             color: app.color,
                         })}
-                        <Typography sx={{ fontSize: 18, fontWeight: 500 }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                             {app.name}
                         </Typography>
                     </Box>

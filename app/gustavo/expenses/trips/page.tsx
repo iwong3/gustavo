@@ -1,28 +1,23 @@
 'use client'
 
-import { Box, CircularProgress, Fab, IconButton, Menu, MenuItem } from '@mui/material'
+import { colors } from '@/lib/colors'
+import {
+    Box,
+    CircularProgress,
+    Fab,
+    IconButton,
+    Menu,
+    MenuItem,
+} from '@mui/material'
+import { IconDots, IconPlus } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { IconPlus, IconDots } from '@tabler/icons-react'
 
-import { fetchTrips, deleteTrip } from 'utils/api'
-import TripFormDialog from 'components/trip-form-dialog'
 import DeleteTripDialog from 'components/delete-trip-dialog'
+import TripFormDialog from 'components/trip-form-dialog'
+import { deleteTrip, fetchTrips } from 'utils/api'
 
 import type { TripSummary } from '@/lib/types'
-
-// Static background images for known trips (by slug)
-import Japan2024Image from '../../../images/japan-2024.jpg'
-import Japan2025Image from '../../../images/japan-2025.jpg'
-import SouthKorea2025Image from '../../../images/south-korea-2025.jpg'
-import Vancouver2024Image from '../../../images/vancouver-2024.jpg'
-
-const tripBackgrounds: Record<string, typeof Japan2024Image> = {
-    'japan-2024': Japan2024Image,
-    'vancouver-2024': Vancouver2024Image,
-    'south-korea-2025': SouthKorea2025Image,
-    'japan-2025': Japan2025Image,
-}
 
 type TripCardProps = {
     trip: TripSummary
@@ -43,23 +38,18 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 'padding': 2,
                 'width': '39%',
                 'height': '10svh',
-                'border': '1px solid #FBBC04',
+                'border': `1.5px solid ${colors.primaryBlack}`,
                 'borderRadius': '10px',
-                'backgroundColor': 'rgba(0, 0, 0, 0.4)',
-                'backgroundImage': tripBackgrounds[trip.slug]
-                    ? `url(${tripBackgrounds[trip.slug].src})`
-                    : undefined,
-                'backgroundSize': 'cover',
-                'backgroundBlendMode': 'darken',
-                'boxShadow': 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-                'color': 'white',
+                'backgroundColor': colors.primaryWhite,
+                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                'color': colors.primaryBlack,
                 'fontSize': 18,
                 'fontWeight': 'bold',
                 'textDecoration': 'none',
                 '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                 },
-                'transition': 'background-color 0.2s ease-out',
+                'transition': 'box-shadow 0.1s ease-out',
             }}>
             <Box
                 component={Link}
@@ -70,7 +60,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     display: 'flex',
                     alignItems: 'flex-end',
                     padding: 2,
-                    color: 'white',
+                    color: colors.primaryBlack,
                     textDecoration: 'none',
                 }}>
                 {trip.name}
@@ -84,13 +74,12 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     setAnchorEl(e.currentTarget)
                 }}
                 sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    color: 'white',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    padding: '2px',
-                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.5)' },
+                    'position': 'absolute',
+                    'top': 4,
+                    'right': 4,
+                    'color': colors.primaryBlack,
+                    'padding': '2px',
+                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)' },
                 }}>
                 <IconDots size={16} />
             </IconButton>
@@ -111,7 +100,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                         setAnchorEl(null)
                         onDelete(trip)
                     }}
-                    sx={{ color: '#C1121F' }}>
+                    sx={{ color: colors.primaryRed }}>
                     Delete
                 </MenuItem>
             </Menu>
@@ -150,7 +139,12 @@ const TripRow = ({ trips, onEdit, onDelete }: TripRowProps) => {
                         width: '100%',
                     }}>
                     {r.map((t) => (
-                        <TripCard key={t.id} trip={t} onEdit={onEdit} onDelete={onDelete} />
+                        <TripCard
+                            key={t.id}
+                            trip={t}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                        />
                     ))}
                 </Box>
             ))}
@@ -209,8 +203,13 @@ export default function TripsPage() {
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-                <CircularProgress sx={{ color: '#FBBC04' }} />
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginTop: 4,
+                }}>
+                <CircularProgress sx={{ color: colors.primaryYellow }} />
             </Box>
         )
     }
@@ -249,7 +248,11 @@ export default function TripsPage() {
                             width: '100%',
                             marginBottom: 2,
                         }}>
-                        <TripRow trips={activeTrips} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                        <TripRow
+                            trips={activeTrips}
+                            onEdit={handleEdit}
+                            onDelete={handleDeleteClick}
+                        />
                     </Box>
                 </>
             )}
@@ -275,7 +278,11 @@ export default function TripsPage() {
                             width: '100%',
                             marginBottom: 2,
                         }}>
-                        <TripRow trips={pastTrips} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                        <TripRow
+                            trips={pastTrips}
+                            onEdit={handleEdit}
+                            onDelete={handleDeleteClick}
+                        />
                     </Box>
                 </>
             )}
@@ -289,12 +296,10 @@ export default function TripsPage() {
                 }}
                 size="medium"
                 sx={{
-                    'position': 'fixed',
-                    'bottom': 140,
-                    'right': 16,
-                    'backgroundColor': '#FBBC04',
-                    '&:hover': { backgroundColor: '#E5A800' },
-                    'zIndex': 9,
+                    position: 'fixed',
+                    bottom: 140,
+                    right: 16,
+                    zIndex: 9,
                 }}>
                 <IconPlus size={24} />
             </Fab>

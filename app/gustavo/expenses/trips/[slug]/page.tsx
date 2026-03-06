@@ -1,19 +1,20 @@
 'use client'
 
+import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
-import { useParams, notFound } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
 import { useDebtCalculatorStore } from 'components/debt/debt-calculator'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
+import { useParams } from 'next/navigation'
 import { TripDataProvider } from 'providers/trip-data-provider'
-import { fetchTripBySlug, fetchExpenses } from 'utils/api'
+import { useCallback, useEffect, useState } from 'react'
+import { fetchExpenses, fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
 import { Gustavo } from 'views/gustavo'
 import { useTripsStore } from 'views/trips'
 
-import type { TripSummary, Expense } from '@/lib/types'
+import type { Expense, TripSummary } from '@/lib/types'
 
 export default function TripDetailPage() {
     const { slug } = useParams<{ slug: string }>()
@@ -53,9 +54,7 @@ export default function TripDetailPage() {
                     (p) => p.firstName
                 )
                 const categoryNames = Array.from(
-                    new Set(
-                        expensesData.map((e) => e.categoryName ?? 'Other')
-                    )
+                    new Set(expensesData.map((e) => e.categoryName ?? 'Other'))
                 )
                 const locationNames = Array.from(
                     new Set(
@@ -111,9 +110,10 @@ export default function TripDetailPage() {
                     flexDirection: 'column',
                     margin: 5,
                     width: '100%',
-                    border: '1px solid #C1121F',
+                    border: `1.5px solid ${colors.primaryRed}`,
                     borderRadius: '10px',
-                    backgroundColor: '#FFFCEE',
+                    backgroundColor: colors.primaryWhite,
+                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                 }}>
                 <Box
                     sx={{
@@ -123,12 +123,12 @@ export default function TripDetailPage() {
                         paddingY: 4,
                         borderTopLeftRadius: '10px',
                         borderTopRightRadius: '10px',
-                        backgroundColor: '#f4978e',
+                        backgroundColor: colors.primaryRed,
                     }}>
                     {getTablerIcon({
                         name: 'IconExclamationCircle',
-                        fill: '#f4978e',
-                        color: '#FFFCEE',
+                        fill: colors.primaryRed,
+                        color: colors.primaryWhite,
                         size: 42,
                     })}
                 </Box>
@@ -140,7 +140,7 @@ export default function TripDetailPage() {
                         padding: 2,
                         borderBottomLeftRadius: '10px',
                         borderBottomRightRadius: '10px',
-                        backgroundColor: '#FFFCEE',
+                        backgroundColor: colors.primaryWhite,
                         fontSize: 16,
                         textAlign: 'center',
                     }}>

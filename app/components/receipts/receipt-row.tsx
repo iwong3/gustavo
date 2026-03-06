@@ -1,6 +1,7 @@
 import { Box, IconButton, Tooltip } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { colors } from '@/lib/colors'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import AnimateHeight from 'react-animate-height'
@@ -108,7 +109,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                             sx={{
                                 display: 'flex',
                                 fontWeight: 'bold',
-                                color: expense.conversionError ? '#C1121F' : 'black',
+                                color: expense.conversionError ? colors.primaryRed : colors.primaryBlack,
                             }}>
                             {costDisplay === CostDisplay.Original
                                 ? FormattedMoney(expense.currency, 0).format(
@@ -141,8 +142,8 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                     container
                     sx={{
                         borderTop: expense.conversionError
-                            ? '1px solid #C1121F'
-                            : '1px solid #FBBC04',
+                            ? `1px solid ${colors.primaryRed}`
+                            : `1px solid ${colors.primaryBlack}`,
                     }}>
                     <Grid size={12}>
                         <Box
@@ -211,15 +212,13 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                 tooltip: {
                                                     sx: {
                                                         padding: 1,
-                                                        border: '1px solid #C1121F',
+                                                        border: `1px solid ${colors.primaryRed}`,
                                                         fontSize: 12,
-                                                        color: 'black',
+                                                        color: colors.primaryBlack,
                                                         fontStyle: 'italic',
                                                         fontWeight: 600,
-                                                        backgroundColor:
-                                                            '#f4d35e',
-                                                        boxShadow:
-                                                            'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                                                        backgroundColor: colors.primaryYellow,
+                                                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                                     },
                                                 },
                                             }}>
@@ -232,7 +231,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                 {getTablerIcon({
                                                     name: 'IconExclamationCircle',
                                                     size: 20,
-                                                    fill: '#FBBC04',
+                                                    fill: colors.primaryRed,
                                                 })}
                                             </Box>
                                         </Tooltip>
@@ -380,7 +379,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                     <IconButton
                                         size="small"
                                         onClick={() => setDeleteDialogOpen(true)}>
-                                        <IconTrash size={18} color="#C1121F" />
+                                        <IconTrash size={18} color={colors.primaryRed} />
                                     </IconButton>
                                 </Box>
                             </Box>

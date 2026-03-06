@@ -1,37 +1,37 @@
 'use client'
 
-import { Box, Tooltip, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useShallow } from 'zustand/react/shallow'
 import {
     IconHome,
     IconReceipt,
     IconSettings,
+    IconArrowLeft,
 } from '@tabler/icons-react'
 
 import { ClientOnly } from 'components/client-only'
-import { ToolsMenu } from 'components/menu/tools/tools-menu'
-import { getTablerIcon } from 'utils/icons'
+import { colors } from '@/lib/colors'
 
-const ErrorConvertingToUSDGeneral = 'Could not convert some data to USD'
-import { useTripsStore } from 'views/trips'
+// Relic of a past version of the app
+export const GUS_QUOTE = `"And a man, a man provides... ...your spending habits."`
+
+const HEADER_HEIGHT = 56
 
 const tabs = [
-    { label: 'Home', href: '/gustavo', icon: IconHome, matchExact: true },
-    {
-        label: 'Expenses',
-        href: '/gustavo/expenses/trips',
-        icon: IconReceipt,
-        matchExact: false,
-    },
-    {
-        label: 'Settings',
-        href: '/gustavo/settings',
-        icon: IconSettings,
-        matchExact: true,
-    },
+    { label: 'Home', href: '/gustavo', icon: IconHome },
+    { label: 'Expenses', href: '/gustavo/expenses/trips', icon: IconReceipt },
+    { label: 'Settings', href: '/gustavo/settings', icon: IconSettings },
 ]
+
+function getBackPath(pathname: string): string | null {
+    if (pathname === '/gustavo') return null
+    if (pathname === '/gustavo/expenses/trips') return '/gustavo'
+    if (pathname.startsWith('/gustavo/expenses/trips/')) return '/gustavo/expenses/trips'
+    if (pathname === '/gustavo/settings') return '/gustavo'
+    if (pathname.startsWith('/gustavo/settings/')) return '/gustavo/settings'
+    return '/gustavo'
+}
 
 export default function GustavoLayout({
     children,
@@ -40,18 +40,10 @@ export default function GustavoLayout({
 }) {
     const router = useRouter()
     const pathname = usePathname()
-    const { currentTrip, loading, currencyConversionError } = useTripsStore(
-        useShallow((state) => state)
-    )
 
     const isHomePage = pathname === '/gustavo'
-    const isTripsPage = pathname === '/gustavo/expenses/trips'
-    const isTripDetail = pathname.startsWith('/gustavo/expenses/trips/')
-    const isSettingsPage = pathname === '/gustavo/settings'
-
-    const handleLogoClick = () => {
-        router.push('/gustavo')
-    }
+    const backPath = getBackPath(pathname)
+    const showIcons = !isHomePage
 
     const getActiveTab = () => {
         if (pathname.startsWith('/gustavo/expenses')) return '/gustavo/expenses/trips'
@@ -61,175 +53,71 @@ export default function GustavoLayout({
 
     const activeTab = getActiveTab()
 
-    const renderHeaderContent = () => {
-        if (isHomePage || isTripsPage) {
-            return (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        marginLeft: 2,
-                    }}>
-                    <Typography
-                        sx={{
-                            fontSize: 14,
-                            fontFamily: 'Spectral',
-                            lineHeight: '90%',
-                        }}>
-                        &quot;And a man, a man provides...
-                    </Typography>
-                    <Typography
-                        sx={{
-                            fontSize: 14,
-                            fontFamily: 'Spectral',
-                            lineHeight: '90%',
-                        }}>
-                        &nbsp; ...your spending habits.&quot;
-                    </Typography>
-                </Box>
-            )
-        }
-
-        if (isTripDetail) {
-            return (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        marginLeft: 2,
-                    }}>
-                    {currencyConversionError && (
-                        <Tooltip
-                            title={ErrorConvertingToUSDGeneral}
-                            enterTouchDelay={0}
-                            slotProps={{
-                                popper: {
-                                    modifiers: [
-                                        {
-                                            name: 'offset',
-                                            options: {
-                                                offset: [0, -12],
-                                            },
-                                        },
-                                    ],
-                                },
-                                tooltip: {
-                                    sx: {
-                                        padding: 1,
-                                        border: '1px solid #C1121F',
-                                        fontSize: 12,
-                                        color: 'black',
-                                        fontStyle: 'italic',
-                                        fontWeight: 600,
-                                        backgroundColor: '#f4d35e',
-                                        boxShadow:
-                                            'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
-                                    },
-                                },
-                            }}>
-                            <Box
-                                sx={{
-                                    marginRight: 1,
-                                }}>
-                                {getTablerIcon({
-                                    name: 'IconExclamationCircle',
-                                    fill: '#C1121F',
-                                    color: '#F4D35E',
-                                    size: 24,
-                                })}
-                            </Box>
-                        </Tooltip>
-                    )}
-                    <Typography
-                        onClick={handleLogoClick}
-                        sx={{
-                            fontSize: 18,
-                            cursor: 'pointer',
-                        }}>
-                        {!loading && currentTrip}
-                    </Typography>
-                </Box>
-            )
-        }
-
-        if (isSettingsPage) {
-            return (
-                <Typography
-                    sx={{
-                        fontSize: 18,
-                        marginLeft: 2,
-                    }}>
-                    Settings
-                </Typography>
-            )
-        }
-
-        return null
-    }
+    const iconSx = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        borderRadius: '50%',
+        padding: '6px',
+        opacity: showIcons ? 1 : 0,
+        pointerEvents: showIcons ? 'auto' : 'none',
+        transition: 'opacity 0.3s ease-out, transform 0.1s ease-out, background-color 0.1s',
+        '&:active': {
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            transform: 'scale(0.88)',
+        },
+    } as const
 
     return (
         <ClientOnly>
         <Box
             sx={{
                 display: 'flex',
-                justifyContent: 'center',
                 width: '100%',
             }}>
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     width: '100%',
-                    maxWidth: 450,
                 }}>
                 {/* Header */}
                 <Box
                     sx={{
                         display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                         width: '100%',
+                        height: HEADER_HEIGHT,
+                        px: 1,
                         position: 'fixed',
                         top: 0,
-                        maxWidth: 450,
-                        backgroundColor: '#F4D35E',
+                        backgroundColor: colors.secondaryYellow,
                         zIndex: 10,
                     }}>
+                    {/* Back icon */}
                     <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            marginTop: 2,
-                            marginLeft: 2,
-                            marginRight: 1,
-                        }}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'flex-start',
-                                alignItems: 'center',
-                            }}>
-                            <Box
-                                onClick={handleLogoClick}
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    cursor: 'pointer',
-                                }}>
-                                <img
-                                    src="/gus-fring.png"
-                                    alt="Gustavo"
-                                    style={{
-                                        width: 42,
-                                        height: 42,
-                                        borderRadius: '100%',
-                                        objectFit: 'cover',
-                                    }}
-                                />
-                            </Box>
-                            {renderHeaderContent()}
-                        </Box>
-                        {isTripDetail && <ToolsMenu />}
+                        onClick={() => backPath && router.push(backPath)}
+                        sx={iconSx}>
+                        <IconArrowLeft size={28} stroke={1.8} color={colors.primaryBlack} />
+                    </Box>
+
+                    {/* Gus Fring icon */}
+                    <Box
+                        onClick={() => router.push('/gustavo')}
+                        sx={iconSx}>
+                        <img
+                            src="/gus-fring.png"
+                            alt="Gustavo"
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                            }}
+                        />
                     </Box>
                 </Box>
 
@@ -240,7 +128,7 @@ export default function GustavoLayout({
                         justifyContent: 'center',
                         alignItems: 'center',
                         width: '100%',
-                        marginTop: '17%',
+                        marginTop: `${HEADER_HEIGHT}px`,
                         marginBottom: '80px',
                     }}>
                     {children}
@@ -255,10 +143,9 @@ export default function GustavoLayout({
                         position: 'fixed',
                         bottom: 0,
                         width: '100%',
-                        maxWidth: 450,
                         height: 64,
-                        backgroundColor: '#F4D35E',
-                        borderTop: '1px solid #E5C044',
+                        backgroundColor: colors.primaryYellow,
+                        borderTop: `3px solid ${colors.primaryRed}`,
                         zIndex: 10,
                     }}>
                     {tabs.map((tab) => {
@@ -278,17 +165,16 @@ export default function GustavoLayout({
                                     flex: 1,
                                     height: '100%',
                                     textDecoration: 'none',
-                                    color: isActive ? '#000' : '#666',
+                                    color: isActive ? colors.primaryBlack : colors.primaryBrown,
                                     backgroundColor: isActive
                                         ? 'rgba(0,0,0,0.08)'
                                         : 'transparent',
-                                    transition:
-                                        'background-color 0.15s, color 0.15s',
+                                    transition: 'background-color 0.15s, color 0.15s',
                                 }}>
                                 <Icon
                                     size={22}
                                     stroke={isActive ? 2.2 : 1.5}
-                                    color={isActive ? '#000' : '#666'}
+                                    color={isActive ? colors.primaryBlack : colors.primaryBrown}
                                 />
                                 <Typography
                                     sx={{
