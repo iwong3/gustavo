@@ -38,7 +38,7 @@ export default function LoginClient({ error }: { error?: string }) {
         if (!isWaiting) return
         const handleMessage = (event: MessageEvent) => {
             if (event.origin !== window.location.origin) return
-            if (event.data === 'auth-success') window.location.href = '/gustavo'
+            if (event.data === 'auth-success') window.location.reload()
         }
         window.addEventListener('message', handleMessage)
         return () => window.removeEventListener('message', handleMessage)
@@ -54,7 +54,7 @@ export default function LoginClient({ error }: { error?: string }) {
         const checkSession = async () => {
             const res = await fetch('/api/auth/session')
             const session = await res.json()
-            if (session?.user) window.location.href = '/gustavo'
+            if (session?.user) window.location.reload()
         }
 
         const handleVisibility = () => {
