@@ -56,14 +56,45 @@ export default function LoginClient({ error }: { error?: string }) {
     }, [isWaiting, router])
 
     const handleSignIn = async () => {
-        if (isStandaloneMode()) {
-            // Open OAuth in a new tab so the PWA stays in standalone mode
-            window.open('/auth/popup-relay', '_blank')
-            setIsWaiting(true)
-        } else {
+        if (!isStandaloneMode()) {
             setIsLoading(true)
             await signIn('google', { callbackUrl: '/gustavo' })
             // Only reached if redirect fails
+            setIsLoading(false)
+            return
+        }
+
+        setIsLoading(true)
+        try {
+            // Fetch CSRF token, then ask Auth.js for the Google OAuth URL without redirecting.
+            // We need the raw URL so we can open it with window.open — only an *external* URL
+            // (accounts.google.com) triggers iOS's SFSafariViewController, which overlays the
+            // standalone PWA without navigating it.  A same-origin relay page would navigate
+            // the WebView itself, which breaks standalone mode once it hits Google's domain.
+            const csrfRes = await fetch('/api/auth/csrf')
+            const { csrfToken } = await csrfRes.json()
+
+            const signinRes = await fetch('/api/auth/signin/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Auth-Return-Redirect': '1',
+                },
+                body: new URLSearchParams({
+                    csrfToken,
+                    callbackUrl: '/auth/pwa-callback',
+                }),
+            })
+            const { url: googleAuthUrl } = await signinRes.json()
+
+            // Open the external Google URL — iOS opens this in SFSafariViewController,
+            // leaving the standalone PWA untouched in the background.
+            window.open(googleAuthUrl, '_blank')
+            setIsWaiting(true)
+        } catch {
+            // Fallback: normal redirect (breaks standalone, but at least signs in)
+            await signIn('google', { callbackUrl: '/gustavo' })
+        } finally {
             setIsLoading(false)
         }
     }

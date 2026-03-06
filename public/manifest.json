@@ -4,13 +4,13 @@
     "description": "Track spending and split costs with friends and family",
     "icons": [
         {
-            "src": "gus-fring.png",
+            "src": "gus-fring-square.png",
             "type": "image/png",
             "sizes": "any",
             "purpose": "any"
         },
         {
-            "src": "gus-fring.png",
+            "src": "gus-fring-square.png",
             "type": "image/png",
             "sizes": "any",
             "purpose": "maskable"

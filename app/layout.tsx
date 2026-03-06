@@ -47,8 +47,8 @@ export default function RootLayout({
     return (
         <html lang="en">
             <head>
-                <link rel="icon" href="/gus-fring.png" type="image/png" />
-                <link rel="apple-touch-icon" href="/gus-fring.png" />
+                <link rel="icon" href="/gus-fring-square.png" type="image/png" />
+                <link rel="apple-touch-icon" href="/gus-fring-square.png" />
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta
