@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-    themeColor: '#1976d2',
+    themeColor: '#fefae0',
     width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
@@ -47,8 +47,8 @@ export default function RootLayout({
     return (
         <html lang="en">
             <head>
-                <link rel="icon" href="/favicon.ico" />
-                <link rel="apple-touch-icon" href="/logo192.png" />
+                <link rel="icon" href="/gus-fring.png" type="image/png" />
+                <link rel="apple-touch-icon" href="/gus-fring.png" />
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta
@@ -56,7 +56,7 @@ export default function RootLayout({
                     content="black-translucent"
                 />
                 <meta name="apple-mobile-web-app-title" content="Gustavo" />
-                <meta name="msapplication-TileColor" content="#1976d2" />
+                <meta name="msapplication-TileColor" content="#fefae0" />
                 <meta name="msapplication-tap-highlight" content="no" />
             </head>
             <body>

@@ -2,17 +2,17 @@ import { Box, Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { useState } from 'react'
 
+import { colors } from '@/lib/colors'
 import ExpenseFormDialog from 'components/expense-form-dialog'
-import { RefreshProvider } from 'providers/refresh-provider'
 import { ActiveMenuItems } from 'components/menu/active-menu-items'
 import { Menu } from 'components/menu/menu'
-import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import {
     ToolsMenuItem,
     ToolsMenuItemMap,
     useToolsMenuStore,
 } from 'components/menu/tools/tools-menu'
 import { useSummaryStore } from 'components/summary/summary'
+import { RefreshProvider } from 'providers/refresh-provider'
 
 type GustavoProps = {
     onRefresh?: () => void
@@ -24,9 +24,6 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
     const activeItem = useToolsMenuStore((s) => s.activeItem)
     const setActiveItem = useToolsMenuStore((s) => s.setActiveItem)
     const setActiveView = useSummaryStore((s) => s.setActiveView)
-    const showIconLabels = useSettingsIconLabelsStore((s) => s.showIconLabels)
-
-    const scrollHeightCss = showIconLabels ? '72dvh' : '74dvh'
 
     const ActiveComponent = ToolsMenuItemMap.get(activeItem)?.Component ?? null
 
@@ -106,11 +103,8 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
                     sx={{
-                        height: scrollHeightCss,
-                        maxHeight: scrollHeightCss,
                         maxWidth: 450,
-                        overflow: 'hidden',
-                        overflowY: 'scroll',
+                        width: '100%',
                     }}>
                     {ActiveComponent && <ActiveComponent />}
                 </Box>
@@ -131,7 +125,7 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                     'position': 'fixed',
                     'bottom': 140,
                     'right': 16,
-                    'backgroundColor': '#FBBC04',
+                    'backgroundColor': colors.primaryYellow,
                     '&:hover': { backgroundColor: '#E5A800' },
                     'zIndex': 9,
                 }}>

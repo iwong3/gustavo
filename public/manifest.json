@@ -4,28 +4,23 @@
     "description": "Track spending and split costs with friends and family",
     "icons": [
         {
-            "src": "favicon.ico",
-            "sizes": "64x64 32x32 24x24 16x16",
-            "type": "image/x-icon"
+            "src": "gus-fring.png",
+            "type": "image/png",
+            "sizes": "any",
+            "purpose": "any"
         },
         {
-            "src": "logo192.png",
+            "src": "gus-fring.png",
             "type": "image/png",
-            "sizes": "192x192",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "logo512.png",
-            "type": "image/png",
-            "sizes": "512x512",
-            "purpose": "any maskable"
+            "sizes": "any",
+            "purpose": "maskable"
         }
     ],
     "start_url": "/",
     "display": "standalone",
     "orientation": "portrait",
-    "theme_color": "#1976d2",
-    "background_color": "#ffffff",
+    "theme_color": "#fefae0",
+    "background_color": "#fefae0",
     "categories": ["finance", "productivity", "utilities"],
     "scope": "/",
     "lang": "en",

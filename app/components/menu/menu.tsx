@@ -37,16 +37,8 @@ import {
 } from 'utils/icons'
 import { useTripData } from 'providers/trip-data-provider'
 
-export enum MenuItem {
-    FilterLocation,
-    FilterPaidBy,
-    FilterSpendType,
-    FilterSplitBetween,
-    Sort,
-    Tools,
-    ToolsDebtPerson1,
-    ToolsDebtPerson2,
-}
+export { MenuItem } from 'components/menu/enums'
+import { MenuItem } from 'components/menu/enums'
 
 export type MenuItemData = {
     item: MenuItem

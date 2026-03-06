@@ -51,9 +51,9 @@ import {
     IconX,
 } from '@tabler/icons-react'
 
-import { MenuItem, MenuItemData } from 'components/menu/menu'
-import { SortItem } from 'components/menu/sort/sort-menu'
-import { ToolsMenuItem } from 'components/menu/tools/tools-menu'
+import type { MenuItemData } from 'components/menu/menu'
+
+import { MenuItem, SortItem, ToolsMenuItem } from 'components/menu/enums'
 import { defaultBackgroundColor } from 'utils/colors'
 
 import type { Expense } from '@/lib/types'

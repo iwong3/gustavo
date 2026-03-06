@@ -39,6 +39,7 @@ export default function TripDetailPage() {
         let ignore = false
 
         setLoading(true)
+        setFetchDataError(false)
         setExpenses([])
         setTrip(null)
 
@@ -64,6 +65,7 @@ export default function TripDetailPage() {
                     )
                 )
 
+                // Reset Zustand stores FIRST so Gustavo mounts into clean filter state
                 setCurrentTrip(tripData.name)
                 resetAllMenuItemStores({
                     participantNames,
@@ -74,6 +76,7 @@ export default function TripDetailPage() {
                 resetToolsMenuStore()
                 resetDebtCalculatorStore()
 
+                // Then set React state to mount Gustavo with correct data
                 setTrip(tripData)
                 setExpenses(expensesData)
                 setLoading(false)

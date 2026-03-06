@@ -20,6 +20,7 @@
         "docker:down": "docker compose -f infra/docker-compose.yml down",
         "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
         "docker:up": "docker compose -f infra/docker-compose.yml up -d",
+        "check:cycles": "madge --circular --extensions ts,tsx app/",
         "lint": "next lint",
         "start:local": "node scripts/app/start.js",
         "start": "next start"
@@ -67,6 +68,7 @@
         "eslint": "^9",
         "eslint-config-next": "^15",
         "gh-pages": "^6.1.1",
+        "madge": "^8.0.0",
         "prettier": "^3.8.1",
         "typescript": "^5.8",
         "vercel": "^37.4.0"

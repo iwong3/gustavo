@@ -16,16 +16,8 @@ import {
 import { defaultBackgroundColor } from 'utils/colors'
 import { getToolsMenuItemIcon } from 'utils/icons'
 
-export enum ToolsMenuItem {
-    Receipts = 'Receipts',
-    DebtCalculator = 'DebtCalculator',
-    TotalSpend = 'TotalSpend',
-    TotalSpendByPerson = 'TotalSpendByPerson',
-    TotalSpendByType = 'TotalSpendByType',
-    TotalSpendByLocation = 'TotalSpendByLocation',
-    TotalSpendByDate = 'TotalSpendByDate',
-    Links = 'Links',
-}
+export { ToolsMenuItem } from 'components/menu/enums'
+import { ToolsMenuItem } from 'components/menu/enums'
 
 type ToolsMenuItemData = {
     Component: ComponentType

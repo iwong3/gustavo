@@ -13,11 +13,8 @@ import {
 } from 'components/menu/sort/sort-item-name'
 import { getTablerIcon } from 'utils/icons'
 
-export enum SortItem {
-    SortCost,
-    SortDate,
-    SortItemName,
-}
+export { SortItem } from 'components/menu/enums'
+import { SortItem } from 'components/menu/enums'
 
 type SortMenuItemData = {
     item: SortItem

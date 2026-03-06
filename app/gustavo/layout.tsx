@@ -80,14 +80,15 @@ export default function GustavoLayout({
                     flexDirection: 'column',
                     width: '100%',
                 }}>
-                {/* Header */}
+                {/* Header — paddingTop accounts for notch/status bar in PWA standalone mode */}
                 <Box
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         width: '100%',
-                        height: HEADER_HEIGHT,
+                        height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                        paddingTop: 'env(safe-area-inset-top, 0px)',
                         px: 1,
                         position: 'fixed',
                         top: 0,
@@ -123,11 +124,14 @@ export default function GustavoLayout({
                 <Box
                     sx={{
                         position: 'fixed',
-                        top: HEADER_HEIGHT,
-                        bottom: 64,
+                        top: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                        bottom: `calc(64px + env(safe-area-inset-bottom, 0px))`,
                         left: 0,
                         right: 0,
                         overflowY: 'auto',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
                     }}>
                     {children}
                 </Box>
@@ -141,9 +145,11 @@ export default function GustavoLayout({
                         position: 'fixed',
                         bottom: 0,
                         width: '100%',
-                        height: 64,
+                        height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
+                        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                         backgroundColor: colors.primaryYellow,
-                        borderTop: `3px solid ${colors.primaryRed}`,
+                        borderTopLeftRadius: '12px',
+                        borderTopRightRadius: '12px',
                         zIndex: 10,
                     }}>
                     {tabs.map((tab) => {

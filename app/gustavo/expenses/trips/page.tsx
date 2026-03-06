@@ -47,7 +47,8 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                     transform: 'translate(1px, 1px)',
                 },
-                'transition': 'box-shadow 0.1s ease-out, transform 0.1s ease-out',
+                'transition':
+                    'box-shadow 0.1s ease-out, transform 0.1s ease-out',
             }}>
             {/* Tap area covering full card */}
             <Box
@@ -63,9 +64,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     textDecoration: 'none',
                 }}>
                 {/* Top: trip name */}
-                <Box sx={{ fontSize: 18, fontWeight: 'bold' }}>
-                    {trip.name}
-                </Box>
+                <Box sx={{ fontSize: 18, fontWeight: 'bold' }}>{trip.name}</Box>
                 {/* Bottom: participant initials */}
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
                     {trip.participants.map((p) => (
@@ -207,9 +206,21 @@ export default function TripsPage() {
                         }}>
                         Upcoming Trips
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', marginBottom: 2 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            width: '100%',
+                            marginBottom: 2,
+                        }}>
                         {activeTrips.map((t) => (
-                            <TripCard key={t.id} trip={t} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                            <TripCard
+                                key={t.id}
+                                trip={t}
+                                onEdit={handleEdit}
+                                onDelete={handleDeleteClick}
+                            />
                         ))}
                     </Box>
                 </>
@@ -227,9 +238,21 @@ export default function TripsPage() {
                         }}>
                         Past Trips
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', marginBottom: 2 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            width: '100%',
+                            marginBottom: 2,
+                        }}>
                         {pastTrips.map((t) => (
-                            <TripCard key={t.id} trip={t} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                            <TripCard
+                                key={t.id}
+                                trip={t}
+                                onEdit={handleEdit}
+                                onDelete={handleDeleteClick}
+                            />
                         ))}
                     </Box>
                 </>
@@ -245,8 +268,9 @@ export default function TripsPage() {
                 size="medium"
                 sx={{
                     position: 'fixed',
-                    bottom: 140,
+                    bottom: 90,
                     right: 16,
+                    backgroundColor: colors.primaryYellow,
                     zIndex: 9,
                 }}>
                 <IconPlus size={24} />
