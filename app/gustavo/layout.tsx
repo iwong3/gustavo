@@ -136,6 +136,19 @@ export default function GustavoLayout({
                     {children}
                 </Box>
 
+                {/* Safe-area fill — extends nav background into iOS home indicator area */}
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 'env(safe-area-inset-bottom, 0px)',
+                        backgroundColor: colors.primaryYellow,
+                        zIndex: 9,
+                    }}
+                />
+
                 {/* Bottom tab bar */}
                 <Box
                     sx={{
