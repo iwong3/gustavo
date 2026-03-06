@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripFormDialog from 'components/trip-form-dialog'
 import { deleteTrip, fetchTrips } from 'utils/api'
+import { InitialsIcon } from 'utils/icons'
 
 import type { TripSummary } from '@/lib/types'
 
@@ -34,38 +35,51 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
             sx={{
                 'position': 'relative',
                 'display': 'flex',
-                'alignItems': 'flex-end',
-                'padding': 2,
-                'width': '39%',
-                'height': '10svh',
-                'border': `1.5px solid ${colors.primaryBlack}`,
-                'borderRadius': '10px',
+                'flexDirection': 'column',
+                'width': '100%',
+                'border': `1px solid ${colors.primaryBlack}`,
+                'borderRadius': '4px',
                 'backgroundColor': colors.primaryWhite,
                 'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                 'color': colors.primaryBlack,
-                'fontSize': 18,
-                'fontWeight': 'bold',
                 'textDecoration': 'none',
-                '&:hover': {
+                '&:active': {
                     boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                    transform: 'translate(1px, 1px)',
                 },
-                'transition': 'box-shadow 0.1s ease-out',
+                'transition': 'box-shadow 0.1s ease-out, transform 0.1s ease-out',
             }}>
+            {/* Tap area covering full card */}
             <Box
                 component={Link}
                 href={`/gustavo/expenses/trips/${trip.slug}`}
                 sx={{
-                    position: 'absolute',
-                    inset: 0,
                     display: 'flex',
-                    alignItems: 'flex-end',
+                    flexDirection: 'column',
+                    gap: 1.5,
                     padding: 2,
+                    paddingRight: 5,
                     color: colors.primaryBlack,
                     textDecoration: 'none',
                 }}>
-                {trip.name}
+                {/* Top: trip name */}
+                <Box sx={{ fontSize: 18, fontWeight: 'bold' }}>
+                    {trip.name}
+                </Box>
+                {/* Bottom: participant initials */}
+                <Box sx={{ display: 'flex', gap: 0.75 }}>
+                    {trip.participants.map((p) => (
+                        <InitialsIcon
+                            key={p.id}
+                            name={p.firstName}
+                            initials={p.initials}
+                            sx={{ width: 28, height: 28, fontSize: 10 }}
+                        />
+                    ))}
+                </Box>
             </Box>
 
+            {/* Three-dots menu */}
             <IconButton
                 size="small"
                 onClick={(e) => {
@@ -75,8 +89,8 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 }}
                 sx={{
                     'position': 'absolute',
-                    'top': 4,
-                    'right': 4,
+                    'top': 8,
+                    'right': 8,
                     'color': colors.primaryBlack,
                     'padding': '2px',
                     '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)' },
@@ -105,50 +119,6 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 </MenuItem>
             </Menu>
         </Box>
-    )
-}
-
-type TripRowProps = {
-    trips: TripSummary[]
-    onEdit: (trip: TripSummary) => void
-    onDelete: (trip: TripSummary) => void
-}
-
-const TripRow = ({ trips, onEdit, onDelete }: TripRowProps) => {
-    const rows: TripSummary[][] = []
-    let row: TripSummary[] = []
-
-    for (let i = 0; i < trips.length; i++) {
-        row.push(trips[i])
-        if (row.length === 2 || i === trips.length - 1) {
-            rows.push(row)
-            row = []
-        }
-    }
-
-    return (
-        <>
-            {rows.map((r, idx) => (
-                <Box
-                    key={'trip-row-' + idx}
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 1,
-                        width: '100%',
-                    }}>
-                    {r.map((t) => (
-                        <TripCard
-                            key={t.id}
-                            trip={t}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                        />
-                    ))}
-                </Box>
-            ))}
-        </>
     )
 }
 
@@ -219,12 +189,10 @@ export default function TripsPage() {
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
                 alignItems: 'center',
-                marginX: 2,
-                marginTop: 2,
+                paddingX: 4,
+                paddingY: 2,
                 width: '100%',
-                height: '100%',
             }}>
             {activeTrips.length > 0 && (
                 <>
@@ -239,20 +207,10 @@ export default function TripsPage() {
                         }}>
                         Upcoming Trips
                     </Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            width: '100%',
-                            marginBottom: 2,
-                        }}>
-                        <TripRow
-                            trips={activeTrips}
-                            onEdit={handleEdit}
-                            onDelete={handleDeleteClick}
-                        />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', marginBottom: 2 }}>
+                        {activeTrips.map((t) => (
+                            <TripCard key={t.id} trip={t} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                        ))}
                     </Box>
                 </>
             )}
@@ -269,20 +227,10 @@ export default function TripsPage() {
                         }}>
                         Past Trips
                     </Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            width: '100%',
-                            marginBottom: 2,
-                        }}>
-                        <TripRow
-                            trips={pastTrips}
-                            onEdit={handleEdit}
-                            onDelete={handleDeleteClick}
-                        />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', marginBottom: 2 }}>
+                        {pastTrips.map((t) => (
+                            <TripCard key={t.id} trip={t} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                        ))}
                     </Box>
                 </>
             )}

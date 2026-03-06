@@ -119,15 +119,15 @@ export default function GustavoLayout({
                     </Box>
                 </Box>
 
-                {/* Main content */}
+                {/* Main content — fills space between header and bottom nav, scrolls within */}
                 <Box
                     sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        width: '100%',
-                        marginTop: `${HEADER_HEIGHT}px`,
-                        marginBottom: '80px',
+                        position: 'fixed',
+                        top: HEADER_HEIGHT,
+                        bottom: 64,
+                        left: 0,
+                        right: 0,
+                        overflowY: 'auto',
                     }}>
                     {children}
                 </Box>
