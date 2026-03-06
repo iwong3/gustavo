@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
@@ -30,15 +30,6 @@ export const metadata: Metadata = {
     },
 }
 
-export const viewport: Viewport = {
-    themeColor: '#fefae0',
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover', // Draw behind notch/home indicator on iPhone
-}
-
 export default function RootLayout({
     children,
 }: {
@@ -49,6 +40,11 @@ export default function RootLayout({
             <head>
                 <link rel="icon" href="/gus-fring-square.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/gus-fring-square.png" />
+                <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+                />
+                <meta name="theme-color" content="#fefae0" />
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta

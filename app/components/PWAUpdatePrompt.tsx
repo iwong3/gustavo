@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Snackbar, Button, IconButton } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
+import { Snackbar } from '@mui/material'
 
 export default function PWAUpdatePrompt() {
     const [updateReady, setUpdateReady] = useState(false)
@@ -12,6 +11,7 @@ export default function PWAUpdatePrompt() {
 
         const handleControllerChange = () => {
             setUpdateReady(true)
+            setTimeout(() => window.location.reload(), 1500)
         }
 
         navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
@@ -23,18 +23,8 @@ export default function PWAUpdatePrompt() {
     return (
         <Snackbar
             open={updateReady}
-            message="New version available"
+            message="Updating to new version…"
             anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-            action={
-                <>
-                    <Button color="inherit" size="small" onClick={() => window.location.reload()}>
-                        Reload
-                    </Button>
-                    <IconButton size="small" color="inherit" onClick={() => setUpdateReady(false)}>
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </>
-            }
         />
     )
 }

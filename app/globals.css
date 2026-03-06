@@ -19,10 +19,6 @@ body {
     margin: 0;
     /* Prevent rubber-band overscroll — the main "this feels like a website" tell */
     overscroll-behavior: none;
-    /* Extend content behind notch/home indicator (requires viewport-fit=cover) */
-    padding-top: env(safe-area-inset-top);
-    padding-right: env(safe-area-inset-right);
-    padding-left: env(safe-area-inset-left);
 }
 
 a {
