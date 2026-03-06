@@ -62,7 +62,7 @@ export default function LoginClient({ error }: { error?: string }) {
         }
 
         document.addEventListener('visibilitychange', handleVisibility)
-        pollRef.current = setInterval(checkSession, 3000)
+        pollRef.current = setInterval(checkSession, 1500)
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility)
@@ -97,7 +97,9 @@ export default function LoginClient({ error }: { error?: string }) {
                 },
                 body: new URLSearchParams({
                     csrfToken,
-                    callbackUrl: '/auth/pwa-callback',
+                    // Must be absolute — relative paths get overridden by Auth.js's stored
+                    // callbackUrl cookie (set when middleware redirected to /login).
+                    callbackUrl: `${window.location.origin}/auth/pwa-callback`,
                 }),
             })
             const { url: googleAuthUrl } = await signinRes.json()
