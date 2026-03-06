@@ -1,15 +1,19 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { colors } from '@/lib/colors'
 import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
+import { signIn } from 'next-auth/react'
+import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
 
 const ERROR_MESSAGES: Record<string, string> = {
-    OAuthSignin: 'There was a problem starting the sign-in process. Please try again.',
-    OAuthCallback: 'There was a problem completing sign-in with Google. Please try again.',
-    OAuthCreateAccount: 'There was a problem creating your account. Please try again.',
-    AccessDenied: 'Your account is not authorized to access this app.',
+    OAuthSignin:
+        'There was a problem starting the sign-in process. Please try again.',
+    OAuthCallback:
+        'There was a problem completing sign-in with Google. Please try again.',
+    OAuthCreateAccount:
+        'There was a problem creating your account. Please try again.',
+    AccessDenied: 'Access denied.',
     Default: 'Something went wrong. Please try again.',
 }
 
@@ -21,7 +25,6 @@ function isStandaloneMode(): boolean {
 }
 
 export default function LoginClient({ error }: { error?: string }) {
-    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [isWaiting, setIsWaiting] = useState(false)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -30,30 +33,42 @@ export default function LoginClient({ error }: { error?: string }) {
         ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default)
         : null
 
-    // Listen for postMessage from the OAuth tab (works on Android/desktop Chrome)
+    // Listen for postMessage — works on Android/desktop where popup has an opener
     useEffect(() => {
         if (!isWaiting) return
         const handleMessage = (event: MessageEvent) => {
             if (event.origin !== window.location.origin) return
-            if (event.data === 'auth-success') router.push('/gustavo')
+            if (event.data === 'auth-success') window.location.href = '/gustavo'
         }
         window.addEventListener('message', handleMessage)
         return () => window.removeEventListener('message', handleMessage)
-    }, [isWaiting, router])
+    }, [isWaiting])
 
-    // Poll the session endpoint as a fallback (necessary on iOS where window.opener is null)
+    // On iOS the SFSafariViewController can't auto-close (cross-origin redirect chain breaks
+    // the opener relationship), so the user taps Done manually. When they do, the standalone
+    // PWA comes back to the foreground and visibilitychange fires — check session immediately.
+    // Poll every 3s as a fallback for cases where visibilitychange doesn't fire.
     useEffect(() => {
         if (!isWaiting) return
-        pollRef.current = setInterval(async () => {
+
+        const checkSession = async () => {
             const res = await fetch('/api/auth/session')
             const session = await res.json()
-            if (session?.user) {
-                clearInterval(pollRef.current!)
-                router.push('/gustavo')
-            }
-        }, 2000)
-        return () => clearInterval(pollRef.current!)
-    }, [isWaiting, router])
+            if (session?.user) window.location.href = '/gustavo'
+        }
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') checkSession()
+        }
+
+        document.addEventListener('visibilitychange', handleVisibility)
+        pollRef.current = setInterval(checkSession, 3000)
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility)
+            clearInterval(pollRef.current!)
+        }
+    }, [isWaiting])
 
     const handleSignIn = async () => {
         if (!isStandaloneMode()) {
@@ -111,14 +126,26 @@ export default function LoginClient({ error }: { error?: string }) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '100vh',
+                height: '100dvh',
                 gap: 3,
                 padding: 4,
             }}>
-            <Typography variant="h4" component="h1">
-                Gustavo
+            <Image
+                src="/gus-fring-square.png"
+                alt="Gustavo"
+                width={120}
+                height={120}
+                style={{
+                    borderRadius: '50%',
+                    border: `4px solid ${colors.primaryWhite}`,
+                    outline: `3px solid ${colors.primaryBlack}`,
+                    boxShadow: `3px 4px 0px ${colors.primaryBlack}`,
+                }}
+                priority
+            />
+            <Typography variant="h5" component="h1">
+                Welcome.
             </Typography>
-            <Typography color="text.secondary">Sign in to continue</Typography>
 
             {errorMessage && (
                 <Alert severity="error" sx={{ maxWidth: 360 }}>
@@ -128,10 +155,16 @@ export default function LoginClient({ error }: { error?: string }) {
 
             {isWaiting ? (
                 <>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                        }}>
                         <CircularProgress size={20} />
                         <Typography color="text.secondary">
-                            Waiting for sign-in… complete it in the browser tab that just opened.
+                            Complete sign-in in the browser, then tap{' '}
+                            <strong>Done</strong> to return.
                         </Typography>
                     </Box>
                     <Button variant="text" size="small" onClick={handleCancel}>
@@ -144,8 +177,24 @@ export default function LoginClient({ error }: { error?: string }) {
                     size="large"
                     onClick={handleSignIn}
                     disabled={isLoading}
-                    startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : null}>
-                    {isLoading ? 'Signing in…' : 'Sign in with Google'}
+                    sx={{ width: 220, position: 'relative' }}>
+                    <Box
+                        component="span"
+                        sx={{ visibility: isLoading ? 'hidden' : 'visible' }}>
+                        Sign in with Google
+                    </Box>
+                    {isLoading && (
+                        <CircularProgress
+                            size={22}
+                            color="inherit"
+                            sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                            }}
+                        />
+                    )}
                 </Button>
             )}
         </Box>
