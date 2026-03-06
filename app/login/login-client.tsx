@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
 
@@ -12,18 +13,64 @@ const ERROR_MESSAGES: Record<string, string> = {
     Default: 'Something went wrong. Please try again.',
 }
 
+function isStandaloneMode(): boolean {
+    return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (navigator as { standalone?: boolean }).standalone === true
+    )
+}
+
 export default function LoginClient({ error }: { error?: string }) {
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+    const [isWaiting, setIsWaiting] = useState(false)
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const errorMessage = error
         ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default)
         : null
 
+    // Listen for postMessage from the OAuth tab (works on Android/desktop Chrome)
+    useEffect(() => {
+        if (!isWaiting) return
+        const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return
+            if (event.data === 'auth-success') router.push('/gustavo')
+        }
+        window.addEventListener('message', handleMessage)
+        return () => window.removeEventListener('message', handleMessage)
+    }, [isWaiting, router])
+
+    // Poll the session endpoint as a fallback (necessary on iOS where window.opener is null)
+    useEffect(() => {
+        if (!isWaiting) return
+        pollRef.current = setInterval(async () => {
+            const res = await fetch('/api/auth/session')
+            const session = await res.json()
+            if (session?.user) {
+                clearInterval(pollRef.current!)
+                router.push('/gustavo')
+            }
+        }, 2000)
+        return () => clearInterval(pollRef.current!)
+    }, [isWaiting, router])
+
     const handleSignIn = async () => {
-        setIsLoading(true)
-        await signIn('google', { callbackUrl: '/gustavo' })
-        // Only reached if redirect fails
-        setIsLoading(false)
+        if (isStandaloneMode()) {
+            // Open OAuth in a new tab so the PWA stays in standalone mode
+            window.open('/auth/popup-relay', '_blank')
+            setIsWaiting(true)
+        } else {
+            setIsLoading(true)
+            await signIn('google', { callbackUrl: '/gustavo' })
+            // Only reached if redirect fails
+            setIsLoading(false)
+        }
+    }
+
+    const handleCancel = () => {
+        clearInterval(pollRef.current!)
+        setIsWaiting(false)
     }
 
     return (
@@ -48,14 +95,28 @@ export default function LoginClient({ error }: { error?: string }) {
                 </Alert>
             )}
 
-            <Button
-                variant="contained"
-                size="large"
-                onClick={handleSignIn}
-                disabled={isLoading}
-                startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : null}>
-                {isLoading ? 'Signing in…' : 'Sign in with Google'}
-            </Button>
+            {isWaiting ? (
+                <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <CircularProgress size={20} />
+                        <Typography color="text.secondary">
+                            Waiting for sign-in… complete it in the browser tab that just opened.
+                        </Typography>
+                    </Box>
+                    <Button variant="text" size="small" onClick={handleCancel}>
+                        Cancel
+                    </Button>
+                </>
+            ) : (
+                <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleSignIn}
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : null}>
+                    {isLoading ? 'Signing in…' : 'Sign in with Google'}
+                </Button>
+            )}
         </Box>
     )
 }
