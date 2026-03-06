@@ -13,8 +13,6 @@ import {
 import { ClientOnly } from 'components/client-only'
 import { colors } from '@/lib/colors'
 
-// Relic of a past version of the app
-export const GUS_QUOTE = `"And a man, a man provides... ...your spending habits."`
 
 const HEADER_HEIGHT = 56
 
