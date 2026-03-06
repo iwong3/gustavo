@@ -49,7 +49,7 @@ export default function GustavoHomePage() {
             <Typography
                 sx={{
                     fontSize: 20,
-                    fontFamily: 'Spectral',
+                    fontFamily: 'var(--font-serif)',
                     textAlign: 'center',
                     paddingBottom: 4,
                 }}>

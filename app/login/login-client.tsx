@@ -145,7 +145,7 @@ export default function LoginClient({ error }: { error?: string }) {
                 }}
                 priority
             />
-            <Typography variant="h5" component="h1">
+            <Typography variant="h5" component="h1" sx={{ fontFamily: 'var(--font-serif)' }}>
                 Welcome.
             </Typography>
 

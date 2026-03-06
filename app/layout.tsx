@@ -1,9 +1,24 @@
 import type { Metadata } from 'next'
+import { Roboto, IBM_Plex_Serif } from 'next/font/google'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import Providers from './components/providers'
 import './globals.css'
+
+const roboto = Roboto({
+    weight: ['300', '400', '500', '700'],
+    subsets: ['latin'],
+    variable: '--font-roboto',
+    display: 'swap',
+})
+
+const ibmPlexSerif = IBM_Plex_Serif({
+    weight: ['300', '400', '500', '700'],
+    subsets: ['latin'],
+    variable: '--font-serif',
+    display: 'swap',
+})
 
 export const metadata: Metadata = {
     title: 'Gustavo - Track Spending and Split Costs',
@@ -36,7 +51,7 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="en">
+        <html lang="en" className={`${roboto.variable} ${ibmPlexSerif.variable}`}>
             <head>
                 <link rel="icon" href="/gus-fring-square.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/gus-fring-square.png" />

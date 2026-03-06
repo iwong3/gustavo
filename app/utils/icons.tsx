@@ -426,7 +426,6 @@ export const LocationIcon = ({ location, sx }: ILocationIconProps) => {
         width: defaultIconSize,
         height: defaultIconSize,
         fontSize: 10,
-        fontFamily: 'Spectral',
         color: 'black',
         backgroundColor: getLocationColor(location),
     }

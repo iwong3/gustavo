@@ -7,6 +7,9 @@ const cardShadowHover = `1px 1px 0px ${colors.primaryBlack}`
 const cardShadowActive = `1px 1px 0px ${colors.primaryBlack}`
 
 export const theme = createTheme({
+    typography: {
+        fontFamily: 'var(--font-roboto), Roboto, sans-serif',
+    },
     palette: {
         primary: {
             main: colors.primaryYellow,

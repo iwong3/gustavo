@@ -64,7 +64,12 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     textDecoration: 'none',
                 }}>
                 {/* Top: trip name */}
-                <Box sx={{ fontSize: 18, fontWeight: 'bold' }}>{trip.name}</Box>
+                <Box
+                    sx={{
+                        fontSize: 18,
+                    }}>
+                    {trip.name}
+                </Box>
                 {/* Bottom: participant initials */}
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
                     {trip.participants.map((p) => (
@@ -202,7 +207,7 @@ export default function TripsPage() {
                             marginBottom: 2,
                             width: '100%',
                             fontSize: 24,
-                            fontFamily: 'Spectral',
+                            fontFamily: 'var(--font-serif)',
                         }}>
                         Upcoming Trips
                     </Box>
@@ -234,7 +239,7 @@ export default function TripsPage() {
                             marginBottom: 2,
                             width: '100%',
                             fontSize: 24,
-                            fontFamily: 'Spectral',
+                            fontFamily: 'var(--font-serif)',
                         }}>
                         Past Trips
                     </Box>
