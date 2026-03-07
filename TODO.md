@@ -18,6 +18,8 @@
 
 - [ ] Re-design form to enter expenses
     - [ ] View options in logical way? (relevant locations for a country?)
+    - [ ] Make it easier to fill in form (ask AI, e.g. pre-fill paid by with
+          current user)
     - [ ] Paper/ledger design animates from bottom up? Covers all of app besides
           header?
 - [ ] Re-design form to enter new trip
