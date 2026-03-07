@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { getUserTripRole, canEditTrip } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
 
@@ -17,10 +19,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const currentUserId = authUser.userId
 
-    const body: { userId: number } = await request.json()
+    const { role: currentRole } = await getUserTripRole(currentUserId, id)
+    if (!canEditTrip(currentRole, authUser.isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body: { userId: number; role?: string } = await request.json()
     if (!body.userId) {
         return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
+
+    // Get trip creator's default participant role
+    const prefsRes = await pool.query(
+        `SELECT u.default_participant_role FROM trips t JOIN users u ON t.created_by = u.id WHERE t.id = $1`,
+        [id]
+    )
+    const defaultRole = body.role ?? prefsRes.rows[0]?.default_participant_role ?? 'viewer'
 
     try {
         await withAuditUser(currentUserId, async (client) => {
@@ -32,17 +46,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
             if (existing.rows.length > 0) {
                 if (existing.rows[0].left_at) {
-                    // Re-add: clear left_at
+                    // Re-add: clear left_at, set role
                     await client.query(
-                        'UPDATE trip_participants SET left_at = NULL WHERE id = $1',
-                        [existing.rows[0].id]
+                        'UPDATE trip_participants SET left_at = NULL, role = $2 WHERE id = $1',
+                        [existing.rows[0].id, defaultRole]
                     )
                 }
                 // Already active — no-op
             } else {
                 await client.query(
-                    'INSERT INTO trip_participants (trip_id, user_id) VALUES ($1, $2)',
-                    [id, body.userId]
+                    'INSERT INTO trip_participants (trip_id, user_id, role) VALUES ($1, $2, $3)',
+                    [id, body.userId, defaultRole]
                 )
             }
         })
@@ -66,6 +80,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const currentUserId = authUser.userId
+
+    const { role: currentRole } = await getUserTripRole(currentUserId, id)
+    if (!canEditTrip(currentRole, authUser.isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const body: { userId: number } = await request.json()
     if (!body.userId) {

@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { getUserTripRole, canManageLocations } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string; id: string }> }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
 
     const { tripId, id: idStr } = await params
     const tripIdNum = parseInt(tripId, 10)
     const id = parseInt(idStr, 10)
     if (isNaN(tripIdNum) || isNaN(id)) {
         return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+    }
+
+    const { role } = await getUserTripRole(userId, tripIdNum)
+    if (!canManageLocations(role, isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { name } = await request.json()
@@ -46,13 +52,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
 
     const { tripId, id: idStr } = await params
     const tripIdNum = parseInt(tripId, 10)
     const id = parseInt(idStr, 10)
     if (isNaN(tripIdNum) || isNaN(id)) {
         return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+    }
+
+    const { role } = await getUserTripRole(userId, tripIdNum)
+    if (!canManageLocations(role, isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     try {

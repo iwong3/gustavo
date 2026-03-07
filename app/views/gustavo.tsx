@@ -7,14 +7,20 @@ import { TripToolbar } from 'components/menu/trip-toolbar'
 import { useToolsMenuStore, ToolsMenuItemMap } from 'components/menu/tools/tools-menu'
 import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
+import { useTripData } from 'providers/trip-data-provider'
+import { canAddExpense } from 'utils/permissions'
 
 type GustavoProps = {
     onRefresh?: () => void
 }
 
 export const Gustavo = ({ onRefresh }: GustavoProps) => {
+    const { trip } = useTripData()
     const [addDialogOpen, setAddDialogOpen] = useState(false)
-    useRegisterFab(useCallback(() => setAddDialogOpen(true), []))
+    const showAddExpense = canAddExpense(trip.userRole)
+
+    const fabCallback = useCallback(() => setAddDialogOpen(true), [])
+    useRegisterFab(showAddExpense ? fabCallback : null)
 
     const activeItem = useToolsMenuStore((s) => s.activeItem)
     const ActiveComponent = ToolsMenuItemMap.get(activeItem)?.Component ?? null
@@ -36,12 +42,14 @@ export const Gustavo = ({ onRefresh }: GustavoProps) => {
                 </RefreshProvider>
             </SpendDataProvider>
 
-            <ExpenseFormDialog
-                open={addDialogOpen}
-                onClose={() => setAddDialogOpen(false)}
-                onSuccess={() => onRefresh?.()}
-                mode="add"
-            />
+            {showAddExpense && (
+                <ExpenseFormDialog
+                    open={addDialogOpen}
+                    onClose={() => setAddDialogOpen(false)}
+                    onSuccess={() => onRefresh?.()}
+                    mode="add"
+                />
+            )}
         </Box>
     )
 }

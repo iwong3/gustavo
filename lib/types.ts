@@ -1,5 +1,7 @@
 /** DB-driven types — replaces all hardcoded enums (Trip, Person, Location, SpendType). */
 
+export type TripRole = 'owner' | 'editor' | 'viewer'
+
 export type TripSummary = {
     id: number
     name: string
@@ -7,7 +9,11 @@ export type TripSummary = {
     startDate: string  // ISO YYYY-MM-DD
     endDate: string    // ISO YYYY-MM-DD
     description: string | null
-    participants: UserSummary[]
+    visibility: 'participants' | 'all_users'
+    userRole: TripRole | null  // current user's role, null if non-participant viewing public trip
+    isAdmin: boolean
+    currentUserId: number
+    participants: ParticipantSummary[]
 }
 
 export type UserSummary = {
@@ -18,6 +24,10 @@ export type UserSummary = {
     avatarUrl: string | null
     initials: string | null
     venmoUrl: string | null
+}
+
+export type ParticipantSummary = UserSummary & {
+    role: TripRole
 }
 
 export type Expense = {
@@ -47,7 +57,17 @@ export type ExpenseCategory = {
     name: string
 }
 
+export type ExpenseCategoryWithMeta = ExpenseCategory & {
+    usageCount: number
+    canEdit: boolean
+}
+
 export type Location = {
     id: number
     name: string
+}
+
+export type UserPreferences = {
+    defaultTripVisibility: 'participants' | 'all_users'
+    defaultParticipantRole: 'editor' | 'viewer'
 }

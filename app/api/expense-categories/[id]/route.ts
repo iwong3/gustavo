@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
+import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { canEditCategory, canDeleteCategory } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
 
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
     if (isNaN(id)) {
         return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+    }
+
+    // Check ownership
+    const catRes = await pool.query(
+        'SELECT created_by FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
+        [id]
+    )
+    if (catRes.rows.length === 0) {
+        return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+    if (!canEditCategory(isAdmin, catRes.rows[0].created_by === userId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { name } = await request.json()
@@ -43,12 +57,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
 
     const { id: idStr } = await params
     const id = parseInt(idStr, 10)
     if (isNaN(id)) {
         return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+    }
+
+    // Check ownership
+    const catRes = await pool.query(
+        'SELECT created_by FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
+        [id]
+    )
+    if (catRes.rows.length === 0) {
+        return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+    if (!canDeleteCategory(isAdmin, catRes.rows[0].created_by === userId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     try {

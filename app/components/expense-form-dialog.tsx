@@ -20,6 +20,7 @@ import {
 import { Currency } from 'utils/currency'
 import { addExpense, updateExpense } from 'utils/api'
 import { useTripData } from 'providers/trip-data-provider'
+import { colors } from '@/lib/colors'
 
 import type { Expense } from '@/lib/types'
 
@@ -77,7 +78,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
         if (open && mode === 'edit' && expense) {
             setName(expense.name)
             setDate(expense.date)
-            setCost(String(expense.costOriginal))
+            setCost(expense.costOriginal.toFixed(2))
             setCurrency(expense.currency as Currency)
             setCategoryId(expense.categoryId ?? '')
             setPaidBy(expense.paidBy.firstName)
@@ -130,8 +131,8 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
     }
 
     const handleClose = () => {
-        resetForm()
         onClose()
+        setTimeout(resetForm, 300)
     }
 
     const handleSubmit = async () => {
@@ -183,11 +184,36 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
     }
 
     const isEdit = mode === 'edit'
-    const selectSx = { backgroundColor: '#FFFFEF' }
+    const fieldSx = {
+        'backgroundColor': colors.primaryWhite,
+        'borderRadius': '4px',
+        '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.primaryBlack,
+        },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: colors.primaryBlack,
+        },
+    }
 
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{isEdit ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="sm"
+            fullWidth
+            slotProps={{
+                paper: {
+                    sx: {
+                        backgroundColor: colors.secondaryYellow,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
+                        borderRadius: '6px',
+                    },
+                },
+            }}>
+            <DialogTitle sx={{ fontWeight: 700, color: colors.primaryBlack }}>
+                {isEdit ? 'Edit Expense' : 'Add Expense'}
+            </DialogTitle>
             <DialogContent
                 sx={{
                     display: 'flex',
@@ -202,7 +228,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     required
                     fullWidth
                     size="small"
-                    sx={selectSx}
+                    sx={fieldSx}
                 />
 
                 <TextField
@@ -214,7 +240,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     fullWidth
                     size="small"
                     slotProps={{ inputLabel: { shrink: true } }}
-                    sx={selectSx}
+                    sx={fieldSx}
                 />
 
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -223,11 +249,15 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                         type="number"
                         value={cost}
                         onChange={(e) => setCost(e.target.value)}
+                        onBlur={() => {
+                            const n = parseFloat(cost)
+                            if (!isNaN(n)) setCost(n.toFixed(2))
+                        }}
                         required
                         fullWidth
                         size="small"
-                        slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-                        sx={selectSx}
+                        slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                        sx={fieldSx}
                     />
                     <FormControl size="small" sx={{ minWidth: 100 }}>
                         <InputLabel>Currency</InputLabel>
@@ -235,7 +265,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                             value={currency}
                             label="Currency"
                             onChange={(e) => setCurrency(e.target.value as Currency)}
-                            sx={selectSx}>
+                            sx={fieldSx}>
                             {Object.values(Currency).map((c) => (
                                 <MenuItem key={c} value={c}>
                                     {c}
@@ -251,7 +281,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                         value={categoryId}
                         label="Category"
                         onChange={(e) => setCategoryId(e.target.value as number | '')}
-                        sx={selectSx}>
+                        sx={fieldSx}>
                         <MenuItem value="">
                             <em>None</em>
                         </MenuItem>
@@ -269,7 +299,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                         value={paidBy}
                         label="Paid by"
                         onChange={(e) => setPaidBy(e.target.value)}
-                        sx={selectSx}>
+                        sx={fieldSx}>
                         {people.map((p) => (
                             <MenuItem key={p} value={p}>
                                 {p}
@@ -286,28 +316,43 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                         <Chip
                             label="Everyone"
                             onClick={() => togglePerson('Everyone')}
-                            color={isEveryone ? 'primary' : 'default'}
-                            variant={isEveryone ? 'filled' : 'outlined'}
                             size="small"
+                            sx={{
+                                'border': `1px solid ${colors.primaryBlack}`,
+                                'backgroundColor': isEveryone
+                                    ? colors.primaryYellow
+                                    : colors.primaryWhite,
+                                'fontWeight': isEveryone ? 600 : 400,
+                                '&:hover': {
+                                    backgroundColor: isEveryone
+                                        ? colors.primaryYellow
+                                        : colors.primaryWhite,
+                                },
+                            }}
                         />
-                        {people.map((p) => (
-                            <Chip
-                                key={p}
-                                label={p}
-                                onClick={() => togglePerson(p)}
-                                color={
-                                    !isEveryone && splitBetween.includes(p)
-                                        ? 'primary'
-                                        : 'default'
-                                }
-                                variant={
-                                    !isEveryone && splitBetween.includes(p)
-                                        ? 'filled'
-                                        : 'outlined'
-                                }
-                                size="small"
-                            />
-                        ))}
+                        {people.map((p) => {
+                            const selected = !isEveryone && splitBetween.includes(p)
+                            return (
+                                <Chip
+                                    key={p}
+                                    label={p}
+                                    onClick={() => togglePerson(p)}
+                                    size="small"
+                                    sx={{
+                                        'border': `1px solid ${colors.primaryBlack}`,
+                                        'backgroundColor': selected
+                                            ? colors.primaryYellow
+                                            : colors.primaryWhite,
+                                        'fontWeight': selected ? 600 : 400,
+                                        '&:hover': {
+                                            backgroundColor: selected
+                                                ? colors.primaryYellow
+                                                : colors.primaryWhite,
+                                        },
+                                    }}
+                                />
+                            )
+                        })}
                     </Box>
                 </Box>
 
@@ -317,7 +362,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                         value={location}
                         label="Location"
                         onChange={(e) => setLocation(e.target.value)}
-                        sx={selectSx}>
+                        sx={fieldSx}>
                         <MenuItem value="">
                             <em>None</em>
                         </MenuItem>
@@ -337,7 +382,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     rows={2}
                     fullWidth
                     size="small"
-                    sx={selectSx}
+                    sx={fieldSx}
                 />
 
                 {error && (
@@ -346,14 +391,17 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     </Typography>
                 )}
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ padding: 2, paddingTop: 0 }}>
                 <Button onClick={handleClose} disabled={submitting}>
                     Cancel
                 </Button>
                 <Button
                     onClick={handleSubmit}
-                    variant="contained"
-                    disabled={submitting}>
+                    disabled={submitting}
+                    sx={{
+                        backgroundColor: colors.primaryYellow,
+                        fontWeight: 600,
+                    }}>
                     {submitting
                         ? isEdit
                             ? 'Saving...'

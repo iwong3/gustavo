@@ -28,6 +28,9 @@ export const theme = createTheme({
                     color: colors.primaryBlack,
                     boxShadow: cardShadow,
                     textTransform: 'none',
+                    lineHeight: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     '&:hover': {
                         backgroundColor: colors.primaryWhite,
                         boxShadow: cardShadowHover,

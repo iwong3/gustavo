@@ -9,41 +9,41 @@
 ## Features
 
 - [ ] Currency conversion API
+- [ ] Roles/access
+    - [ ] Private by default
+    - [ ] Add people as editors/viewers
+    - [ ] Possibly create groups and add group as editors/viewers? Need to
+          figure out interactions with groups and specific people's permissions
+- [ ] My trips (upcoming/past) vs. Trips I'm a part of (should that even be a
+      difference) vs. other people's public trips
+- [ ] Export trip data as CSV
+- [ ] More useful graphs for trip expense data
+- [ ] Add notes for a trip? Such as link to Google Photos album
+- [ ] Track user's last login
 
 ## UX / Design
 
-- [ ] Transition off of MUI/Emotion and into Tailwind
-- [ ] Come up with a high level theme consistent across whole app
-- [ ] Re-design homepage
-    - [ ] Welcome screen
-        - [ ] Select app (currently only Travel Expenses)
-- [ ] Re-design trip selection
-- [ ] Re-design expense tracker
 - [ ] Re-design form to enter expenses
     - [ ] View options in logical way? (relevant locations for a country?)
-- [ ] Mobile first UX
+    - [ ] Paper/ledger design animates from bottom up? Covers all of app besides
+          header?
+- [ ] Re-design form to enter new trip
+- [ ] Loading screens
+- [ ] Error screens
+- [ ] Sort/filter trips
+- [ ] Explore hold and drag for trips, expenses
+- [ ] Instead of expanding expense, click to show popup modal with more details
+- [ ] Settings to change theme
+- [ ] Setting to use your Google avatar instead of initials icon
 
 ## Tech Debt
 
 - [ ] Simplify Zustand usage
+- [ ] Consider MUI/Emotion vs. Tailwind
 
 ## Others
 
 - [ ] Update app documentation
-
-## Questions
-
-- How are DB connections handled by Next.js? Are they atomic? Transactional?
-- I noticed a lot of our API routes have this check:
-    ```
-    const session = await auth()
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    ```
-    Do we have to define this for every route? Can we define this once somewhere
-    instead?
-- Is there anything we can DRY up?
 
 ## Done
 
@@ -59,3 +59,9 @@
 - [x] Create/edit/delete a trip
 - [x] Edit/delete expenses
     - [x] Add/edit/delete categories, locations, etc.
+- [x] Come up with a high level theme consistent across whole app
+- [x] Re-design homepage
+    - [x] Welcome screen
+        - [x] Select app (currently only Travel Expenses)
+- [x] Re-design trip selection
+- [x] Re-design expense tracker

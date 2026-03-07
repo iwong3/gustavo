@@ -7,17 +7,23 @@ export async function GET(request: NextRequest) {
     const includeCount = request.nextUrl.searchParams.get('includeCount') === 'true'
 
     if (includeCount) {
+        const authUser = await requireAuthWithUserId()
         const { rows } = await pool.query(
-            `SELECT ec.id, ec.name,
+            `SELECT ec.id, ec.name, ec.created_by,
                     COUNT(e.id)::int AS usage_count
              FROM expense_categories ec
              LEFT JOIN expenses e ON e.category_id = ec.id AND e.deleted_at IS NULL
              WHERE ec.deleted_at IS NULL
-             GROUP BY ec.id, ec.name
+             GROUP BY ec.id, ec.name, ec.created_by
              ORDER BY ec.name`
         )
+        const userId = authUser?.userId
+        const isAdmin = authUser?.isAdmin ?? false
         return NextResponse.json(rows.map((r) => ({
-            id: r.id, name: r.name, usageCount: r.usage_count,
+            id: r.id,
+            name: r.name,
+            usageCount: r.usage_count,
+            canEdit: isAdmin || r.created_by === userId,
         })))
     }
 
@@ -50,10 +56,10 @@ export async function POST(request: NextRequest) {
             )
             if (existing.rows.length > 0) {
                 if (existing.rows[0].deleted_at) {
-                    // Revive soft-deleted category
+                    // Revive soft-deleted category and claim ownership
                     await client.query(
-                        `UPDATE expense_categories SET deleted_at = NULL WHERE id = $1`,
-                        [existing.rows[0].id]
+                        `UPDATE expense_categories SET deleted_at = NULL, created_by = $2 WHERE id = $1`,
+                        [existing.rows[0].id, userId]
                     )
                     return { id: existing.rows[0].id, name: trimmed }
                 }
@@ -61,8 +67,8 @@ export async function POST(request: NextRequest) {
             }
 
             const res = await client.query(
-                `INSERT INTO expense_categories (name) VALUES ($1) RETURNING id`,
-                [trimmed]
+                `INSERT INTO expense_categories (name, created_by) VALUES ($1, $2) RETURNING id`,
+                [trimmed, userId]
             )
             return { id: res.rows[0].id, name: trimmed }
         })

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripFormDialog from 'components/trip-form-dialog'
 import { deleteTrip, fetchTrips } from 'utils/api'
+import { canEditTrip, canDeleteTrip } from 'utils/permissions'
 import { InitialsIcon } from 'utils/icons'
 
 import type { TripSummary } from '@/lib/types'
@@ -29,6 +30,10 @@ type TripCardProps = {
 const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
     const menuOpen = Boolean(anchorEl)
+
+    const showEdit = canEditTrip(trip.userRole, trip.isAdmin)
+    const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
+    const showMenu = showEdit || showDelete
 
     return (
         <Box
@@ -57,7 +62,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     gap: 1,
                     padding: 2,
                     paddingTop: 1,
-                    paddingRight: 5,
+                    paddingRight: showMenu ? 5 : 2,
                     color: colors.primaryBlack,
                     textDecoration: 'none',
                 }}>
@@ -88,45 +93,53 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 </Box>
             </Box>
 
-            {/* Three-dots menu */}
-            <IconButton
-                size="small"
-                onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setAnchorEl(e.currentTarget)
-                }}
-                sx={{
-                    'position': 'absolute',
-                    'top': 8,
-                    'right': 8,
-                    'color': colors.primaryBlack,
-                    'padding': '2px',
-                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)' },
-                }}>
-                <IconDots size={16} />
-            </IconButton>
+            {/* Three-dots menu — only for users with edit or delete permission */}
+            {showMenu && (
+                <>
+                    <IconButton
+                        size="small"
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setAnchorEl(e.currentTarget)
+                        }}
+                        sx={{
+                            'position': 'absolute',
+                            'top': 8,
+                            'right': 8,
+                            'color': colors.primaryBlack,
+                            'padding': '2px',
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)' },
+                        }}>
+                        <IconDots size={16} />
+                    </IconButton>
 
-            <Menu
-                anchorEl={anchorEl}
-                open={menuOpen}
-                onClose={() => setAnchorEl(null)}>
-                <MenuItem
-                    onClick={() => {
-                        setAnchorEl(null)
-                        onEdit(trip)
-                    }}>
-                    Edit
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        setAnchorEl(null)
-                        onDelete(trip)
-                    }}
-                    sx={{ color: colors.primaryRed }}>
-                    Delete
-                </MenuItem>
-            </Menu>
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={menuOpen}
+                        onClose={() => setAnchorEl(null)}>
+                        {showEdit && (
+                            <MenuItem
+                                onClick={() => {
+                                    setAnchorEl(null)
+                                    onEdit(trip)
+                                }}>
+                                Edit
+                            </MenuItem>
+                        )}
+                        {showDelete && (
+                            <MenuItem
+                                onClick={() => {
+                                    setAnchorEl(null)
+                                    onDelete(trip)
+                                }}
+                                sx={{ color: colors.primaryRed }}>
+                                Delete
+                            </MenuItem>
+                        )}
+                    </Menu>
+                </>
+            )}
         </Box>
     )
 }

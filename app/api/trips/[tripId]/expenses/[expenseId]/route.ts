@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { getUserTripRole, canEditExpense, canDeleteExpense } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string; expenseId: string }> }
 
@@ -29,7 +30,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
+
+    // Check permission: role-based or reporter
+    const { role } = await getUserTripRole(userId, tripIdNum)
+    const reporterRes = await pool.query(
+        'SELECT reported_by FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
+        [expenseIdNum, tripIdNum]
+    )
+    if (reporterRes.rows.length === 0) {
+        return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
+    }
+    const isReporter = reporterRes.rows[0].reported_by === userId
+    if (!canEditExpense(role, isAdmin, isReporter)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const body: UpdateExpenseBody = await request.json()
 
@@ -167,7 +182,20 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
+
+    const { role } = await getUserTripRole(userId, tripIdNum)
+    const reporterRes = await pool.query(
+        'SELECT reported_by FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
+        [expenseIdNum, tripIdNum]
+    )
+    if (reporterRes.rows.length === 0) {
+        return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
+    }
+    const isReporter = reporterRes.rows[0].reported_by === userId
+    if (!canDeleteExpense(role, isAdmin, isReporter)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     try {
         await withAuditUser(userId, async (client) => {

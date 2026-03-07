@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { getUserTripRole, canAddExpense } from '@/lib/permissions'
 
 function userSummary(row: { id: number; name: string; email: string | null; avatar_url: string | null; initials: string | null; venmo_url: string | null }) {
     return {
@@ -85,7 +86,7 @@ export async function GET(
         return {
             id: e.id,
             name: e.name,
-            date: e.date,
+            date: typeof e.date === 'string' ? e.date.slice(0, 10) : new Date(e.date).toISOString().slice(0, 10),
             costOriginal: parseFloat(e.cost_original),
             currency: e.currency,
             costConvertedUsd: parseFloat(e.cost_converted_usd),
@@ -141,6 +142,11 @@ export async function POST(
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const reporterId = authUser.userId
+
+    const { role } = await getUserTripRole(authUser.userId, id)
+    if (!canAddExpense(role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const body: CreateExpenseBody = await request.json()
 

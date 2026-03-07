@@ -3,7 +3,7 @@
  * All types are DB-driven — no enum mappings.
  */
 
-import type { TripSummary, UserSummary, Expense, ExpenseCategory, Location } from '@/lib/types'
+import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole } from '@/lib/types'
 
 // ── Trips ──
 
@@ -26,6 +26,7 @@ export type CreateTripData = {
     endDate: string
     description?: string
     participantIds?: number[]
+    visibility?: 'participants' | 'all_users'
 }
 
 export const createTrip = async (data: CreateTripData): Promise<{ id: number; slug: string }> => {
@@ -41,7 +42,7 @@ export const createTrip = async (data: CreateTripData): Promise<{ id: number; sl
     return res.json()
 }
 
-export const updateTrip = async (tripId: number, data: Partial<CreateTripData>): Promise<void> => {
+export const updateTrip = async (tripId: number, data: Partial<CreateTripData> & { visibility?: string }): Promise<void> => {
     const res = await fetch(`/api/trips/${tripId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -138,10 +139,54 @@ export const fetchExpenseCategories = async (): Promise<ExpenseCategory[]> => {
     return res.json()
 }
 
+export const fetchExpenseCategoriesWithMeta = async (): Promise<ExpenseCategoryWithMeta[]> => {
+    const res = await fetch('/api/expense-categories?includeCount=true')
+    if (!res.ok) throw new Error(`Failed to fetch categories: ${res.status}`)
+    return res.json()
+}
+
 // ── Locations ──
 
 export const fetchLocations = async (tripId: number): Promise<Location[]> => {
     const res = await fetch(`/api/trips/${tripId}/locations`)
     if (!res.ok) throw new Error(`Failed to fetch locations: ${res.status}`)
     return res.json()
+}
+
+// ── Participant Roles ──
+
+export const updateParticipantRole = async (
+    tripId: number,
+    userId: number,
+    role: TripRole
+): Promise<void> => {
+    const res = await fetch(`/api/trips/${tripId}/participants/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+    })
+    if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to update role')
+    }
+}
+
+// ── User Preferences ──
+
+export const fetchUserPreferences = async (): Promise<UserPreferences> => {
+    const res = await fetch('/api/users/me/preferences')
+    if (!res.ok) throw new Error(`Failed to fetch preferences: ${res.status}`)
+    return res.json()
+}
+
+export const updateUserPreferences = async (data: Partial<UserPreferences>): Promise<void> => {
+    const res = await fetch('/api/users/me/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to update preferences')
+    }
 }

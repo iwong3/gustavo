@@ -18,26 +18,21 @@ import {
 } from '@mui/material'
 import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
 
-type CategoryWithCount = {
-    id: number
-    name: string
-    usageCount: number
-}
+import { fetchExpenseCategoriesWithMeta } from 'utils/api'
+import type { ExpenseCategoryWithMeta } from '@/lib/types'
 
 export default function CategoriesPage() {
-    const [categories, setCategories] = useState<CategoryWithCount[]>([])
+    const [categories, setCategories] = useState<ExpenseCategoryWithMeta[]>([])
     const [loading, setLoading] = useState(true)
     const [newName, setNewName] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editName, setEditName] = useState('')
-    const [deleteTarget, setDeleteTarget] = useState<CategoryWithCount | null>(null)
+    const [deleteTarget, setDeleteTarget] = useState<ExpenseCategoryWithMeta | null>(null)
     const editRef = useRef<HTMLInputElement>(null)
 
-    const fetchCategories = useCallback(async () => {
+    const loadCategories = useCallback(async () => {
         try {
-            const res = await fetch('/api/expense-categories?includeCount=true')
-            if (!res.ok) throw new Error('Failed to fetch')
-            const data: CategoryWithCount[] = await res.json()
+            const data = await fetchExpenseCategoriesWithMeta()
             setCategories(data)
         } catch (err) {
             console.error('Failed to fetch categories:', err)
@@ -47,8 +42,8 @@ export default function CategoriesPage() {
     }, [])
 
     useEffect(() => {
-        fetchCategories()
-    }, [fetchCategories])
+        loadCategories()
+    }, [loadCategories])
 
     useEffect(() => {
         if (editingId !== null && editRef.current) {
@@ -67,7 +62,7 @@ export default function CategoriesPage() {
                 body: JSON.stringify({ name: trimmed }),
             })
             setNewName('')
-            await fetchCategories()
+            await loadCategories()
         } catch (err) {
             console.error('Failed to add category:', err)
         }
@@ -91,7 +86,7 @@ export default function CategoriesPage() {
                 body: JSON.stringify({ name: trimmed }),
             })
             setEditingId(null)
-            await fetchCategories()
+            await loadCategories()
         } catch (err) {
             console.error('Failed to rename category:', err)
         }
@@ -104,13 +99,13 @@ export default function CategoriesPage() {
                 method: 'DELETE',
             })
             setDeleteTarget(null)
-            await fetchCategories()
+            await loadCategories()
         } catch (err) {
             console.error('Failed to delete category:', err)
         }
     }
 
-    const startEdit = (cat: CategoryWithCount) => {
+    const startEdit = (cat: ExpenseCategoryWithMeta) => {
         setEditingId(cat.id)
         setEditName(cat.name)
     }
@@ -157,81 +152,85 @@ export default function CategoriesPage() {
                 </Typography>
             ) : (
                 <List disablePadding>
-                    {categories.map((cat) => (
-                        <ListItem
-                            key={cat.id}
-                            disablePadding
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                paddingY: 0.75,
-                                borderBottom: '1px solid rgba(0,0,0,0.08)',
-                            }}>
-                            {editingId === cat.id ? (
-                                <>
-                                    <TextField
-                                        size="small"
-                                        value={editName}
-                                        onChange={(e) => setEditName(e.target.value)}
-                                        inputRef={editRef}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleRename(cat.id)
-                                            if (e.key === 'Escape') cancelEdit()
-                                        }}
-                                        onBlur={() => handleRename(cat.id)}
-                                        sx={{
-                                            flex: 1,
-                                            '& .MuiInputBase-root': {
-                                                backgroundColor: '#FFFFEF',
-                                            },
-                                        }}
-                                    />
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleRename(cat.id)}
-                                        sx={{ color: 'green' }}>
-                                        <IconCheck size={18} />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={cancelEdit}
-                                        sx={{ color: 'text.secondary' }}>
-                                        <IconX size={18} />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <>
-                                    <Typography
-                                        onClick={() => startEdit(cat)}
-                                        sx={{
-                                            flex: 1,
-                                            fontSize: 15,
-                                            cursor: 'pointer',
-                                            '&:hover': { color: '#FBBC04' },
-                                        }}>
-                                        {cat.name}
-                                    </Typography>
-                                    <Chip
-                                        label={`${cat.usageCount} expense${cat.usageCount !== 1 ? 's' : ''}`}
-                                        size="small"
-                                        sx={{
-                                            fontSize: 12,
-                                            height: 22,
-                                            backgroundColor: 'rgba(0,0,0,0.06)',
-                                        }}
-                                    />
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => setDeleteTarget(cat)}
-                                        sx={{ color: '#C1121F' }}>
-                                        <IconTrash size={18} />
-                                    </IconButton>
-                                </>
-                            )}
-                        </ListItem>
-                    ))}
+                    {categories.map((cat) => {
+                        return (
+                            <ListItem
+                                key={cat.id}
+                                disablePadding
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    paddingY: 0.75,
+                                    borderBottom: '1px solid rgba(0,0,0,0.08)',
+                                }}>
+                                {editingId === cat.id ? (
+                                    <>
+                                        <TextField
+                                            size="small"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            inputRef={editRef}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleRename(cat.id)
+                                                if (e.key === 'Escape') cancelEdit()
+                                            }}
+                                            onBlur={() => handleRename(cat.id)}
+                                            sx={{
+                                                flex: 1,
+                                                '& .MuiInputBase-root': {
+                                                    backgroundColor: '#FFFFEF',
+                                                },
+                                            }}
+                                        />
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleRename(cat.id)}
+                                            sx={{ color: 'green' }}>
+                                            <IconCheck size={18} />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={cancelEdit}
+                                            sx={{ color: 'text.secondary' }}>
+                                            <IconX size={18} />
+                                        </IconButton>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Typography
+                                            onClick={() => cat.canEdit && startEdit(cat)}
+                                            sx={{
+                                                flex: 1,
+                                                fontSize: 15,
+                                                cursor: cat.canEdit ? 'pointer' : 'default',
+                                                '&:hover': cat.canEdit ? { color: '#FBBC04' } : {},
+                                            }}>
+                                            {cat.name}
+                                        </Typography>
+                                        <Chip
+                                            label={`${cat.usageCount} expense${cat.usageCount !== 1 ? 's' : ''}`}
+                                            size="small"
+                                            sx={{
+                                                fontSize: 12,
+                                                height: 22,
+                                                backgroundColor: 'rgba(0,0,0,0.06)',
+                                            }}
+                                        />
+                                        {cat.canEdit && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setDeleteTarget(cat)}
+                                                sx={{ color: '#C1121F' }}>
+                                                <IconTrash size={18} />
+                                            </IconButton>
+                                        )}
+                                    </>
+                                )}
+                            </ListItem>
+                        )
+                    })}
                 </List>
             )}
 

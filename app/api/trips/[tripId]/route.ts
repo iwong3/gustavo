@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { getUserTripRole, canEditTrip, canDeleteTrip } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
 
@@ -12,6 +13,7 @@ type UpdateTripBody = {
     startDate?: string
     endDate?: string
     description?: string | null
+    visibility?: 'participants' | 'all_users'
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -23,7 +25,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
+
+    const { role } = await getUserTripRole(userId, id)
+    if (!canEditTrip(role, isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const body: UpdateTripBody = await request.json()
 
@@ -61,6 +68,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 sets.push(`description = $${idx++}`)
                 values.push(body.description)
             }
+            if (body.visibility !== undefined) {
+                sets.push(`visibility = $${idx++}`)
+                values.push(body.visibility)
+            }
 
             if (sets.length > 0) {
                 values.push(id)
@@ -92,7 +103,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { userId } = authUser
+    const { userId, isAdmin } = authUser
+
+    const { role } = await getUserTripRole(userId, id)
+    if (!canDeleteTrip(role, isAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     try {
         await withAuditUser(userId, async (client) => {

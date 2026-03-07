@@ -15,6 +15,7 @@ import { SplitBetweenInitials } from 'components/receipts/receipt-items/split-be
 import { CostDisplay, FormattedMoney } from 'utils/currency'
 import { getTablerIcon, CategoryIcon, InitialsIcon } from 'utils/icons'
 import { deleteExpense } from 'utils/api'
+import { canEditExpense as canEditExpenseFn, canDeleteExpense as canDeleteExpenseFn } from 'utils/permissions'
 import { useTripData } from 'providers/trip-data-provider'
 import { getUcUrlFromOpenUrl } from 'utils/image'
 
@@ -30,6 +31,9 @@ interface IReceiptsRowProps {
 export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
     const { trip } = useTripData()
     const participants = trip.participants
+    const isReporter = expense.reportedBy?.id === trip.currentUserId
+    const showEdit = canEditExpenseFn(trip.userRole, trip.isAdmin, isReporter)
+    const showDelete = canDeleteExpenseFn(trip.userRole, trip.isAdmin, isReporter)
 
     const [expanded, setExpanded] = useState(false)
     const [receiptImageExpanded, setReceiptImageExpanded] = useState(false)
@@ -363,24 +367,30 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                         )}
                                     </Box>
                                 )}
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'flex-end',
-                                        gap: 0.5,
-                                        marginTop: 1,
-                                    }}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => setEditDialogOpen(true)}>
-                                        <IconEdit size={18} />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => setDeleteDialogOpen(true)}>
-                                        <IconTrash size={18} color={colors.primaryRed} />
-                                    </IconButton>
-                                </Box>
+                                {(showEdit || showDelete) && (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'flex-end',
+                                            gap: 0.5,
+                                            marginTop: 1,
+                                        }}>
+                                        {showEdit && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setEditDialogOpen(true)}>
+                                                <IconEdit size={18} />
+                                            </IconButton>
+                                        )}
+                                        {showDelete && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setDeleteDialogOpen(true)}>
+                                                <IconTrash size={18} color={colors.primaryRed} />
+                                            </IconButton>
+                                        )}
+                                    </Box>
+                                )}
                             </Box>
                         </Box>
                     </Grid>
