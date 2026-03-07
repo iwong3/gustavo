@@ -358,7 +358,18 @@ export const TripToolbar = () => {
                                         }
                                         onClick={() => {
                                             const sc = document.getElementById('main-scroll')
-                                            if (sc) sc.scrollTop = 0
+                                            if (sc && sc.scrollTop > 0) {
+                                                const start = sc.scrollTop
+                                                const startTime = performance.now()
+                                                const duration = 300
+                                                const animate = (now: number) => {
+                                                    const t = Math.min((now - startTime) / duration, 1)
+                                                    const ease = 1 - Math.pow(1 - t, 3)
+                                                    sc.scrollTop = start * (1 - ease)
+                                                    if (t < 1) requestAnimationFrame(animate)
+                                                }
+                                                requestAnimationFrame(animate)
+                                            }
                                             collapseToggle()
                                         }}
                                     />
