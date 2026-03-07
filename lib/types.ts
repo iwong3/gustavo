@@ -1,6 +1,6 @@
 /** DB-driven types — replaces all hardcoded enums (Trip, Person, Location, SpendType). */
 
-export type TripRole = 'owner' | 'editor' | 'viewer'
+export type TripRole = 'owner' | 'admin' | 'editor' | 'viewer'
 
 export type TripSummary = {
     id: number

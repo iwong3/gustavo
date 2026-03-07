@@ -349,6 +349,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                                                             borderColor: colors.primaryBlack,
                                                         },
                                                     }}>
+                                                    <MenuItem value="admin" sx={{ fontSize: 13 }}>Admin</MenuItem>
                                                     <MenuItem value="editor" sx={{ fontSize: 13 }}>Editor</MenuItem>
                                                     <MenuItem value="viewer" sx={{ fontSize: 13 }}>Viewer</MenuItem>
                                                 </Select>

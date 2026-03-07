@@ -28,8 +28,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const { role } = await request.json()
-    if (role !== 'editor' && role !== 'viewer') {
-        return NextResponse.json({ error: 'Role must be "editor" or "viewer"' }, { status: 400 })
+    if (role !== 'admin' && role !== 'editor' && role !== 'viewer') {
+        return NextResponse.json({ error: 'Role must be "admin", "editor", or "viewer"' }, { status: 400 })
     }
 
     try {

@@ -17,7 +17,7 @@ if (!connectionString) {
 }
 
 const EMAIL = 'ivanwong15@gmail.com'
-const VALID_ROLES = ['owner', 'editor', 'viewer']
+const VALID_ROLES = ['owner', 'admin', 'editor', 'viewer']
 
 async function main() {
     const args = process.argv.slice(2)
@@ -26,7 +26,7 @@ async function main() {
 
     if (!role && !adminFlag) {
         console.log('Usage: pnpm db:test-as <role|reset|status> [--admin|--no-admin]')
-        console.log('  Roles: viewer, editor, owner')
+        console.log('  Roles: viewer, editor, admin, owner')
         console.log('  reset: restore owner + admin')
         console.log('  status: show current state')
         process.exit(0)

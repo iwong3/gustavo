@@ -93,7 +93,7 @@ export default function SettingsPage() {
                         fontWeight: 500,
                         color: colors.primaryBlack,
                     }}>
-                    Default Trip Settings
+                    Trip
                 </Typography>
 
                 <Box
@@ -101,7 +101,7 @@ export default function SettingsPage() {
                     <Typography
                         variant="body2"
                         sx={{ color: colors.primaryBlack }}>
-                        Trip visibility
+                        Default trip visibility
                     </Typography>
                     <ToggleButtonGroup
                         value={prefs?.defaultTripVisibility ?? ''}
@@ -139,6 +139,7 @@ export default function SettingsPage() {
                         sx={toggleGroupSx}>
                         <ToggleButton value="viewer">Viewer</ToggleButton>
                         <ToggleButton value="editor">Editor</ToggleButton>
+                        <ToggleButton value="admin">Admin</ToggleButton>
                     </ToggleButtonGroup>
                 </Box>
 

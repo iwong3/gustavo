@@ -1,7 +1,7 @@
 import type { TripRole } from '@/lib/types'
 
 export function canEditTrip(role: TripRole | null, isAdmin: boolean): boolean {
-    return isAdmin || role === 'owner' || role === 'editor'
+    return isAdmin || role === 'owner' || role === 'admin' || role === 'editor'
 }
 
 export function canDeleteTrip(role: TripRole | null, isAdmin: boolean): boolean {
@@ -9,11 +9,11 @@ export function canDeleteTrip(role: TripRole | null, isAdmin: boolean): boolean 
 }
 
 export function canAddExpense(role: TripRole | null): boolean {
-    return role === 'owner' || role === 'editor' || role === 'viewer'
+    return role === 'owner' || role === 'admin' || role === 'editor' || role === 'viewer'
 }
 
 export function canEditExpense(role: TripRole | null, isAdmin: boolean, isReporter: boolean): boolean {
-    return isAdmin || role === 'owner' || role === 'editor' || isReporter
+    return isAdmin || role === 'owner' || role === 'admin' || role === 'editor' || isReporter
 }
 
 export function canDeleteExpense(role: TripRole | null, isAdmin: boolean, isReporter: boolean): boolean {
@@ -21,9 +21,9 @@ export function canDeleteExpense(role: TripRole | null, isAdmin: boolean, isRepo
 }
 
 export function canManageRoles(role: TripRole | null, isAdmin: boolean): boolean {
-    return isAdmin || role === 'owner'
+    return isAdmin || role === 'owner' || role === 'admin'
 }
 
 export function canManageLocations(role: TripRole | null, isAdmin: boolean): boolean {
-    return isAdmin || role === 'owner' || role === 'editor'
+    return isAdmin || role === 'owner' || role === 'admin' || role === 'editor'
 }
