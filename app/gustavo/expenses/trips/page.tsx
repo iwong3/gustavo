@@ -21,6 +21,17 @@ import { InitialsIcon } from 'utils/icons'
 
 import type { TripSummary } from '@/lib/types'
 
+const formatDateRange = (start: string, end: string) => {
+    const s = new Date(start + 'T00:00:00')
+    const e = new Date(end + 'T00:00:00')
+    const mo = (d: Date) => d.toLocaleString('en-US', { month: 'short' })
+    if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
+        return `${mo(s)} ${s.getDate()} – ${e.getDate()}`
+    }
+    const fmt = (d: Date) => `${mo(d)} ${d.getDate()}`
+    return `${fmt(s)} – ${fmt(e)}`
+}
+
 type TripCardProps = {
     trip: TripSummary
     onEdit: (trip: TripSummary) => void
@@ -66,12 +77,14 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     color: colors.primaryBlack,
                     textDecoration: 'none',
                 }}>
-                {/* Top: trip name */}
-                <Box
-                    sx={{
-                        fontSize: 18,
-                    }}>
-                    {trip.name}
+                {/* Top: trip name + dates */}
+                <Box>
+                    <Box sx={{ fontSize: 18 }}>
+                        {trip.name}
+                    </Box>
+                    <Box sx={{ fontSize: 11, color: 'text.secondary' }}>
+                        {formatDateRange(trip.startDate, trip.endDate)}
+                    </Box>
                 </Box>
                 {/* Bottom: participant initials — stacked overlap */}
                 <Box sx={{ display: 'flex' }}>
@@ -190,8 +203,10 @@ export default function TripsPage() {
     }
 
     const now = new Date().toISOString().slice(0, 10)
-    const activeTrips = trips.filter((t) => t.endDate >= now)
-    const pastTrips = trips.filter((t) => t.endDate < now)
+    const myTrips = trips.filter((t) => t.userRole !== null)
+    const otherTrips = trips.filter((t) => t.userRole === null)
+    const activeTrips = myTrips.filter((t) => t.endDate >= now)
+    const pastTrips = myTrips.filter((t) => t.endDate < now)
 
     useRegisterFab(
         useCallback(() => {
@@ -278,6 +293,39 @@ export default function TripsPage() {
                             marginBottom: 2,
                         }}>
                         {pastTrips.map((t) => (
+                            <TripCard
+                                key={t.id}
+                                trip={t}
+                                onEdit={handleEdit}
+                                onDelete={handleDeleteClick}
+                            />
+                        ))}
+                    </Box>
+                </>
+            )}
+
+            {otherTrips.length > 0 && (
+                <>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginBottom: 2,
+                            width: '100%',
+                            fontSize: 24,
+                            fontFamily: 'var(--font-serif)',
+                        }}>
+                        Other Trips
+                    </Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            width: '100%',
+                            marginBottom: 2,
+                        }}>
+                        {otherTrips.map((t) => (
                             <TripCard
                                 key={t.id}
                                 trip={t}

@@ -9,13 +9,6 @@
 ## Features
 
 - [ ] Currency conversion API
-- [ ] Roles/access
-    - [ ] Private by default
-    - [ ] Add people as editors/viewers
-    - [ ] Possibly create groups and add group as editors/viewers? Need to
-          figure out interactions with groups and specific people's permissions
-- [ ] My trips (upcoming/past) vs. Trips I'm a part of (should that even be a
-      difference) vs. other people's public trips
 - [ ] Export trip data as CSV
 - [ ] More useful graphs for trip expense data
 - [ ] Add notes for a trip? Such as link to Google Photos album
@@ -65,3 +58,7 @@
         - [x] Select app (currently only Travel Expenses)
 - [x] Re-design trip selection
 - [x] Re-design expense tracker
+- [x] Roles/access
+    - [x] Private by default
+    - [x] Add people as editors/viewers
+- [x] View other people's trips
