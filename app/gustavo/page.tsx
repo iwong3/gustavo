@@ -1,6 +1,6 @@
 'use client'
 
-import { colors } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
 import { getTablerIcon } from 'utils/icons'
@@ -76,10 +76,7 @@ export default function GustavoHomePage() {
                             'justifyContent': 'center',
                             'gap': 1.5,
                             'aspectRatio': '1',
-                            'borderRadius': '4px',
-                            'backgroundColor': colors.primaryWhite,
-                            'border': `1px solid ${colors.primaryBlack}`,
-                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                            ...cardSx,
                             'textDecoration': 'none',
                             'color': colors.primaryBlack,
                             '&:active': {

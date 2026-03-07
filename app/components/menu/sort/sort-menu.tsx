@@ -55,7 +55,7 @@ export const useSortMenuStore = create<SortMenuState & SortMenuActions>(
     })
 )
 
-const sortStoreResets = new Set<() => void>()
+export const sortStoreResets = new Set<() => void>()
 
 export const resetAllSortStores = () => {
     sortStoreResets.forEach((reset) => reset())

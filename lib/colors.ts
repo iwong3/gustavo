@@ -14,3 +14,11 @@ export const hardShadow = {
     border: `1px solid ${colors.primaryBlack}`,
     boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
 } as const
+
+// Shared card style — border + shadow + white background. Add borderRadius per usage.
+export const cardSx = {
+    border: `1px solid ${colors.primaryBlack}`,
+    backgroundColor: colors.primaryWhite,
+    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+    borderRadius: '4px',
+} as const

@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import { useEffect, useState } from 'react'
 
 import { InitialsIcon } from 'utils/icons'
-import { useSpendData } from 'providers/spend-data-provider'
+import { useTripData } from 'providers/trip-data-provider'
 
 import type { Expense, UserSummary } from '@/lib/types'
 
@@ -11,7 +11,8 @@ interface ISplitBetweenInitialsProps {
 }
 
 export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) => {
-    const { participants } = useSpendData()
+    const { trip } = useTripData()
+    const participants = trip.participants
 
     const getInitialState = () => {
         const filters = new Map<string, { active: boolean; user: UserSummary }>()

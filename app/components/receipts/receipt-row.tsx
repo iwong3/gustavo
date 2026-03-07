@@ -17,7 +17,6 @@ import { getTablerIcon, CategoryIcon, InitialsIcon } from 'utils/icons'
 import { deleteExpense } from 'utils/api'
 import { useTripData } from 'providers/trip-data-provider'
 import { getUcUrlFromOpenUrl } from 'utils/image'
-import { useSpendData } from 'providers/spend-data-provider'
 
 import type { Expense } from '@/lib/types'
 
@@ -29,8 +28,8 @@ interface IReceiptsRowProps {
 }
 
 export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
-    const { participants } = useSpendData()
     const { trip } = useTripData()
+    const participants = trip.participants
 
     const [expanded, setExpanded] = useState(false)
     const [receiptImageExpanded, setReceiptImageExpanded] = useState(false)

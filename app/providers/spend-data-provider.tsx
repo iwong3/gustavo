@@ -1,7 +1,7 @@
 'use client'
 
 import Fuse from 'fuse.js'
-import { useMemo } from 'react'
+import { createContext, useContext, useDeferredValue, useMemo } from 'react'
 
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
@@ -29,6 +29,8 @@ type SpendDataValue = {
     totalSpendByDateByPerson: Map<number, Map<string, number>> // userId → date → amount
     participants: UserSummary[]
 }
+
+const SpendDataContext = createContext<SpendDataValue | null>(null)
 
 const fuseOptions = {
     keys: [
@@ -213,19 +215,23 @@ function computeSummaries(
     }
 }
 
-export function useSpendData(): SpendDataValue {
+// --- Provider component: computes once, shares via context ---
+
+export function SpendDataProvider({ children }: { children: React.ReactNode }) {
     const { expenses, trip } = useTripData()
     const participants = trip.participants
 
-    // UI state from Zustand stores
-    const splitBetweenFilters = useFilterSplitBetweenStore((s) => s.filters)
-    const paidByFilters = useFilterPaidByStore((s) => s.filters)
-    const spendTypeFilters = useFilterSpendTypeStore((s) => s.filters)
-    const locationFilters = useFilterLocationStore((s) => s.filters)
-    const costOrder = useSortCostStore((s) => s.order)
-    const dateOrder = useSortDateStore((s) => s.order)
-    const nameOrder = useSortItemNameStore((s) => s.order)
-    const searchInput = useSearchBarStore((s) => s.searchInput)
+    // UI state from Zustand stores — deferred so filter/sort/search chip visuals
+    // update instantly while the expensive data recomputation happens in a
+    // lower-priority render pass
+    const splitBetweenFilters = useDeferredValue(useFilterSplitBetweenStore((s) => s.filters))
+    const paidByFilters = useDeferredValue(useFilterPaidByStore((s) => s.filters))
+    const spendTypeFilters = useDeferredValue(useFilterSpendTypeStore((s) => s.filters))
+    const locationFilters = useDeferredValue(useFilterLocationStore((s) => s.filters))
+    const costOrder = useDeferredValue(useSortCostStore((s) => s.order))
+    const dateOrder = useDeferredValue(useSortDateStore((s) => s.order))
+    const nameOrder = useDeferredValue(useSortItemNameStore((s) => s.order))
+    const searchInput = useDeferredValue(useSearchBarStore((s) => s.searchInput))
 
     const filteredExpenses = useMemo(() => {
         let filtered = expenses
@@ -251,12 +257,29 @@ export function useSpendData(): SpendDataValue {
         [filteredExpenses, splitBetweenFilters, participants.length]
     )
 
-    return {
-        expenses,
-        filteredExpenses,
-        totalSpend,
-        debtMap,
-        participants,
-        ...summaries,
+    const value = useMemo<SpendDataValue>(
+        () => ({
+            expenses,
+            filteredExpenses,
+            totalSpend,
+            debtMap,
+            participants,
+            ...summaries,
+        }),
+        [expenses, filteredExpenses, totalSpend, debtMap, participants, summaries]
+    )
+
+    return (
+        <SpendDataContext.Provider value={value}>
+            {children}
+        </SpendDataContext.Provider>
+    )
+}
+
+export function useSpendData(): SpendDataValue {
+    const ctx = useContext(SpendDataContext)
+    if (!ctx) {
+        throw new Error('useSpendData must be used within SpendDataProvider')
     }
+    return ctx
 }

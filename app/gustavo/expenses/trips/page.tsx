@@ -1,15 +1,15 @@
 'use client'
 
-import { colors } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import {
     Box,
     CircularProgress,
-    Fab,
     IconButton,
     Menu,
     MenuItem,
 } from '@mui/material'
-import { IconDots, IconPlus } from '@tabler/icons-react'
+import { IconDots } from '@tabler/icons-react'
+import { useRegisterFab } from 'providers/fab-provider'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -37,10 +37,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 'display': 'flex',
                 'flexDirection': 'column',
                 'width': '100%',
-                'border': `1px solid ${colors.primaryBlack}`,
-                'borderRadius': '4px',
-                'backgroundColor': colors.primaryWhite,
-                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                ...cardSx,
                 'color': colors.primaryBlack,
                 'textDecoration': 'none',
                 '&:active': {
@@ -57,8 +54,9 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 1.5,
+                    gap: 1,
                     padding: 2,
+                    paddingTop: 1,
                     paddingRight: 5,
                     color: colors.primaryBlack,
                     textDecoration: 'none',
@@ -70,14 +68,21 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     }}>
                     {trip.name}
                 </Box>
-                {/* Bottom: participant initials */}
-                <Box sx={{ display: 'flex', gap: 0.75 }}>
-                    {trip.participants.map((p) => (
+                {/* Bottom: participant initials — stacked overlap */}
+                <Box sx={{ display: 'flex' }}>
+                    {trip.participants.map((p, i) => (
                         <InitialsIcon
                             key={p.id}
                             name={p.firstName}
                             initials={p.initials}
-                            sx={{ width: 28, height: 28, fontSize: 10 }}
+                            sx={{
+                                width: 28,
+                                height: 28,
+                                fontSize: 10,
+                                marginLeft: i === 0 ? 0 : -0.5,
+                                zIndex: trip.participants.length - i,
+                                outline: '2px solid white',
+                            }}
                         />
                     ))}
                 </Box>
@@ -175,6 +180,14 @@ export default function TripsPage() {
     const activeTrips = trips.filter((t) => t.endDate >= now)
     const pastTrips = trips.filter((t) => t.endDate < now)
 
+    useRegisterFab(
+        useCallback(() => {
+            setEditTrip(undefined)
+            setFormMode('create')
+            setFormOpen(true)
+        }, [])
+    )
+
     if (loading) {
         return (
             <Box
@@ -262,24 +275,6 @@ export default function TripsPage() {
                     </Box>
                 </>
             )}
-
-            {/* New Trip FAB */}
-            <Fab
-                onClick={() => {
-                    setEditTrip(undefined)
-                    setFormMode('create')
-                    setFormOpen(true)
-                }}
-                size="medium"
-                sx={{
-                    position: 'fixed',
-                    bottom: 90,
-                    right: 16,
-                    backgroundColor: colors.primaryYellow,
-                    zIndex: 9,
-                }}>
-                <IconPlus size={24} />
-            </Fab>
 
             <TripFormDialog
                 open={formOpen}

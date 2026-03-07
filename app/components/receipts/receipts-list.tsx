@@ -1,6 +1,6 @@
 import { Box } from '@mui/material'
 
-import { colors } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import { ReceiptsRow } from 'components/receipts/receipt-row'
 import { useRefresh } from 'providers/refresh-provider'
 import { useSpendData } from 'providers/spend-data-provider'
@@ -18,21 +18,20 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const displayData = expenses || filteredExpenses
 
     return (
-        <Box id="receipts-list">
-            {displayData.map((row, index) => (
+        <Box id="receipts-list" sx={{ paddingTop: 1, scrollMarginTop: '54px' }}>
+            {displayData.map((row) => (
                 <Box
-                    key={'row-' + index}
+                    key={row.id}
                     sx={{
-                        marginX: 1,
+                        ...cardSx,
+                        marginX: 3,
                         marginBottom: 1,
                         border: row.conversionError
                             ? `1.5px solid ${colors.primaryRed}`
                             : `1.5px solid ${colors.primaryBlack}`,
-                        borderRadius: 4,
                         backgroundColor: row.conversionError
                             ? '#ffe8e5'
                             : colors.primaryWhite,
-                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                     }}>
                     <ReceiptsRow expense={row} onRefresh={onRefresh} />
                 </Box>
