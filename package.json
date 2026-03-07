@@ -12,6 +12,7 @@
         "db:backfill": "node --env-file=.env.local scripts/backfill/import-expenses.js",
         "db:create-migration": "bash scripts/db/create-migration.sh",
         "db:migrate": "node --env-file=.env.local scripts/db/migrate.js",
+        "db:migrate:prod": "node --env-file=.env.production.local scripts/db/migrate.js",
         "db:reset": "bash scripts/db/reset-database.sh",
         "db:seed": "node --env-file=.env.local scripts/db/seed.js",
         "db:test-as": "node --env-file=.env.local scripts/db/test-as.js",

@@ -65,6 +65,7 @@ export default function SettingsPage() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 width: '100%',
+                minHeight: '100%',
                 paddingX: 3,
                 paddingTop: 4,
                 gap: 3,
@@ -198,6 +199,17 @@ export default function SettingsPage() {
                 sx={{ marginTop: 2 }}>
                 Sign out
             </Button>
+
+            <Typography
+                sx={{
+                    fontSize: 11,
+                    color: 'text.disabled',
+                    marginTop: 'auto',
+                    paddingBottom: 2,
+                    alignSelf: 'flex-end',
+                }}>
+                Version: {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
+            </Typography>
         </Box>
     )
 }

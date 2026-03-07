@@ -1,3 +1,4 @@
+import { execSync } from 'child_process'
 import withPWA from 'next-pwa'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -6,6 +7,16 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const isDev = process.env.NODE_ENV !== 'production'
+
+const commitHash =
+    process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+    (() => {
+        try {
+            return execSync('git rev-parse --short HEAD').toString().trim()
+        } catch {
+            return 'unknown'
+        }
+    })()
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -25,6 +36,9 @@ const nextConfig = {
             '@visx/scale',
             '@visx/shape',
         ],
+    },
+    env: {
+        NEXT_PUBLIC_COMMIT_HASH: commitHash,
     },
     eslint: {
         // Lint runs as a separate step (pnpm lint); not during build
