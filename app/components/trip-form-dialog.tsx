@@ -9,6 +9,8 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControl,
+    InputLabel,
     MenuItem,
     Select,
     TextField,
@@ -19,6 +21,7 @@ import {
 
 import { createTrip, updateTrip, fetchUsers, fetchUserPreferences, updateParticipantRole } from 'utils/api'
 import { canManageRoles } from 'utils/permissions'
+import { Currency, formatCurrencyLabel } from 'utils/currency'
 import { colors } from '@/lib/colors'
 import type { TripSummary, TripRole, UserSummary } from '@/lib/types'
 
@@ -39,6 +42,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
     const [endDate, setEndDate] = useState(todayISO())
     const [description, setDescription] = useState('')
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
+    const [currency, setCurrency] = useState<Currency>(Currency.USD)
     const [visibility, setVisibility] = useState<'participants' | 'all_users'>('participants')
     const [participantRoles, setParticipantRoles] = useState<Map<number, TripRole>>(new Map())
     const [submitting, setSubmitting] = useState(false)
@@ -58,6 +62,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
             setStartDate(trip.startDate)
             setEndDate(trip.endDate)
             setDescription(trip.description ?? '')
+            setCurrency((trip.currency ?? 'USD') as Currency)
             setSelectedUserIds(trip.participants.map((p) => p.id))
             setVisibility(trip.visibility)
             setParticipantRoles(new Map(trip.participants.map((p) => [p.id, p.role])))
@@ -82,6 +87,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
         setStartDate(todayISO())
         setEndDate(todayISO())
         setDescription('')
+        setCurrency(Currency.USD)
         setSelectedUserIds([])
         setVisibility('participants')
         setParticipantRoles(new Map())
@@ -115,6 +121,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                     endDate,
                     description: description.trim() || undefined,
                     visibility,
+                    currency,
                 })
 
                 // Manage participants: compute additions and removals
@@ -162,6 +169,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                     description: description.trim() || undefined,
                     participantIds: selectedUserIds.length > 0 ? selectedUserIds : undefined,
                     visibility,
+                    currency,
                 })
             }
 
@@ -265,6 +273,21 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                     size="small"
                     sx={fieldSx}
                 />
+
+                <FormControl size="small" fullWidth>
+                    <InputLabel>Local Currency</InputLabel>
+                    <Select
+                        value={currency}
+                        label="Local Currency"
+                        onChange={(e) => setCurrency(e.target.value as Currency)}
+                        sx={fieldSx}>
+                        {Object.values(Currency).map((c) => (
+                            <MenuItem key={c} value={c}>
+                                {formatCurrencyLabel(c)}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
 
                 <Box>
                     <Typography variant="body2" sx={{ marginBottom: 0.5 }}>

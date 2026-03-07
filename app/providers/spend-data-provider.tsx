@@ -125,20 +125,89 @@ function applySearch(data: Expense[], searchInput: string): Expense[] {
     return results.map((r) => data[r.refIndex])
 }
 
+// --- Blended exchange rate calculation ---
+
+/** Compute per-person blended exchange rates from currency exchange expenses.
+ *  Returns a Map: payerId → { currency → rate (local per USD) } */
+function computeBlendedRates(expenses: Expense[]): Map<number, Map<string, number>> {
+    // payerId → currency → { totalUsd, totalLocal }
+    const pools = new Map<number, Map<string, { totalUsd: number; totalLocal: number }>>()
+
+    for (const exp of expenses) {
+        if (exp.categorySlug !== 'currency_exchange') continue
+        if (!exp.localCurrencyReceived || exp.localCurrencyReceived <= 0) continue
+
+        const payerId = exp.paidBy.id
+        const currency = exp.currency !== 'USD' ? exp.currency : 'USD'
+        // For currency exchange: costOriginal is USD paid, localCurrencyReceived is local currency received
+        const usdPaid = exp.costOriginal
+        const localReceived = exp.localCurrencyReceived
+
+        const payerPools = pools.get(payerId) ?? new Map()
+        const pool = payerPools.get(currency) ?? { totalUsd: 0, totalLocal: 0 }
+        pool.totalUsd += usdPaid
+        pool.totalLocal += localReceived
+        payerPools.set(currency, pool)
+        pools.set(payerId, payerPools)
+    }
+
+    // Convert pools to rates: rate = totalLocal / totalUsd
+    const rates = new Map<number, Map<string, number>>()
+    pools.forEach((currencyPools, payerId) => {
+        const payerRates = new Map<string, number>()
+        currencyPools.forEach((pool, currency) => {
+            if (pool.totalUsd > 0) {
+                payerRates.set(currency, pool.totalLocal / pool.totalUsd)
+            }
+        })
+        rates.set(payerId, payerRates)
+    })
+
+    return rates
+}
+
+/** Get the USD value of an expense, using blended rates for non-USD local currency expenses. */
+function getExpenseUsdValue(
+    exp: Expense,
+    blendedRates: Map<number, Map<string, number>>
+): number {
+    // Currency exchange expenses are already in USD (costOriginal = USD paid)
+    if (exp.categorySlug === 'currency_exchange') {
+        return exp.costOriginal
+    }
+
+    // USD expenses — use directly
+    if (exp.currency === 'USD') {
+        return exp.costOriginal
+    }
+
+    // Non-USD expense — try to use payer's blended rate
+    const payerRates = blendedRates.get(exp.paidBy.id)
+    const blendedRate = payerRates?.get(exp.currency)
+    if (blendedRate && blendedRate > 0) {
+        return exp.costOriginal / blendedRate
+    }
+
+    // Fallback: use the pre-computed costConvertedUsd
+    return exp.costConvertedUsd
+}
+
 // --- Debt calculation ---
 
 function computeDebtMap(
     expenses: Expense[],
     participantCount: number
 ): { totalSpend: number; debtMap: Map<number, Map<number, number>> } {
+    const blendedRates = computeBlendedRates(expenses)
     let totalSpend = 0
     const debtMap = new Map<number, Map<number, number>>()
 
     for (const exp of expenses) {
-        totalSpend += exp.costConvertedUsd
+        const usdValue = getExpenseUsdValue(exp, blendedRates)
+        totalSpend += usdValue
         const payerId = exp.paidBy.id
         const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
-        const splitCost = exp.costConvertedUsd / splitCount
+        const splitCost = usdValue / splitCount
 
         for (const participant of exp.splitBetween) {
             if (participant.id === payerId) continue
@@ -156,9 +225,11 @@ function computeDebtMap(
 
 function computeSummaries(
     expenses: Expense[],
+    allExpenses: Expense[],
     splitBetweenFilters: Map<string, boolean>,
     participantCount: number
 ) {
+    const blendedRates = computeBlendedRates(allExpenses)
     let filteredTotalSpend = 0
     let filteredPeopleTotalSpend = 0
     const totalSpendByPerson = new Map<number, number>()
@@ -170,26 +241,27 @@ function computeSummaries(
     const isSplitFilterActive = Array.from(splitBetweenFilters.values()).includes(true)
 
     for (const exp of expenses) {
-        filteredTotalSpend += exp.costConvertedUsd
+        const usdValue = getExpenseUsdValue(exp, blendedRates)
+        filteredTotalSpend += usdValue
 
         // Per-person spend (what they paid)
         const prev = totalSpendByPerson.get(exp.paidBy.id) ?? 0
-        totalSpendByPerson.set(exp.paidBy.id, prev + exp.costConvertedUsd)
+        totalSpendByPerson.set(exp.paidBy.id, prev + usdValue)
 
         // Per-category
         const cat = exp.categoryName ?? 'Other'
-        totalSpendByType.set(cat, (totalSpendByType.get(cat) ?? 0) + exp.costConvertedUsd)
+        totalSpendByType.set(cat, (totalSpendByType.get(cat) ?? 0) + usdValue)
 
         // Per-location
         const loc = exp.locationName ?? 'Other'
-        totalSpendByLocation.set(loc, (totalSpendByLocation.get(loc) ?? 0) + exp.costConvertedUsd)
+        totalSpendByLocation.set(loc, (totalSpendByLocation.get(loc) ?? 0) + usdValue)
 
         // Per-date
-        totalSpendByDate.set(exp.date, (totalSpendByDate.get(exp.date) ?? 0) + exp.costConvertedUsd)
+        totalSpendByDate.set(exp.date, (totalSpendByDate.get(exp.date) ?? 0) + usdValue)
 
         // Per-person split cost (what they owe from this expense)
         const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
-        const splitCost = exp.costConvertedUsd / splitCount
+        const splitCost = usdValue / splitCount
 
         for (const participant of exp.splitBetween) {
             if (isSplitFilterActive && !splitBetweenFilters.get(participant.firstName)) {
@@ -253,8 +325,8 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
     )
 
     const summaries = useMemo(
-        () => computeSummaries(filteredExpenses, splitBetweenFilters, participants.length),
-        [filteredExpenses, splitBetweenFilters, participants.length]
+        () => computeSummaries(filteredExpenses, expenses, splitBetweenFilters, participants.length),
+        [filteredExpenses, expenses, splitBetweenFilters, participants.length]
     )
 
     const value = useMemo<SpendDataValue>(

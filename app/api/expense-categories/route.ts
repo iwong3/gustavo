@@ -9,12 +9,12 @@ export async function GET(request: NextRequest) {
     if (includeCount) {
         const authUser = await requireAuthWithUserId()
         const { rows } = await pool.query(
-            `SELECT ec.id, ec.name, ec.created_by,
+            `SELECT ec.id, ec.name, ec.slug, ec.created_by,
                     COUNT(e.id)::int AS usage_count
              FROM expense_categories ec
              LEFT JOIN expenses e ON e.category_id = ec.id AND e.deleted_at IS NULL
              WHERE ec.deleted_at IS NULL
-             GROUP BY ec.id, ec.name, ec.created_by
+             GROUP BY ec.id, ec.name, ec.slug, ec.created_by
              ORDER BY ec.name`
         )
         const userId = authUser?.userId
@@ -22,13 +22,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(rows.map((r) => ({
             id: r.id,
             name: r.name,
+            slug: r.slug,
             usageCount: r.usage_count,
-            canEdit: isAdmin || r.created_by === userId,
+            canEdit: r.slug ? false : (isAdmin || r.created_by === userId),
         })))
     }
 
     const { rows } = await pool.query(
-        `SELECT id, name FROM expense_categories
+        `SELECT id, name, slug FROM expense_categories
          WHERE deleted_at IS NULL
          ORDER BY name`
     )

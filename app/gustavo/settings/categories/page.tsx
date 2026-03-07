@@ -16,7 +16,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
+import { IconCheck, IconLock, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
 
 import { fetchExpenseCategoriesWithMeta } from 'utils/api'
 import type { ExpenseCategoryWithMeta } from '@/lib/types'
@@ -218,14 +218,16 @@ export default function CategoriesPage() {
                                                 backgroundColor: 'rgba(0,0,0,0.06)',
                                             }}
                                         />
-                                        {cat.canEdit && (
+                                        {cat.slug ? (
+                                            <IconLock size={16} color="#999" />
+                                        ) : cat.canEdit ? (
                                             <IconButton
                                                 size="small"
                                                 onClick={() => setDeleteTarget(cat)}
                                                 sx={{ color: '#C1121F' }}>
                                                 <IconTrash size={18} />
                                             </IconButton>
-                                        )}
+                                        ) : null}
                                     </>
                                 )}
                             </ListItem>

@@ -19,11 +19,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Check ownership
     const catRes = await pool.query(
-        'SELECT created_by FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
+        'SELECT created_by, slug FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
         [id]
     )
     if (catRes.rows.length === 0) {
         return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+    if (catRes.rows[0].slug) {
+        return NextResponse.json({ error: 'System categories cannot be renamed' }, { status: 403 })
     }
     if (!canEditCategory(isAdmin, catRes.rows[0].created_by === userId)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -67,11 +70,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     // Check ownership
     const catRes = await pool.query(
-        'SELECT created_by FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
+        'SELECT created_by, slug FROM expense_categories WHERE id = $1 AND deleted_at IS NULL',
         [id]
     )
     if (catRes.rows.length === 0) {
         return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+    if (catRes.rows[0].slug) {
+        return NextResponse.json({ error: 'System categories cannot be deleted' }, { status: 403 })
     }
     if (!canDeleteCategory(isAdmin, catRes.rows[0].created_by === userId)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

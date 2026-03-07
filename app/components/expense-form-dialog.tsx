@@ -17,14 +17,14 @@ import {
     Typography,
 } from '@mui/material'
 
-import { Currency } from 'utils/currency'
+import { Currency, getCurrencyMeta, formatCurrencyLabel } from 'utils/currency'
 import { addExpense, updateExpense } from 'utils/api'
 import { useTripData } from 'providers/trip-data-provider'
 import { colors } from '@/lib/colors'
 
 import type { Expense } from '@/lib/types'
 
-type Category = { id: number; name: string }
+type Category = { id: number; name: string; slug: string | null }
 
 const todayISO = () => {
     const d = new Date()
@@ -54,6 +54,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
     const [splitBetween, setSplitBetween] = useState<string[]>(['Everyone'])
     const [location, setLocation] = useState('')
     const [notes, setNotes] = useState('')
+    const [localCurrencyReceived, setLocalCurrencyReceived] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [tripLocations, setTripLocations] = useState<string[]>([])
@@ -89,13 +90,31 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
             }
             setLocation(expense.locationName ?? '')
             setNotes(expense.notes ?? '')
+            setLocalCurrencyReceived(expense.localCurrencyReceived?.toFixed(2) ?? '')
             setError('')
         } else if (open && mode === 'add') {
             resetForm()
         }
     }, [open, mode, expense])
 
+    const tripCurrency = (trip.currency ?? 'USD') as Currency
+    const availableCurrencies = tripCurrency === Currency.USD
+        ? [Currency.USD]
+        : [Currency.USD, tripCurrency]
+
+    const selectedCategory = categories.find((c) => c.id === categoryId)
+    const isCurrencyExchange = selectedCategory?.slug === 'currency_exchange'
     const isEveryone = splitBetween.includes('Everyone')
+
+    // When currency exchange is selected, force currency to trip currency and split to paidBy
+    useEffect(() => {
+        if (isCurrencyExchange) {
+            setCurrency(tripCurrency)
+            if (paidBy) {
+                setSplitBetween([paidBy])
+            }
+        }
+    }, [isCurrencyExchange, paidBy, tripCurrency])
 
     const togglePerson = (person: string) => {
         if (person === 'Everyone') {
@@ -127,6 +146,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
         setSplitBetween(['Everyone'])
         setLocation('')
         setNotes('')
+        setLocalCurrencyReceived('')
         setError('')
     }
 
@@ -145,6 +165,15 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
             setError('Please enter a valid cost.')
             return
         }
+        if (isCurrencyExchange && !localCurrencyReceived) {
+            setError('Please enter the local currency amount received.')
+            return
+        }
+        const localReceivedNum = localCurrencyReceived ? parseFloat(localCurrencyReceived) : undefined
+        if (isCurrencyExchange && (isNaN(localReceivedNum!) || localReceivedNum! <= 0)) {
+            setError('Please enter a valid local currency amount.')
+            return
+        }
 
         setSubmitting(true)
         setError('')
@@ -159,6 +188,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
             split_between: splitBetween,
             location: location || undefined,
             notes: notes.trim() || undefined,
+            local_currency_received: localReceivedNum || undefined,
         }
 
         try {
@@ -245,34 +275,39 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
 
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <TextField
-                        label="Cost"
+                        label={isCurrencyExchange ? 'USD paid' : 'Cost'}
                         type="number"
                         value={cost}
                         onChange={(e) => setCost(e.target.value)}
                         onBlur={() => {
                             const n = parseFloat(cost)
-                            if (!isNaN(n)) setCost(n.toFixed(2))
+                            if (!isNaN(n)) setCost(n.toFixed(isCurrencyExchange ? 2 : getCurrencyMeta(currency).decimals))
                         }}
                         required
                         fullWidth
                         size="small"
-                        slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                        slotProps={{
+                            htmlInput: { min: 0, step: isCurrencyExchange ? '0.01' : getCurrencyMeta(currency).step },
+                            input: isCurrencyExchange ? { startAdornment: <Typography sx={{ marginRight: 0.5, color: 'text.secondary' }}>$</Typography> } : undefined,
+                        }}
                         sx={fieldSx}
                     />
-                    <FormControl size="small" sx={{ minWidth: 100 }}>
-                        <InputLabel>Currency</InputLabel>
-                        <Select
-                            value={currency}
-                            label="Currency"
-                            onChange={(e) => setCurrency(e.target.value as Currency)}
-                            sx={fieldSx}>
-                            {Object.values(Currency).map((c) => (
-                                <MenuItem key={c} value={c}>
-                                    {c}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    {!isCurrencyExchange && (
+                        <FormControl size="small" sx={{ minWidth: 100 }}>
+                            <InputLabel>Currency</InputLabel>
+                            <Select
+                                value={currency}
+                                label="Currency"
+                                onChange={(e) => setCurrency(e.target.value as Currency)}
+                                sx={fieldSx}>
+                                {availableCurrencies.map((c) => (
+                                    <MenuItem key={c} value={c}>
+                                        {formatCurrencyLabel(c)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    )}
                 </Box>
 
                 <FormControl size="small" fullWidth>
@@ -293,6 +328,30 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     </Select>
                 </FormControl>
 
+                {isCurrencyExchange && (() => {
+                    const localMeta = getCurrencyMeta(tripCurrency)
+                    return (
+                        <TextField
+                            label={`Local currency received (${tripCurrency})`}
+                            type="number"
+                            value={localCurrencyReceived}
+                            onChange={(e) => setLocalCurrencyReceived(e.target.value)}
+                            onBlur={() => {
+                                const n = parseFloat(localCurrencyReceived)
+                                if (!isNaN(n)) setLocalCurrencyReceived(n.toFixed(localMeta.decimals))
+                            }}
+                            required
+                            fullWidth
+                            size="small"
+                            slotProps={{
+                                htmlInput: { min: 0, step: localMeta.step },
+                                input: { startAdornment: <Typography sx={{ marginRight: 0.5, color: 'text.secondary' }}>{localMeta.symbol}</Typography> },
+                            }}
+                            sx={fieldSx}
+                        />
+                    )
+                })()}
+
                 <FormControl size="small" fullWidth required>
                     <InputLabel>Paid by</InputLabel>
                     <Select
@@ -308,11 +367,11 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     </Select>
                 </FormControl>
 
-                <Box>
+                <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                     <Typography variant="body2" sx={{ marginBottom: 0.5 }}>
                         Split between
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pointerEvents: isCurrencyExchange ? 'none' : 'auto' }}>
                         <Chip
                             label="Everyone"
                             onClick={() => togglePerson('Everyone')}

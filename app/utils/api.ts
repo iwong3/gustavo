@@ -27,6 +27,7 @@ export type CreateTripData = {
     description?: string
     participantIds?: number[]
     visibility?: 'participants' | 'all_users'
+    currency?: string
 }
 
 export const createTrip = async (data: CreateTripData): Promise<{ id: number; slug: string }> => {

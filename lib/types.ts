@@ -9,6 +9,7 @@ export type TripSummary = {
     startDate: string  // ISO YYYY-MM-DD
     endDate: string    // ISO YYYY-MM-DD
     description: string | null
+    currency: string
     visibility: 'participants' | 'all_users'
     userRole: TripRole | null  // current user's role, null if non-participant viewing public trip
     isAdmin: boolean
@@ -41,6 +42,7 @@ export type Expense = {
     conversionError: boolean
     categoryId: number | null
     categoryName: string | null
+    categorySlug: string | null
     locationId: number | null
     locationName: string | null
     paidBy: UserSummary
@@ -50,11 +52,13 @@ export type Expense = {
     isEveryone: boolean
     notes: string
     receiptImageUrl: string | null
+    localCurrencyReceived: number | null
 }
 
 export type ExpenseCategory = {
     id: number
     name: string
+    slug: string | null
 }
 
 export type ExpenseCategoryWithMeta = ExpenseCategory & {

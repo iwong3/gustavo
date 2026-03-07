@@ -243,6 +243,26 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                     FormattedMoney().format(splitCost)
                                 )}
                             </Box>
+                            {/* Currency exchange details */}
+                            {expense.categorySlug === 'currency_exchange' && expense.localCurrencyReceived && (
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                        marginTop: 1,
+                                        fontSize: 13,
+                                        fontStyle: 'italic',
+                                        color: 'text.secondary',
+                                    }}>
+                                    {FormattedMoney('USD').format(expense.costOriginal)}
+                                    &nbsp;→&nbsp;
+                                    {FormattedMoney(expense.currency, 0).format(expense.localCurrencyReceived)}
+                                    &nbsp;
+                                    (rate: {(expense.localCurrencyReceived / expense.costOriginal).toFixed(2)})
+                                </Box>
+                            )}
                             <Box
                                 sx={{
                                     display: 'flex',

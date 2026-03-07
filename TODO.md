@@ -8,7 +8,6 @@
 
 ## Features
 
-- [ ] Currency conversion API
 - [ ] Export trip data as CSV
 - [ ] More useful graphs for trip expense data
 - [ ] Add notes for a trip? Such as link to Google Photos album
@@ -35,6 +34,7 @@
 
 - [ ] Simplify Zustand usage
 - [ ] Consider MUI/Emotion vs. Tailwind
+- [ ] Unit tests (e.g. debt calculation logic)
 
 ## Others
 
@@ -64,3 +64,4 @@
     - [x] Private by default
     - [x] Add people as editors/viewers
 - [x] View other people's trips
+- [x] Track currency exchange as expenses for more accurate debt calculation

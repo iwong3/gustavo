@@ -31,7 +31,8 @@ export async function GET(
         `SELECT
             e.id, e.name, e.date, e.cost_original, e.currency,
             e.cost_converted_usd, e.exchange_rate, e.conversion_error,
-            e.category_id, ec.name AS category_name,
+            e.category_id, ec.name AS category_name, ec.slug AS category_slug,
+            e.local_currency_received,
             e.location_id, l.name AS location_name,
             e.notes, e.reported_at,
             payer.id AS payer_id, payer.name AS payer_name, payer.email AS payer_email,
@@ -94,6 +95,7 @@ export async function GET(
             conversionError: e.conversion_error,
             categoryId: e.category_id,
             categoryName: e.category_name,
+            categorySlug: e.category_slug,
             locationId: e.location_id,
             locationName: e.location_name,
             notes: e.notes ?? '',
@@ -110,6 +112,7 @@ export async function GET(
             }) : null,
             splitBetween,
             isEveryone: splitBetween.length === tripParticipantCount,
+            localCurrencyReceived: e.local_currency_received ? parseFloat(e.local_currency_received) : null,
             receiptImageUrl: null,
         }
     })
@@ -127,6 +130,7 @@ type CreateExpenseBody = {
     split_between: string[] // first names, or ["Everyone"]
     location?: string // location name
     notes?: string
+    local_currency_received?: number
 }
 
 export async function POST(
@@ -181,10 +185,10 @@ export async function POST(
 
             // Insert expense
             const expenseRes = await client.query(
-                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at, local_currency_received)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
                  RETURNING id`,
-                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId]
+                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId, body.local_currency_received || null]
             )
             const expId = expenseRes.rows[0].id
 

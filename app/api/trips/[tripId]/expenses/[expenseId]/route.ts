@@ -18,6 +18,7 @@ type UpdateExpenseBody = {
     split_between?: string[] // first names, or ["Everyone"]
     location?: string | null // location name
     notes?: string
+    local_currency_received?: number | null
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -87,6 +88,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             if (body.notes !== undefined) {
                 sets.push(`notes = $${idx++}`)
                 values.push(body.notes)
+            }
+            if (body.local_currency_received !== undefined) {
+                sets.push(`local_currency_received = $${idx++}`)
+                values.push(body.local_currency_received)
             }
 
             // Resolve paid_by

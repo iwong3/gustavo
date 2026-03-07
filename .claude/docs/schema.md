@@ -24,6 +24,7 @@ trips
   start_date DATE
   end_date DATE
   visibility TEXT (default 'participants')
+  currency TEXT (default 'USD') -- local currency for the trip destination
   created_by BIGINT FK -> users
   created_at, updated_at, deleted_at
 
@@ -47,6 +48,7 @@ expense_categories
   id BIGINT PK
   name TEXT (unique)
   created_by BIGINT FK -> users
+  slug TEXT (unique, nullable) -- system categories (e.g. 'currency_exchange'); NULL for user-created
   created_at, updated_at, deleted_at
 
 expenses
@@ -66,6 +68,7 @@ expenses
   reported_by BIGINT FK -> users
   reported_at TIMESTAMPTZ
   created_at, updated_at, deleted_at
+  local_currency_received NUMERIC(12,2) -- only for currency exchange expenses
 
 expense_participants
   id BIGINT PK
@@ -137,12 +140,12 @@ users 1──* expense_participants
 - **BIGINT PKs** — simpler and more efficient than UUID for a single-DB personal app
 - **TEXT for role/visibility/currency** — no Postgres ENUMs (can't remove values). Validated in app code.
 - **Soft deletes** — `deleted_at TIMESTAMPTZ` on users, trips, locations, expenses, expense_categories. All queries filter `WHERE deleted_at IS NULL`.
-- **Expense categories** — global (not trip-scoped), with `created_by` for ownership. Soft-deleted categories still display on existing expenses and remain filterable.
+- **Expense categories** — global (not trip-scoped), with `created_by` for ownership. System categories have a `slug` (e.g. `currency_exchange`) and `created_by = NULL`; they cannot be renamed or deleted. Soft-deleted categories still display on existing expenses and remain filterable.
 - **"Everyone" split detection** — compare expense_participants count to trip_participants count for that trip. No separate flag column.
 - **Users without email** — some participants don't have Google accounts. They have `email = NULL` and cannot log in, but can be referenced as payers/participants.
 - **Trip ownership** — `trips.created_by` determines the owner. The owner is also recorded as a participant with `role = 'owner'`.
 - **`updated_at` trigger** — automatically set on UPDATE via `set_updated_at()` trigger function on users, trips, expenses.
-- **Home currency** — always USD, handled in app code. Not stored per-trip.
+- **Home currency** — always USD for debt calculation. Trip-level `currency` column stores the destination's local currency (e.g., JPY for Japan). Expense form shows only USD + trip currency.
 - **Audit log** — Postgres triggers on all tables automatically write to `audit_log`. User attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`).
 
 ## Common Query Patterns

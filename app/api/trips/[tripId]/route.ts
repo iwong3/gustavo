@@ -14,6 +14,7 @@ type UpdateTripBody = {
     endDate?: string
     description?: string | null
     visibility?: 'participants' | 'all_users'
+    currency?: string
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -71,6 +72,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             if (body.visibility !== undefined) {
                 sets.push(`visibility = $${idx++}`)
                 values.push(body.visibility)
+            }
+            if (body.currency !== undefined) {
+                sets.push(`currency = $${idx++}`)
+                values.push(body.currency)
             }
 
             if (sets.length > 0) {

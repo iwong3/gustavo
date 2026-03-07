@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         // Single trip by slug
         const tripRes = await pool.query(
             `SELECT t.id, t.name, t.slug, t.description, t.start_date, t.end_date,
-                    t.created_by, t.visibility,
+                    t.created_by, t.visibility, t.currency,
                     tp.role AS user_role
              FROM trips t
              LEFT JOIN trip_participants tp ON tp.trip_id = t.id AND tp.user_id = $2 AND tp.left_at IS NULL
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
             endDate: formatDate(trip.end_date),
             createdBy: trip.created_by,
             visibility: trip.visibility,
+            currency: trip.currency,
             userRole: trip.user_role as TripRole | null,
             isAdmin,
             currentUserId: userId,
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
     // All trips visible to user (participant OR public)
     const tripsRes = await pool.query(
         `SELECT t.id, t.name, t.slug, t.description, t.start_date, t.end_date,
-                t.created_by, t.visibility,
+                t.created_by, t.visibility, t.currency,
                 tp.role AS user_role
          FROM trips t
          LEFT JOIN trip_participants tp ON tp.trip_id = t.id AND tp.user_id = $1 AND tp.left_at IS NULL
@@ -125,6 +126,7 @@ export async function GET(request: NextRequest) {
         endDate: formatDate(t.end_date),
         createdBy: t.created_by,
         visibility: t.visibility,
+        currency: t.currency,
         userRole: t.user_role as TripRole | null,
         isAdmin,
         currentUserId: userId,
@@ -147,6 +149,7 @@ type CreateTripBody = {
     description?: string
     participantIds?: number[]
     visibility?: 'participants' | 'all_users'
+    currency?: string
 }
 
 function slugify(name: string): string {
@@ -175,10 +178,12 @@ export async function POST(request: NextRequest) {
             const visibility = body.visibility ?? prefsRes.rows[0]?.default_trip_visibility ?? 'participants'
             const defaultRole = prefsRes.rows[0]?.default_participant_role ?? 'viewer'
 
+            const currency = body.currency ?? 'USD'
+
             const res = await client.query(
-                `INSERT INTO trips (name, slug, start_date, end_date, description, created_by, visibility)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                [body.name, slug, body.startDate, body.endDate, body.description || null, creatorId, visibility]
+                `INSERT INTO trips (name, slug, start_date, end_date, description, created_by, visibility, currency)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+                [body.name, slug, body.startDate, body.endDate, body.description || null, creatorId, visibility, currency]
             )
             const newTripId = res.rows[0].id
 
