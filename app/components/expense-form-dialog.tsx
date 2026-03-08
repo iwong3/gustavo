@@ -253,6 +253,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
     }
 
     const isEdit = mode === 'edit'
+    const fieldShadow = `2px 2px 0px ${colors.primaryBlack}`
     const fieldSx = {
         'backgroundColor': colors.primaryWhite,
         'borderRadius': '4px',
@@ -262,10 +263,28 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
         '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.primaryBlack,
         },
+        // Shadow for TextField wrapper (OutlinedInput is a child)
+        '& .MuiOutlinedInput-root': {
+            boxShadow: fieldShadow,
+        },
+        // Shadow for standalone Select (it IS the OutlinedInput root)
+        '&.MuiOutlinedInput-root': {
+            boxShadow: fieldShadow,
+        },
         '& input[type="date"]': {
             textAlign: 'left',
         },
     }
+
+    const chipSx = (selected: boolean) => ({
+        'border': `1px solid ${colors.primaryBlack}`,
+        'backgroundColor': selected ? colors.primaryYellow : colors.primaryWhite,
+        'fontWeight': selected ? 600 : 400,
+        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+        '&:hover': {
+            backgroundColor: selected ? colors.primaryYellow : colors.primaryWhite,
+        },
+    })
 
     return (
         <FormDrawer open={open} onClose={handleClose}>
@@ -459,18 +478,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                             label="Everyone"
                             onClick={() => togglePerson('Everyone')}
                             size="small"
-                            sx={{
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'backgroundColor': isEveryone
-                                    ? colors.primaryYellow
-                                    : colors.primaryWhite,
-                                'fontWeight': isEveryone ? 600 : 400,
-                                '&:hover': {
-                                    backgroundColor: isEveryone
-                                        ? colors.primaryYellow
-                                        : colors.primaryWhite,
-                                },
-                            }}
+                            sx={chipSx(isEveryone)}
                         />
                         {people.map((p) => {
                             const selected = !isEveryone && splitBetween.includes(p)
@@ -480,18 +488,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                                     label={p}
                                     onClick={() => togglePerson(p)}
                                     size="small"
-                                    sx={{
-                                        'border': `1px solid ${colors.primaryBlack}`,
-                                        'backgroundColor': selected
-                                            ? colors.primaryYellow
-                                            : colors.primaryWhite,
-                                        'fontWeight': selected ? 600 : 400,
-                                        '&:hover': {
-                                            backgroundColor: selected
-                                                ? colors.primaryYellow
-                                                : colors.primaryWhite,
-                                        },
-                                    }}
+                                    sx={chipSx(selected)}
                                 />
                             )
                         })}
@@ -555,7 +552,7 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                     </Typography>
                 )}
             </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '12px 24px', paddingBottom: `calc(12px + env(safe-area-inset-bottom, 0px))` }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '16px 24px', paddingBottom: `calc(24px + env(safe-area-inset-bottom, 0px))` }}>
                 <Button onClick={handleClose} disabled={submitting} size="large">
                     Cancel
                 </Button>

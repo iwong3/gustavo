@@ -1,7 +1,7 @@
 'use client'
 
 import { colors } from '@/lib/colors'
-import { Box, Fade, Slide } from '@mui/material'
+import { Box, Slide } from '@mui/material'
 import { createPortal } from 'react-dom'
 
 const HEADER_HEIGHT = 56
@@ -17,18 +17,17 @@ export default function FormDrawer({ open, onClose, children }: Props) {
 
     return createPortal(
         <>
-            {/* Backdrop */}
-            <Fade in={open} timeout={300}>
+            {/* Backdrop (transparent, just catches clicks to close) */}
+            {open && (
                 <Box
                     onClick={onClose}
                     sx={{
                         position: 'fixed',
                         inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
                         zIndex: 1200,
                     }}
                 />
-            </Fade>
+            )}
 
             {/* Drawer panel */}
             <Slide
@@ -48,6 +47,8 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         backgroundColor: colors.secondaryYellow,
                         borderTopLeftRadius: '16px',
                         borderTopRightRadius: '16px',
+                        borderTop: `1px solid ${colors.primaryBlack}`,
+                        boxShadow: `4px -2px 0px ${colors.primaryBlack}`,
                         zIndex: 1300,
                         display: 'flex',
                         flexDirection: 'column',
@@ -59,11 +60,11 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                             overflowY: 'auto',
                             display: 'flex',
                             flexDirection: 'column',
-                            backgroundImage: `linear-gradient(${colors.secondaryYellow}CC, ${colors.secondaryYellow}EE), url(/lined-paper.jpg)`,
-                            backgroundSize: '100%, 120%',
-                            backgroundPosition: 'top left, top left',
-                            backgroundRepeat: 'no-repeat, no-repeat',
-                            backgroundAttachment: 'local, local',
+                            // backgroundImage: `linear-gradient(${colors.secondaryYellow}CC, ${colors.secondaryYellow}EE), url(/lined-paper.jpg)`,
+                            // backgroundSize: '100%, 120%',
+                            // backgroundPosition: 'top left, top left',
+                            // backgroundRepeat: 'no-repeat, no-repeat',
+                            // backgroundAttachment: 'local, local',
                         }}>
                         {children}
                     </Box>

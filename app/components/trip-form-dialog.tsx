@@ -199,6 +199,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
 
     const tripLabelSx = { fontWeight: 600, fontSize: 13, color: colors.primaryBlack, marginBottom: 0.5 }
 
+    const fieldShadow = `2px 2px 0px ${colors.primaryBlack}`
     const fieldSx = {
         'backgroundColor': colors.primaryWhite,
         'borderRadius': '4px',
@@ -208,10 +209,26 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
         '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.primaryBlack,
         },
+        '& .MuiOutlinedInput-root': {
+            boxShadow: fieldShadow,
+        },
+        '&.MuiOutlinedInput-root': {
+            boxShadow: fieldShadow,
+        },
         '& input[type="date"]': {
             textAlign: 'left',
         },
     }
+
+    const chipSx = (selected: boolean) => ({
+        'border': `1px solid ${colors.primaryBlack}`,
+        'backgroundColor': selected ? colors.primaryYellow : colors.primaryWhite,
+        'fontWeight': selected ? 600 : 400,
+        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+        '&:hover': {
+            backgroundColor: selected ? colors.primaryYellow : colors.primaryWhite,
+        },
+    })
 
     return (
         <FormDrawer open={open} onClose={handleClose}>
@@ -321,18 +338,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                                     label={u.firstName}
                                     onClick={() => toggleUser(u.id)}
                                     size="small"
-                                    sx={{
-                                        'border': `1px solid ${colors.primaryBlack}`,
-                                        'backgroundColor': selectedUserIds.includes(u.id)
-                                            ? colors.primaryYellow
-                                            : colors.primaryWhite,
-                                        'fontWeight': selectedUserIds.includes(u.id) ? 600 : 400,
-                                        '&:hover': {
-                                            backgroundColor: selectedUserIds.includes(u.id)
-                                                ? colors.primaryYellow
-                                                : colors.primaryWhite,
-                                        },
-                                    }}
+                                    sx={chipSx(selectedUserIds.includes(u.id))}
                                 />
                             ))}
                     </Box>
@@ -371,6 +377,8 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                                                         height: 24,
                                                         backgroundColor: colors.primaryYellow,
                                                         fontWeight: 600,
+                                                        border: `1px solid ${colors.primaryBlack}`,
+                                                        boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                                                     }}
                                                 />
                                             ) : (
@@ -389,6 +397,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                                                         fontSize: 12,
                                                         height: 28,
                                                         backgroundColor: colors.primaryWhite,
+                                                        boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                                                         '& .MuiOutlinedInput-notchedOutline': {
                                                             borderColor: colors.primaryBlack,
                                                         },
@@ -418,11 +427,14 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                         size="small"
                         fullWidth
                         sx={{
+                            boxShadow: fieldShadow,
                             '& .MuiToggleButton-root': {
                                 'textTransform': 'none',
                                 'fontSize': 13,
                                 'border': `1px solid ${colors.primaryBlack}`,
                                 'color': colors.primaryBlack,
+                                'backgroundColor': colors.primaryWhite,
+                                '&:hover': { backgroundColor: colors.primaryWhite },
                                 '&.Mui-selected': {
                                     backgroundColor: colors.primaryYellow,
                                     fontWeight: 600,
@@ -441,7 +453,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                     </Typography>
                 )}
             </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '12px 24px', paddingBottom: `calc(12px + env(safe-area-inset-bottom, 0px))` }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '16px 24px', paddingBottom: `calc(24px + env(safe-area-inset-bottom, 0px))` }}>
                 <Button onClick={handleClose} disabled={submitting} size="large">
                     Cancel
                 </Button>
