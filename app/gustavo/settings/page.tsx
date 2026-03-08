@@ -45,11 +45,16 @@ export default function SettingsPage() {
     const { name, email, image } = session.user
 
     const toggleGroupSx = {
+        'border': `2px solid ${colors.primaryBlack}`,
+        'borderRadius': 1,
+        'boxShadow': `3px 4px 0px ${colors.primaryBlack}`,
         '& .MuiToggleButton-root': {
             'textTransform': 'none',
             'fontSize': 14,
-            'border': `1px solid ${colors.primaryBlack}`,
+            'border': 'none',
+            'borderRight': `2px solid ${colors.primaryBlack}`,
             'color': colors.primaryBlack,
+            '&:last-of-type': { borderRight: 'none' },
             '&.Mui-selected': {
                 'backgroundColor': colors.primaryYellow,
                 'fontWeight': 600,

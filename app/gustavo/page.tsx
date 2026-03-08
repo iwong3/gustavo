@@ -32,7 +32,7 @@ export default function GustavoHomePage() {
                 paddingX: 4,
             }}>
             {/* Gus Fring avatar */}
-            <Box sx={{ paddingBottom: 1 }}>
+            <Box sx={{ paddingBottom: 1, paddingTop: 1 }}>
                 <img
                     src="/gus-fring.png"
                     alt="Gustavo"
@@ -41,6 +41,9 @@ export default function GustavoHomePage() {
                         height: 96,
                         borderRadius: '100%',
                         objectFit: 'cover',
+                        border: `4px solid ${colors.primaryWhite}`,
+                        outline: `3px solid ${colors.primaryBlack}`,
+                        boxShadow: `3px 4px 0px ${colors.primaryBlack}`,
                     }}
                 />
             </Box>

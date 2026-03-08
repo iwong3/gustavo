@@ -12,6 +12,8 @@
 - [ ] More useful graphs for trip expense data
 - [ ] Add notes for a trip? Such as link to Google Photos album
 - [ ] Track user's last login
+- [ ] Update "manage categories" and "manage locations" settings
+- [ ] Add ability to add locations when creating or editing a trip
 
 ## UX / Design
 
