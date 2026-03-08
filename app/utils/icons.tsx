@@ -1,5 +1,6 @@
 import { Box, SxProps, Theme } from '@mui/material'
 import {
+    ArrowsLeftRight,
     Bed,
     ForkKnife,
     FunnelSimple,
@@ -378,6 +379,8 @@ export const getIconFromCategory = (
     switch (category) {
         case 'Attraction':
             return <MapPinArea size={size} />
+        case 'Currency Exchange':
+            return <ArrowsLeftRight size={size} />
         case 'Transit':
             return <Train size={size} />
         case 'Food':
@@ -396,6 +399,8 @@ export const getColorForCategory = (category: string | null | undefined) => {
     switch (category) {
         case 'Attraction':
             return '#ff9b85'
+        case 'Currency Exchange':
+            return '#b8d8ba'
         case 'Transit':
             return '#aed9e0'
         case 'Food':

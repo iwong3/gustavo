@@ -5,14 +5,10 @@ import {
     Box,
     Button,
     Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     FormControl,
-    InputLabel,
     MenuItem,
     Select,
+    Skeleton,
     TextField,
     ToggleButton,
     ToggleButtonGroup,
@@ -20,9 +16,11 @@ import {
 } from '@mui/material'
 
 import { createTrip, updateTrip, fetchUsers, fetchUserPreferences, updateParticipantRole } from 'utils/api'
+import { useCurrentUser } from 'hooks/useCurrentUser'
 import { canManageRoles } from 'utils/permissions'
 import { Currency, formatCurrencyLabel } from 'utils/currency'
 import { colors } from '@/lib/colors'
+import FormDrawer from 'components/form-drawer'
 import type { TripSummary, TripRole, UserSummary } from '@/lib/types'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -36,6 +34,7 @@ type Props = {
 }
 
 export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }: Props) {
+    const currentUser = useCurrentUser()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
     const [name, setName] = useState('')
     const [startDate, setStartDate] = useState(todayISO())
@@ -51,10 +50,16 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
     useEffect(() => {
         if (open) {
             fetchUsers()
-                .then(setAllUsers)
+                .then((users) => {
+                    setAllUsers(users)
+                    // Pre-select current user in create mode
+                    if (mode === 'create' && currentUser) {
+                        setSelectedUserIds((prev) => prev.includes(currentUser.id) ? prev : [currentUser.id])
+                    }
+                })
                 .catch(() => {})
         }
-    }, [open])
+    }, [open, mode, currentUser])
 
     useEffect(() => {
         if (open && mode === 'edit' && trip) {
@@ -192,6 +197,8 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
     const isEdit = mode === 'edit'
     const showRoleManagement = isEdit && trip && canManageRoles(trip.userRole, trip.isAdmin)
 
+    const tripLabelSx = { fontWeight: 600, fontSize: 13, color: colors.primaryBlack, marginBottom: 0.5 }
+
     const fieldSx = {
         'backgroundColor': colors.primaryWhite,
         'borderRadius': '4px',
@@ -201,126 +208,140 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
         '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: colors.primaryBlack,
         },
+        '& input[type="date"]': {
+            textAlign: 'left',
+        },
     }
 
     return (
-        <Dialog
-            open={open}
-            onClose={handleClose}
-            maxWidth="sm"
-            fullWidth
-            slotProps={{
-                paper: {
-                    sx: {
-                        backgroundColor: colors.secondaryYellow,
-                        border: `1px solid ${colors.primaryBlack}`,
-                        boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
-                        borderRadius: '6px',
-                    },
-                },
-            }}>
-            <DialogTitle sx={{ fontWeight: 700, color: colors.primaryBlack }}>
+        <FormDrawer open={open} onClose={handleClose}>
+            <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, color: colors.primaryBlack, padding: '16px 24px 0' }}
+            >
                 {isEdit ? 'Edit Trip' : 'New Trip'}
-            </DialogTitle>
-            <DialogContent
+            </Typography>
+            <Box
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
-                    paddingTop: '8px !important',
+                    padding: '16px 24px',
+                    flex: 1,
+                    overflowY: 'auto',
                 }}>
-                <TextField
-                    label="Trip name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    fullWidth
-                    size="small"
-                    sx={fieldSx}
-                />
-
-                <TextField
-                    label="Start date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
-                    fullWidth
-                    size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    sx={fieldSx}
-                />
-
-                <TextField
-                    label="End date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                    fullWidth
-                    size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    sx={fieldSx}
-                />
-
-                <TextField
-                    label="Description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    multiline
-                    rows={2}
-                    fullWidth
-                    size="small"
-                    sx={fieldSx}
-                />
-
-                <FormControl size="small" fullWidth>
-                    <InputLabel>Local Currency</InputLabel>
-                    <Select
-                        value={currency}
-                        label="Local Currency"
-                        onChange={(e) => setCurrency(e.target.value as Currency)}
-                        sx={fieldSx}>
-                        {Object.values(Currency).map((c) => (
-                            <MenuItem key={c} value={c}>
-                                {formatCurrencyLabel(c)}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                <Box>
+                    <Typography sx={tripLabelSx}>Trip name *</Typography>
+                    <TextField
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Japan 2025"
+                        required
+                        fullWidth
+                        size="small"
+                        sx={fieldSx}
+                    />
+                </Box>
 
                 <Box>
-                    <Typography variant="body2" sx={{ marginBottom: 0.5 }}>
-                        Participants
-                    </Typography>
+                    <Typography sx={tripLabelSx}>Start date *</Typography>
+                    <TextField
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        required
+                        fullWidth
+                        size="small"
+                        slotProps={{ inputLabel: { shrink: true } }}
+                        sx={fieldSx}
+                    />
+                </Box>
+
+                <Box>
+                    <Typography sx={tripLabelSx}>End date *</Typography>
+                    <TextField
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        required
+                        fullWidth
+                        size="small"
+                        slotProps={{ inputLabel: { shrink: true } }}
+                        sx={fieldSx}
+                    />
+                </Box>
+
+                <Box>
+                    <Typography sx={tripLabelSx}>Description</Typography>
+                    <TextField
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Optional"
+                        multiline
+                        rows={2}
+                        fullWidth
+                        size="small"
+                        sx={fieldSx}
+                    />
+                </Box>
+
+                <Box>
+                    <Typography sx={tripLabelSx}>Local Currency</Typography>
+                    <FormControl size="small" fullWidth>
+                        <Select
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value as Currency)}
+                            displayEmpty
+                            sx={fieldSx}>
+                            {Object.values(Currency).map((c) => (
+                                <MenuItem key={c} value={c}>
+                                    {formatCurrencyLabel(c)}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+
+                <Box>
+                    <Typography sx={tripLabelSx}>Participants</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {allUsers.map((u) => (
-                            <Chip
-                                key={u.id}
-                                label={u.firstName}
-                                onClick={() => toggleUser(u.id)}
-                                size="small"
-                                sx={{
-                                    'border': `1px solid ${colors.primaryBlack}`,
-                                    'backgroundColor': selectedUserIds.includes(u.id)
-                                        ? colors.primaryYellow
-                                        : colors.primaryWhite,
-                                    'fontWeight': selectedUserIds.includes(u.id) ? 600 : 400,
-                                    '&:hover': {
-                                        backgroundColor: selectedUserIds.includes(u.id)
+                        {allUsers.length === 0
+                            ? Array.from({ length: 5 }, (_, i) => (
+                                <Skeleton
+                                    key={i}
+                                    variant="rounded"
+                                    width={60 + (i % 3) * 16}
+                                    height={24}
+                                    sx={{ borderRadius: '16px' }}
+                                />
+                            ))
+                            : allUsers.map((u) => (
+                                <Chip
+                                    key={u.id}
+                                    label={u.firstName}
+                                    onClick={() => toggleUser(u.id)}
+                                    size="small"
+                                    sx={{
+                                        'border': `1px solid ${colors.primaryBlack}`,
+                                        'backgroundColor': selectedUserIds.includes(u.id)
                                             ? colors.primaryYellow
                                             : colors.primaryWhite,
-                                    },
-                                }}
-                            />
-                        ))}
+                                        'fontWeight': selectedUserIds.includes(u.id) ? 600 : 400,
+                                        '&:hover': {
+                                            backgroundColor: selectedUserIds.includes(u.id)
+                                                ? colors.primaryYellow
+                                                : colors.primaryWhite,
+                                        },
+                                    }}
+                                />
+                            ))}
                     </Box>
                 </Box>
 
                 {/* Role management — only for owner/admin in edit mode */}
                 {showRoleManagement && (
                     <Box>
-                        <Typography variant="body2" sx={{ marginBottom: 0.5 }}>
+                        <Typography sx={tripLabelSx}>
                             Participant Roles
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -385,7 +406,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                 )}
 
                 <Box>
-                    <Typography variant="body2" sx={{ marginBottom: 0.5 }}>
+                    <Typography sx={tripLabelSx}>
                         Trip Visibility
                     </Typography>
                     <ToggleButtonGroup
@@ -419,14 +440,15 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                         {error}
                     </Typography>
                 )}
-            </DialogContent>
-            <DialogActions sx={{ padding: 2, paddingTop: 0 }}>
-                <Button onClick={handleClose} disabled={submitting}>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '12px 24px', paddingBottom: `calc(12px + env(safe-area-inset-bottom, 0px))` }}>
+                <Button onClick={handleClose} disabled={submitting} size="large">
                     Cancel
                 </Button>
                 <Button
                     onClick={handleSubmit}
                     disabled={submitting}
+                    size="large"
                     sx={{
                         backgroundColor: colors.primaryYellow,
                         fontWeight: 600,
@@ -439,7 +461,7 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
                           ? 'Save'
                           : 'Create'}
                 </Button>
-            </DialogActions>
-        </Dialog>
+            </Box>
+        </FormDrawer>
     )
 }
