@@ -9,15 +9,15 @@ import {
     MenuItem,
 } from '@mui/material'
 import { IconDots } from '@tabler/icons-react'
-import { useRegisterFab } from 'providers/fab-provider'
 import Link from 'next/link'
+import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useState } from 'react'
 
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripFormDialog from 'components/trip-form-dialog'
 import { deleteTrip, fetchTrips } from 'utils/api'
-import { canEditTrip, canDeleteTrip } from 'utils/permissions'
 import { InitialsIcon } from 'utils/icons'
+import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
 import type { TripSummary } from '@/lib/types'
 
@@ -79,9 +79,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 }}>
                 {/* Top: trip name + dates */}
                 <Box>
-                    <Box sx={{ fontSize: 18 }}>
-                        {trip.name}
-                    </Box>
+                    <Box sx={{ fontSize: 18 }}>{trip.name}</Box>
                     <Box sx={{ fontSize: 11, color: 'text.secondary' }}>
                         {formatDateRange(trip.startDate, trip.endDate)}
                     </Box>
@@ -99,7 +97,8 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                                 fontSize: 10,
                                 marginLeft: i === 0 ? 0 : -0.5,
                                 zIndex: trip.participants.length - i,
-                                outline: '2px solid white',
+                                border: `1px solid ${colors.primaryBlack}`,
+                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                             }}
                         />
                     ))}

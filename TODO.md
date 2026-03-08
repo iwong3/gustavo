@@ -15,13 +15,6 @@
 
 ## UX / Design
 
-- [ ] Re-design form to enter expenses
-    - [ ] View options in logical way? (relevant locations for a country?)
-    - [ ] Make it easier to fill in form (ask AI, e.g. pre-fill paid by with
-          current user)
-    - [ ] Paper/ledger design animates from bottom up? Covers all of app besides
-          header?
-- [ ] Re-design form to enter new trip
 - [ ] Loading screens
 - [ ] Error screens
 - [ ] Sort/filter trips
@@ -29,6 +22,8 @@
 - [ ] Instead of expanding expense, click to show popup modal with more details
 - [ ] Settings to change theme
 - [ ] Setting to use your Google avatar instead of initials icon
+- [ ] Setting to pick initials icon background color
+- [ ] Update version git commit hash to include datetime of deployment
 
 ## Tech Debt
 
@@ -65,3 +60,6 @@
     - [x] Add people as editors/viewers
 - [x] View other people's trips
 - [x] Track currency exchange as expenses for more accurate debt calculation
+- [x] Re-design form to enter expenses
+    - [x] Drawer from bottom up
+    - [x] Make form easier to fill in with pre-fills, fewer clicks

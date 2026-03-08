@@ -306,6 +306,8 @@ export const InitialsIcon = ({ name, initials, sx }: IInitialsIconProps) => {
         height: defaultIconSize,
         color: colors.color,
         backgroundColor: colors.bgColor,
+        border: '1px solid #090401',
+        boxShadow: '1px 1px 0px #090401',
     }
 
     return (

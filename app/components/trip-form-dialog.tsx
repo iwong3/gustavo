@@ -19,6 +19,7 @@ import { createTrip, updateTrip, fetchUsers, fetchUserPreferences, updatePartici
 import { useCurrentUser } from 'hooks/useCurrentUser'
 import { canManageRoles } from 'utils/permissions'
 import { Currency, formatCurrencyLabel } from 'utils/currency'
+import { InitialsIcon } from 'utils/icons'
 import { colors } from '@/lib/colors'
 import FormDrawer from 'components/form-drawer'
 import type { TripSummary, TripRole, UserSummary } from '@/lib/types'
@@ -218,17 +219,10 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
         '& input[type="date"]': {
             textAlign: 'left',
         },
-    }
-
-    const chipSx = (selected: boolean) => ({
-        'border': `1px solid ${colors.primaryBlack}`,
-        'backgroundColor': selected ? colors.primaryYellow : colors.primaryWhite,
-        'fontWeight': selected ? 600 : 400,
-        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-        '&:hover': {
-            backgroundColor: selected ? colors.primaryYellow : colors.primaryWhite,
+        '& input[type="date"]::-webkit-date-and-time-value': {
+            textAlign: 'left',
         },
-    })
+    }
 
     return (
         <FormDrawer open={open} onClose={handleClose}>
@@ -321,26 +315,39 @@ export default function TripFormDialog({ open, onClose, onSuccess, mode, trip }:
 
                 <Box>
                     <Typography sx={tripLabelSx}>Participants</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                         {allUsers.length === 0
                             ? Array.from({ length: 5 }, (_, i) => (
                                 <Skeleton
                                     key={i}
-                                    variant="rounded"
-                                    width={60 + (i % 3) * 16}
-                                    height={24}
-                                    sx={{ borderRadius: '16px' }}
+                                    variant="circular"
+                                    width={32}
+                                    height={32}
                                 />
                             ))
-                            : allUsers.map((u) => (
-                                <Chip
-                                    key={u.id}
-                                    label={u.firstName}
-                                    onClick={() => toggleUser(u.id)}
-                                    size="small"
-                                    sx={chipSx(selectedUserIds.includes(u.id))}
-                                />
-                            ))}
+                            : allUsers.map((u) => {
+                                const selected = selectedUserIds.includes(u.id)
+                                return (
+                                    <Box
+                                        key={u.id}
+                                        onClick={() => toggleUser(u.id)}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            opacity: selected ? 1 : 0.4,
+                                            transition: 'opacity 0.15s',
+                                        }}>
+                                        <InitialsIcon
+                                            name={u.firstName}
+                                            initials={u.initials}
+                                            sx={{
+                                                width: 32,
+                                                height: 32,
+                                                fontSize: 12,
+                                            }}
+                                        />
+                                    </Box>
+                                )
+                            })}
                     </Box>
                 </Box>
 

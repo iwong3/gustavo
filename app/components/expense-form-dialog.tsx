@@ -17,7 +17,7 @@ import {
 import { Currency, getCurrencyMeta, formatCurrencyLabel } from 'utils/currency'
 import { addExpense, updateExpense } from 'utils/api'
 import { useTripData } from 'providers/trip-data-provider'
-import { getIconFromCategory, getColorForCategory } from 'utils/icons'
+import { getIconFromCategory, getColorForCategory, InitialsIcon } from 'utils/icons'
 import { colors } from '@/lib/colors'
 import FormDrawer from 'components/form-drawer'
 
@@ -274,12 +274,15 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
         '& input[type="date"]': {
             textAlign: 'left',
         },
+        '& input[type="date"]::-webkit-date-and-time-value': {
+            textAlign: 'left',
+        },
     }
 
     const chipSx = (selected: boolean) => ({
         'border': `1px solid ${colors.primaryBlack}`,
         'backgroundColor': selected ? colors.primaryYellow : colors.primaryWhite,
-        'fontWeight': selected ? 600 : 400,
+        'fontWeight': 600,
         'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
         '&:hover': {
             backgroundColor: selected ? colors.primaryYellow : colors.primaryWhite,
@@ -473,23 +476,34 @@ export default function ExpenseFormDialog({ open, onClose, onSuccess, mode, expe
                 {/* 6. Split between */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                     <Typography sx={labelSx}>Split between</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pointerEvents: isCurrencyExchange ? 'none' : 'auto' }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', pointerEvents: isCurrencyExchange ? 'none' : 'auto' }}>
                         <Chip
-                            label="Everyone"
+                            label="All"
                             onClick={() => togglePerson('Everyone')}
                             size="small"
                             sx={chipSx(isEveryone)}
                         />
-                        {people.map((p) => {
-                            const selected = !isEveryone && splitBetween.includes(p)
+                        {trip.participants.map((p) => {
+                            const selected = isEveryone || splitBetween.includes(p.firstName)
                             return (
-                                <Chip
-                                    key={p}
-                                    label={p}
-                                    onClick={() => togglePerson(p)}
-                                    size="small"
-                                    sx={chipSx(selected)}
-                                />
+                                <Box
+                                    key={p.id}
+                                    onClick={() => togglePerson(p.firstName)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        opacity: selected ? 1 : 0.4,
+                                        transition: 'opacity 0.15s',
+                                    }}>
+                                    <InitialsIcon
+                                        name={p.firstName}
+                                        initials={p.initials}
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            fontSize: 12,
+                                        }}
+                                    />
+                                </Box>
                             )
                         })}
                     </Box>

@@ -44,30 +44,17 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        backgroundColor: colors.secondaryYellow,
+                        backgroundColor: colors.primaryWhite,
                         borderTopLeftRadius: '16px',
                         borderTopRightRadius: '16px',
-                        borderTop: `1px solid ${colors.primaryBlack}`,
-                        boxShadow: `4px -2px 0px ${colors.primaryBlack}`,
+                        borderTop: `2px solid ${colors.primaryBlack}`,
+                        boxShadow: `2px -2px 0px ${colors.primaryBlack}`,
                         zIndex: 1300,
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
                     }}>
-                    <Box
-                        sx={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            // backgroundImage: `linear-gradient(${colors.secondaryYellow}CC, ${colors.secondaryYellow}EE), url(/lined-paper.jpg)`,
-                            // backgroundSize: '100%, 120%',
-                            // backgroundPosition: 'top left, top left',
-                            // backgroundRepeat: 'no-repeat, no-repeat',
-                            // backgroundAttachment: 'local, local',
-                        }}>
-                        {children}
-                    </Box>
+                    {children}
                 </Box>
             </Slide>
         </>,
