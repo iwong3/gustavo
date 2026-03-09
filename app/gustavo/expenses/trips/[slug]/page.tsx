@@ -2,7 +2,6 @@
 
 import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
-import { useDebtCalculatorStore } from 'components/debt/debt-calculator'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
@@ -32,8 +31,6 @@ export default function TripDetailPage() {
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
     const resetToolsMenuStore = useToolsMenuStore((s) => s.reset)
-    const resetDebtCalculatorStore = useDebtCalculatorStore((s) => s.reset)
-
     useEffect(() => {
         if (!slug) return
         let ignore = false
@@ -74,7 +71,6 @@ export default function TripDetailPage() {
                 })
                 resetSearchBarStore()
                 resetToolsMenuStore()
-                resetDebtCalculatorStore()
 
                 // Then set React state to mount Gustavo with correct data
                 setTrip(tripData)

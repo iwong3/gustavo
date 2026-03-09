@@ -3,7 +3,7 @@
 // Example: export * from './Button'
 // Example: export * from './Modal'
 
-export * from './debt/debt-calculator'
+export * from './debt/debt-overview'
 export * from './graphs/graph'
 export * from './graphs/line-graph'
 export * from './links/links'

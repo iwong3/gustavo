@@ -1,3 +1,19 @@
+// ── Gustavo Design System ─────────────────────────────────────────────────────
+//
+// Visual style: Neo-brutalist
+//   - Hard black borders (1px solid primaryBlack) with offset box shadows (2px 2px 0px)
+//   - No blur, no soft shadows — clean, hard-edged aesthetic
+//   - Warm off-white backgrounds (primaryWhite), yellow accents (primaryYellow)
+//
+// Key patterns:
+//   - Cards/containers: `cardSx` or `hardShadow` (below)
+//   - Form fields: see `lib/form-styles.ts` for fieldSx, errorFieldSx, labels, etc.
+//   - Selected/active states: primaryYellow background
+//   - Error states: primaryRed border + shadow + text
+//   - Focus states: primaryYellow border + shadow
+//
+// ──────────────────────────────────────────────────────────────────────────────
+
 export const colors = {
     primaryYellow: '#f7cd83',
     secondaryYellow: '#fefae0',

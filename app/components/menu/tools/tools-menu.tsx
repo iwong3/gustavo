@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { DebtCalculator } from 'components/debt/debt-calculator'
+import { DebtOverview } from 'components/debt/debt-overview'
 import { Links } from 'components/links/links'
 import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
 import { ReceiptsList } from 'components/receipts/receipts-list'
@@ -38,7 +38,7 @@ export const ToolsMenuItemMap: Map<ToolsMenuItem, ToolsMenuItemData> = new Map([
     [
         ToolsMenuItem.DebtCalculator,
         {
-            Component: DebtCalculator,
+            Component: DebtOverview,
             label: 'Debt',
             indent: false,
         },
