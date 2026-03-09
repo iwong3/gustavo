@@ -10,7 +10,6 @@ import {
 import {
     IconCalendarEvent,
     IconCurrencyDollar,
-    IconDotsVertical,
     IconFilter,
     IconLayoutNavbarCollapse,
     IconRefresh,
@@ -33,17 +32,10 @@ import { useSortCostStore } from 'components/menu/sort/sort-cost'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { sortStoreResets, useSortMenuStore } from 'components/menu/sort/sort-menu'
-import {
-    ToolsMenuItem,
-    ToolsMenuItemMap,
-    useToolsMenuStore,
-} from 'components/menu/tools/tools-menu'
-import { SummaryView, useSummaryStore } from 'components/summary/summary'
 import { useTripData } from 'providers/trip-data-provider'
 import {
     getColorForCategory,
     getIconFromCategory,
-    getToolsMenuItemIcon,
     InitialsIcon,
     LocationIcon,
 } from 'utils/icons'
@@ -53,14 +45,6 @@ type Panel = 'filter' | 'sort' | 'nav' | null
 const TOOLBAR_HEIGHT = 34
 const PANEL_BORDER = colors.primaryBlack
 
-// Summary items set
-const SUMMARY_ITEMS = new Set([
-    ToolsMenuItem.TotalSpend,
-    ToolsMenuItem.TotalSpendByPerson,
-    ToolsMenuItem.TotalSpendByType,
-    ToolsMenuItem.TotalSpendByLocation,
-    ToolsMenuItem.TotalSpendByDate,
-])
 
 // ─── Main toolbar ─────────────────────────────────────────────────────────────
 
@@ -89,24 +73,6 @@ export const TripToolbar = () => {
             ),
         [expenses]
     )
-
-    // View navigation
-    const activeItem = useToolsMenuStore((s) => s.activeItem)
-    const setActiveItem = useToolsMenuStore((s) => s.setActiveItem)
-    const setActiveView = useSummaryStore((s) => s.setActiveView)
-
-    const isSummaryActive = SUMMARY_ITEMS.has(activeItem)
-    const isReceiptsActive = activeItem === ToolsMenuItem.Receipts
-
-    const navigateTo = (item: ToolsMenuItem) => {
-        if (item === ToolsMenuItem.TotalSpend) {
-            setActiveView(SummaryView.TotalSpendByPerson)
-        }
-        const summaryView = ToolsMenuItemMap.get(item)?.summaryView
-        if (summaryView) setActiveView(summaryView)
-        setActiveItem(item)
-        setOpenPanel(null)
-    }
 
     // Register sort resets
     const sortDateReset = useSortDateStore((s) => s.reset)
@@ -143,14 +109,6 @@ export const TripToolbar = () => {
 
     const anyActive = filterAnyActive || sortActive || searchInput !== ''
 
-    // Close panels when navigating away from Receipts
-    useEffect(() => {
-        if (!isReceiptsActive) {
-            setOpenPanel(null)
-            setSearchOpen(false)
-        }
-    }, [isReceiptsActive])
-
     useEffect(() => {
         if (searchOpen) {
             setTimeout(() => searchInputRef.current?.focus(), 320)
@@ -175,11 +133,6 @@ export const TripToolbar = () => {
         setOpenPanel((prev) => (prev === panel ? null : panel))
         setSearchOpen(false)
     }
-
-    // Current view label for the nav button
-    const activeLabel = isSummaryActive
-        ? 'Charts'
-        : (ToolsMenuItemMap.get(activeItem)?.label ?? 'Menu')
 
     return (
         <ClickAwayListener
@@ -221,112 +174,7 @@ export const TripToolbar = () => {
                                 pointerEvents: searchOpen ? 'none' : 'auto',
                                 transition: 'opacity 0.18s ease-out',
                             }}>
-                            {/* Nav button — shows current view, opens view picker */}
-                            <Box
-                                onClick={() => togglePanel('nav')}
-                                sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'gap': 0.5,
-                                    'paddingX': 1,
-                                    'paddingY': 0.5,
-                                    'borderRadius': '6px',
-                                    'cursor': 'pointer',
-                                    'backgroundColor':
-                                        openPanel === 'nav'
-                                            ? `${colors.primaryBlack}0a`
-                                            : 'transparent',
-                                    'transition': 'background-color 0.15s',
-                                    '&:active': { opacity: 0.55 },
-                                }}>
-                                {getToolsMenuItemIcon(
-                                    isSummaryActive
-                                        ? ToolsMenuItem.TotalSpend
-                                        : activeItem,
-                                    17
-                                )}
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        lineHeight: 1,
-                                        color: colors.primaryBlack,
-                                    }}>
-                                    {activeLabel}
-                                </Typography>
-                                <IconDotsVertical
-                                    size={14}
-                                    color={colors.primaryBlack}
-                                    style={{ opacity: 0.4 }}
-                                />
-                            </Box>
-
-                            {/* Summary sub-nav chips (inline, only when Charts active) */}
-                            {isSummaryActive && (
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 0.25,
-                                        marginLeft: 0.5,
-                                    }}>
-                                    {[
-                                        ToolsMenuItem.TotalSpendByPerson,
-                                        ToolsMenuItem.TotalSpendByType,
-                                        ToolsMenuItem.TotalSpendByLocation,
-                                        ToolsMenuItem.TotalSpendByDate,
-                                    ].map((item) => {
-                                        const data = ToolsMenuItemMap.get(item)!
-                                        const isActive =
-                                            activeItem === item ||
-                                            (activeItem ===
-                                                ToolsMenuItem.TotalSpend &&
-                                                item ===
-                                                    ToolsMenuItem.TotalSpendByPerson)
-                                        return (
-                                            <Box
-                                                key={item}
-                                                onClick={() => navigateTo(item)}
-                                                sx={{
-                                                    'paddingX': 0.75,
-                                                    'paddingY': 0.25,
-                                                    'borderRadius': '4px',
-                                                    'cursor': 'pointer',
-                                                    'backgroundColor': isActive
-                                                        ? colors.primaryBlack
-                                                        : 'transparent',
-                                                    'transition':
-                                                        'background-color 0.15s',
-                                                    '&:active': {
-                                                        opacity: 0.7,
-                                                    },
-                                                }}>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 10,
-                                                        fontWeight: isActive
-                                                            ? 700
-                                                            : 400,
-                                                        lineHeight: 1,
-                                                        color: isActive
-                                                            ? colors.primaryWhite
-                                                            : colors.primaryBlack,
-                                                        opacity: isActive
-                                                            ? 1
-                                                            : 0.55,
-                                                    }}>
-                                                    {data.label}
-                                                </Typography>
-                                            </Box>
-                                        )
-                                    })}
-                                </Box>
-                            )}
-
-                            {/* Receipts-specific buttons */}
-                            {isReceiptsActive && (
-                                <>
-                                    <ToolbarButton
+                            <ToolbarButton
                                         icon={<IconSearch size={17} />}
                                         active={searchInput !== ''}
                                         onClick={() => {
@@ -383,12 +231,10 @@ export const TripToolbar = () => {
                                             />
                                         </Box>
                                     )}
-                                </>
-                            )}
                         </Box>
 
                         {/* Search overlay */}
-                        {isReceiptsActive && (
+                        {(
                             <Box
                                 sx={{
                                     position: 'absolute',
@@ -488,96 +334,8 @@ export const TripToolbar = () => {
 
                     {/* ── Panels — absolute, overlays content ── */}
 
-                    {/* Nav panel */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: TOOLBAR_HEIGHT,
-                            left: 0,
-                            right: 0,
-                            zIndex: 1,
-                            maxHeight: openPanel === 'nav' ? '400px' : 0,
-                            opacity: openPanel === 'nav' ? 1 : 0,
-                            overflow: 'hidden',
-                            transition:
-                                'max-height 0.25s ease-out, opacity 0.18s ease-out',
-                            pointerEvents:
-                                openPanel === 'nav' ? 'auto' : 'none',
-                        }}>
-                        {openPanel === 'nav' && (
-                            <Box
-                                sx={{
-                                    marginX: 3,
-                                    border: `1px solid ${PANEL_BORDER}`,
-                                    borderRadius: '0 0 8px 8px',
-                                    backgroundColor: colors.primaryWhite,
-                                    padding: 1,
-                                }}>
-                                {[
-                                    ToolsMenuItem.Receipts,
-                                    ToolsMenuItem.DebtCalculator,
-                                    ToolsMenuItem.TotalSpend,
-                                    ToolsMenuItem.Links,
-                                ].map((item) => {
-                                    const data = ToolsMenuItemMap.get(item)!
-                                    const isActive =
-                                        item === ToolsMenuItem.TotalSpend
-                                            ? isSummaryActive
-                                            : activeItem === item
-                                    return (
-                                        <Box
-                                            key={item}
-                                            onClick={() => navigateTo(item)}
-                                            sx={{
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'gap': 1.5,
-                                                'paddingX': 1.5,
-                                                'paddingY': 1,
-                                                'borderRadius': '6px',
-                                                'cursor': 'pointer',
-                                                'backgroundColor': isActive
-                                                    ? `${colors.primaryBlack}08`
-                                                    : 'transparent',
-                                                '&:active': {
-                                                    backgroundColor: `${colors.primaryBlack}12`,
-                                                },
-                                            }}>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    opacity: isActive
-                                                        ? 1
-                                                        : 0.5,
-                                                }}>
-                                                {getToolsMenuItemIcon(
-                                                    item,
-                                                    18
-                                                )}
-                                            </Box>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: 13,
-                                                    fontWeight: isActive
-                                                        ? 700
-                                                        : 400,
-                                                    color: colors.primaryBlack,
-                                                }}>
-                                                {item ===
-                                                ToolsMenuItem.TotalSpend
-                                                    ? 'Charts'
-                                                    : data.label}
-                                            </Typography>
-                                        </Box>
-                                    )
-                                })}
-                            </Box>
-                        )}
-                    </Box>
-
                     {/* Filter / Sort panel */}
-                    {isReceiptsActive && (
-                        <Box
+                    <Box
                             sx={{
                                 position: 'absolute',
                                 top: TOOLBAR_HEIGHT,
@@ -646,7 +404,6 @@ export const TripToolbar = () => {
                                 </Box>
                             )}
                         </Box>
-                    )}
                 </Box>
             </Box>
         </ClickAwayListener>

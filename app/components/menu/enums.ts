@@ -21,10 +21,5 @@ export enum SortItem {
 export enum ToolsMenuItem {
     Receipts = 'Receipts',
     DebtCalculator = 'DebtCalculator',
-    TotalSpend = 'TotalSpend',
-    TotalSpendByPerson = 'TotalSpendByPerson',
-    TotalSpendByType = 'TotalSpendByType',
-    TotalSpendByLocation = 'TotalSpendByLocation',
-    TotalSpendByDate = 'TotalSpendByDate',
     Links = 'Links',
 }

@@ -7,6 +7,7 @@ import { Bar } from '@visx/shape'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
+import { cardSx, colors } from '@/lib/colors'
 import {
     SortOrder as CostOrder,
     useSortCostStore,
@@ -19,6 +20,7 @@ interface GraphProps {
     height?: number
     barColors?: string[]
     activeData?: boolean[]
+    onBarClick?: (index: number) => void
 }
 
 interface GraphData {
@@ -34,6 +36,7 @@ export const Graph = ({
     height,
     barColors,
     activeData,
+    onBarClick,
 }: GraphProps) => {
     const [graphData, setGraphData] = useState<GraphData[]>([])
     const [totalValue, setTotalValue] = useState<number>(0)
@@ -103,13 +106,16 @@ export const Graph = ({
             sx={{
                 padding: 1,
                 width: graphWidth,
-                border: '1px solid #FBBC04',
-                borderRadius: '10px',
-                backgroundColor: '#FFFCEE',
-                boxShadow: 'rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px',
+                ...cardSx,
+                borderRadius: '8px',
                 overflowX: 'scroll',
             }}>
             <svg width={totalWidth} height={graphHeight}>
+                <defs>
+                    <filter id="bar-shadow" x="-5%" y="-5%" width="120%" height="120%">
+                        <feDropShadow dx="1" dy="1" stdDeviation="0" floodColor={colors.primaryBlack} floodOpacity="1" />
+                    </filter>
+                </defs>
                 <Group>
                     {graphData.map((data, index) => {
                         const yLabel = data.value
@@ -135,18 +141,23 @@ export const Graph = ({
                                     width={barWidth}
                                     height={barHeight}
                                     fill={data.barColor}
+                                    stroke={colors.primaryBlack}
+                                    strokeWidth={1}
+                                    rx={3}
                                     filter={
                                         atLeastOneActive && !data.isActive
                                             ? 'brightness(0.75)'
-                                            : 'none'
+                                            : 'url(#bar-shadow)'
                                     }
                                     style={{
                                         WebkitFilter:
                                             atLeastOneActive && !data.isActive
                                                 ? 'brightness(0.75)'
-                                                : 'none',
+                                                : undefined,
                                         transition: 'all 0.2s',
+                                        cursor: onBarClick ? 'pointer' : 'default',
                                     }}
+                                    onClick={() => onBarClick?.(index)}
                                 />
                                 {/* Spend label */}
                                 <Label
@@ -155,12 +166,14 @@ export const Graph = ({
                                     )}
                                     titleProps={{
                                         textAnchor: 'middle',
+                                        fill: colors.primaryBlack,
                                     }}
                                     x={barX}
                                     y={barY - 2}
                                     width={barWidth}
                                     horizontalAnchor="start"
                                     titleFontSize={12}
+                                    titleFontWeight={700}
                                     backgroundFill="none"
                                     showAnchorLine={false}
                                 />
@@ -170,6 +183,7 @@ export const Graph = ({
                                         title={percentageString + '%'}
                                         titleProps={{
                                             textAnchor: 'middle',
+                                            fill: colors.primaryBlack,
                                         }}
                                         x={barX}
                                         y={graphHeight - 14}
@@ -188,6 +202,15 @@ export const Graph = ({
                     top={graphHeight - 2 * marginY}
                     scale={xScale}
                     numTicks={data.length}
+                    stroke={colors.primaryBlack}
+                    tickStroke={colors.primaryBlack}
+                    tickLabelProps={() => ({
+                        fill: colors.primaryBlack,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        textAnchor: 'middle' as const,
+                    })}
+                    hideTicks
                 />
             </svg>
         </Box>

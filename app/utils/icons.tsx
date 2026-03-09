@@ -233,31 +233,6 @@ export const getToolsMenuItemIcon = (
             })
         case ToolsMenuItem.DebtCalculator:
             return <HandCoins size={size} weight="fill" />
-        case ToolsMenuItem.TotalSpend:
-            return getTablerIcon({
-                name: 'IconChartBar',
-                size,
-            })
-        case ToolsMenuItem.TotalSpendByPerson:
-            return getTablerIcon({
-                name: 'IconUser',
-                size,
-            })
-        case ToolsMenuItem.TotalSpendByType:
-            return getTablerIcon({
-                name: 'IconTag',
-                size,
-            })
-        case ToolsMenuItem.TotalSpendByLocation:
-            return getTablerIcon({
-                name: 'IconMap2',
-                size,
-            })
-        case ToolsMenuItem.TotalSpendByDate:
-            return getTablerIcon({
-                name: 'IconCalendarEvent',
-                size,
-            })
         case ToolsMenuItem.Links:
             return getTablerIcon({
                 name: 'IconExternalLink',

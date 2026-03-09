@@ -33,7 +33,7 @@ const tools = [
         bg: '#f5d4d2',
     },
     {
-        name: 'Graphs',
+        name: 'Insights',
         path: 'graphs',
         icon: 'IconChartBar',
         bg: '#d2e0ea',
