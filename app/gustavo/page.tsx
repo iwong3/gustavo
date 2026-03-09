@@ -14,10 +14,10 @@ function getGreeting(): string {
 
 const apps = [
     {
-        name: 'Expenses',
-        href: '/gustavo/expenses/trips',
-        icon: 'IconReceipt',
-        color: colors.primaryGreen,
+        name: 'Trips',
+        href: '/gustavo/trips',
+        icon: 'IconPlaneDeparture',
+        bg: '#e8edca',
     },
 ]
 
@@ -59,12 +59,12 @@ export default function GustavoHomePage() {
                 Good {getGreeting()}. We have work to do.
             </Typography>
 
-            {/* App grid — 2 square cards per row */}
+            {/* App list — full-width stacked rows */}
             <Box
                 sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
                     width: '100%',
                 }}>
                 {apps.map((app) => (
@@ -74,11 +74,9 @@ export default function GustavoHomePage() {
                         href={app.href}
                         sx={{
                             'display': 'flex',
-                            'flexDirection': 'column',
                             'alignItems': 'center',
-                            'justifyContent': 'center',
-                            'gap': 1.5,
-                            'aspectRatio': '1',
+                            'gap': 2,
+                            'padding': 2,
                             ...cardSx,
                             'textDecoration': 'none',
                             'color': colors.primaryBlack,
@@ -88,12 +86,32 @@ export default function GustavoHomePage() {
                             },
                             'transition': 'box-shadow 0.1s, transform 0.1s',
                         }}>
-                        {getTablerIcon({
-                            name: app.icon,
-                            size: 52,
-                            color: app.color,
-                        })}
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 44,
+                                height: 44,
+                                borderRadius: '50%',
+                                backgroundColor: app.bg,
+                                border: `1.5px solid ${colors.primaryBlack}`,
+                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                flexShrink: 0,
+                            }}>
+                            {getTablerIcon({
+                                name: app.icon,
+                                size: 22,
+                                stroke: 1.8,
+                                color: colors.primaryBlack,
+                                fill: 'none',
+                            })}
+                        </Box>
+                        <Typography
+                            sx={{
+                                fontSize: 16,
+                                fontWeight: 600,
+                            }}>
                             {app.name}
                         </Typography>
                     </Box>

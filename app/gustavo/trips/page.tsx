@@ -66,7 +66,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
             {/* Tap area covering full card */}
             <Box
                 component={Link}
-                href={`/gustavo/expenses/trips/${trip.slug}`}
+                href={`/gustavo/trips/${trip.slug}`}
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',

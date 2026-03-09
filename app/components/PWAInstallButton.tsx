@@ -14,6 +14,8 @@ import {
     Typography,
 } from '@mui/material'
 import { useState } from 'react'
+import { colors, hardShadow } from '../../lib/colors'
+import { primaryButtonSx, secondaryButtonSx } from '../../lib/form-styles'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 
 interface PWAInstallButtonProps {
@@ -52,15 +54,9 @@ export default function PWAInstallButton({
                 onClick={handleInstallClick}
                 sx={{
                     textTransform: 'none',
-                    borderRadius: 2,
-                    ...(variant === 'contained' && {
-                        'background':
-                            'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-                        '&:hover': {
-                            background:
-                                'linear-gradient(45deg, #1565c0 30%, #1e88e5 90%)',
-                        },
-                    }),
+                    ...(variant === 'contained'
+                        ? primaryButtonSx
+                        : secondaryButtonSx),
                 }}>
                 {isIOS ? 'Add to Home Screen' : 'Install App'}
             </Button>
@@ -70,35 +66,71 @@ export default function PWAInstallButton({
                 open={showIOSInstructions}
                 onClose={() => setShowIOSInstructions(false)}
                 maxWidth="sm"
-                fullWidth>
-                <DialogTitle>
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backgroundColor: colors.primaryWhite,
+                            ...hardShadow,
+                            boxShadow: `4px 4px 0px ${colors.primaryBlack}`,
+                            borderRadius: '4px',
+                        },
+                    },
+                }}>
+                <DialogTitle
+                    sx={{
+                        borderBottom: `1px solid ${colors.primaryBlack}`,
+                        fontWeight: 700,
+                        color: colors.primaryBlack,
+                    }}>
                     <Box display="flex" alignItems="center" gap={1}>
-                        <AppleIcon color="primary" />
+                        <AppleIcon sx={{ color: colors.primaryBlack }} />
                         Add to Home Screen
                     </Box>
                 </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body1" paragraph>
-                        To install this app on your iOS device:
-                    </Typography>
-                    <Box component="ol" sx={{ 'pl': 2, '& li': { mb: 1 } }}>
+                <DialogContent sx={{ pt: '20px !important' }}>
+                    <Box
+                        sx={{
+                            mb: 2,
+                            p: 1.5,
+                            backgroundColor: colors.secondaryYellow,
+                            border: `1px solid ${colors.primaryBlack}`,
+                            borderRadius: '4px',
+                        }}>
+                        <Typography
+                            variant="body2"
+                            sx={{ color: colors.primaryBlack }}>
+                            You must use <strong>Safari</strong> to install this
+                            app. Other browsers (Chrome, Firefox) do not support
+                            PWA installation on iOS.
+                        </Typography>
+                    </Box>
+                    <Box
+                        component="ol"
+                        sx={{
+                            'pl': 2,
+                            '& li': { mb: 1.5, color: colors.primaryBlack },
+                        }}>
                         <li>
                             <Typography variant="body2">
                                 Tap the <strong>Share</strong> button{' '}
-                                <span
-                                    style={{
+                                <Box
+                                    component="span"
+                                    sx={{
                                         display: 'inline-block',
                                         width: '20px',
                                         height: '20px',
                                         textAlign: 'center',
-                                        border: '1px solid #ccc',
+                                        border: `1px solid ${colors.primaryBlack}`,
                                         borderRadius: '4px',
                                         fontSize: '12px',
                                         lineHeight: '18px',
+                                        backgroundColor:
+                                            colors.secondaryYellow,
                                     }}>
                                     ⬆
-                                </span>{' '}
-                                at the bottom of your screen
+                                </Box>{' '}
+                                in the Safari toolbar
                             </Typography>
                         </li>
                         <li>
@@ -116,21 +148,30 @@ export default function PWAInstallButton({
                             </Typography>
                         </li>
                     </Box>
-                    <Typography
-                        variant="body2"
+                    <Box
                         sx={{
                             mt: 2,
-                            fontStyle: 'italic',
-                            color: 'text.secondary',
+                            p: 1.5,
+                            backgroundColor: colors.secondaryYellow,
+                            border: `1px solid ${colors.primaryBlack}`,
+                            borderRadius: '4px',
                         }}>
-                        The app will then appear on your home screen and work
-                        like a native app!
-                    </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{ color: colors.primaryBlack }}>
+                            Gustavo will appear on your home screen and work
+                            like a native app &mdash; no App Store needed.
+                        </Typography>
+                    </Box>
                 </DialogContent>
-                <DialogActions>
+                <DialogActions
+                    sx={{
+                        borderTop: `1px solid ${colors.primaryBlack}`,
+                        p: 2,
+                    }}>
                     <Button
                         onClick={() => setShowIOSInstructions(false)}
-                        color="primary">
+                        sx={primaryButtonSx}>
                         Got it
                     </Button>
                 </DialogActions>

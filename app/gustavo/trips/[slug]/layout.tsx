@@ -1,42 +1,35 @@
 'use client'
 
 import { colors } from '@/lib/colors'
-import { Box } from '@mui/material'
+import { Box, CircularProgress } from '@mui/material'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
-import { useToolsMenuStore } from 'components/menu/tools/tools-menu'
 import { useParams } from 'next/navigation'
+import { RefreshProvider } from 'providers/refresh-provider'
+import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchExpenses, fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
-import { Gustavo } from 'views/gustavo'
-import { useTripsStore } from 'views/trips'
 
 import type { Expense, TripSummary } from '@/lib/types'
 
-export default function TripDetailPage() {
+export default function TripLayout({ children }: { children: React.ReactNode }) {
     const { slug } = useParams<{ slug: string }>()
 
     const [trip, setTrip] = useState<TripSummary | null>(null)
     const [expenses, setExpenses] = useState<Expense[]>([])
-
-    const setCurrentTrip = useTripsStore((s) => s.setCurrentTrip)
-    const setLoading = useTripsStore((s) => s.setLoading)
-    const setFetchDataError = useTripsStore((s) => s.setFetchDataError)
-    const setCurrencyConversionError = useTripsStore(
-        (s) => s.setCurrencyConversionError
-    )
-    const fetchDataError = useTripsStore((s) => s.fetchDataError)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(false)
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
-    const resetToolsMenuStore = useToolsMenuStore((s) => s.reset)
+
     useEffect(() => {
         if (!slug) return
         let ignore = false
 
         setLoading(true)
-        setFetchDataError(false)
+        setError(false)
         setExpenses([])
         setTrip(null)
 
@@ -62,24 +55,22 @@ export default function TripDetailPage() {
                     )
                 )
 
-                // Reset Zustand stores FIRST so Gustavo mounts into clean filter state
-                setCurrentTrip(tripData.name)
+                // Reset filter stores so sub-pages mount into clean state
                 resetAllMenuItemStores({
                     participantNames,
                     categoryNames,
                     locationNames,
                 })
                 resetSearchBarStore()
-                resetToolsMenuStore()
 
-                // Then set React state to mount Gustavo with correct data
                 setTrip(tripData)
                 setExpenses(expensesData)
                 setLoading(false)
             } catch (err) {
                 console.error(err)
                 if (!ignore) {
-                    setFetchDataError(true)
+                    setError(true)
+                    setLoading(false)
                 }
             }
         }
@@ -89,7 +80,7 @@ export default function TripDetailPage() {
         return () => {
             ignore = true
         }
-    }, [slug])
+    }, [slug, resetSearchBarStore])
 
     const refreshData = useCallback(async () => {
         if (!trip) return
@@ -101,7 +92,7 @@ export default function TripDetailPage() {
         }
     }, [trip])
 
-    if (fetchDataError) {
+    if (error) {
         return (
             <Box
                 sx={{
@@ -150,13 +141,26 @@ export default function TripDetailPage() {
         )
     }
 
-    if (!trip) {
-        return null
+    if (loading || !trip) {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginTop: 4,
+                }}>
+                <CircularProgress sx={{ color: colors.primaryYellow }} />
+            </Box>
+        )
     }
 
     return (
         <TripDataProvider expenses={expenses} trip={trip}>
-            <Gustavo key={slug} onRefresh={refreshData} />
+            <SpendDataProvider>
+                <RefreshProvider onRefresh={refreshData}>
+                    {children}
+                </RefreshProvider>
+            </SpendDataProvider>
         </TripDataProvider>
     )
 }

@@ -36,8 +36,8 @@ export default function PWAInstallPrompt() {
                         <div>
                             <h3>Install Gustavo</h3>
                             <p>
-                                Get quick access and a better experience by
-                                installing Gustavo on your device.
+                                Add Gustavo to your home screen for quick access
+                                and a native app experience.
                             </p>
                         </div>
                     </div>
@@ -50,7 +50,7 @@ export default function PWAInstallPrompt() {
                         <button
                             onClick={handleInstallClick}
                             className="pwa-install-btn">
-                            {isIOS ? 'Show Instructions' : 'Install'}
+                            {isIOS ? 'How to Install' : 'Install'}
                         </button>
                     </div>
                 </div>
@@ -65,20 +65,27 @@ export default function PWAInstallPrompt() {
                         className="pwa-ios-modal"
                         onClick={(e) => e.stopPropagation()}>
                         <div className="pwa-ios-header">
-                            <h3>🍎 Add to Home Screen</h3>
+                            <h3>Add to Home Screen</h3>
                             <button
                                 className="pwa-ios-close"
                                 onClick={() => setShowIOSInstructions(false)}>
-                                ×
+                                &times;
                             </button>
                         </div>
                         <div className="pwa-ios-content">
-                            <p>To install this app on your iOS device:</p>
+                            <p className="pwa-ios-safari-note">
+                                You must use <strong>Safari</strong> to install
+                                this app. Other browsers (Chrome, Firefox) do
+                                not support PWA installation on iOS.
+                            </p>
                             <ol>
                                 <li>
-                                    Tap the <strong>Share</strong> button{' '}
-                                    <span className="share-icon">⬆</span> at the
-                                    bottom of your screen
+                                    Tap the{' '}
+                                    <strong>
+                                        Share{' '}
+                                        <span className="share-icon">⬆</span>
+                                    </strong>{' '}
+                                    button in the Safari toolbar
                                 </li>
                                 <li>
                                     Scroll down and tap{' '}
@@ -87,13 +94,13 @@ export default function PWAInstallPrompt() {
                                     </strong>
                                 </li>
                                 <li>
-                                    Tap <strong>&ldquo;Add&rdquo;</strong> in
-                                    the top-right corner
+                                    Tap <strong>&ldquo;Add&rdquo;</strong> in the
+                                    top-right corner
                                 </li>
                             </ol>
                             <p className="pwa-ios-note">
-                                The app will then appear on your home screen and
-                                work like a native app!
+                                Gustavo will appear on your home screen and work
+                                like a native app &mdash; no App Store needed.
                             </p>
                         </div>
                         <div className="pwa-ios-footer">
@@ -121,14 +128,14 @@ export default function PWAInstallPrompt() {
                 }
 
                 .pwa-install-card {
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    background: #fffdf7;
+                    border: 1px solid #090401;
+                    box-shadow: 3px 3px 0px #090401;
                     padding: 16px;
                     pointer-events: all;
                     max-width: 400px;
                     margin: 0 auto;
-                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
                 }
 
                 .pwa-install-content {
@@ -146,15 +153,16 @@ export default function PWAInstallPrompt() {
                 .pwa-install-content h3 {
                     margin: 0 0 4px 0;
                     font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #333;
+                    font-weight: 700;
+                    color: #090401;
                 }
 
                 .pwa-install-content p {
                     margin: 0;
                     font-size: 0.9rem;
-                    color: #666;
+                    color: #090401;
                     line-height: 1.4;
+                    opacity: 0.8;
                 }
 
                 .pwa-install-actions {
@@ -164,34 +172,47 @@ export default function PWAInstallPrompt() {
                 }
 
                 .pwa-dismiss-btn {
-                    background: none;
-                    border: 1px solid #ddd;
+                    background: #fffdf7;
+                    border: 1px solid #090401;
+                    box-shadow: 2px 2px 0px #090401;
                     padding: 8px 16px;
-                    border-radius: 6px;
+                    border-radius: 4px;
                     cursor: pointer;
                     font-size: 0.9rem;
-                    color: #666;
-                    transition: all 0.2s;
+                    font-weight: 600;
+                    color: #090401;
+                    transition: transform 0.1s, box-shadow 0.1s;
                 }
 
                 .pwa-dismiss-btn:hover {
-                    background-color: #f5f5f5;
+                    background-color: #fefae0;
+                }
+
+                .pwa-dismiss-btn:active {
+                    box-shadow: none;
+                    transform: translate(2px, 2px);
                 }
 
                 .pwa-install-btn {
-                    background-color: #1976d2;
-                    color: white;
-                    border: none;
+                    background-color: #f7cd83;
+                    color: #090401;
+                    border: 1px solid #090401;
+                    box-shadow: 2px 2px 0px #090401;
                     padding: 8px 16px;
-                    border-radius: 6px;
+                    border-radius: 4px;
                     cursor: pointer;
                     font-size: 0.9rem;
-                    font-weight: 500;
-                    transition: background-color 0.2s;
+                    font-weight: 600;
+                    transition: transform 0.1s, box-shadow 0.1s;
                 }
 
                 .pwa-install-btn:hover {
-                    background-color: #1565c0;
+                    background-color: #f5c165;
+                }
+
+                .pwa-install-btn:active {
+                    box-shadow: none;
+                    transform: translate(2px, 2px);
                 }
 
                 /* iOS Modal Styles */
@@ -201,7 +222,7 @@ export default function PWAInstallPrompt() {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
+                    background: rgba(9, 4, 1, 0.5);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -210,8 +231,10 @@ export default function PWAInstallPrompt() {
                 }
 
                 .pwa-ios-modal {
-                    background: white;
-                    border-radius: 12px;
+                    background: #fffdf7;
+                    border: 1px solid #090401;
+                    box-shadow: 4px 4px 0px #090401;
+                    border-radius: 4px;
                     max-width: 500px;
                     width: 100%;
                     max-height: 90vh;
@@ -222,56 +245,68 @@ export default function PWAInstallPrompt() {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 20px 20px 0;
-                    border-bottom: 1px solid #eee;
-                    padding-bottom: 15px;
+                    padding: 20px 20px 15px;
+                    border-bottom: 1px solid #090401;
                 }
 
                 .pwa-ios-header h3 {
                     margin: 0;
                     font-size: 1.2rem;
-                    color: #333;
+                    font-weight: 700;
+                    color: #090401;
                 }
 
                 .pwa-ios-close {
                     background: none;
-                    border: none;
-                    font-size: 1.5rem;
+                    border: 1px solid #090401;
+                    font-size: 1.2rem;
                     cursor: pointer;
-                    color: #666;
+                    color: #090401;
                     padding: 0;
-                    width: 30px;
-                    height: 30px;
+                    width: 28px;
+                    height: 28px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border-radius: 50%;
-                    transition: background-color 0.2s;
+                    border-radius: 4px;
+                    transition: transform 0.1s, box-shadow 0.1s;
+                    box-shadow: 1px 1px 0px #090401;
                 }
 
                 .pwa-ios-close:hover {
-                    background-color: #f5f5f5;
+                    background-color: #fefae0;
+                }
+
+                .pwa-ios-close:active {
+                    box-shadow: none;
+                    transform: translate(1px, 1px);
                 }
 
                 .pwa-ios-content {
                     padding: 20px;
                 }
 
-                .pwa-ios-content p {
-                    margin: 0 0 15px 0;
+                .pwa-ios-safari-note {
+                    margin: 0 0 16px 0;
+                    padding: 10px 12px;
+                    background-color: #fefae0;
+                    border: 1px solid #090401;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
                     line-height: 1.5;
-                    color: #333;
+                    color: #090401;
                 }
 
                 .pwa-ios-content ol {
                     padding-left: 20px;
-                    margin: 15px 0;
+                    margin: 16px 0;
                 }
 
                 .pwa-ios-content li {
                     margin-bottom: 12px;
                     line-height: 1.5;
-                    color: #333;
+                    color: #090401;
+                    font-size: 0.95rem;
                 }
 
                 .share-icon {
@@ -279,43 +314,50 @@ export default function PWAInstallPrompt() {
                     width: 20px;
                     height: 20px;
                     text-align: center;
-                    border: 1px solid #ccc;
+                    border: 1px solid #090401;
                     border-radius: 4px;
                     font-size: 12px;
                     line-height: 18px;
-                    background-color: #f8f9fa;
+                    background-color: #fefae0;
                 }
 
                 .pwa-ios-note {
-                    font-style: italic;
-                    color: #666;
-                    font-size: 0.9rem;
-                    margin-top: 15px !important;
-                    padding: 10px;
-                    background-color: #f8f9fa;
-                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    margin: 16px 0 0 0;
+                    padding: 10px 12px;
+                    background-color: #fefae0;
+                    border: 1px solid #090401;
+                    border-radius: 4px;
+                    line-height: 1.5;
+                    color: #090401;
                 }
 
                 .pwa-ios-footer {
                     padding: 15px 20px 20px;
-                    border-top: 1px solid #eee;
+                    border-top: 1px solid #090401;
                     text-align: right;
                 }
 
                 .pwa-ios-got-it {
-                    background-color: #1976d2;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
+                    background-color: #f7cd83;
+                    color: #090401;
+                    border: 1px solid #090401;
+                    box-shadow: 2px 2px 0px #090401;
+                    padding: 10px 24px;
+                    border-radius: 4px;
                     cursor: pointer;
                     font-size: 0.9rem;
-                    font-weight: 500;
-                    transition: background-color 0.2s;
+                    font-weight: 600;
+                    transition: transform 0.1s, box-shadow 0.1s;
                 }
 
                 .pwa-ios-got-it:hover {
-                    background-color: #1565c0;
+                    background-color: #f5c165;
+                }
+
+                .pwa-ios-got-it:active {
+                    box-shadow: none;
+                    transform: translate(2px, 2px);
                 }
 
                 @media (max-width: 480px) {

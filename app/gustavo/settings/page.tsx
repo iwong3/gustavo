@@ -14,7 +14,8 @@ import {
 import { IconChevronRight, IconPencil } from '@tabler/icons-react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { HexColorPicker } from 'react-colorful'
 
 import { colors, hardShadow } from '@/lib/colors'
 import { labelSx, primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
@@ -317,7 +318,6 @@ function IconCustomizeDialog({
     )
     const [editColor, setEditColor] = useState(iconColor || '#FBBC04')
     const [saving, setSaving] = useState(false)
-    const colorInputRef = useRef<HTMLInputElement>(null)
 
     // Sync when dialog opens with new props
     useEffect(() => {
@@ -433,46 +433,58 @@ function IconCustomizeDialog({
                     </Box>
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <Typography sx={labelSx}>Color</Typography>
-                        {/* Hidden native color input */}
-                        <input
-                            ref={colorInputRef}
-                            type="color"
-                            value={editColor}
-                            onChange={(e) => setEditColor(e.target.value)}
-                            style={{
-                                position: 'absolute',
-                                opacity: 0,
-                                width: 0,
-                                height: 0,
-                                pointerEvents: 'none',
-                            }}
-                        />
                         <Box
-                            onClick={() => colorInputRef.current?.click()}
                             sx={{
-                                'flex': 1,
-                                'borderRadius': 1,
-                                'backgroundColor': editColor,
-                                'border': `2px solid ${colors.primaryBlack}`,
-                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                'cursor': 'pointer',
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'justifyContent': 'center',
-                                'gap': 1,
-                                '&:hover': { opacity: 0.9 },
+                                flex: 1,
+                                borderRadius: 1,
+                                backgroundColor: editColor,
+                                border: `2px solid ${colors.primaryBlack}`,
+                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1,
                             }}>
-                            <IconPencil size={16} color={contrastText} />
                             <Typography
                                 sx={{
                                     fontSize: 13,
                                     fontFamily: 'monospace',
                                     color: contrastText,
+                                    fontWeight: 600,
                                 }}>
                                 {editColor.toUpperCase()}
                             </Typography>
                         </Box>
                     </Box>
+                </Box>
+
+                {/* Color wheel */}
+                <Box
+                    sx={{
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                        '& .react-colorful': {
+                            width: '100%',
+                            height: 180,
+                            borderRadius: 1,
+                            border: `2px solid ${colors.primaryBlack}`,
+                            boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        },
+                        '& .react-colorful__saturation': {
+                            borderRadius: '4px 4px 0 0',
+                            borderBottom: `2px solid ${colors.primaryBlack}`,
+                        },
+                        '& .react-colorful__hue': {
+                            borderRadius: '0 0 4px 4px',
+                            height: 20,
+                        },
+                        '& .react-colorful__pointer': {
+                            width: 20,
+                            height: 20,
+                            border: `2px solid ${colors.primaryBlack}`,
+                        },
+                    }}>
+                    <HexColorPicker color={editColor} onChange={setEditColor} />
                 </Box>
 
                 {/* Actions */}

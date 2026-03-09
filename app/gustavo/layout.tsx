@@ -4,7 +4,7 @@ import { Box, Typography } from '@mui/material'
 import {
     IconArrowLeft,
     IconHome,
-    IconReceipt,
+    IconPlaneDeparture,
     IconSettings,
 } from '@tabler/icons-react'
 import Link from 'next/link'
@@ -52,15 +52,22 @@ const HEADER_HEIGHT = 56
 
 const tabs = [
     { label: 'Home', href: '/gustavo', icon: IconHome },
-    { label: 'Expenses', href: '/gustavo/expenses/trips', icon: IconReceipt },
+    { label: 'Trips', href: '/gustavo/trips', icon: IconPlaneDeparture },
     { label: 'Settings', href: '/gustavo/settings', icon: IconSettings },
 ]
 
 function getBackPath(pathname: string): string | null {
     if (pathname === '/gustavo') return null
-    if (pathname === '/gustavo/expenses/trips') return '/gustavo'
-    if (pathname.startsWith('/gustavo/expenses/trips/'))
-        return '/gustavo/expenses/trips'
+    if (pathname === '/gustavo/trips') return '/gustavo'
+    // /gustavo/trips/[slug]/expenses → /gustavo/trips/[slug]
+    // /gustavo/trips/[slug] → /gustavo/trips
+    if (pathname.startsWith('/gustavo/trips/')) {
+        const parts = pathname.split('/')
+        // /gustavo/trips/[slug] = 4 parts → back to trip list
+        if (parts.length <= 4) return '/gustavo/trips'
+        // /gustavo/trips/[slug]/expenses = 5 parts → back to trip hub
+        return parts.slice(0, 4).join('/')
+    }
     if (pathname === '/gustavo/settings') return '/gustavo'
     if (pathname.startsWith('/gustavo/settings/')) return '/gustavo/settings'
     return '/gustavo'
@@ -79,9 +86,9 @@ export default function GustavoLayout({
     const showIcons = !isHomePage
 
     const getActiveTab = () => {
-        if (pathname.startsWith('/gustavo/expenses'))
-            return '/gustavo/expenses/trips'
-        if (pathname === '/gustavo/settings') return '/gustavo/settings'
+        if (pathname.startsWith('/gustavo/trips')) return '/gustavo/trips'
+        if (pathname.startsWith('/gustavo/settings'))
+            return '/gustavo/settings'
         return '/gustavo'
     }
 

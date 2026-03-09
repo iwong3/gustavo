@@ -4,7 +4,7 @@ import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, canAddExpense } from '@/lib/permissions'
 
-function userSummary(row: { id: number; name: string; email: string | null; avatar_url: string | null; initials: string | null; venmo_url: string | null }) {
+function userSummary(row: { id: number; name: string; email: string | null; avatar_url: string | null; initials: string | null; icon_color: string | null; venmo_url: string | null }) {
     return {
         id: row.id,
         name: row.name,
@@ -12,6 +12,7 @@ function userSummary(row: { id: number; name: string; email: string | null; avat
         email: row.email,
         avatarUrl: row.avatar_url,
         initials: row.initials,
+        iconColor: row.icon_color,
         venmoUrl: row.venmo_url,
     }
 }
@@ -37,10 +38,11 @@ export async function GET(
             e.notes, e.reported_at,
             payer.id AS payer_id, payer.name AS payer_name, payer.email AS payer_email,
             payer.avatar_url AS payer_avatar_url, payer.initials AS payer_initials,
-            payer.venmo_url AS payer_venmo_url,
+            payer.icon_color AS payer_icon_color, payer.venmo_url AS payer_venmo_url,
             reporter.id AS reporter_id, reporter.name AS reporter_name,
             reporter.email AS reporter_email, reporter.avatar_url AS reporter_avatar_url,
-            reporter.initials AS reporter_initials, reporter.venmo_url AS reporter_venmo_url
+            reporter.initials AS reporter_initials, reporter.icon_color AS reporter_icon_color,
+            reporter.venmo_url AS reporter_venmo_url
         FROM expenses e
         JOIN users payer ON e.paid_by = payer.id
         LEFT JOIN users reporter ON e.reported_by = reporter.id
@@ -59,7 +61,7 @@ export async function GET(
 
     // Fetch all expense participants in one query
     const epRes = await pool.query(
-        `SELECT ep.expense_id, u.id, u.name, u.email, u.avatar_url, u.initials, u.venmo_url
+        `SELECT ep.expense_id, u.id, u.name, u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url
          FROM expense_participants ep
          JOIN users u ON ep.user_id = u.id
          WHERE ep.expense_id = ANY($1)
@@ -103,12 +105,12 @@ export async function GET(
             paidBy: userSummary({
                 id: e.payer_id, name: e.payer_name, email: e.payer_email,
                 avatar_url: e.payer_avatar_url, initials: e.payer_initials,
-                venmo_url: e.payer_venmo_url,
+                icon_color: e.payer_icon_color, venmo_url: e.payer_venmo_url,
             }),
             reportedBy: e.reporter_id ? userSummary({
                 id: e.reporter_id, name: e.reporter_name, email: e.reporter_email,
                 avatar_url: e.reporter_avatar_url, initials: e.reporter_initials,
-                venmo_url: e.reporter_venmo_url,
+                icon_color: e.reporter_icon_color, venmo_url: e.reporter_venmo_url,
             }) : null,
             splitBetween,
             isEveryone: splitBetween.length === tripParticipantCount,

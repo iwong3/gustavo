@@ -1,14 +1,12 @@
 import { Box, Link } from '@mui/material'
-import { usePathname } from 'next/navigation'
 
+import { useTripData } from 'providers/trip-data-provider'
 import { getTablerIcon } from 'utils/icons'
 import { Link as LinkType, LinksByTripSlug, getLogoFromLinkType } from 'utils/links'
 
 export const Links = () => {
-    const pathname = usePathname()
-    // Extract slug from /gustavo/expenses/trips/[slug]
-    const slug = pathname.split('/').pop() ?? ''
-    const tripLinks = LinksByTripSlug[slug] ?? []
+    const { trip } = useTripData()
+    const tripLinks = LinksByTripSlug[trip.slug] ?? []
 
     const personalLinks = tripLinks.filter((link) => link.personal)
     const externalLinks = tripLinks.filter((link) => !link.personal)

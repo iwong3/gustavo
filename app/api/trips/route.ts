@@ -8,7 +8,7 @@ function formatDate(d: string | Date): string {
     return typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)
 }
 
-function mapUser(u: { id: number; name: string; first_name: string; email: string | null; avatar_url: string | null; initials: string | null; venmo_url: string | null }) {
+function mapUser(u: { id: number; name: string; first_name: string; email: string | null; avatar_url: string | null; initials: string | null; icon_color: string | null; venmo_url: string | null }) {
     return {
         id: u.id,
         name: u.name,
@@ -16,6 +16,7 @@ function mapUser(u: { id: number; name: string; first_name: string; email: strin
         email: u.email,
         avatarUrl: u.avatar_url,
         initials: u.initials,
+        iconColor: u.icon_color,
         venmoUrl: u.venmo_url,
     }
 }
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
 
         const participantsRes = await pool.query(
             `SELECT u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
-                    u.email, u.avatar_url, u.initials, u.venmo_url,
+                    u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
                     tp.role
              FROM trip_participants tp
              JOIN users u ON tp.user_id = u.id
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     // Fetch all participants for all trips in one query
     const participantsRes = await pool.query(
         `SELECT tp.trip_id, u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
-                u.email, u.avatar_url, u.initials, u.venmo_url,
+                u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
                 tp.role
          FROM trip_participants tp
          JOIN users u ON tp.user_id = u.id

@@ -36,6 +36,7 @@ import {
     IconMapQuestion,
     IconNotes,
     IconPhoto,
+    IconPlaneDeparture,
     IconReceipt,
     IconSearch,
     IconSettings,
@@ -133,6 +134,8 @@ export const getTablerIcon = ({
             return <IconNotes {...props} />
         case 'IconPhoto':
             return <IconPhoto {...props} />
+        case 'IconPlaneDeparture':
+            return <IconPlaneDeparture {...props} />
         case 'IconReceipt':
             return <IconReceipt {...props} />
         case 'IconSearch':
@@ -336,6 +339,7 @@ export const InitialsIcon = ({ name, initials, iconColor, sx }: IInitialsIconPro
                 alignItems: 'center',
                 borderRadius: '100%',
                 fontWeight: 'bold',
+                lineHeight: 1,
                 transition: 'background-color 0.1s',
                 ...defaultSx,
                 ...sx,
