@@ -35,7 +35,10 @@ export function SettlementCard({ settlement, participantById, currentUserId, onT
                 borderRadius: '4px',
                 cursor: 'pointer',
                 ...hardShadow,
-                borderLeft: isUserInvolved ? `4px solid ${colors.primaryYellow}` : hardShadow.border,
+                ...(isUserInvolved && {
+                    border: `2px solid ${colors.primaryYellow}`,
+                    boxShadow: `2px 2px 0px ${colors.primaryYellow}`,
+                }),
                 '&:active': {
                     boxShadow: 'none',
                     transform: 'translate(2px, 2px)',

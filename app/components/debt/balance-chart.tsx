@@ -12,20 +12,24 @@ type Props = {
     currentUserId: number
 }
 
+const chartColors = {
+    green: '#6b8e23',
+    red: colors.primaryRed,
+}
+
 export function BalanceChart({ balances, participantById, currentUserId }: Props) {
-    // Find the max absolute balance for scaling bars
     const maxAbs = Math.max(...balances.map((b) => Math.abs(b.netBalance)), 1)
 
     return (
         <Box
             sx={{
-                padding: 1.5,
                 backgroundColor: colors.primaryWhite,
                 borderRadius: '4px',
+                overflow: 'hidden',
                 ...hardShadow,
             }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {balances.map((balance) => {
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                {balances.map((balance, index) => {
                     const participant = participantById.get(balance.userId)
                     if (!participant) return null
 
@@ -33,26 +37,42 @@ export function BalanceChart({ balances, participantById, currentUserId }: Props
                     const isOwed = balance.netBalance > 0.005
                     const owes = balance.netBalance < -0.005
                     const pct = Math.abs(balance.netBalance) / maxAbs * 100
+                    // Ensure tiny amounts are still visible
+                    const barPct = pct < 3 && (isOwed || owes) ? 3 : pct
+                    const isFirst = index === 0
+                    const isLast = index === balances.length - 1
 
                     return (
-                        <Box key={balance.userId} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {/* Name column */}
-                            <Box sx={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box
+                            key={balance.userId}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                paddingX: 1,
+                                paddingTop: isFirst ? 1 : 0.5,
+                                paddingBottom: isLast ? 1 : 0.5,
+                                ...(isCurrentUser && {
+                                    backgroundColor: colors.primaryYellow,
+                                }),
+                            }}>
+                            {/* Icon + Amount */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                                 <InitialsIcon
                                     name={participant.firstName}
                                     initials={participant.initials}
-                                    sx={{ width: 24, height: 24, fontSize: 10 }}
+                                    sx={{ width: 22, height: 22, fontSize: 9 }}
                                 />
                                 <Typography
                                     sx={{
-                                        fontSize: 11,
-                                        fontWeight: isCurrentUser ? 700 : 600,
-                                        lineHeight: 1.2,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
+                                        width: 76,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        textAlign: 'right',
+                                        color: owes ? chartColors.red : isOwed ? chartColors.green : colors.primaryBlack,
                                     }}>
-                                    {isCurrentUser ? 'You' : participant.firstName}
+                                    {owes ? '-' : isOwed ? '+' : ''}
+                                    {FormattedMoney().format(Math.abs(balance.netBalance))}
                                 </Typography>
                             </Box>
 
@@ -64,62 +84,34 @@ export function BalanceChart({ balances, participantById, currentUserId }: Props
                                         <Box
                                             sx={{
                                                 height: '100%',
-                                                width: `${pct}%`,
-                                                minWidth: 2,
-                                                backgroundColor: colors.primaryRed,
-                                                borderRadius: '2px 0 0 2px',
-                                                opacity: 0.75,
+                                                width: `${barPct}%`,
+                                                backgroundColor: chartColors.red,
+                                                borderRadius: '3px 0 0 3px',
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                boxShadow: `-1px 1px 0px ${colors.primaryBlack}`,
                                             }}
                                         />
                                     )}
                                 </Box>
-                                {/* Center line */}
-                                <Box sx={{ width: '1px', backgroundColor: `${colors.primaryBlack}30`, flexShrink: 0 }} />
                                 {/* Right half: owed */}
                                 <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
                                     {isOwed && (
                                         <Box
                                             sx={{
                                                 height: '100%',
-                                                width: `${pct}%`,
-                                                minWidth: 2,
-                                                backgroundColor: colors.primaryGreen,
-                                                borderRadius: '0 2px 2px 0',
-                                                opacity: 0.75,
+                                                width: `${barPct}%`,
+                                                backgroundColor: chartColors.green,
+                                                borderRadius: '0 3px 3px 0',
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                                             }}
                                         />
                                     )}
                                 </Box>
                             </Box>
-
-                            {/* Amount */}
-                            <Typography
-                                sx={{
-                                    width: 60,
-                                    flexShrink: 0,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    textAlign: 'right',
-                                    color: owes ? colors.primaryRed : isOwed ? colors.primaryGreen : colors.primaryBlack,
-                                }}>
-                                {owes ? '-' : isOwed ? '+' : ''}
-                                {FormattedMoney().format(Math.abs(balance.netBalance))}
-                            </Typography>
                         </Box>
                     )
                 })}
-            </Box>
-
-            {/* Legend */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 1, paddingTop: 1, borderTop: `1px solid ${colors.primaryBlack}15` }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: colors.primaryRed, opacity: 0.75 }} />
-                    <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Owes</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: colors.primaryGreen, opacity: 0.75 }} />
-                    <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Is owed</Typography>
-                </Box>
             </Box>
         </Box>
     )

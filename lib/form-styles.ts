@@ -9,6 +9,8 @@
 //   fieldShadow              — raw shadow string (for custom uses like ToggleButtonGroup)
 //   dropdownPaperSx          — MUI Select/Autocomplete dropdown paper styling
 //   dropdownMenuItemSx       — MUI MenuItem styling inside dropdowns
+//   primaryButtonSx          — yellow background, black border + shadow (create, submit)
+//   secondaryButtonSx        — white background, black border + shadow (cancel, close)
 //
 // States:
 //   Default — black border, black 2px offset shadow
@@ -146,6 +148,44 @@ export const selectMenuProps = {
             '& .MuiMenuItem-root': dropdownMenuItemSx,
         },
     },
+} as const
+
+// ── Button styles ────────────────────────────────────────────────────────────
+
+/** Primary action button — yellow background, black border + shadow. */
+export const primaryButtonSx = {
+    'backgroundColor': colors.primaryYellow,
+    'color': colors.primaryBlack,
+    'fontWeight': 600,
+    'border': `1px solid ${colors.primaryBlack}`,
+    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+    'borderRadius': '4px',
+    '&:hover': {
+        backgroundColor: colors.primaryYellow,
+    },
+    '&:active': {
+        boxShadow: 'none',
+        transform: 'translate(2px, 2px)',
+    },
+    'transition': 'transform 0.1s, box-shadow 0.1s',
+} as const
+
+/** Secondary action button — white background, black border + shadow. */
+export const secondaryButtonSx = {
+    'backgroundColor': colors.primaryWhite,
+    'color': colors.primaryBlack,
+    'fontWeight': 600,
+    'border': `1px solid ${colors.primaryBlack}`,
+    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+    'borderRadius': '4px',
+    '&:hover': {
+        backgroundColor: colors.primaryWhite,
+    },
+    '&:active': {
+        boxShadow: 'none',
+        transform: 'translate(2px, 2px)',
+    },
+    'transition': 'transform 0.1s, box-shadow 0.1s',
 } as const
 
 // ── Error message ─────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from 'react'
 
 import { colors } from '@/lib/colors'
+import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
     errorFieldSx,
     errorLabelSx,
@@ -671,17 +672,15 @@ export default function TripFormDialog({
                 <Button
                     onClick={handleClose}
                     disabled={submitting}
-                    size="large">
+                    size="large"
+                    sx={secondaryButtonSx}>
                     Cancel
                 </Button>
                 <Button
                     onClick={handleSubmit}
                     disabled={submitting}
                     size="large"
-                    sx={{
-                        backgroundColor: colors.primaryYellow,
-                        fontWeight: 600,
-                    }}>
+                    sx={primaryButtonSx}>
                     {submitting
                         ? isEdit
                             ? 'Saving...'

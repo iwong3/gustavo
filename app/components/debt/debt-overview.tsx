@@ -34,17 +34,11 @@ export function DebtOverview() {
         [debtMap, participants, currentUserId, participantById]
     )
 
-    // Per-person net balances, sorted: current user first, then alphabetical
+    // Per-person net balances, sorted: most owed (green) to most owing (red)
     const sortedBalances = useMemo(() => {
         const balances = computeNetBalances(debtMap, participants)
-        return balances.sort((a, b) => {
-            if (a.userId === currentUserId) return -1
-            if (b.userId === currentUserId) return 1
-            const nameA = participantById.get(a.userId)?.firstName ?? ''
-            const nameB = participantById.get(b.userId)?.firstName ?? ''
-            return nameA.localeCompare(nameB)
-        })
-    }, [debtMap, participants, currentUserId, participantById])
+        return balances.sort((a, b) => b.netBalance - a.netBalance)
+    }, [debtMap, participants])
 
     // Drawer state
     const [drawerUserId, setDrawerUserId] = useState<number | null>(null)

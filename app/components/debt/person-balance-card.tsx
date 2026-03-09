@@ -46,7 +46,10 @@ export function PersonBalanceCard({
                 borderRadius: '4px',
                 cursor: 'pointer',
                 ...hardShadow,
-                borderLeft: isCurrentUser ? `4px solid ${colors.primaryYellow}` : hardShadow.border,
+                ...(isCurrentUser && {
+                    border: `2px solid ${colors.primaryYellow}`,
+                    boxShadow: `2px 2px 0px ${colors.primaryYellow}`,
+                }),
                 '&:active': {
                     boxShadow: 'none',
                     transform: 'translate(2px, 2px)',
@@ -85,7 +88,7 @@ export function PersonBalanceCard({
                             : isOwed
                               ? '#d4edda'
                               : '#f8d7da',
-                        border: `1px solid ${colors.primaryBlack}`,
+                        border: `1px solid ${settled ? colors.primaryBlack : isOwed ? colors.primaryGreen : colors.primaryRed}`,
                     }}>
                     {settled ? (
                         <IconMinus size={14} />

@@ -3,6 +3,7 @@ import { IconX, IconArrowRight, IconChevronDown } from '@tabler/icons-react'
 import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { colors, hardShadow } from '@/lib/colors'
+import { secondaryButtonSx } from '@/lib/form-styles'
 import { FormattedMoney } from 'utils/currency'
 import { InitialsIcon } from 'utils/icons'
 import { getPersonPairwiseDebts } from '@/lib/debt'
@@ -96,15 +97,13 @@ export function DebtDetailDrawer({
                         <Box
                             onClick={onClose}
                             sx={{
+                                ...secondaryButtonSx,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 width: 32,
                                 height: 32,
-                                borderRadius: '4px',
                                 cursor: 'pointer',
-                                border: `1px solid ${colors.primaryBlack}`,
-                                '&:active': { backgroundColor: colors.primaryYellow },
                             }}>
                             <IconX size={18} />
                         </Box>
