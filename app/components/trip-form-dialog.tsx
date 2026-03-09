@@ -428,6 +428,7 @@ export default function TripFormDialog({
                                           <InitialsIcon
                                               name={u.firstName}
                                               initials={u.initials}
+                                              iconColor={u.iconColor}
                                               sx={{
                                                   width: 32,
                                                   height: 32,
@@ -473,6 +474,7 @@ export default function TripFormDialog({
                                             <InitialsIcon
                                                 name={u.firstName}
                                                 initials={u.initials}
+                                                iconColor={u.iconColor}
                                                 sx={{
                                                     width: 24,
                                                     height: 24,

@@ -6,7 +6,7 @@ import { Graph } from 'components/graphs/graph'
 import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
 import { defaultBackgroundColor } from 'utils/colors'
 import { FormattedMoney } from 'utils/currency'
-import { getInitialsIconColors, InitialsIcon } from 'utils/icons'
+import { InitialsIcon } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
 
 import type { UserSummary } from '@/lib/types'
@@ -23,12 +23,12 @@ export const TotalSpendByPerson = () => {
         participantById.set(p.id, p)
     }
 
-    // Convert Map<number,number> to array of [firstName, totalSpend]
-    const totalSpendByPersonArray: [string, number][] = Array.from(
+    // Convert Map<number,number> to array of [firstName, totalSpend, iconColor]
+    const totalSpendByPersonArray: [string, number, string | null][] = Array.from(
         totalSpendByPerson.entries()
     ).map(([userId, amount]) => {
         const p = participantById.get(userId)
-        return [p?.firstName ?? String(userId), amount]
+        return [p?.firstName ?? String(userId), amount, p?.iconColor ?? null]
     })
 
     // cards
@@ -37,8 +37,8 @@ export const TotalSpendByPerson = () => {
         const rows = []
         let row = []
         for (let i = 0; i < totalSpendByPersonArray.length; i++) {
-            const [personName, totalSpend] = totalSpendByPersonArray[i]
-            row.push(renderPerson(personName, totalSpend))
+            const [personName, totalSpend, iconColor] = totalSpendByPersonArray[i]
+            row.push(renderPerson(personName, totalSpend, iconColor))
 
             if (
                 row.length === rowLength ||
@@ -66,7 +66,7 @@ export const TotalSpendByPerson = () => {
         return rows
     }
 
-    const renderPerson = (personName: string, totalSpend: number) => {
+    const renderPerson = (personName: string, totalSpend: number, iconColor: string | null) => {
         const key = 'total-spend-by-person-' + personName
         const isActive = filters.get(personName)
 
@@ -100,6 +100,7 @@ export const TotalSpendByPerson = () => {
                     }}>
                     <InitialsIcon
                         name={personName}
+                        iconColor={iconColor}
                         sx={{
                             width: 18,
                             height: 18,
@@ -134,7 +135,7 @@ export const TotalSpendByPerson = () => {
 
     // graph
     const personColors = totalSpendByPersonArray.map(
-        ([personName]) => getInitialsIconColors(personName).bgColor
+        ([, , iconColor]) => iconColor ?? '#FBBC04'
     )
     const activePeople = Array.from(filters.values())
 
@@ -156,7 +157,7 @@ export const TotalSpendByPerson = () => {
                     marginY: 2,
                 }}>
                 <Graph
-                    data={totalSpendByPersonArray}
+                    data={totalSpendByPersonArray.map(([name, amount]) => [name, amount] as [string, number])}
                     width={(windowWidth || 390) * 0.9}
                     height={(windowWidth || 390) * 0.5}
                     barColors={personColors}

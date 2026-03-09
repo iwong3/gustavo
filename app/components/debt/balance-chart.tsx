@@ -61,6 +61,7 @@ export function BalanceChart({ balances, participantById, currentUserId }: Props
                                 <InitialsIcon
                                     name={participant.firstName}
                                     initials={participant.initials}
+                                    iconColor={participant.iconColor}
                                     sx={{ width: 22, height: 22, fontSize: 9 }}
                                 />
                                 <Typography

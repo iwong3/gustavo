@@ -67,6 +67,7 @@ export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) =>
                             <InitialsIcon
                                 name={name}
                                 initials={user.initials}
+                                iconColor={user.iconColor}
                                 sx={{ width: size, height: size, ...customSx }}
                             />
                         </Box>

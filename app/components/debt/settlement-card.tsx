@@ -50,6 +50,7 @@ export function SettlementCard({ settlement, participantById, currentUserId, onT
                 <InitialsIcon
                     name={debtor.firstName}
                     initials={debtor.initials}
+                    iconColor={debtor.iconColor}
                     sx={{ width: 36, height: 36, fontSize: 14 }}
                 />
                 <Typography sx={{ fontSize: 11, fontWeight: 600, marginTop: 0.5, lineHeight: 1 }}>
@@ -70,6 +71,7 @@ export function SettlementCard({ settlement, participantById, currentUserId, onT
                 <InitialsIcon
                     name={creditor.firstName}
                     initials={creditor.initials}
+                    iconColor={creditor.iconColor}
                     sx={{ width: 36, height: 36, fontSize: 14 }}
                 />
                 <Typography sx={{ fontSize: 11, fontWeight: 600, marginTop: 0.5, lineHeight: 1 }}>

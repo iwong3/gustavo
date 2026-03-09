@@ -286,6 +286,7 @@ export const getSortMenuItemIcon = (
 interface IInitialsIconProps {
     name: string  // first name
     initials?: string | null  // from DB, fallback to derived
+    iconColor?: string | null  // hex color from DB
     sx?: SxProps<Theme>
 }
 
@@ -298,14 +299,31 @@ function deriveInitials(name: string): string {
     return name.slice(0, 2).toUpperCase()
 }
 
-export const InitialsIcon = ({ name, initials, sx }: IInitialsIconProps) => {
-    const colors = getInitialsIconColors(name)
+/** Returns '#000' or '#fff' based on WCAG relative luminance of the background */
+export function getContrastText(hex: string): '#000' | '#fff' {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+
+    const R = r <= 0.03928 ? r / 12.92 : ((r + 0.055) / 1.055) ** 2.4
+    const G = g <= 0.03928 ? g / 12.92 : ((g + 0.055) / 1.055) ** 2.4
+    const B = b <= 0.03928 ? b / 12.92 : ((b + 0.055) / 1.055) ** 2.4
+
+    const luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B
+    return luminance > 0.179 ? '#000' : '#fff'
+}
+
+const DEFAULT_ICON_COLOR = '#FBBC04'
+
+export const InitialsIcon = ({ name, initials, iconColor, sx }: IInitialsIconProps) => {
+    const bgColor = iconColor ?? DEFAULT_ICON_COLOR
+    const textColor = getContrastText(bgColor)
     const displayInitials = initials || deriveInitials(name)
     const defaultSx = {
         width: defaultIconSize,
         height: defaultIconSize,
-        color: colors.color,
-        backgroundColor: colors.bgColor,
+        color: textColor,
+        backgroundColor: bgColor,
         border: '1px solid #090401',
         boxShadow: '1px 1px 0px #090401',
     }
@@ -325,29 +343,6 @@ export const InitialsIcon = ({ name, initials, sx }: IInitialsIconProps) => {
             {displayInitials}
         </Box>
     )
-}
-
-type IconColors = {
-    color: string
-    bgColor: string
-}
-
-// Color by first name — deterministic for known users, hashed for unknown
-const personColorMap: Record<string, string> = {
-    'Aibek': '#c8553d',
-    'Angela': '#64b5f6',
-    'Dennis': '#fca311',
-    'Ivan': '#ffc857',
-    'Jenny': '#c8b6ff',
-    'Joanna': '#90a955',
-    'Lisa': '#e5989b',
-    'Michelle': '#b8c0ff',
-    'Suming': '#ffc09f',
-}
-
-export const getInitialsIconColors = (name: string): IconColors => {
-    const bgColor = personColorMap[name] ?? '#FBBC04'
-    return { color: 'black', bgColor }
 }
 
 // --- Spend type / category icons (string-based) ---

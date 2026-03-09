@@ -132,6 +132,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                             <InitialsIcon
                                 name={expense.paidBy.firstName}
                                 initials={expense.paidBy.initials}
+                                iconColor={expense.paidBy.iconColor}
                                 sx={{ width: 24, height: 24 }}
                             />
                         </Box>

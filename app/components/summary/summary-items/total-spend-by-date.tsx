@@ -7,7 +7,6 @@ import { useWindowSize } from 'hooks/useWindowSize'
 import { Graph } from 'components/graphs/graph'
 import { LineGraph } from 'components/graphs/line-graph'
 import { useSortDateStore } from 'components/menu/sort/sort-date'
-import { getInitialsIconColors } from 'utils/icons'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 
@@ -66,7 +65,7 @@ export const TotalSpendByDate = () => {
     const { trip } = useTripData()
     const participants = trip.participants
     const personColors: string[] = participants.map(
-        (p) => getInitialsIconColors(p.firstName).bgColor
+        (p) => p.iconColor ?? '#FBBC04'
     )
 
     return (

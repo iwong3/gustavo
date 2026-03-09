@@ -14,6 +14,7 @@
 - [ ] Track user's last login
 - [ ] Update "manage categories" and "manage locations" settings
 - [ ] Add ability to add locations when creating or editing a trip
+- [ ] When adding expense, add ability to "cover" for user(s)
 
 ## UX / Design
 

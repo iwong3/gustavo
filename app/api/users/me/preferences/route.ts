@@ -7,7 +7,7 @@ export async function GET() {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const res = await pool.query(
-        'SELECT default_trip_visibility, default_participant_role FROM users WHERE id = $1',
+        'SELECT default_trip_visibility, default_participant_role, initials, icon_color FROM users WHERE id = $1',
         [authUser.userId]
     )
     if (res.rows.length === 0) {
@@ -17,6 +17,8 @@ export async function GET() {
     return NextResponse.json({
         defaultTripVisibility: res.rows[0].default_trip_visibility,
         defaultParticipantRole: res.rows[0].default_participant_role,
+        initials: res.rows[0].initials,
+        iconColor: res.rows[0].icon_color,
     })
 }
 
@@ -43,6 +45,22 @@ export async function PUT(request: NextRequest) {
         }
         sets.push(`default_participant_role = $${idx++}`)
         values.push(body.defaultParticipantRole)
+    }
+
+    if (body.initials !== undefined) {
+        if (typeof body.initials !== 'string' || body.initials.length < 1 || body.initials.length > 3) {
+            return NextResponse.json({ error: 'Initials must be 1-3 characters' }, { status: 400 })
+        }
+        sets.push(`initials = $${idx++}`)
+        values.push(body.initials.toUpperCase())
+    }
+
+    if (body.iconColor !== undefined) {
+        if (typeof body.iconColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(body.iconColor)) {
+            return NextResponse.json({ error: 'Invalid hex color' }, { status: 400 })
+        }
+        sets.push(`icon_color = $${idx++}`)
+        values.push(body.iconColor)
     }
 
     if (sets.length === 0) {

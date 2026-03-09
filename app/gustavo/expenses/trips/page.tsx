@@ -91,6 +91,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                             key={p.id}
                             name={p.firstName}
                             initials={p.initials}
+                            iconColor={p.iconColor}
                             sx={{
                                 width: 28,
                                 height: 28,

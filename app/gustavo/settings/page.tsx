@@ -1,25 +1,31 @@
 'use client'
 
 import {
-    Avatar,
     Box,
     Button,
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    TextField,
     ToggleButton,
     ToggleButtonGroup,
     Typography,
 } from '@mui/material'
-import { IconChevronRight } from '@tabler/icons-react'
+import { IconChevronRight, IconPencil } from '@tabler/icons-react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { colors } from '@/lib/colors'
+import { colors, hardShadow } from '@/lib/colors'
+import { labelSx, primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import type { UserPreferences } from '@/lib/types'
 import { fetchUserPreferences, updateUserPreferences } from 'utils/api'
+import { InitialsIcon, getContrastText } from 'utils/icons'
 
 export default function SettingsPage() {
     const { data: session } = useSession()
     const [prefs, setPrefs] = useState<UserPreferences | null>(null)
+    const [iconDialogOpen, setIconDialogOpen] = useState(false)
 
     useEffect(() => {
         fetchUserPreferences()
@@ -42,7 +48,7 @@ export default function SettingsPage() {
 
     if (!session?.user) return null
 
-    const { name, email, image } = session.user
+    const { name, email } = session.user
 
     const toggleGroupSx = {
         'border': `2px solid ${colors.primaryBlack}`,
@@ -75,7 +81,42 @@ export default function SettingsPage() {
                 paddingTop: 4,
                 gap: 3,
             }}>
-            <Avatar src={image ?? undefined} sx={{ width: 80, height: 80 }} />
+            {/* Profile icon + edit button */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    cursor: 'pointer',
+                }}
+                onClick={() => setIconDialogOpen(true)}>
+                <InitialsIcon
+                    name={name ?? ''}
+                    initials={prefs?.initials}
+                    iconColor={prefs?.iconColor}
+                    sx={{
+                        width: 80,
+                        height: 80,
+                        fontSize: 32,
+                        border: `2px solid ${colors.primaryBlack}`,
+                        boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: colors.primaryWhite,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                    <IconPencil size={14} />
+                </Box>
+            </Box>
             <Box sx={{ textAlign: 'center' }}>
                 <Typography sx={{ fontSize: 20, fontWeight: 600 }}>
                     {name}
@@ -215,6 +256,245 @@ export default function SettingsPage() {
                 }}>
                 Version: {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
             </Typography>
+
+            {prefs && (
+                <IconCustomizeDialog
+                    open={iconDialogOpen}
+                    onClose={() => setIconDialogOpen(false)}
+                    name={name ?? ''}
+                    initials={prefs.initials}
+                    iconColor={prefs.iconColor}
+                    onSave={async (newInitials, newColor) => {
+                        setPrefs((prev) =>
+                            prev
+                                ? {
+                                      ...prev,
+                                      initials: newInitials,
+                                      iconColor: newColor,
+                                  }
+                                : prev
+                        )
+                        await updateUserPreferences({
+                            initials: newInitials,
+                            iconColor: newColor,
+                        })
+                    }}
+                />
+            )}
         </Box>
+    )
+}
+
+// ── Icon Customize Dialog ────────────────────────────────────────────────────
+
+function deriveInitials(name: string): string {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.slice(0, 2).toUpperCase()
+}
+
+type IconCustomizeDialogProps = {
+    open: boolean
+    onClose: () => void
+    name: string
+    initials: string | null
+    iconColor: string | null
+    onSave: (initials: string, color: string) => Promise<void>
+}
+
+function IconCustomizeDialog({
+    open,
+    onClose,
+    name,
+    initials,
+    iconColor,
+    onSave,
+}: IconCustomizeDialogProps) {
+    const [editInitials, setEditInitials] = useState(
+        initials || deriveInitials(name)
+    )
+    const [editColor, setEditColor] = useState(iconColor || '#FBBC04')
+    const [saving, setSaving] = useState(false)
+    const colorInputRef = useRef<HTMLInputElement>(null)
+
+    // Sync when dialog opens with new props
+    useEffect(() => {
+        if (open) {
+            setEditInitials(initials || deriveInitials(name))
+            setEditColor(iconColor || '#FBBC04')
+        }
+    }, [open, initials, iconColor, name])
+
+    const handleSave = async () => {
+        if (!editInitials.trim()) return
+        setSaving(true)
+        try {
+            await onSave(editInitials.trim().toUpperCase(), editColor)
+            onClose()
+        } catch (err) {
+            console.error('Failed to save icon settings:', err)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const contrastText = getContrastText(editColor)
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    ...hardShadow,
+                    borderRadius: '8px',
+                    backgroundColor: colors.primaryWhite,
+                },
+            }}>
+            <DialogTitle
+                sx={{
+                    fontWeight: 600,
+                    fontSize: 18,
+                    color: colors.primaryBlack,
+                    paddingBottom: 1,
+                }}>
+                Customize Icon
+            </DialogTitle>
+            <DialogContent
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 3,
+                    paddingTop: '8px !important',
+                }}>
+                {/* Preview */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        paddingY: 2,
+                    }}>
+                    <InitialsIcon
+                        name={name}
+                        initials={editInitials || undefined}
+                        iconColor={editColor}
+                        sx={{
+                            width: 80,
+                            height: 80,
+                            fontSize: 32,
+                            border: `2px solid ${colors.primaryBlack}`,
+                            boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        }}
+                    />
+                    <Typography
+                        variant="body2"
+                        sx={{ color: 'text.secondary', fontSize: 12 }}>
+                        Preview
+                    </Typography>
+                </Box>
+
+                {/* Initials + Color — single row, equal height */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ flex: '0 0 90px', display: 'flex', flexDirection: 'column' }}>
+                        <Typography sx={labelSx}>Initials</Typography>
+                        <TextField
+                            value={editInitials}
+                            onChange={(e) => {
+                                const val = e.target.value.toUpperCase()
+                                if (val.length <= 3) setEditInitials(val)
+                            }}
+                            size="small"
+                            fullWidth
+                            inputProps={{
+                                maxLength: 3,
+                                style: {
+                                    textAlign: 'center',
+                                    fontWeight: 600,
+                                    letterSpacing: 2,
+                                },
+                            }}
+                            sx={{
+                                'flex': 1,
+                                '& .MuiOutlinedInput-root': {
+                                    'height': '100%',
+                                    'border': `2px solid ${colors.primaryBlack}`,
+                                    'borderRadius': 1,
+                                    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                    '& fieldset': { border: 'none' },
+                                },
+                            }}
+                        />
+                    </Box>
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Typography sx={labelSx}>Color</Typography>
+                        {/* Hidden native color input */}
+                        <input
+                            ref={colorInputRef}
+                            type="color"
+                            value={editColor}
+                            onChange={(e) => setEditColor(e.target.value)}
+                            style={{
+                                position: 'absolute',
+                                opacity: 0,
+                                width: 0,
+                                height: 0,
+                                pointerEvents: 'none',
+                            }}
+                        />
+                        <Box
+                            onClick={() => colorInputRef.current?.click()}
+                            sx={{
+                                'flex': 1,
+                                'borderRadius': 1,
+                                'backgroundColor': editColor,
+                                'border': `2px solid ${colors.primaryBlack}`,
+                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                'cursor': 'pointer',
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'justifyContent': 'center',
+                                'gap': 1,
+                                '&:hover': { opacity: 0.9 },
+                            }}>
+                            <IconPencil size={16} color={contrastText} />
+                            <Typography
+                                sx={{
+                                    fontSize: 13,
+                                    fontFamily: 'monospace',
+                                    color: contrastText,
+                                }}>
+                                {editColor.toUpperCase()}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+
+                {/* Actions */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: 1.5,
+                        paddingTop: 1,
+                        paddingBottom: 1,
+                    }}>
+                    <Button onClick={onClose} sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving || !editInitials.trim()}
+                        sx={primaryButtonSx}>
+                        {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                </Box>
+            </DialogContent>
+        </Dialog>
     )
 }

@@ -24,6 +24,7 @@ export type UserSummary = {
     email: string | null
     avatarUrl: string | null
     initials: string | null
+    iconColor: string | null
     venmoUrl: string | null
 }
 
@@ -74,4 +75,6 @@ export type Location = {
 export type UserPreferences = {
     defaultTripVisibility: 'participants' | 'all_users'
     defaultParticipantRole: 'editor' | 'viewer'
+    initials: string | null
+    iconColor: string | null
 }

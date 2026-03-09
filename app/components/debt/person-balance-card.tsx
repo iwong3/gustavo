@@ -61,6 +61,7 @@ export function PersonBalanceCard({
                 <InitialsIcon
                     name={participant.firstName}
                     initials={participant.initials}
+                    iconColor={participant.iconColor}
                     sx={{ width: 40, height: 40, fontSize: 16 }}
                 />
                 <Box sx={{ flex: 1 }}>

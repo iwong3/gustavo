@@ -413,6 +413,7 @@ export default function ExpenseFormDialog({
                                             <InitialsIcon
                                                 name={p.firstName}
                                                 initials={p.initials}
+                                                iconColor={p.iconColor}
                                                 sx={{
                                                     width: 24,
                                                     height: 24,
@@ -443,6 +444,7 @@ export default function ExpenseFormDialog({
                                             <InitialsIcon
                                                 name={p.firstName}
                                                 initials={p.initials}
+                                                iconColor={p.iconColor}
                                                 sx={{
                                                     width: 24,
                                                     height: 24,
@@ -552,6 +554,7 @@ export default function ExpenseFormDialog({
                                     <InitialsIcon
                                         name={p.firstName}
                                         initials={p.initials}
+                                        iconColor={p.iconColor}
                                         sx={{
                                             width: 32,
                                             height: 32,

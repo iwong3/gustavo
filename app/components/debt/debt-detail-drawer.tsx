@@ -88,6 +88,7 @@ export function DebtDetailDrawer({
                             <InitialsIcon
                                 name={person.firstName}
                                 initials={person.initials}
+                                iconColor={person.iconColor}
                                 sx={{ width: 36, height: 36, fontSize: 14 }}
                             />
                             <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
@@ -197,6 +198,7 @@ function PairwiseSection({
                     <InitialsIcon
                         name={debtorData.firstName}
                         initials={debtorData.initials}
+                        iconColor={debtorData.iconColor}
                         sx={{ width: 28, height: 28, fontSize: 12 }}
                     />
                 )}
@@ -208,6 +210,7 @@ function PairwiseSection({
                     <InitialsIcon
                         name={creditorData.firstName}
                         initials={creditorData.initials}
+                        iconColor={creditorData.iconColor}
                         sx={{ width: 28, height: 28, fontSize: 12 }}
                     />
                 )}
