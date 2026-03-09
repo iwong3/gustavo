@@ -1,6 +1,7 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
+import { dropdownMenuItemSx, dropdownPaperSx } from '@/lib/form-styles'
 import {
     Box,
     CircularProgress,
@@ -130,13 +131,17 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                     <Menu
                         anchorEl={anchorEl}
                         open={menuOpen}
-                        onClose={() => setAnchorEl(null)}>
+                        onClose={() => setAnchorEl(null)}
+                        slotProps={{
+                            paper: { sx: dropdownPaperSx },
+                        }}>
                         {showEdit && (
                             <MenuItem
                                 onClick={() => {
                                     setAnchorEl(null)
                                     onEdit(trip)
-                                }}>
+                                }}
+                                sx={dropdownMenuItemSx}>
                                 Edit
                             </MenuItem>
                         )}
@@ -146,7 +151,13 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                                     setAnchorEl(null)
                                     onDelete(trip)
                                 }}
-                                sx={{ color: colors.primaryRed }}>
+                                sx={{
+                                    ...dropdownMenuItemSx,
+                                    'color': colors.primaryRed,
+                                    '&:hover': {
+                                        backgroundColor: `${colors.primaryRed}18`,
+                                    },
+                                }}>
                                 Delete
                             </MenuItem>
                         )}

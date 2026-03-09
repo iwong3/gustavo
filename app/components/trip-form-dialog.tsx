@@ -5,6 +5,7 @@ import {
     Button,
     Chip,
     FormControl,
+    IconButton,
     MenuItem,
     Select,
     Skeleton,
@@ -13,9 +14,10 @@ import {
     ToggleButtonGroup,
     Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { IconPencil, IconPlus, IconCheck, IconX } from '@tabler/icons-react'
+import { useEffect, useRef, useState } from 'react'
 
-import { colors } from '@/lib/colors'
+import { colors, hardShadow } from '@/lib/colors'
 import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
     errorFieldSx,
@@ -25,11 +27,12 @@ import {
     fieldSx,
     labelSx,
 } from '@/lib/form-styles'
-import type { TripRole, TripSummary, UserSummary } from '@/lib/types'
+import type { Location, TripRole, TripSummary, UserSummary } from '@/lib/types'
 import FormDrawer from 'components/form-drawer'
 import { useCurrentUser } from 'hooks/useCurrentUser'
 import {
     createTrip,
+    fetchLocations,
     fetchUserPreferences,
     fetchUsers,
     updateParticipantRole,
@@ -40,6 +43,21 @@ import { InitialsIcon } from 'utils/icons'
 import { canManageRoles } from 'utils/permissions'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
+
+// ── Location item for local state ───────────────────────────────────────────
+
+type LocalLocation = {
+    /** Negative IDs = new (unsaved), positive IDs = existing from DB */
+    id: number
+    name: string
+    /** Original name for rename tracking (edit mode only) */
+    originalName?: string
+}
+
+let nextLocalId = -1
+
+// MUI small TextField rendered height (with size="small") is 40px
+const INPUT_HEIGHT = 40
 
 type Props = {
     open: boolean
@@ -74,6 +92,14 @@ export default function TripFormDialog({
     const [error, setError] = useState('')
     const [attempted, setAttempted] = useState(false)
 
+    // ── Location state ──────────────────────────────────────────────────────
+    const [locations, setLocations] = useState<LocalLocation[]>([])
+    const [deletedLocationIds, setDeletedLocationIds] = useState<number[]>([])
+    const [newLocName, setNewLocName] = useState('')
+    const [editingLocId, setEditingLocId] = useState<number | null>(null)
+    const [editLocName, setEditLocName] = useState('')
+    const editLocRef = useRef<HTMLInputElement>(null)
+
     useEffect(() => {
         if (open) {
             fetchUsers()
@@ -106,6 +132,20 @@ export default function TripFormDialog({
             )
             setError('')
             setAttempted(false)
+
+            // Load existing locations
+            fetchLocations(trip.id)
+                .then((locs) =>
+                    setLocations(
+                        locs.map((l) => ({
+                            id: l.id,
+                            name: l.name,
+                            originalName: l.name,
+                        }))
+                    )
+                )
+                .catch(() => {})
+            setDeletedLocationIds([])
         } else if (open && mode === 'create') {
             resetForm()
             // Load user's default visibility preference
@@ -114,6 +154,13 @@ export default function TripFormDialog({
                 .catch(() => {})
         }
     }, [open, mode, trip])
+
+    useEffect(() => {
+        if (editingLocId !== null && editLocRef.current) {
+            editLocRef.current.focus()
+            editLocRef.current.select()
+        }
+    }, [editingLocId])
 
     const toggleUser = (userId: number) => {
         setSelectedUserIds((prev) =>
@@ -134,11 +181,124 @@ export default function TripFormDialog({
         setParticipantRoles(new Map())
         setError('')
         setAttempted(false)
+        setLocations([])
+        setDeletedLocationIds([])
+        setNewLocName('')
+        setEditingLocId(null)
+        setEditLocName('')
+        nextLocalId = -1
     }
 
     const handleClose = () => {
         onClose()
         setTimeout(resetForm, 300)
+    }
+
+    // ── Location handlers ───────────────────────────────────────────────────
+
+    const addLocation = () => {
+        const trimmed = newLocName.trim()
+        if (!trimmed) return
+        // Prevent duplicates (case-insensitive)
+        if (locations.some((l) => l.name.toLowerCase() === trimmed.toLowerCase())) {
+            setNewLocName('')
+            return
+        }
+        setLocations((prev) => [...prev, { id: nextLocalId--, name: trimmed }])
+        setNewLocName('')
+    }
+
+    const removeLocation = (locId: number) => {
+        setLocations((prev) => prev.filter((l) => l.id !== locId))
+        // Track deletion of existing DB locations
+        if (locId > 0) {
+            setDeletedLocationIds((prev) => [...prev, locId])
+        }
+        if (editingLocId === locId) {
+            setEditingLocId(null)
+        }
+    }
+
+    const startEditLocation = (loc: LocalLocation) => {
+        setEditingLocId(loc.id)
+        setEditLocName(loc.name)
+    }
+
+    const confirmEditLocation = () => {
+        if (editingLocId === null) return
+        const trimmed = editLocName.trim()
+        if (!trimmed) {
+            setEditingLocId(null)
+            return
+        }
+        // Check for duplicates (excluding current)
+        const isDuplicate = locations.some(
+            (l) =>
+                l.id !== editingLocId &&
+                l.name.toLowerCase() === trimmed.toLowerCase()
+        )
+        if (isDuplicate) {
+            setEditingLocId(null)
+            return
+        }
+        setLocations((prev) =>
+            prev.map((l) =>
+                l.id === editingLocId ? { ...l, name: trimmed } : l
+            )
+        )
+        setEditingLocId(null)
+    }
+
+    const cancelEditLocation = () => {
+        setEditingLocId(null)
+        setEditLocName('')
+    }
+
+    // ── Save locations to API ───────────────────────────────────────────────
+
+    const saveLocations = async (tripId: number) => {
+        const promises: Promise<unknown>[] = []
+
+        // Delete removed locations
+        for (const id of deletedLocationIds) {
+            promises.push(
+                fetch(`/api/trips/${tripId}/locations/${id}`, {
+                    method: 'DELETE',
+                })
+            )
+        }
+
+        // Add new locations (negative IDs)
+        for (const loc of locations) {
+            if (loc.id < 0) {
+                promises.push(
+                    fetch(`/api/trips/${tripId}/locations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: loc.name }),
+                    })
+                )
+            }
+        }
+
+        // Rename existing locations that changed
+        for (const loc of locations) {
+            if (
+                loc.id > 0 &&
+                loc.originalName &&
+                loc.name !== loc.originalName
+            ) {
+                promises.push(
+                    fetch(`/api/trips/${tripId}/locations/${loc.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: loc.name }),
+                    })
+                )
+            }
+        }
+
+        await Promise.all(promises)
     }
 
     const handleSubmit = async () => {
@@ -231,6 +391,9 @@ export default function TripFormDialog({
                         await Promise.all(newRoleChanges)
                     }
                 }
+
+                // Save location changes
+                await saveLocations(trip.id)
             } else {
                 const created = await createTrip({
                     name: name.trim(),
@@ -257,6 +420,9 @@ export default function TripFormDialog({
                 if (roleUpdates.length > 0) {
                     await Promise.all(roleUpdates)
                 }
+
+                // Create locations for the new trip
+                await saveLocations(created.id)
             }
 
             resetForm()
@@ -306,7 +472,7 @@ export default function TripFormDialog({
                     color: colors.primaryBlack,
                     padding: '16px 24px 0',
                 }}>
-                {isEdit ? 'Edit Trip' : 'Create Trip'}
+                {isEdit ? 'Edit trip' : 'Create trip'}
             </Typography>
             <Box
                 sx={{
@@ -319,7 +485,7 @@ export default function TripFormDialog({
                 }}>
                 <Box>
                     <Typography sx={nameError ? errorLabelSx : labelSx}>
-                        Trip Name *
+                        Trip name *
                     </Typography>
                     <TextField
                         value={name}
@@ -336,7 +502,7 @@ export default function TripFormDialog({
                     <Box sx={{ flex: 1 }}>
                         <Typography
                             sx={startDateError ? errorLabelSx : labelSx}>
-                            Start Date *
+                            Start date *
                         </Typography>
                         <TextField
                             type="date"
@@ -351,7 +517,7 @@ export default function TripFormDialog({
                     </Box>
                     <Box sx={{ flex: 1 }}>
                         <Typography sx={endDateError ? errorLabelSx : labelSx}>
-                            End Date *
+                            End date *
                         </Typography>
                         <TextField
                             type="date"
@@ -381,8 +547,8 @@ export default function TripFormDialog({
                 </Box>
 
                 <Box>
-                    <Typography sx={labelSx}>Local Currency</Typography>
-                    <FormControl size="small" fullWidth>
+                    <Typography sx={labelSx}>Local currency</Typography>
+                    <FormControl size="small" sx={{ width: 120 }}>
                         <Select
                             value={currency}
                             onChange={(e) =>
@@ -580,6 +746,8 @@ export default function TripFormDialog({
                                                         paddingLeft: '12px',
                                                         paddingRight:
                                                             '28px !important',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
                                                     },
                                                     '& .MuiSelect-icon': {
                                                         right: 4,
@@ -621,7 +789,7 @@ export default function TripFormDialog({
                 </Box>
 
                 <Box>
-                    <Typography sx={labelSx}>Trip Visibility</Typography>
+                    <Typography sx={labelSx}>Trip visibility</Typography>
                     <ToggleButtonGroup
                         value={visibility}
                         exclusive
@@ -655,6 +823,204 @@ export default function TripFormDialog({
                         </ToggleButton>
                         <ToggleButton value="all_users">All users</ToggleButton>
                     </ToggleButtonGroup>
+                </Box>
+
+                {/* Locations — inline list */}
+                <Box>
+                    <Typography sx={labelSx}>Locations</Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            gap: 0.75,
+                            alignItems: 'stretch',
+                        }}>
+                        <TextField
+                            value={newLocName}
+                            onChange={(e) => setNewLocName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addLocation()
+                                }
+                            }}
+                            placeholder="Add a location"
+                            size="small"
+                            fullWidth
+                            sx={fieldSx}
+                        />
+                        <IconButton
+                            onClick={addLocation}
+                            disabled={!newLocName.trim()}
+                            sx={{
+                                'color': colors.primaryBlack,
+                                'backgroundColor': colors.primaryYellow,
+                                ...hardShadow,
+                                'borderRadius': '4px',
+                                'width': INPUT_HEIGHT,
+                                'height': INPUT_HEIGHT,
+                                'flexShrink': 0,
+                                '&:hover': {
+                                    backgroundColor: colors.primaryYellow,
+                                },
+                                '&:active': {
+                                    boxShadow: 'none',
+                                    transform: 'translate(2px, 2px)',
+                                },
+                                '&.Mui-disabled': {
+                                    color: `${colors.primaryBlack}40`,
+                                    backgroundColor: `${colors.primaryYellow}60`,
+                                    border: `1px solid ${colors.primaryBlack}40`,
+                                    boxShadow: `2px 2px 0px ${colors.primaryBlack}40`,
+                                },
+                                'transition':
+                                    'transform 0.1s, box-shadow 0.1s',
+                            }}>
+                            <IconPlus size={18} />
+                        </IconButton>
+                    </Box>
+                    {locations.length > 0 && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                marginTop: 1,
+                                border: `1px solid ${colors.primaryBlack}`,
+                                borderRadius: '4px',
+                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                backgroundColor: colors.primaryWhite,
+                                overflow: 'hidden',
+                            }}>
+                            {locations.map((loc, i) => (
+                                <Box
+                                    key={loc.id}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        paddingY: 0.5,
+                                        paddingX: 1,
+                                        borderBottom:
+                                            i < locations.length - 1
+                                                ? `1px solid ${colors.primaryBlack}15`
+                                                : 'none',
+                                    }}>
+                                    {editingLocId === loc.id ? (
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                flex: 1,
+                                                gap: 0.5,
+                                            }}>
+                                            <input
+                                                ref={editLocRef}
+                                                value={editLocName}
+                                                onChange={(e) =>
+                                                    setEditLocName(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter')
+                                                        confirmEditLocation()
+                                                    if (e.key === 'Escape')
+                                                        cancelEditLocation()
+                                                }}
+                                                onBlur={confirmEditLocation}
+                                                style={{
+                                                    border: `1px solid ${colors.primaryYellow}`,
+                                                    boxShadow: `1px 1px 0px ${colors.primaryYellow}`,
+                                                    outline: 'none',
+                                                    background:
+                                                        colors.primaryWhite,
+                                                    fontSize: 14,
+                                                    padding: '4px 8px',
+                                                    borderRadius: 4,
+                                                    flex: 1,
+                                                    fontFamily: 'inherit',
+                                                }}
+                                            />
+                                            <IconButton
+                                                size="small"
+                                                onMouseDown={(e) =>
+                                                    e.preventDefault()
+                                                }
+                                                onClick={confirmEditLocation}
+                                                sx={{
+                                                    color: colors.primaryGreen,
+                                                    padding: '4px',
+                                                }}>
+                                                <IconCheck size={16} />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onMouseDown={(e) =>
+                                                    e.preventDefault()
+                                                }
+                                                onClick={cancelEditLocation}
+                                                sx={{
+                                                    color: colors.primaryBlack,
+                                                    padding: '4px',
+                                                    opacity: 0.4,
+                                                }}>
+                                                <IconX size={16} />
+                                            </IconButton>
+                                        </Box>
+                                    ) : (
+                                        <>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 14,
+                                                    flex: 1,
+                                                }}>
+                                                {loc.name}
+                                            </Typography>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    gap: 0.25,
+                                                }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        startEditLocation(loc)
+                                                    }
+                                                    sx={{
+                                                        'color':
+                                                            colors.primaryBlack,
+                                                        'padding': '4px',
+                                                        'opacity': 0.4,
+                                                        '&:hover': {
+                                                            opacity: 1,
+                                                        },
+                                                    }}>
+                                                    <IconPencil size={15} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        removeLocation(loc.id)
+                                                    }
+                                                    sx={{
+                                                        'color':
+                                                            colors.primaryBlack,
+                                                        'padding': '4px',
+                                                        'opacity': 0.4,
+                                                        '&:hover': {
+                                                            opacity: 1,
+                                                            color: colors.primaryRed,
+                                                        },
+                                                    }}>
+                                                    <IconX size={15} />
+                                                </IconButton>
+                                            </Box>
+                                        </>
+                                    )}
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
                 </Box>
 
                 {error && (

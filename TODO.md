@@ -13,7 +13,6 @@
 - [ ] Add notes for a trip? Such as link to Google Photos album
 - [ ] Track user's last login
 - [ ] Update "manage categories" and "manage locations" settings
-- [ ] Add ability to add locations when creating or editing a trip
 - [ ] When adding expense, add ability to "cover" for user(s)
 - [ ] End of trip report generator? Standalone page or image or pdf gen. Include
       fun stats.
@@ -30,7 +29,6 @@
 - [ ] Instead of expanding expense, click to show popup modal with more details
 - [ ] Settings to change theme
 - [ ] Update version git commit hash to include datetime of deployment
-- [ ] Redesign nav? Trips > Expenses / Debts / Graphs
 - [ ] Update debt UX
 - [ ] Update expense row UX
 
@@ -72,4 +70,7 @@
 - [x] Re-design form to enter expenses
     - [x] Drawer from bottom up
     - [x] Make form easier to fill in with pre-fills, fewer clicks
-- [ ] Setting to change initials and icon color
+- [x] Setting to change initials and icon color
+- [x] Add ability to add locations when creating or editing a trip
+- [x] Add a side drawer menu to navigate to any page with 1 click
+- [x] Redesign nav - Trips > Expenses / Debts / Graphs

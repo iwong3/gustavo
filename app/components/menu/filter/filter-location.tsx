@@ -1,10 +1,10 @@
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { useSettingsIconLabelsStore } from 'components/menu/settings/settings-icon-labels'
+import { colors } from '@/lib/colors'
 import { useEffect } from 'react'
-import { getTablerIcon, LocationIcon } from 'utils/icons'
+import { getTablerIcon } from 'utils/icons'
 
 type FilterLocationState = {
     filters: Map<string, boolean> // locationName → boolean
@@ -62,10 +62,6 @@ export const FilterLocation = ({
         reset(locationNames)
     }, [])
 
-    const { showIconLabels } = useSettingsIconLabelsStore(
-        useShallow((state) => state)
-    )
-
     return (
         <Box
             sx={{
@@ -98,61 +94,48 @@ export const FilterLocation = ({
                     }}>
                     {getTablerIcon({ name: 'IconX' })}
                 </Box>
-                {showIconLabels && (
-                    <Typography sx={{ fontSize: '10px' }}>Clear</Typography>
-                )}
             </Box>
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'space-evenly',
                     alignItems: 'center',
+                    gap: 1.5,
+                    overflowX: 'auto',
                     width: '100%',
+                    paddingY: 0.5,
+                    // Hide scrollbar but keep scrollable
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
                 }}>
                 {Array.from(filters.entries()).map(([location, isActive]) => {
                     return (
                         <Box
                             key={'filter-location-' + location}
                             sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                paddingX: 1.5,
+                                paddingY: 0.5,
+                                fontSize: 12,
+                                fontWeight: isActive ? 600 : 500,
+                                borderRadius: '4px',
+                                border: `1px solid ${colors.primaryBlack}`,
+                                boxShadow: isActive
+                                    ? `2px 2px 0px ${colors.primaryBlack}`
+                                    : 'none',
+                                backgroundColor: isActive
+                                    ? colors.primaryYellow
+                                    : colors.primaryWhite,
+                                color: colors.primaryBlack,
+                                opacity: isActive ? 1 : 0.5,
+                                transition:
+                                    'opacity 0.1s, box-shadow 0.1s, background-color 0.1s',
+                                whiteSpace: 'nowrap',
                             }}
                             onClick={() => {
                                 handleFilterClick(location)
                             }}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                }}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        borderRadius: '100%',
-                                        transition: 'background-color 0.1s',
-                                    }}>
-                                    <LocationIcon
-                                        location={location}
-                                        sx={
-                                            !isActive
-                                                ? {
-                                                      backgroundColor:
-                                                          'lightgray',
-                                                  }
-                                                : undefined
-                                        }
-                                    />
-                                </Box>
-                                {showIconLabels && (
-                                    <Typography sx={{ fontSize: '10px' }}>
-                                        {location}
-                                    </Typography>
-                                )}
-                            </Box>
+                            {location}
                         </Box>
                     )
                 })}

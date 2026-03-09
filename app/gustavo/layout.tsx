@@ -2,18 +2,19 @@
 
 import { Box, Typography } from '@mui/material'
 import {
-    IconArrowLeft,
     IconHome,
     IconPlaneDeparture,
     IconSettings,
 } from '@tabler/icons-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 import { colors } from '@/lib/colors'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
+import NavDrawer from 'components/nav-drawer'
 import { FabProvider, useFab } from 'providers/fab-provider'
 
 function ContentFab() {
@@ -56,34 +57,15 @@ const tabs = [
     { label: 'Settings', href: '/gustavo/settings', icon: IconSettings },
 ]
 
-function getBackPath(pathname: string): string | null {
-    if (pathname === '/gustavo') return null
-    if (pathname === '/gustavo/trips') return '/gustavo'
-    // /gustavo/trips/[slug]/expenses → /gustavo/trips/[slug]
-    // /gustavo/trips/[slug] → /gustavo/trips
-    if (pathname.startsWith('/gustavo/trips/')) {
-        const parts = pathname.split('/')
-        // /gustavo/trips/[slug] = 4 parts → back to trip list
-        if (parts.length <= 4) return '/gustavo/trips'
-        // /gustavo/trips/[slug]/expenses = 5 parts → back to trip hub
-        return parts.slice(0, 4).join('/')
-    }
-    if (pathname === '/gustavo/settings') return '/gustavo'
-    if (pathname.startsWith('/gustavo/settings/')) return '/gustavo/settings'
-    return '/gustavo'
-}
 
 export default function GustavoLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const router = useRouter()
     const pathname = usePathname()
 
-    const isHomePage = pathname === '/gustavo'
-    const backPath = getBackPath(pathname)
-    const showIcons = !isHomePage
+    const [drawerOpen, setDrawerOpen] = useState(false)
 
     const getActiveTab = () => {
         if (pathname.startsWith('/gustavo/trips')) return '/gustavo/trips'
@@ -94,26 +76,13 @@ export default function GustavoLayout({
 
     const activeTab = getActiveTab()
 
-    const iconSx = {
-        'display': 'flex',
-        'alignItems': 'center',
-        'justifyContent': 'center',
-        'cursor': 'pointer',
-        'borderRadius': '50%',
-        'padding': '6px',
-        'opacity': showIcons ? 1 : 0,
-        'pointerEvents': showIcons ? 'auto' : 'none',
-        'transition':
-            'opacity 0.3s ease-out, transform 0.1s ease-out, background-color 0.1s',
-        '&:active': {
-            backgroundColor: 'rgba(0,0,0,0.1)',
-            transform: 'scale(0.88)',
-        },
-    } as const
-
     return (
         <ClientOnly>
             <FabProvider>
+                <NavDrawer
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                />
                 <Box
                     sx={{
                         display: 'flex',
@@ -130,7 +99,6 @@ export default function GustavoLayout({
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'space-between',
                                 width: '100%',
                                 height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
                                 paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -140,23 +108,23 @@ export default function GustavoLayout({
                                 backgroundColor: colors.secondaryYellow,
                                 zIndex: 10,
                             }}>
-                            {/* Back icon */}
+                            {/* Gus Fring icon — opens nav drawer */}
                             <Box
-                                onClick={() =>
-                                    backPath && router.push(backPath)
-                                }
-                                sx={iconSx}>
-                                <IconArrowLeft
-                                    size={28}
-                                    stroke={1.8}
-                                    color={colors.primaryBlack}
-                                />
-                            </Box>
-
-                            {/* Gus Fring icon */}
-                            <Box
-                                onClick={() => router.push('/gustavo')}
-                                sx={iconSx}>
+                                onClick={() => setDrawerOpen(true)}
+                                sx={{
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'justifyContent': 'center',
+                                    'cursor': 'pointer',
+                                    'borderRadius': '50%',
+                                    'padding': '6px',
+                                    'transition':
+                                        'transform 0.1s ease-out, background-color 0.1s',
+                                    '&:active': {
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        transform: 'scale(0.88)',
+                                    },
+                                }}>
                                 <img
                                     src="/gus-fring.png"
                                     alt="Gustavo"

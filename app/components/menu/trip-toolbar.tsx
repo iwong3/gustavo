@@ -22,6 +22,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { colors } from '@/lib/colors'
+import type { ParticipantSummary } from '@/lib/types'
 import { useFilterLocationStore } from 'components/menu/filter/filter-location'
 import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
 import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
@@ -37,7 +38,6 @@ import {
     getColorForCategory,
     getIconFromCategory,
     InitialsIcon,
-    LocationIcon,
 } from 'utils/icons'
 
 type Panel = 'filter' | 'sort' | 'nav' | null
@@ -364,6 +364,7 @@ export const TripToolbar = () => {
                                     }}>
                                     {openPanel === 'filter' && (
                                         <FilterPanel
+                                            participants={trip.participants}
                                             participantNames={participantNames}
                                             categoryNames={categoryNames}
                                             locationNames={locationNames}
@@ -521,6 +522,7 @@ const TabButton = ({
 // ─── Filter panel ─────────────────────────────────────────────────────────────
 
 type FilterPanelProps = {
+    participants: ParticipantSummary[]
     participantNames: string[]
     categoryNames: string[]
     locationNames: string[]
@@ -528,6 +530,7 @@ type FilterPanelProps = {
 }
 
 const FilterPanel = memo(function FilterPanel({
+    participants,
     participantNames,
     categoryNames,
     locationNames,
@@ -542,6 +545,15 @@ const FilterPanel = memo(function FilterPanel({
     const locationFilters = useFilterLocationStore((s) => s.filters)
     const locationClick = useFilterLocationStore((s) => s.handleFilterClick)
 
+    // Build lookup map: firstName → participant data
+    const participantMap = useMemo(() => {
+        const map = new Map<string, ParticipantSummary>()
+        for (const p of participants) {
+            map.set(p.firstName, p)
+        }
+        return map
+    }, [participants])
+
     return (
         <>
             <PanelHeader label="Filters" onReset={onReset} />
@@ -549,28 +561,33 @@ const FilterPanel = memo(function FilterPanel({
             {participantNames.length > 0 && (
                 <FilterRow label="Split between">
                     {Array.from(splitFilters.entries()).map(
-                        ([name, active]) => (
-                            <Box
-                                key={name}
-                                onClick={() => splitClick(name)}
-                                sx={{ cursor: 'pointer' }}>
-                                <InitialsIcon
-                                    name={name}
-                                    sx={{
-                                        width: 32,
-                                        height: 32,
-                                        fontSize: 10,
-                                        outline: active
-                                            ? `2px solid ${colors.primaryBlack}`
-                                            : '2px solid transparent',
-                                        outlineOffset: '1px',
-                                        opacity: active ? 1 : 0.4,
-                                        transition:
-                                            'outline-color 0.1s, opacity 0.1s',
-                                    }}
-                                />
-                            </Box>
-                        )
+                        ([name, active]) => {
+                            const p = participantMap.get(name)
+                            return (
+                                <Box
+                                    key={name}
+                                    onClick={() => splitClick(name)}
+                                    sx={{ cursor: 'pointer' }}>
+                                    <InitialsIcon
+                                        name={name}
+                                        initials={p?.initials}
+                                        iconColor={p?.iconColor}
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            fontSize: 10,
+                                            outline: active
+                                                ? `2px solid ${colors.primaryBlack}`
+                                                : '2px solid transparent',
+                                            outlineOffset: '1px',
+                                            opacity: active ? 1 : 0.4,
+                                            transition:
+                                                'outline-color 0.1s, opacity 0.1s',
+                                        }}
+                                    />
+                                </Box>
+                            )
+                        }
                     )}
                 </FilterRow>
             )}
@@ -578,28 +595,33 @@ const FilterPanel = memo(function FilterPanel({
             {participantNames.length > 0 && (
                 <FilterRow label="Paid by">
                     {Array.from(paidByFilters.entries()).map(
-                        ([name, active]) => (
-                            <Box
-                                key={name}
-                                onClick={() => paidByClick(name)}
-                                sx={{ cursor: 'pointer' }}>
-                                <InitialsIcon
-                                    name={name}
-                                    sx={{
-                                        width: 32,
-                                        height: 32,
-                                        fontSize: 10,
-                                        outline: active
-                                            ? `2px solid ${colors.primaryBlack}`
-                                            : '2px solid transparent',
-                                        outlineOffset: '1px',
-                                        opacity: active ? 1 : 0.4,
-                                        transition:
-                                            'outline-color 0.1s, opacity 0.1s',
-                                    }}
-                                />
-                            </Box>
-                        )
+                        ([name, active]) => {
+                            const p = participantMap.get(name)
+                            return (
+                                <Box
+                                    key={name}
+                                    onClick={() => paidByClick(name)}
+                                    sx={{ cursor: 'pointer' }}>
+                                    <InitialsIcon
+                                        name={name}
+                                        initials={p?.initials}
+                                        iconColor={p?.iconColor}
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            fontSize: 10,
+                                            outline: active
+                                                ? `2px solid ${colors.primaryBlack}`
+                                                : '2px solid transparent',
+                                            outlineOffset: '1px',
+                                            opacity: active ? 1 : 0.4,
+                                            transition:
+                                                'outline-color 0.1s, opacity 0.1s',
+                                        }}
+                                    />
+                                </Box>
+                            )
+                        }
                     )}
                 </FilterRow>
             )}
@@ -644,22 +666,27 @@ const FilterPanel = memo(function FilterPanel({
                             <Box
                                 key={loc}
                                 onClick={() => locationClick(loc)}
-                                sx={{ cursor: 'pointer' }}>
-                                <LocationIcon
-                                    location={loc}
-                                    sx={{
-                                        width: 32,
-                                        height: 32,
-                                        fontSize: 10,
-                                        outline: active
-                                            ? `2px solid ${colors.primaryBlack}`
-                                            : '2px solid transparent',
-                                        outlineOffset: '1px',
-                                        opacity: active ? 1 : 0.4,
-                                        transition:
-                                            'outline-color 0.1s, opacity 0.1s',
-                                    }}
-                                />
+                                sx={{
+                                    cursor: 'pointer',
+                                    paddingX: 1.5,
+                                    paddingY: 0.5,
+                                    fontSize: 12,
+                                    fontWeight: active ? 600 : 500,
+                                    borderRadius: '4px',
+                                    border: `1px solid ${colors.primaryBlack}`,
+                                    boxShadow: active
+                                        ? `2px 2px 0px ${colors.primaryBlack}`
+                                        : 'none',
+                                    backgroundColor: active
+                                        ? colors.primaryYellow
+                                        : colors.primaryWhite,
+                                    color: colors.primaryBlack,
+                                    opacity: active ? 1 : 0.5,
+                                    transition:
+                                        'opacity 0.1s, box-shadow 0.1s, background-color 0.1s',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                {loc}
                             </Box>
                         )
                     )}

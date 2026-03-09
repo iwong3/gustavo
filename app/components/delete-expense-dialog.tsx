@@ -8,6 +8,12 @@ import {
     DialogTitle,
     Typography,
 } from '@mui/material'
+import { colors } from '@/lib/colors'
+import {
+    destructiveButtonSx,
+    dialogPaperSx,
+    secondaryButtonSx,
+} from '@/lib/form-styles'
 
 import type { Expense } from '@/lib/types'
 
@@ -20,19 +26,30 @@ type Props = {
 
 export default function DeleteExpenseDialog({ open, expense, onClose, onConfirm }: Props) {
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>Delete expense?</DialogTitle>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="xs"
+            fullWidth
+            slotProps={{ paper: { sx: dialogPaperSx } }}>
+            <DialogTitle
+                sx={{
+                    fontWeight: 700,
+                    color: colors.primaryRed,
+                    fontSize: 18,
+                }}>
+                Delete expense?
+            </DialogTitle>
             <DialogContent>
-                <Typography>
+                <Typography sx={{ fontSize: 14 }}>
                     Are you sure you want to delete <strong>{expense?.name}</strong>?
                 </Typography>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button
-                    onClick={onConfirm}
-                    variant="contained"
-                    color="error">
+            <DialogActions sx={{ padding: '8px 24px 16px' }}>
+                <Button onClick={onClose} sx={secondaryButtonSx}>
+                    Cancel
+                </Button>
+                <Button onClick={onConfirm} sx={destructiveButtonSx}>
                     Delete
                 </Button>
             </DialogActions>

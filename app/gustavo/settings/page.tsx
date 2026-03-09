@@ -214,29 +214,6 @@ export default function SettingsPage() {
                     </Box>
                 </Link>
 
-                <Link
-                    href="/gustavo/settings/locations"
-                    style={{ textDecoration: 'none' }}>
-                    <Box
-                        sx={{
-                            'display': 'flex',
-                            'alignItems': 'center',
-                            'justifyContent': 'space-between',
-                            'paddingY': 1,
-                            'borderRadius': 1,
-                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                        }}>
-                        <Typography
-                            sx={{ fontSize: 14, color: colors.primaryBlack }}>
-                            Manage Locations
-                        </Typography>
-                        <IconChevronRight
-                            size={18}
-                            color={colors.primaryBlack}
-                        />
-                    </Box>
-                </Link>
-
                 {prefs?.isAdmin && (
                     <>
                         <Typography

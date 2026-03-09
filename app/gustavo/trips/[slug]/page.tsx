@@ -1,12 +1,20 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import { Box, Typography } from '@mui/material'
+import { Box, IconButton, Typography } from '@mui/material'
 import { HandCoins } from '@phosphor-icons/react'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
+import { useState } from 'react'
+import { deleteTrip } from 'utils/api'
 import { getTablerIcon, InitialsIcon } from 'utils/icons'
+import { canDeleteTrip, canEditTrip } from 'utils/permissions'
+
+import DeleteTripDialog from 'components/delete-trip-dialog'
+import TripFormDialog from 'components/trip-form-dialog'
 
 const formatDateRange = (start: string, end: string) => {
     const s = new Date(start + 'T00:00:00')
@@ -49,6 +57,30 @@ const tools = [
 export default function TripHubPage() {
     const { trip } = useTripData()
     const { totalSpend, debtMap } = useSpendData()
+    const router = useRouter()
+
+    // Dialog state
+    const [formOpen, setFormOpen] = useState(false)
+    const [deleteOpen, setDeleteOpen] = useState(false)
+
+    const showEdit = canEditTrip(trip.userRole, trip.isAdmin)
+    const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
+
+    const handleEditSuccess = () => {
+        // Reload the page to pick up updated trip data from the layout
+        router.refresh()
+        window.location.reload()
+    }
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await deleteTrip(trip.id)
+            setDeleteOpen(false)
+            router.push('/gustavo/trips')
+        } catch (err) {
+            console.error('Failed to delete trip:', err)
+        }
+    }
 
     const formatUsd = (n: number) =>
         n.toLocaleString('en-US', {
@@ -223,6 +255,88 @@ export default function TripHubPage() {
                     </Box>
                 ))}
             </Box>
+
+            {/* Bottom action buttons */}
+            {(showEdit || showDelete) && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        width: '100%',
+                        marginTop: 3,
+                        marginBottom: 1,
+                    }}>
+                    {showEdit && (
+                        <IconButton
+                            onClick={() => setFormOpen(true)}
+                            sx={{
+                                'flex': 1,
+                                'backgroundColor': colors.primaryWhite,
+                                'border': `1px solid ${colors.primaryBlack}`,
+                                'borderRadius': '4px',
+                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                'height': 44,
+                                '&:hover': {
+                                    backgroundColor: colors.primaryYellow,
+                                },
+                                '&:active': {
+                                    boxShadow: 'none',
+                                    transform: 'translate(2px, 2px)',
+                                },
+                                'transition':
+                                    'transform 0.1s, box-shadow 0.1s, background-color 0.1s',
+                            }}>
+                            <IconPencil
+                                size={20}
+                                color={colors.primaryBlack}
+                            />
+                        </IconButton>
+                    )}
+                    {showDelete && (
+                        <IconButton
+                            onClick={() => setDeleteOpen(true)}
+                            sx={{
+                                'flex': 1,
+                                'backgroundColor': colors.primaryWhite,
+                                'border': `1px solid ${colors.primaryBlack}`,
+                                'borderRadius': '4px',
+                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                'height': 44,
+                                '&:hover': {
+                                    backgroundColor: `${colors.primaryRed}18`,
+                                },
+                                '&:active': {
+                                    boxShadow: 'none',
+                                    transform: 'translate(2px, 2px)',
+                                },
+                                'transition':
+                                    'transform 0.1s, box-shadow 0.1s, background-color 0.1s',
+                            }}>
+                            <IconTrash
+                                size={20}
+                                color={colors.primaryBlack}
+                            />
+                        </IconButton>
+                    )}
+                </Box>
+            )}
+
+            {/* Edit trip form */}
+            <TripFormDialog
+                open={formOpen}
+                onClose={() => setFormOpen(false)}
+                onSuccess={handleEditSuccess}
+                mode="edit"
+                trip={trip}
+            />
+
+            {/* Delete trip confirmation */}
+            <DeleteTripDialog
+                open={deleteOpen}
+                trip={trip}
+                onClose={() => setDeleteOpen(false)}
+                onConfirm={handleDeleteConfirm}
+            />
         </Box>
     )
 }

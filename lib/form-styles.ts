@@ -188,6 +188,40 @@ export const secondaryButtonSx = {
     'transition': 'transform 0.1s, box-shadow 0.1s',
 } as const
 
+// ── Dialog styles ────────────────────────────────────────────────────────────
+
+/** Neo-brutalist Dialog paper — white background, black border + shadow, rounded. */
+export const dialogPaperSx = {
+    backgroundColor: colors.primaryWhite,
+    border: `2px solid ${colors.primaryBlack}`,
+    boxShadow: `4px 4px 0px ${colors.primaryBlack}`,
+    borderRadius: '8px',
+} as const
+
+/** Destructive (delete) button — red background, black border + shadow. */
+export const destructiveButtonSx = {
+    'backgroundColor': colors.primaryRed,
+    'color': colors.primaryWhite,
+    'fontWeight': 600,
+    'border': `1px solid ${colors.primaryBlack}`,
+    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+    'borderRadius': '4px',
+    '&:hover': {
+        backgroundColor: colors.primaryRed,
+    },
+    '&:active': {
+        boxShadow: 'none',
+        transform: 'translate(2px, 2px)',
+    },
+    '&.Mui-disabled': {
+        backgroundColor: `${colors.primaryRed}60`,
+        color: `${colors.primaryWhite}90`,
+        border: `1px solid ${colors.primaryBlack}40`,
+        boxShadow: `2px 2px 0px ${colors.primaryBlack}40`,
+    },
+    'transition': 'transform 0.1s, box-shadow 0.1s',
+} as const
+
 // ── Error message ─────────────────────────────────────────────────────────────
 
 export const errorMessageSx = {

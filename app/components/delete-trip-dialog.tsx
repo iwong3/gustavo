@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
+    Box,
     Button,
     Dialog,
     DialogActions,
@@ -11,6 +12,13 @@ import {
     Typography,
 } from '@mui/material'
 import { colors } from '@/lib/colors'
+import {
+    destructiveButtonSx,
+    dialogPaperSx,
+    fieldSx,
+    labelSx,
+    secondaryButtonSx,
+} from '@/lib/form-styles'
 
 import type { TripSummary } from '@/lib/types'
 
@@ -32,32 +40,48 @@ export default function DeleteTripDialog({ open, trip, onClose, onConfirm }: Pro
     const isConfirmed = confirmText === tripName
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle sx={{ color: colors.primaryRed }}>Delete trip?</DialogTitle>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="xs"
+            fullWidth
+            slotProps={{ paper: { sx: dialogPaperSx } }}>
+            <DialogTitle
+                sx={{
+                    fontWeight: 700,
+                    color: colors.primaryRed,
+                    fontSize: 18,
+                }}>
+                Delete trip?
+            </DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography>
+                <Typography sx={{ fontSize: 14 }}>
                     This will delete <strong>{tripName}</strong> and all its expenses.
                     This action cannot be undone.
                 </Typography>
-                <Typography variant="body2">
-                    Type <strong>{tripName}</strong> to confirm:
-                </Typography>
-                <TextField
-                    value={confirmText}
-                    onChange={(e) => setConfirmText(e.target.value)}
-                    size="small"
-                    fullWidth
-                    autoFocus
-                    placeholder={tripName}
-                />
+                <Box>
+                    <Typography sx={{ ...labelSx, marginBottom: 0.5 }}>
+                        Type <strong>{tripName}</strong> to confirm:
+                    </Typography>
+                    <TextField
+                        value={confirmText}
+                        onChange={(e) => setConfirmText(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        placeholder={tripName}
+                        sx={fieldSx}
+                    />
+                </Box>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
+            <DialogActions sx={{ padding: '8px 24px 16px' }}>
+                <Button onClick={onClose} sx={secondaryButtonSx}>
+                    Cancel
+                </Button>
                 <Button
                     onClick={onConfirm}
-                    variant="contained"
-                    color="error"
-                    disabled={!isConfirmed}>
+                    disabled={!isConfirmed}
+                    sx={destructiveButtonSx}>
                     Delete
                 </Button>
             </DialogActions>
