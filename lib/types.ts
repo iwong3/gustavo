@@ -77,4 +77,5 @@ export type UserPreferences = {
     defaultParticipantRole: 'editor' | 'viewer'
     initials: string | null
     iconColor: string | null
+    isAdmin: boolean
 }

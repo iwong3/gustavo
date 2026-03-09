@@ -236,6 +236,42 @@ export default function SettingsPage() {
                         />
                     </Box>
                 </Link>
+
+                {prefs?.isAdmin && (
+                    <>
+                        <Typography
+                            sx={{
+                                fontSize: 16,
+                                fontWeight: 500,
+                                color: colors.primaryBlack,
+                                marginTop: 1,
+                            }}>
+                            Admin
+                        </Typography>
+                        <Link
+                            href="/gustavo/settings/invite"
+                            style={{ textDecoration: 'none' }}>
+                            <Box
+                                sx={{
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'justifyContent': 'space-between',
+                                    'paddingY': 1,
+                                    'borderRadius': 1,
+                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                                }}>
+                                <Typography
+                                    sx={{ fontSize: 14, color: colors.primaryBlack }}>
+                                    Invite Users
+                                </Typography>
+                                <IconChevronRight
+                                    size={18}
+                                    color={colors.primaryBlack}
+                                />
+                            </Box>
+                        </Link>
+                    </>
+                )}
             </Box>
 
             <Button

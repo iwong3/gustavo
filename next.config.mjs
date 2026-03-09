@@ -64,6 +64,28 @@ const nextConfig = {
             },
         })
 
+        // pg-cloudflare uses cloudflare:sockets which isn't available outside Cloudflare Workers.
+        // This is only needed when pg is dynamically imported in auth.ts (signIn callback).
+        // The middleware (Edge) bundle hits this path during static analysis — stub it out.
+        if (!isServer || config.name === 'middleware') {
+            config.resolve.fallback = {
+                ...config.resolve.fallback,
+                'pg-native': false,
+            }
+        }
+        // Ignore cloudflare:sockets scheme that pg-cloudflare tries to import
+        config.plugins.push({
+            apply(compiler) {
+                compiler.hooks.normalModuleFactory.tap('IgnoreCloudflare', (nmf) => {
+                    nmf.hooks.beforeResolve.tap('IgnoreCloudflare', (result) => {
+                        if (result.request === 'cloudflare:sockets') {
+                            return false
+                        }
+                    })
+                })
+            },
+        })
+
         return config
     },
 

@@ -191,3 +191,41 @@ export const updateUserPreferences = async (data: Partial<UserPreferences>): Pro
         throw new Error(err.error || 'Failed to update preferences')
     }
 }
+
+// ── Allowed Emails (admin) ──
+
+export type AllowedEmail = {
+    id: number
+    email: string
+    createdAt: string
+    addedByName: string | null
+    hasAccount: boolean
+    userName: string | null
+}
+
+export const fetchAllowedEmails = async (): Promise<AllowedEmail[]> => {
+    const res = await fetch('/api/allowed-emails')
+    if (!res.ok) throw new Error(`Failed to fetch allowed emails: ${res.status}`)
+    return res.json()
+}
+
+export const addAllowedEmail = async (email: string): Promise<AllowedEmail> => {
+    const res = await fetch('/api/allowed-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    })
+    if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to add email')
+    }
+    return res.json()
+}
+
+export const removeAllowedEmail = async (id: number): Promise<void> => {
+    const res = await fetch(`/api/allowed-emails/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to remove email')
+    }
+}
