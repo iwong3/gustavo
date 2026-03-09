@@ -16,6 +16,7 @@ import { CostDisplay, FormattedMoney } from 'utils/currency'
 import { getTablerIcon, CategoryIcon, InitialsIcon } from 'utils/icons'
 import { deleteExpense } from 'utils/api'
 import { canEditExpense as canEditExpenseFn, canDeleteExpense as canDeleteExpenseFn } from 'utils/permissions'
+import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { getUcUrlFromOpenUrl } from 'utils/image'
 
@@ -30,6 +31,7 @@ interface IReceiptsRowProps {
 
 export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
     const { trip } = useTripData()
+    const { getUsdValue } = useSpendData()
     const participants = trip.participants
     const isReporter = expense.reportedBy?.id === trip.currentUserId
     const showEdit = canEditExpenseFn(trip.userRole, trip.isAdmin, isReporter)
@@ -48,10 +50,11 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
 
     const { costDisplay } = useSettingsCostStore(useShallow((state) => state))
 
+    const costUsd = getUsdValue(expense)
     const splitCount = expense.isEveryone
         ? participants.length
         : expense.splitBetween.length
-    const splitCost = expense.costConvertedUsd / splitCount
+    const splitCost = costUsd / splitCount
     const splitCostOriginal = expense.costOriginal / splitCount
 
     return (
@@ -118,9 +121,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                 ? FormattedMoney(expense.currency, 0).format(
                                       expense.costOriginal
                                   )
-                                : FormattedMoney('USD', 0).format(
-                                      expense.costConvertedUsd
-                                  )}
+                                : FormattedMoney('USD', 0).format(costUsd)}
                         </Box>
                         <Box
                             sx={{

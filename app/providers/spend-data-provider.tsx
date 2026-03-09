@@ -28,6 +28,8 @@ type SpendDataValue = {
     totalSpendByDate: Map<string, number>       // date → amount
     totalSpendByDateByPerson: Map<number, Map<string, number>> // userId → date → amount
     participants: UserSummary[]
+    /** Get the USD value of an expense using blended exchange rates (falls back to costConvertedUsd). */
+    getUsdValue: (exp: Expense) => number
 }
 
 const SpendDataContext = createContext<SpendDataValue | null>(null)
@@ -92,14 +94,15 @@ function applySorting(
     data: Expense[],
     costOrder: number,
     dateOrder: number,
-    nameOrder: number
+    nameOrder: number,
+    blendedRates: Map<number, Map<string, number>>
 ): Expense[] {
     if (costOrder !== 0) {
-        return data.slice().sort((a, b) =>
-            costOrder === 1
-                ? b.costConvertedUsd - a.costConvertedUsd
-                : a.costConvertedUsd - b.costConvertedUsd
-        )
+        return data.slice().sort((a, b) => {
+            const aUsd = getExpenseUsdValue(a, blendedRates)
+            const bUsd = getExpenseUsdValue(b, blendedRates)
+            return costOrder === 1 ? bUsd - aUsd : aUsd - bUsd
+        })
     }
     if (dateOrder !== 0) {
         return data.slice().sort((a, b) => {
@@ -305,18 +308,26 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
     const nameOrder = useDeferredValue(useSortItemNameStore((s) => s.order))
     const searchInput = useDeferredValue(useSearchBarStore((s) => s.searchInput))
 
+    // Compute blended rates once from ALL expenses (including currency exchanges)
+    const blendedRates = useMemo(() => computeBlendedRates(expenses), [expenses])
+
+    const getUsdValue = useMemo(
+        () => (exp: Expense) => getExpenseUsdValue(exp, blendedRates),
+        [blendedRates]
+    )
+
     const filteredExpenses = useMemo(() => {
         let filtered = expenses
         filtered = filterBySplitBetween(filtered, splitBetweenFilters)
         filtered = filterByPaidBy(filtered, paidByFilters)
         filtered = filterBySpendType(filtered, spendTypeFilters)
         filtered = filterByLocation(filtered, locationFilters)
-        filtered = applySorting(filtered, costOrder, dateOrder, nameOrder)
+        filtered = applySorting(filtered, costOrder, dateOrder, nameOrder, blendedRates)
         filtered = applySearch(filtered, searchInput)
         return filtered
     }, [
         expenses, splitBetweenFilters, paidByFilters, spendTypeFilters,
-        locationFilters, costOrder, dateOrder, nameOrder, searchInput,
+        locationFilters, costOrder, dateOrder, nameOrder, searchInput, blendedRates,
     ])
 
     const { totalSpend, debtMap } = useMemo(
@@ -336,9 +347,10 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
             totalSpend,
             debtMap,
             participants,
+            getUsdValue,
             ...summaries,
         }),
-        [expenses, filteredExpenses, totalSpend, debtMap, participants, summaries]
+        [expenses, filteredExpenses, totalSpend, debtMap, participants, getUsdValue, summaries]
     )
 
     return (

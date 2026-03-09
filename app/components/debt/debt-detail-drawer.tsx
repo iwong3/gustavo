@@ -8,6 +8,7 @@ import { FormattedMoney } from 'utils/currency'
 import { InitialsIcon } from 'utils/icons'
 import { getPersonPairwiseDebts } from '@/lib/debt'
 import { ReceiptsList } from 'components/receipts/receipts-list'
+import { useSpendData } from 'providers/spend-data-provider'
 
 import type { Expense, UserSummary } from '@/lib/types'
 import type { PersonPairwiseDebt, GroupedExpenses } from '@/lib/debt'
@@ -260,18 +261,19 @@ function ExpenseGroup({
     participantCount: number
     showExchangeInfo?: boolean
 }) {
+    const { getUsdValue } = useSpendData()
+
     if (expenses.length === 0) return null
 
-    // Compute group total (in USD)
-    const groupTotal = expenses.reduce((sum, exp) => sum + exp.costConvertedUsd, 0)
+    // Compute group total (in USD) using blended rates
+    const groupTotal = expenses.reduce((sum, exp) => sum + getUsdValue(exp), 0)
 
     // For foreign expenses, compute effective blended rate
     let effectiveRate: number | null = null
     if (showExchangeInfo && expenses.length > 0) {
         const totalOriginal = expenses.reduce((sum, exp) => sum + exp.costOriginal, 0)
-        const totalUsd = expenses.reduce((sum, exp) => sum + exp.costConvertedUsd, 0)
-        if (totalUsd > 0) {
-            effectiveRate = totalOriginal / totalUsd
+        if (groupTotal > 0) {
+            effectiveRate = totalOriginal / groupTotal
         }
     }
 

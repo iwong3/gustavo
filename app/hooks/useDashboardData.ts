@@ -49,6 +49,7 @@ export function useDashboardData() {
         totalSpendByType,
         totalSpendByLocation,
         participants,
+        getUsdValue,
     } = useSpendData()
 
     const [activeDimension, setActiveDimensionRaw] = useState<Dimension>('person')
@@ -139,12 +140,13 @@ export function useDashboardData() {
         const categoryTotals = new Map<string, number>()
 
         for (const exp of crossFilteredExpenses) {
-            totalSpend += exp.costConvertedUsd
-            if (!biggest || exp.costConvertedUsd > biggest.amount) {
-                biggest = { name: exp.name, amount: exp.costConvertedUsd }
+            const usdValue = getUsdValue(exp)
+            totalSpend += usdValue
+            if (!biggest || usdValue > biggest.amount) {
+                biggest = { name: exp.name, amount: usdValue }
             }
             const cat = exp.categoryName ?? 'Other'
-            categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + exp.costConvertedUsd)
+            categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + usdValue)
         }
 
         let topCategory: { name: string; amount: number } | null = null
@@ -174,7 +176,7 @@ export function useDashboardData() {
             tripDurationDays,
             filterLabel,
         }
-    }, [crossFilteredExpenses, trip, participants, selectedKey, activeDimension])
+    }, [crossFilteredExpenses, trip, participants, selectedKey, activeDimension, getUsdValue])
 
     // Timeline data — from cross-filtered expenses, grouped by date, stacked by category
     const timelineData = useMemo((): TimelineDataPoint[] => {
@@ -184,7 +186,7 @@ export function useDashboardData() {
             const dateKey = exp.date
             const cat = exp.categoryName ?? 'Other'
             const catMap = dateMap.get(dateKey) ?? new Map<string, number>()
-            catMap.set(cat, (catMap.get(cat) ?? 0) + exp.costConvertedUsd)
+            catMap.set(cat, (catMap.get(cat) ?? 0) + getUsdValue(exp))
             dateMap.set(dateKey, catMap)
         }
 
@@ -205,7 +207,7 @@ export function useDashboardData() {
             const total = segments.reduce((sum, s) => sum + s.value, 0)
             return { date: dayjs(date).format('M/D'), segments, total }
         })
-    }, [crossFilteredExpenses])
+    }, [crossFilteredExpenses, getUsdValue])
 
     // Unique categories for the timeline legend
     const timelineCategories = useMemo(() => {
