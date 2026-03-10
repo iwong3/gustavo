@@ -795,7 +795,7 @@ export default function TripFormDialog({
                             { value: 'participants', label: 'Participants only' },
                             { value: 'all_users', label: 'All users' },
                         ]}
-                        onChange={(val) => setVisibility(val)}
+                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
                         fontSize={13}
                         borderWidth={1}
                     />
