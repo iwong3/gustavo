@@ -2,6 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 import {
+    IconArrowLeft,
     IconHome,
     IconPlaneDeparture,
     IconSettings,
@@ -137,6 +138,52 @@ export default function GustavoLayout({
                                     }}
                                 />
                             </Box>
+
+                            {/* Spacer */}
+                            <Box sx={{ flex: 1 }} />
+
+                            {/* Back button — shows on trip sub-pages */}
+                            {(() => {
+                                // Match /gustavo/trips/<slug>/<tool>
+                                const match = pathname.match(
+                                    /^\/gustavo\/trips\/([^/]+)\/.+$/
+                                )
+                                if (!match) return null
+                                const slug = match[1]
+                                return (
+                                    <Box
+                                        component={Link}
+                                        href={`/gustavo/trips/${slug}`}
+                                        sx={{
+                                            'display': 'flex',
+                                            'alignItems': 'center',
+                                            'justifyContent': 'center',
+                                            'width': 34,
+                                            'height': 34,
+                                            'borderRadius': '4px',
+                                            'cursor': 'pointer',
+                                            'marginRight': 0.5,
+                                            'textDecoration': 'none',
+                                            'color': colors.primaryBlack,
+                                            'backgroundColor':
+                                                colors.primaryWhite,
+                                            'border': `1px solid ${colors.primaryBlack}`,
+                                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                            'transition':
+                                                'transform 0.1s, box-shadow 0.1s',
+                                            '&:active': {
+                                                boxShadow: 'none',
+                                                transform:
+                                                    'translate(2px, 2px)',
+                                            },
+                                        }}>
+                                        <IconArrowLeft
+                                            size={18}
+                                            stroke={2}
+                                        />
+                                    </Box>
+                                )
+                            })()}
                         </Box>
 
                         {/* Main content — fills space between header and bottom nav, scrolls within */}

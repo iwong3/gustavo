@@ -7,8 +7,6 @@ import {
     DialogContent,
     DialogTitle,
     TextField,
-    ToggleButton,
-    ToggleButtonGroup,
     Typography,
 } from '@mui/material'
 import { IconChevronRight, IconPencil } from '@tabler/icons-react'
@@ -20,6 +18,7 @@ import { HexColorPicker } from 'react-colorful'
 import { colors, hardShadow } from '@/lib/colors'
 import { labelSx, primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import type { UserPreferences } from '@/lib/types'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { fetchUserPreferences, updateUserPreferences } from 'utils/api'
 import { InitialsIcon, getContrastText } from 'utils/icons'
 
@@ -50,25 +49,6 @@ export default function SettingsPage() {
     if (!session?.user) return null
 
     const { name, email } = session.user
-
-    const toggleGroupSx = {
-        'border': `2px solid ${colors.primaryBlack}`,
-        'borderRadius': 1,
-        'boxShadow': `3px 4px 0px ${colors.primaryBlack}`,
-        '& .MuiToggleButton-root': {
-            'textTransform': 'none',
-            'fontSize': 14,
-            'border': 'none',
-            'borderRight': `2px solid ${colors.primaryBlack}`,
-            'color': colors.primaryBlack,
-            '&:last-of-type': { borderRight: 'none' },
-            '&.Mui-selected': {
-                'backgroundColor': colors.primaryYellow,
-                'fontWeight': 600,
-                '&:hover': { backgroundColor: colors.primaryYellow },
-            },
-        },
-    }
 
     return (
         <Box
@@ -151,21 +131,14 @@ export default function SettingsPage() {
                         sx={{ color: colors.primaryBlack }}>
                         Default trip visibility
                     </Typography>
-                    <ToggleButtonGroup
+                    <SlidingToggle
                         value={prefs?.defaultTripVisibility ?? ''}
-                        exclusive
-                        onChange={(_, val) => {
-                            if (val)
-                                handlePrefChange('defaultTripVisibility', val)
-                        }}
-                        size="small"
-                        fullWidth
-                        sx={toggleGroupSx}>
-                        <ToggleButton value="participants">
-                            Participants only
-                        </ToggleButton>
-                        <ToggleButton value="all_users">All users</ToggleButton>
-                    </ToggleButtonGroup>
+                        options={[
+                            { value: 'participants', label: 'Participants only' },
+                            { value: 'all_users', label: 'All users' },
+                        ]}
+                        onChange={(val) => handlePrefChange('defaultTripVisibility', val)}
+                    />
                 </Box>
 
                 <Box
@@ -175,20 +148,15 @@ export default function SettingsPage() {
                         sx={{ color: colors.primaryBlack }}>
                         Default participant role
                     </Typography>
-                    <ToggleButtonGroup
+                    <SlidingToggle
                         value={prefs?.defaultParticipantRole ?? ''}
-                        exclusive
-                        onChange={(_, val) => {
-                            if (val)
-                                handlePrefChange('defaultParticipantRole', val)
-                        }}
-                        size="small"
-                        fullWidth
-                        sx={toggleGroupSx}>
-                        <ToggleButton value="viewer">Viewer</ToggleButton>
-                        <ToggleButton value="editor">Editor</ToggleButton>
-                        <ToggleButton value="admin">Admin</ToggleButton>
-                    </ToggleButtonGroup>
+                        options={[
+                            { value: 'viewer', label: 'Viewer' },
+                            { value: 'editor', label: 'Editor' },
+                            { value: 'admin', label: 'Admin' },
+                        ]}
+                        onChange={(val) => handlePrefChange('defaultParticipantRole', val)}
+                    />
                 </Box>
 
                 <Link

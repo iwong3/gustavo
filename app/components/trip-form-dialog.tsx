@@ -10,8 +10,6 @@ import {
     Select,
     Skeleton,
     TextField,
-    ToggleButton,
-    ToggleButtonGroup,
     Typography,
 } from '@mui/material'
 import { IconPencil, IconPlus, IconCheck, IconX } from '@tabler/icons-react'
@@ -29,6 +27,7 @@ import {
 } from '@/lib/form-styles'
 import type { Location, TripRole, TripSummary, UserSummary } from '@/lib/types'
 import FormDrawer from 'components/form-drawer'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { useCurrentUser } from 'hooks/useCurrentUser'
 import {
     createTrip,
@@ -790,39 +789,16 @@ export default function TripFormDialog({
 
                 <Box>
                     <Typography sx={labelSx}>Trip visibility</Typography>
-                    <ToggleButtonGroup
+                    <SlidingToggle
                         value={visibility}
-                        exclusive
-                        onChange={(_, val) => {
-                            if (val) setVisibility(val)
-                        }}
-                        size="small"
-                        fullWidth
-                        sx={{
-                            'boxShadow': fieldShadow,
-                            '& .MuiToggleButton-root': {
-                                'textTransform': 'none',
-                                'fontSize': 13,
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'color': colors.primaryBlack,
-                                'backgroundColor': colors.primaryWhite,
-                                '&:hover': {
-                                    backgroundColor: colors.primaryWhite,
-                                },
-                                '&.Mui-selected': {
-                                    'backgroundColor': colors.primaryYellow,
-                                    'fontWeight': 600,
-                                    '&:hover': {
-                                        backgroundColor: colors.primaryYellow,
-                                    },
-                                },
-                            },
-                        }}>
-                        <ToggleButton value="participants">
-                            Participants only
-                        </ToggleButton>
-                        <ToggleButton value="all_users">All users</ToggleButton>
-                    </ToggleButtonGroup>
+                        options={[
+                            { value: 'participants', label: 'Participants only' },
+                            { value: 'all_users', label: 'All users' },
+                        ]}
+                        onChange={(val) => setVisibility(val)}
+                        fontSize={13}
+                        borderWidth={1}
+                    />
                 </Box>
 
                 {/* Locations — inline list */}

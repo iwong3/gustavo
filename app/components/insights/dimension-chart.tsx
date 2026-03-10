@@ -2,6 +2,7 @@
 
 import { colors, hardShadow } from '@/lib/colors'
 import { Box, Typography } from '@mui/material'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { useWindowSize } from 'hooks/useWindowSize'
 
 import { Graph } from 'components/graphs/graph'
@@ -16,10 +17,10 @@ interface DimensionChartProps {
     onBarClick: (index: number) => void
 }
 
-const dimensions: { key: Dimension; label: string }[] = [
-    { key: 'person', label: 'Person' },
-    { key: 'category', label: 'Category' },
-    { key: 'location', label: 'Location' },
+const dimensionOptions = [
+    { value: 'person', label: 'Person' },
+    { value: 'category', label: 'Category' },
+    { value: 'location', label: 'Location' },
 ]
 
 export function DimensionChart({
@@ -41,52 +42,15 @@ export function DimensionChart({
 
     return (
         <Box sx={{ width: '100%' }}>
-            {/* Dimension toggle — matches settings page ToggleButtonGroup style */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    border: `1px solid ${colors.primaryBlack}`,
-                    borderRadius: '4px',
-                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                    overflow: 'hidden',
-                    marginBottom: 2,
-                    width: '100%',
-                }}>
-                {dimensions.map((dim, i) => {
-                    const isActive = dimension === dim.key
-                    return (
-                        <Box
-                            key={dim.key}
-                            onClick={() => onDimensionChange(dim.key)}
-                            sx={{
-                                'flex': 1,
-                                'display': 'flex',
-                                'justifyContent': 'center',
-                                'alignItems': 'center',
-                                'paddingY': 1,
-                                'cursor': 'pointer',
-                                'userSelect': 'none',
-                                'backgroundColor': isActive
-                                    ? colors.primaryYellow
-                                    : colors.primaryWhite,
-                                'borderRight':
-                                    i < dimensions.length - 1
-                                        ? `1px solid ${colors.primaryBlack}`
-                                        : 'none',
-                                '&:active': { opacity: 0.7 },
-                                'transition': 'background-color 0.15s',
-                            }}>
-                            <Typography
-                                sx={{
-                                    fontSize: 13,
-                                    fontWeight: isActive ? 700 : 500,
-                                    color: colors.primaryBlack,
-                                }}>
-                                {dim.label}
-                            </Typography>
-                        </Box>
-                    )
-                })}
+            {/* Dimension toggle */}
+            <Box sx={{ marginBottom: 2 }}>
+                <SlidingToggle
+                    value={dimension}
+                    options={dimensionOptions}
+                    onChange={(val) => onDimensionChange(val as Dimension)}
+                    fontSize={13}
+                    borderWidth={1}
+                />
             </Box>
 
             {/* Bar chart */}

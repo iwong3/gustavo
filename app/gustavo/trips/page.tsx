@@ -22,15 +22,23 @@ import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
 import type { TripSummary } from '@/lib/types'
 
-const formatDateRange = (start: string, end: string) => {
+const formatDateRange = (start: string, end: string, tripName?: string) => {
     const s = new Date(start + 'T00:00:00')
     const e = new Date(end + 'T00:00:00')
     const mo = (d: Date) => d.toLocaleString('en-US', { month: 'short' })
+    const showYear = (d: Date) => !tripName || !tripName.includes(String(d.getFullYear()))
     if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
-        return `${mo(s)} ${s.getDate()} – ${e.getDate()}`
+        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
+        return `${mo(s)} ${s.getDate()} – ${e.getDate()}${suffix}`
     }
     const fmt = (d: Date) => `${mo(d)} ${d.getDate()}`
-    return `${fmt(s)} – ${fmt(e)}`
+    if (s.getFullYear() === e.getFullYear()) {
+        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
+        return `${fmt(s)} – ${fmt(e)}${suffix}`
+    }
+    const yrS = showYear(s) ? `, ${s.getFullYear()}` : ''
+    const yrE = showYear(e) ? `, ${e.getFullYear()}` : ''
+    return `${fmt(s)}${yrS} – ${fmt(e)}${yrE}`
 }
 
 type TripCardProps = {
@@ -82,7 +90,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
                 <Box>
                     <Box sx={{ fontSize: 18 }}>{trip.name}</Box>
                     <Box sx={{ fontSize: 11, color: 'text.secondary' }}>
-                        {formatDateRange(trip.startDate, trip.endDate)}
+                        {formatDateRange(trip.startDate, trip.endDate, trip.name)}
                     </Box>
                 </Box>
                 {/* Bottom: participant initials — stacked overlap */}
@@ -240,6 +248,11 @@ export default function TripsPage() {
         )
     }
 
+    const noTrips =
+        activeTrips.length === 0 &&
+        pastTrips.length === 0 &&
+        otherTrips.length === 0
+
     return (
         <Box
             sx={{
@@ -250,6 +263,32 @@ export default function TripsPage() {
                 paddingY: 2,
                 width: '100%',
             }}>
+            {noTrips && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1,
+                        marginTop: 6,
+                        textAlign: 'center',
+                    }}>
+                    <Box
+                        sx={{
+                            fontSize: 24,
+                            fontFamily: 'var(--font-serif)',
+                        }}>
+                        No trips yet
+                    </Box>
+                    <Box
+                        sx={{
+                            fontSize: 14,
+                            color: 'text.secondary',
+                        }}>
+                        Tap the + button to create your first trip.
+                    </Box>
+                </Box>
+            )}
             {activeTrips.length > 0 && (
                 <>
                     <Box

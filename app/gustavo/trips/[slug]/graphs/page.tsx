@@ -34,8 +34,8 @@ export default function InsightsPage() {
                 paddingY: 2,
                 gap: 3,
             }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, alignSelf: 'flex-start' }}>
-                {getTablerIcon({ name: 'IconChartBar', size: 20, stroke: 2, color: colors.primaryBlack })}
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, alignSelf: 'flex-start', paddingX: 1.5, paddingY: 0.75, background: 'linear-gradient(135deg, #f0b490 0%, #cdbfdb 100%)', ...hardShadow, borderRadius: '4px' }}>
+                {getTablerIcon({ name: 'IconChartBar', size: 20, stroke: 2, color: colors.primaryBlack, fill: colors.primaryWhite })}
                 <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Insights
                 </Typography>

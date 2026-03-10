@@ -158,7 +158,7 @@ export const TripToolbar = () => {
                             height: TOOLBAR_HEIGHT,
                             display: 'flex',
                             alignItems: 'center',
-                            paddingX: 3,
+                            paddingX: 2,
                             position: 'relative',
                             zIndex: 2,
                         }}>
@@ -352,7 +352,7 @@ export const TripToolbar = () => {
                                 openPanel === 'sort') && (
                                 <Box
                                     sx={{
-                                        marginX: 3,
+                                        marginX: 2,
                                         borderLeft: `1px solid ${PANEL_BORDER}`,
                                         borderRight: `1px solid ${PANEL_BORDER}`,
                                         borderBottom: `1px solid ${PANEL_BORDER}`,

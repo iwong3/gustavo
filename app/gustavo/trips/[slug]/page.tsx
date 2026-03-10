@@ -2,7 +2,6 @@
 
 import { cardSx, colors } from '@/lib/colors'
 import { Box, IconButton, Typography } from '@mui/material'
-import { HandCoins } from '@phosphor-icons/react'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,15 +15,23 @@ import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripFormDialog from 'components/trip-form-dialog'
 
-const formatDateRange = (start: string, end: string) => {
+const formatDateRange = (start: string, end: string, tripName?: string) => {
     const s = new Date(start + 'T00:00:00')
     const e = new Date(end + 'T00:00:00')
     const mo = (d: Date) => d.toLocaleString('en-US', { month: 'short' })
+    const showYear = (d: Date) => !tripName || !tripName.includes(String(d.getFullYear()))
     if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
-        return `${mo(s)} ${s.getDate()} – ${e.getDate()}`
+        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
+        return `${mo(s)} ${s.getDate()} – ${e.getDate()}${suffix}`
     }
     const fmt = (d: Date) => `${mo(d)} ${d.getDate()}`
-    return `${fmt(s)} – ${fmt(e)}`
+    if (s.getFullYear() === e.getFullYear()) {
+        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
+        return `${fmt(s)} – ${fmt(e)}${suffix}`
+    }
+    const yrS = showYear(s) ? `, ${s.getFullYear()}` : ''
+    const yrE = showYear(e) ? `, ${e.getFullYear()}` : ''
+    return `${fmt(s)}${yrS} – ${fmt(e)}${yrE}`
 }
 
 const tools = [
@@ -32,25 +39,31 @@ const tools = [
         name: 'Expenses',
         path: 'expenses',
         icon: 'IconReceipt',
-        bg: '#e8edca',
+        bg: '#dae6a3',
     },
     {
         name: 'Debts',
         path: 'debts',
-        icon: 'HandCoins',
-        bg: '#f5d4d2',
+        icon: 'IconPigMoney',
+        bg: '#f0b8b4',
     },
     {
         name: 'Insights',
         path: 'graphs',
         icon: 'IconChartBar',
-        bg: '#d2e0ea',
+        bg: 'linear-gradient(135deg, #f0b490 0%, #cdbfdb 100%)',
     },
     {
         name: 'Links',
         path: 'links',
         icon: 'IconExternalLink',
-        bg: '#e6d9cc',
+        bg: '#b4cedf',
+    },
+    {
+        name: 'Activity',
+        path: 'activity',
+        icon: 'IconLayoutList',
+        bg: '#cdbfdb',
     },
 ]
 
@@ -132,7 +145,7 @@ export default function TripHubPage() {
                         color: 'text.secondary',
                         marginBottom: 1.5,
                     }}>
-                    {formatDateRange(trip.startDate, trip.endDate)}
+                    {formatDateRange(trip.startDate, trip.endDate, trip.name)}
                 </Typography>
 
                 {/* Participant avatars */}
@@ -224,26 +237,18 @@ export default function TripHubPage() {
                                 width: 44,
                                 height: 44,
                                 borderRadius: '50%',
-                                backgroundColor: tool.bg,
+                                background: tool.bg,
                                 border: `1.5px solid ${colors.primaryBlack}`,
                                 boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                 flexShrink: 0,
                             }}>
-                            {tool.icon === 'HandCoins' ? (
-                                <HandCoins
-                                    size={22}
-                                    weight="regular"
-                                    color={colors.primaryBlack}
-                                />
-                            ) : (
-                                getTablerIcon({
-                                    name: tool.icon,
-                                    size: 22,
-                                    stroke: 1.8,
-                                    color: colors.primaryBlack,
-                                    fill: 'none',
-                                })
-                            )}
+                            {getTablerIcon({
+                                name: tool.icon,
+                                size: 22,
+                                stroke: 1.8,
+                                color: colors.primaryBlack,
+                                fill: colors.primaryWhite,
+                            })}
                         </Box>
                         <Typography
                             sx={{

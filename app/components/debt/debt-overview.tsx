@@ -55,7 +55,7 @@ export function DebtOverview() {
     const allSettled = settlements.length === 0
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, paddingX: 1.5, paddingY: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, paddingX: 2, paddingY: 1.5 }}>
             {/* Net balance chart (top visual) */}
             {!allSettled && (
                 <Box>

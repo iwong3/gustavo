@@ -24,7 +24,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                     key={row.id}
                     sx={{
                         ...cardSx,
-                        marginX: 3,
+                        marginX: 2,
                         marginBottom: 1,
                         border: row.conversionError
                             ? `1.5px solid ${colors.primaryRed}`

@@ -1,6 +1,6 @@
 'use client'
 
-import { colors } from '@/lib/colors'
+import { colors, hardShadow } from '@/lib/colors'
 import { Box, Typography } from '@mui/material'
 import { useCallback, useState } from 'react'
 
@@ -30,8 +30,8 @@ export default function ExpensesPage() {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 2, paddingTop: 2, paddingBottom: 1 }}>
-                {getTablerIcon({ name: 'IconReceipt', size: 20, stroke: 2, color: colors.primaryBlack })}
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, marginX: 2, marginTop: 2, marginBottom: 1, paddingX: 1.5, paddingY: 0.75, backgroundColor: '#dae6a3', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                {getTablerIcon({ name: 'IconReceipt', size: 20, stroke: 2, color: colors.primaryBlack, fill: colors.primaryWhite })}
                 <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Expenses
                 </Typography>

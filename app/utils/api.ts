@@ -192,6 +192,20 @@ export const updateUserPreferences = async (data: Partial<UserPreferences>): Pro
     }
 }
 
+// ── Activity Log ──
+
+export type ActivityResponse = {
+    entries: import('@/lib/types').ActivityEntry[]
+    fieldLabels: Record<string, string>
+    ignoredFields: string[]
+}
+
+export const fetchActivity = async (tripId: number): Promise<ActivityResponse> => {
+    const res = await fetch(`/api/trips/${tripId}/activity`)
+    if (!res.ok) throw new Error(`Failed to fetch activity: ${res.status}`)
+    return res.json()
+}
+
 // ── Allowed Emails (admin) ──
 
 export type AllowedEmail = {

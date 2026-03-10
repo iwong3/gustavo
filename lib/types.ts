@@ -72,6 +72,23 @@ export type Location = {
     name: string
 }
 
+export type ActivityEntry = {
+    id: number
+    tableName: string
+    recordId: number
+    action: 'INSERT' | 'UPDATE' | 'DELETE'
+    oldData: Record<string, unknown> | null
+    newData: Record<string, unknown> | null
+    changedBy: {
+        id: number
+        name: string
+        initials: string | null
+        iconColor: string | null
+    } | null
+    changedAt: string // ISO timestamp
+    summary: string   // human-readable description
+}
+
 export type UserPreferences = {
     defaultTripVisibility: 'participants' | 'all_users'
     defaultParticipantRole: 'editor' | 'viewer'

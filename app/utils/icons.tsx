@@ -28,6 +28,7 @@ import {
     IconExternalLink,
     IconHandFingerLeft,
     IconHandFingerRight,
+    IconHistory,
     IconLayoutList,
     IconLayoutNavbarCollapse,
     IconLink,
@@ -36,6 +37,7 @@ import {
     IconMapQuestion,
     IconNotes,
     IconPhoto,
+    IconPigMoney,
     IconPlaneDeparture,
     IconReceipt,
     IconSearch,
@@ -118,6 +120,8 @@ export const getTablerIcon = ({
             return <IconHandFingerLeft {...props} />
         case 'IconHandFingerRight':
             return <IconHandFingerRight {...props} />
+        case 'IconHistory':
+            return <IconHistory {...props} />
         case 'IconLayoutList':
             return <IconLayoutList {...props} />
         case 'IconLayoutNavbarCollapse':
@@ -134,6 +138,8 @@ export const getTablerIcon = ({
             return <IconNotes {...props} />
         case 'IconPhoto':
             return <IconPhoto {...props} />
+        case 'IconPigMoney':
+            return <IconPigMoney {...props} />
         case 'IconPlaneDeparture':
             return <IconPlaneDeparture {...props} />
         case 'IconReceipt':

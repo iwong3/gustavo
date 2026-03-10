@@ -12,13 +12,11 @@
 - [ ] More useful graphs for trip expense data
 - [ ] Add notes for a trip? Such as link to Google Photos album
 - [ ] Track user's last login
-- [ ] Update "manage categories" and "manage locations" settings
 - [ ] When adding expense, add ability to "cover" for user(s)
 - [ ] End of trip report generator? Standalone page or image or pdf gen. Include
       fun stats.
 - [ ] Copy expense (useful for similar expenses)
 - [ ] Infer expense fields from name?
-- [ ] Activity log
 
 ## UX / Design
 
@@ -74,3 +72,5 @@
 - [x] Add ability to add locations when creating or editing a trip
 - [x] Add a side drawer menu to navigate to any page with 1 click
 - [x] Redesign nav - Trips > Expenses / Debts / Graphs
+- [x] Activity log
+- [x] Update "manage categories" and "manage locations" settings
