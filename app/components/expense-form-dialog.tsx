@@ -12,17 +12,18 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { IconGift } from '@tabler/icons-react'
 import { colors } from '@/lib/colors'
-import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
     dropdownMenuItemSx,
     dropdownPaperSx,
     errorMessageSx,
     fieldSx,
     labelSx,
+    primaryButtonSx,
+    secondaryButtonSx,
     selectMenuProps,
 } from '@/lib/form-styles'
+import { IconGift } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, updateExpense } from 'utils/api'
@@ -143,7 +144,9 @@ export default function ExpenseFormDialog({
             } else {
                 setSplitBetween(expense.splitBetween.map((u) => u.firstName))
             }
-            setCoveredParticipants(expense.coveredParticipants.map((u) => u.firstName))
+            setCoveredParticipants(
+                expense.coveredParticipants.map((u) => u.firstName)
+            )
             setLocation(expense.locationName ?? '')
             setNotes(expense.notes ?? '')
             setLocalCurrencyReceived(
@@ -217,9 +220,7 @@ export default function ExpenseFormDialog({
 
     // Participants eligible for covering: in the split, not the payer
     const coverableParticipants = useMemo(() => {
-        const splitSet = isEveryone
-            ? new Set(people)
-            : new Set(splitBetween)
+        const splitSet = isEveryone ? new Set(people) : new Set(splitBetween)
         return trip.participants.filter(
             (p) => p.firstName !== paidBy && splitSet.has(p.firstName)
         )
@@ -282,7 +283,10 @@ export default function ExpenseFormDialog({
             category_id: categoryId || undefined,
             paid_by: paidBy,
             split_between: splitBetween,
-            covered_participants: coveredParticipants.length > 0 ? coveredParticipants : undefined,
+            covered_participants:
+                coveredParticipants.length > 0
+                    ? coveredParticipants
+                    : undefined,
             location: location || undefined,
             notes: notes.trim() || undefined,
             local_currency_received: localReceivedNum || undefined,
@@ -546,7 +550,12 @@ export default function ExpenseFormDialog({
                 {/* SVG gradient definition for gift icons */}
                 <svg width={0} height={0} style={{ position: 'absolute' }}>
                     <defs>
-                        <linearGradient id="giftGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient
+                            id="giftGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%">
                             <stop offset="0%" stopColor="#e67e22" />
                             <stop offset="100%" stopColor="#c0392b" />
                         </linearGradient>
@@ -555,13 +564,33 @@ export default function ExpenseFormDialog({
 
                 {/* 5. Split between — multi-select avatar row with gift toggle */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 1,
+                        }}>
                         <Typography sx={labelSx}>Split between *</Typography>
-                        {!isCurrencyExchange && coverableParticipants.length > 0 && (
-                            <Typography sx={{ fontSize: 11, color: 'text.secondary', fontStyle: 'italic' }}>
-                                tap <IconGift size={10} color={colors.primaryBlack} style={{ verticalAlign: 'middle', marginBottom: 1 }} /> to cover
-                            </Typography>
-                        )}
+                        {!isCurrencyExchange &&
+                            coverableParticipants.length > 0 && (
+                                <Typography
+                                    sx={{
+                                        fontSize: 11,
+                                        color: 'text.secondary',
+                                        fontStyle: 'italic',
+                                        lineHeight: 1,
+                                    }}>
+                                    tap{' '}
+                                    <IconGift
+                                        size={10}
+                                        color={colors.primaryBlack}
+                                        style={{
+                                            verticalAlign: '-1px',
+                                        }}
+                                    />{' '}
+                                    to cover
+                                </Typography>
+                            )}
                     </Box>
                     <Box
                         sx={{
@@ -596,8 +625,13 @@ export default function ExpenseFormDialog({
                         {trip.participants.map((p) => {
                             const selected =
                                 isEveryone || splitBetween.includes(p.firstName)
-                            const isCoverable = selected && p.firstName !== paidBy && !isCurrencyExchange
-                            const isCovered = coveredParticipants.includes(p.firstName)
+                            const isCoverable =
+                                selected &&
+                                p.firstName !== paidBy &&
+                                !isCurrencyExchange
+                            const isCovered = coveredParticipants.includes(
+                                p.firstName
+                            )
                             return (
                                 <Box
                                     key={p.id}
@@ -608,7 +642,9 @@ export default function ExpenseFormDialog({
                                         gap: 0.25,
                                     }}>
                                     <Box
-                                        onClick={() => togglePerson(p.firstName)}
+                                        onClick={() =>
+                                            togglePerson(p.firstName)
+                                        }
                                         sx={{
                                             cursor: 'pointer',
                                             opacity: selected ? 1 : 0.4,
@@ -643,12 +679,21 @@ export default function ExpenseFormDialog({
                                             <IconGift
                                                 size={20}
                                                 color={colors.primaryBlack}
-                                                fill={isCovered ? 'url(#giftGradient)' : 'none'}
+                                                fill={
+                                                    isCovered
+                                                        ? 'url(#giftGradient)'
+                                                        : 'none'
+                                                }
+                                                fillOpacity={
+                                                    isCovered ? 0.6 : undefined
+                                                }
                                             />
                                         </Box>
                                     ) : (
                                         // Spacer to keep alignment
-                                        !isCurrencyExchange && <Box sx={{ height: 22 }} />
+                                        !isCurrencyExchange && (
+                                            <Box sx={{ height: 22 }} />
+                                        )
                                     )}
                                 </Box>
                             )

@@ -3,8 +3,8 @@ import { IconGift } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { colors } from '@/lib/colors'
-import { InitialsIcon } from 'utils/icons'
 import { useTripData } from 'providers/trip-data-provider'
+import { InitialsIcon } from 'utils/icons'
 
 import type { Expense, UserSummary } from '@/lib/types'
 
@@ -12,7 +12,9 @@ interface ISplitBetweenInitialsProps {
     expense: Expense
 }
 
-export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) => {
+export const SplitBetweenInitials = ({
+    expense,
+}: ISplitBetweenInitialsProps) => {
     const { trip } = useTripData()
     const participants = trip.participants
 
@@ -22,15 +24,17 @@ export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) =>
     )
 
     const getInitialState = () => {
-        const filters = new Map<string, { active: boolean; user: UserSummary }>()
+        const filters = new Map<
+            string,
+            { active: boolean; user: UserSummary }
+        >()
         participants.forEach((p) => {
             filters.set(p.firstName, { active: false, user: p })
         })
         return filters
     }
 
-    const [splitters, setSplitters] =
-        useState(getInitialState)
+    const [splitters, setSplitters] = useState(getInitialState)
 
     useEffect(() => {
         const newSplitters = getInitialState()
@@ -43,7 +47,10 @@ export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) =>
             expense.splitBetween.forEach((person) => {
                 const existing = newSplitters.get(person.firstName)
                 if (existing) {
-                    newSplitters.set(person.firstName, { ...existing, active: true })
+                    newSplitters.set(person.firstName, {
+                        ...existing,
+                        active: true,
+                    })
                 }
             })
         }
@@ -65,7 +72,12 @@ export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) =>
             {hasCovered && (
                 <svg width={0} height={0} style={{ position: 'absolute' }}>
                     <defs>
-                        <linearGradient id="giftGradientDisplay" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient
+                            id="giftGradientDisplay"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%">
                             <stop offset="0%" stopColor="#e67e22" />
                             <stop offset="100%" stopColor="#c0392b" />
                         </linearGradient>
@@ -106,6 +118,7 @@ export const SplitBetweenInitials = ({ expense }: ISplitBetweenInitialsProps) =>
                                         size={16}
                                         color={colors.primaryBlack}
                                         fill="url(#giftGradientDisplay)"
+                                        fillOpacity={0.99}
                                     />
                                 </Box>
                             )}
