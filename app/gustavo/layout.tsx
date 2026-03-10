@@ -142,18 +142,38 @@ export default function GustavoLayout({
                             {/* Spacer */}
                             <Box sx={{ flex: 1 }} />
 
-                            {/* Back button — shows on trip sub-pages */}
+                            {/* Back button — shows on sub-pages */}
                             {(() => {
-                                // Match /gustavo/trips/<slug>/<tool>
-                                const match = pathname.match(
+                                // Determine back URL for nested pages
+                                let backHref: string | null = null
+                                // /gustavo/trips/<slug>/<tool> → trip hub
+                                const tripMatch = pathname.match(
                                     /^\/gustavo\/trips\/([^/]+)\/.+$/
                                 )
-                                if (!match) return null
-                                const slug = match[1]
+                                if (tripMatch) {
+                                    backHref = `/gustavo/trips/${tripMatch[1]}`
+                                }
+                                // /gustavo/trips/[slug] (trip hub) → trips list
+                                else if (/^\/gustavo\/trips\/[^/]+$/.test(pathname)) {
+                                    backHref = '/gustavo/trips'
+                                }
+                                // /gustavo/trips → home
+                                else if (pathname === '/gustavo/trips') {
+                                    backHref = '/gustavo'
+                                }
+                                // /gustavo/settings/<sub> → settings
+                                else if (/^\/gustavo\/settings\/.+$/.test(pathname)) {
+                                    backHref = '/gustavo/settings'
+                                }
+                                // /gustavo/settings → home
+                                else if (pathname === '/gustavo/settings') {
+                                    backHref = '/gustavo'
+                                }
+                                if (!backHref) return null
                                 return (
                                     <Box
                                         component={Link}
-                                        href={`/gustavo/trips/${slug}`}
+                                        href={backHref}
                                         sx={{
                                             'display': 'flex',
                                             'alignItems': 'center',

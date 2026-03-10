@@ -347,6 +347,7 @@ export default function ExpenseFormDialog({
                         required
                         fullWidth
                         size="small"
+                        slotProps={{ htmlInput: { maxLength: 200 } }}
                         sx={fieldSx}
                     />
                 </Box>
@@ -825,6 +826,7 @@ export default function ExpenseFormDialog({
                         rows={2}
                         fullWidth
                         size="small"
+                        slotProps={{ htmlInput: { maxLength: 2000 } }}
                         sx={fieldSx}
                     />
                 </Box>

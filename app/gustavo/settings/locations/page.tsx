@@ -185,6 +185,7 @@ export default function LocationsPage() {
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleAdd()
                             }}
+                            slotProps={{ htmlInput: { maxLength: 200 } }}
                             sx={{
                                 flex: 1,
                                 '& .MuiInputBase-root': { backgroundColor: '#FFFFEF' },
@@ -226,6 +227,7 @@ export default function LocationsPage() {
                                                 value={editName}
                                                 onChange={(e) => setEditName(e.target.value)}
                                                 inputRef={editRef}
+                                                slotProps={{ htmlInput: { maxLength: 200 } }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') handleRename(loc.id)
                                                     if (e.key === 'Escape') cancelEdit()

@@ -52,6 +52,10 @@ export default function InviteUsersPage() {
     const handleAdd = async () => {
         const email = newEmail.trim().toLowerCase()
         if (!email) return
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setError('Please enter a valid email address')
+            return
+        }
         setAdding(true)
         setError(null)
         try {
@@ -121,6 +125,7 @@ export default function InviteUsersPage() {
                     placeholder="email@gmail.com"
                     type="email"
                     autoComplete="off"
+                    slotProps={{ htmlInput: { maxLength: 254 } }}
                     size="small"
                     fullWidth
                     disabled={adding}

@@ -493,6 +493,7 @@ export default function TripFormDialog({
                         required
                         fullWidth
                         size="small"
+                        slotProps={{ htmlInput: { maxLength: 200 } }}
                         sx={nameError ? errorFieldSx : fieldSx}
                     />
                 </Box>
@@ -541,6 +542,7 @@ export default function TripFormDialog({
                         rows={2}
                         fullWidth
                         size="small"
+                        slotProps={{ htmlInput: { maxLength: 2000 } }}
                         sx={fieldSx}
                     />
                 </Box>
@@ -822,6 +824,7 @@ export default function TripFormDialog({
                             placeholder="Add a location"
                             size="small"
                             fullWidth
+                            slotProps={{ htmlInput: { maxLength: 200 } }}
                             sx={fieldSx}
                         />
                         <IconButton

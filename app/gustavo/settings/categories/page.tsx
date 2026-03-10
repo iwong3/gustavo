@@ -262,6 +262,7 @@ export default function CategoriesPage() {
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAdd()
                     }}
+                    slotProps={{ htmlInput: { maxLength: 100 } }}
                     sx={{ flex: 1, ...(addError ? errorFieldSx : fieldSx) }}
                 />
                 <IconButton
@@ -433,6 +434,7 @@ export default function CategoriesPage() {
                                                 onChange={(e) => { setEditName(e.target.value); setEditError('') }}
                                                 inputRef={editRef}
                                                 fullWidth
+                                                slotProps={{ htmlInput: { maxLength: 100 } }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') handleRename(cat.id)
                                                     if (e.key === 'Escape') cancelEdit()
