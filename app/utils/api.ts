@@ -87,6 +87,7 @@ export type AddExpenseData = {
     category_id?: number
     paid_by: string // first name
     split_between: string[] // first names, or ["Everyone"]
+    covered_participants?: string[] // first names of participants whose cost is covered by payer
     location?: string // location name
     notes?: string
 }

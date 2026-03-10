@@ -16,6 +16,7 @@ type UpdateExpenseBody = {
     category_id?: number | null
     paid_by?: string // first name
     split_between?: string[] // first names, or ["Everyone"]
+    covered_participants?: string[] // first names of participants whose cost is covered by payer
     location?: string | null // location name
     notes?: string
     local_currency_received?: number | null
@@ -130,35 +131,62 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 )
             }
 
-            // Update split_between if provided
-            if (body.split_between !== undefined) {
+            // Update split_between and/or covered_participants if provided
+            if (body.split_between !== undefined || body.covered_participants !== undefined) {
+                // Resolve new participants (before deleting, in case we need existing IDs)
+                let participantIds: number[]
+                if (body.split_between !== undefined) {
+                    if (body.split_between.length === 1 && body.split_between[0] === 'Everyone') {
+                        const tpRes = await client.query(
+                            'SELECT user_id FROM trip_participants WHERE trip_id = $1 AND left_at IS NULL',
+                            [tripIdNum]
+                        )
+                        participantIds = tpRes.rows.map((r: { user_id: number }) => r.user_id)
+                    } else {
+                        const placeholders = body.split_between.map((_, i) => `$${i + 1}`).join(', ')
+                        const usersRes = await client.query(
+                            `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${placeholders})`,
+                            body.split_between
+                        )
+                        participantIds = usersRes.rows.map((r: { id: number }) => r.id)
+                    }
+                } else {
+                    // split_between not changed, re-fetch existing participant IDs
+                    const existingRes = await client.query(
+                        'SELECT user_id FROM expense_participants WHERE expense_id = $1',
+                        [expenseIdNum]
+                    )
+                    participantIds = existingRes.rows.map((r: { user_id: number }) => r.user_id)
+                }
+
                 // Delete existing participants
                 await client.query(
                     'DELETE FROM expense_participants WHERE expense_id = $1',
                     [expenseIdNum]
                 )
 
-                // Resolve new participants
-                let participantIds: number[]
-                if (body.split_between.length === 1 && body.split_between[0] === 'Everyone') {
-                    const tpRes = await client.query(
-                        'SELECT user_id FROM trip_participants WHERE trip_id = $1 AND left_at IS NULL',
-                        [tripIdNum]
+                // Resolve covered participants → user IDs
+                const coveredIds = new Set<number>()
+                if (body.covered_participants && body.covered_participants.length > 0) {
+                    const covPlaceholders = body.covered_participants.map((_, i) => `$${i + 1}`).join(', ')
+                    const covRes = await client.query(
+                        `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${covPlaceholders})`,
+                        body.covered_participants
                     )
-                    participantIds = tpRes.rows.map((r: { user_id: number }) => r.user_id)
-                } else {
-                    const placeholders = body.split_between.map((_, i) => `$${i + 1}`).join(', ')
-                    const usersRes = await client.query(
-                        `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${placeholders})`,
-                        body.split_between
-                    )
-                    participantIds = usersRes.rows.map((r: { id: number }) => r.id)
+                    for (const r of covRes.rows) coveredIds.add(r.id)
                 }
+
+                // Resolve payer ID for covered_by value
+                const payerIdRes = await client.query(
+                    'SELECT paid_by FROM expenses WHERE id = $1',
+                    [expenseIdNum]
+                )
+                const expPayerId = payerIdRes.rows[0].paid_by
 
                 for (const uid of participantIds) {
                     await client.query(
-                        'INSERT INTO expense_participants (expense_id, user_id) VALUES ($1, $2)',
-                        [expenseIdNum, uid]
+                        'INSERT INTO expense_participants (expense_id, user_id, covered_by) VALUES ($1, $2, $3)',
+                        [expenseIdNum, uid, coveredIds.has(uid) ? expPayerId : null]
                     )
                 }
             }

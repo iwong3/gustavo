@@ -20,6 +20,8 @@ export default function InsightsPage() {
         stats,
         timelineData,
         timelineCategories,
+        personMetric,
+        setPersonMetric,
     } = useDashboardData()
 
     return (
@@ -91,6 +93,8 @@ export default function InsightsPage() {
                 data={chartData}
                 selectedKey={selectedKey}
                 onBarClick={(index) => handleBarClick(index, chartData)}
+                personMetric={personMetric}
+                onPersonMetricChange={setPersonMetric}
             />
 
             {/* Timeline stacked bar chart */}

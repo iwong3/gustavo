@@ -22,7 +22,8 @@ type SpendDataValue = {
     debtMap: Map<number, Map<number, number>> // userId → userId → amount
     filteredTotalSpend: number
     filteredPeopleTotalSpend: number
-    totalSpendByPerson: Map<number, number>     // userId → amount
+    totalSpendByPerson: Map<number, number>     // userId → total paid amount
+    netSpendByPerson: Map<number, number>       // userId → net amount responsible for (after covered adjustments)
     totalSpendByType: Map<string, number>       // categoryName → amount
     totalSpendByLocation: Map<string, number>   // locationName → amount
     totalSpendByDate: Map<string, number>       // date → amount
@@ -212,8 +213,12 @@ function computeDebtMap(
         const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
         const splitCost = usdValue / splitCount
 
+        // Build set of covered participant IDs for fast lookup
+        const coveredIds = new Set(exp.coveredParticipants.map((p) => p.id))
+
         for (const participant of exp.splitBetween) {
             if (participant.id === payerId) continue
+            if (coveredIds.has(participant.id)) continue // covered — no debt
             // participant owes payer
             const owes = debtMap.get(participant.id) ?? new Map()
             owes.set(payerId, (owes.get(payerId) ?? 0) + splitCost)
@@ -238,6 +243,7 @@ function computeSummaries(
     const totalSpendByPerson = new Map<number, number>()
     const totalSpendByType = new Map<string, number>()
     const totalSpendByLocation = new Map<string, number>()
+    const netSpendByPerson = new Map<number, number>()  // userId → net amount they're responsible for
     const totalSpendByDate = new Map<string, number>()
     const totalSpendByDateByPerson = new Map<number, Map<string, number>>()
 
@@ -265,8 +271,23 @@ function computeSummaries(
         // Per-person split cost (what they owe from this expense)
         const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
         const splitCost = usdValue / splitCount
+        const coveredIds = new Set(exp.coveredParticipants.map((p) => p.id))
 
         for (const participant of exp.splitBetween) {
+            // Net spend: covered participants' shares go to the payer instead
+            if (coveredIds.has(participant.id)) {
+                // Covered person doesn't pay — payer absorbs their share
+                netSpendByPerson.set(
+                    exp.paidBy.id,
+                    (netSpendByPerson.get(exp.paidBy.id) ?? 0) + splitCost
+                )
+            } else {
+                netSpendByPerson.set(
+                    participant.id,
+                    (netSpendByPerson.get(participant.id) ?? 0) + splitCost
+                )
+            }
+
             if (isSplitFilterActive && !splitBetweenFilters.get(participant.firstName)) {
                 continue
             }
@@ -283,6 +304,7 @@ function computeSummaries(
         filteredTotalSpend,
         filteredPeopleTotalSpend,
         totalSpendByPerson,
+        netSpendByPerson,
         totalSpendByType,
         totalSpendByLocation,
         totalSpendByDate,

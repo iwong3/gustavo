@@ -50,6 +50,7 @@ export type Expense = {
     reportedBy: UserSummary | null
     reportedAt: string | null
     splitBetween: UserSummary[]
+    coveredParticipants: UserSummary[]
     isEveryone: boolean
     notes: string
     receiptImageUrl: string | null

@@ -41,11 +41,14 @@ export type DashboardStats = {
     filterLabel: string | null // e.g. "Food" when cross-filtered
 }
 
+export type PersonMetric = 'paid' | 'spent'
+
 export function useDashboardData() {
     const { trip } = useTripData()
     const {
         filteredExpenses,
         totalSpendByPerson,
+        netSpendByPerson,
         totalSpendByType,
         totalSpendByLocation,
         participants,
@@ -54,6 +57,7 @@ export function useDashboardData() {
 
     const [activeDimension, setActiveDimensionRaw] = useState<Dimension>('person')
     const [selectedKey, setSelectedKey] = useState<string | null>(null)
+    const [personMetric, setPersonMetric] = useState<PersonMetric>('paid')
 
     // Switching dimension clears selection
     const setActiveDimension = useCallback((dim: Dimension) => {
@@ -92,10 +96,11 @@ export function useDashboardData() {
     const chartData = useMemo((): ChartDatum[] => {
         switch (activeDimension) {
             case 'person': {
+                const dataSource = personMetric === 'spent' ? netSpendByPerson : totalSpendByPerson
                 return participants.map((p) => ({
                     key: String(p.id),
                     label: p.firstName,
-                    value: totalSpendByPerson.get(p.id) ?? 0,
+                    value: dataSource.get(p.id) ?? 0,
                     color: p.iconColor ?? '#f7cd83',
                 }))
             }
@@ -124,6 +129,8 @@ export function useDashboardData() {
         activeDimension,
         participants,
         totalSpendByPerson,
+        netSpendByPerson,
+        personMetric,
         totalSpendByType,
         totalSpendByLocation,
     ])
@@ -232,5 +239,7 @@ export function useDashboardData() {
         timelineData,
         timelineCategories,
         crossFilteredExpenses,
+        personMetric,
+        setPersonMetric,
     }
 }

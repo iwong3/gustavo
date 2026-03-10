@@ -12,7 +12,6 @@
 - [ ] More useful graphs for trip expense data
 - [ ] Add notes for a trip? Such as link to Google Photos album
 - [ ] Track user's last login
-- [ ] When adding expense, add ability to "cover" for user(s)
 - [ ] End of trip report generator? Standalone page or image or pdf gen. Include
       fun stats.
 - [ ] Copy expense (useful for similar expenses)
@@ -74,3 +73,4 @@
 - [x] Redesign nav - Trips > Expenses / Debts / Graphs
 - [x] Activity log
 - [x] Update "manage categories" and "manage locations" settings
+- [x] When adding expense, add ability to "cover" for user(s)

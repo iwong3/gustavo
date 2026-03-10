@@ -59,9 +59,9 @@ export async function GET(
 
     const expenseIds = expensesRes.rows.map((e) => e.id)
 
-    // Fetch all expense participants in one query
+    // Fetch all expense participants in one query (including covered_by)
     const epRes = await pool.query(
-        `SELECT ep.expense_id, u.id, u.name, u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url
+        `SELECT ep.expense_id, ep.covered_by, u.id, u.name, u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url
          FROM expense_participants ep
          JOIN users u ON ep.user_id = u.id
          WHERE ep.expense_id = ANY($1)
@@ -85,7 +85,11 @@ export async function GET(
     const tripParticipantCount: number = tpCountRes.rows[0].count
 
     const expenses = expensesRes.rows.map((e) => {
-        const splitBetween = (participantsByExpense.get(e.id) ?? []).map(userSummary)
+        const participants = participantsByExpense.get(e.id) ?? []
+        const splitBetween = participants.map(userSummary)
+        const coveredParticipants = participants
+            .filter((p) => p.covered_by != null)
+            .map(userSummary)
         return {
             id: e.id,
             name: e.name,
@@ -113,6 +117,7 @@ export async function GET(
                 icon_color: e.reporter_icon_color, venmo_url: e.reporter_venmo_url,
             }) : null,
             splitBetween,
+            coveredParticipants,
             isEveryone: splitBetween.length === tripParticipantCount,
             localCurrencyReceived: e.local_currency_received ? parseFloat(e.local_currency_received) : null,
             receiptImageUrl: null,
@@ -130,6 +135,7 @@ type CreateExpenseBody = {
     category_id?: number
     paid_by: string // first name
     split_between: string[] // first names, or ["Everyone"]
+    covered_participants?: string[] // first names of participants whose cost is covered by payer
     location?: string // location name
     notes?: string
     local_currency_received?: number
@@ -211,11 +217,22 @@ export async function POST(
                 participantIds = usersRes.rows.map((r: { id: number }) => r.id)
             }
 
-            // Insert expense_participants
+            // Resolve covered participants → user IDs
+            const coveredIds = new Set<number>()
+            if (body.covered_participants && body.covered_participants.length > 0) {
+                const covPlaceholders = body.covered_participants.map((_, i) => `$${i + 1}`).join(', ')
+                const covRes = await client.query(
+                    `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${covPlaceholders})`,
+                    body.covered_participants
+                )
+                for (const r of covRes.rows) coveredIds.add(r.id)
+            }
+
+            // Insert expense_participants (with covered_by for covered participants)
             for (const userId of participantIds) {
                 await client.query(
-                    `INSERT INTO expense_participants (expense_id, user_id) VALUES ($1, $2)`,
-                    [expId, userId]
+                    `INSERT INTO expense_participants (expense_id, user_id, covered_by) VALUES ($1, $2, $3)`,
+                    [expId, userId, coveredIds.has(userId) ? payerId : null]
                 )
             }
 

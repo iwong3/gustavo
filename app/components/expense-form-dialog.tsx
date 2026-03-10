@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { IconGift } from '@tabler/icons-react'
 import { colors } from '@/lib/colors'
 import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
@@ -74,6 +75,7 @@ export default function ExpenseFormDialog({
     const [location, setLocation] = useState('')
     const [notes, setNotes] = useState('')
     const [localCurrencyReceived, setLocalCurrencyReceived] = useState('')
+    const [coveredParticipants, setCoveredParticipants] = useState<string[]>([])
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [tripLocations, setTripLocations] = useState<string[]>([])
@@ -141,6 +143,7 @@ export default function ExpenseFormDialog({
             } else {
                 setSplitBetween(expense.splitBetween.map((u) => u.firstName))
             }
+            setCoveredParticipants(expense.coveredParticipants.map((u) => u.firstName))
             setLocation(expense.locationName ?? '')
             setNotes(expense.notes ?? '')
             setLocalCurrencyReceived(
@@ -175,14 +178,22 @@ export default function ExpenseFormDialog({
         }
     }, [isCurrencyExchange, paidBy, tripCurrency])
 
+    // Remove payer from covered if they become the payer
+    useEffect(() => {
+        setCoveredParticipants((prev) => prev.filter((p) => p !== paidBy))
+    }, [paidBy])
+
     const togglePerson = (person: string) => {
         if (person === 'Everyone') {
             setSplitBetween(['Everyone'])
+            setCoveredParticipants([])
             return
         }
         let next = splitBetween.filter((p) => p !== 'Everyone')
         if (next.includes(person)) {
             next = next.filter((p) => p !== person)
+            // Remove from covered if no longer in split
+            setCoveredParticipants((prev) => prev.filter((p) => p !== person))
         } else {
             next.push(person)
         }
@@ -190,10 +201,29 @@ export default function ExpenseFormDialog({
             setSplitBetween(['Everyone'])
         } else if (next.length === 0) {
             setSplitBetween(['Everyone'])
+            setCoveredParticipants([])
         } else {
             setSplitBetween(next)
         }
     }
+
+    const toggleCovered = (person: string) => {
+        setCoveredParticipants((prev) =>
+            prev.includes(person)
+                ? prev.filter((p) => p !== person)
+                : [...prev, person]
+        )
+    }
+
+    // Participants eligible for covering: in the split, not the payer
+    const coverableParticipants = useMemo(() => {
+        const splitSet = isEveryone
+            ? new Set(people)
+            : new Set(splitBetween)
+        return trip.participants.filter(
+            (p) => p.firstName !== paidBy && splitSet.has(p.firstName)
+        )
+    }, [trip.participants, splitBetween, isEveryone, paidBy, people])
 
     const resetForm = () => {
         setName('')
@@ -203,6 +233,7 @@ export default function ExpenseFormDialog({
         setCategoryId('')
         setPaidBy(currentUserName)
         setSplitBetween(['Everyone'])
+        setCoveredParticipants([])
         setLocation('')
         setNotes('')
         setLocalCurrencyReceived('')
@@ -251,6 +282,7 @@ export default function ExpenseFormDialog({
             category_id: categoryId || undefined,
             paid_by: paidBy,
             split_between: splitBetween,
+            covered_participants: coveredParticipants.length > 0 ? coveredParticipants : undefined,
             location: location || undefined,
             notes: notes.trim() || undefined,
             local_currency_received: localReceivedNum || undefined,
@@ -511,30 +543,52 @@ export default function ExpenseFormDialog({
                         )
                     })()}
 
-                {/* 5. Split between — multi-select avatar row with opacity toggle */}
+                {/* SVG gradient definition for gift icons */}
+                <svg width={0} height={0} style={{ position: 'absolute' }}>
+                    <defs>
+                        <linearGradient id="giftGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#e67e22" />
+                            <stop offset="100%" stopColor="#c0392b" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                {/* 5. Split between — multi-select avatar row with gift toggle */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
-                    <Typography sx={labelSx}>Split between *</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                        <Typography sx={labelSx}>Split between *</Typography>
+                        {!isCurrencyExchange && coverableParticipants.length > 0 && (
+                            <Typography sx={{ fontSize: 11, color: 'text.secondary', fontStyle: 'italic' }}>
+                                tap <IconGift size={10} color={colors.primaryBlack} style={{ verticalAlign: 'middle', marginBottom: 1 }} /> to cover
+                            </Typography>
+                        )}
+                    </Box>
                     <Box
                         sx={{
                             display: 'flex',
                             flexWrap: 'wrap',
-                            gap: 0.75,
-                            alignItems: 'center',
+                            gap: 1.5,
+                            alignItems: 'flex-start',
                             pointerEvents: isCurrencyExchange ? 'none' : 'auto',
                         }}>
                         <Box
                             onClick={() => togglePerson('Everyone')}
                             sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
                                 cursor: 'pointer',
                                 opacity: isEveryone ? 1 : 0.4,
                                 transition: 'opacity 0.15s',
+                                // Reserve space for gift icon row below
+                                paddingBottom: !isCurrencyExchange ? '24px' : 0,
                             }}>
                             <InitialsIcon
                                 name="All"
                                 initials="All"
                                 sx={{
-                                    width: 32,
-                                    height: 32,
+                                    width: 28,
+                                    height: 28,
                                     fontSize: 10,
                                 }}
                             />
@@ -542,25 +596,60 @@ export default function ExpenseFormDialog({
                         {trip.participants.map((p) => {
                             const selected =
                                 isEveryone || splitBetween.includes(p.firstName)
+                            const isCoverable = selected && p.firstName !== paidBy && !isCurrencyExchange
+                            const isCovered = coveredParticipants.includes(p.firstName)
                             return (
                                 <Box
                                     key={p.id}
-                                    onClick={() => togglePerson(p.firstName)}
                                     sx={{
-                                        cursor: 'pointer',
-                                        opacity: selected ? 1 : 0.4,
-                                        transition: 'opacity 0.15s',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: 0.25,
                                     }}>
-                                    <InitialsIcon
-                                        name={p.firstName}
-                                        initials={p.initials}
-                                        iconColor={p.iconColor}
+                                    <Box
+                                        onClick={() => togglePerson(p.firstName)}
                                         sx={{
-                                            width: 32,
-                                            height: 32,
-                                            fontSize: 12,
-                                        }}
-                                    />
+                                            cursor: 'pointer',
+                                            opacity: selected ? 1 : 0.4,
+                                            transition: 'opacity 0.15s',
+                                        }}>
+                                        <InitialsIcon
+                                            name={p.firstName}
+                                            initials={p.initials}
+                                            iconColor={p.iconColor}
+                                            sx={{
+                                                width: 28,
+                                                height: 28,
+                                                fontSize: 11,
+                                            }}
+                                        />
+                                    </Box>
+                                    {isCoverable ? (
+                                        <Box
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                toggleCovered(p.firstName)
+                                            }}
+                                            sx={{
+                                                cursor: 'pointer',
+                                                opacity: isCovered ? 1 : 0.3,
+                                                transition: 'opacity 0.15s',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: 22,
+                                            }}>
+                                            <IconGift
+                                                size={20}
+                                                color={colors.primaryBlack}
+                                                fill={isCovered ? 'url(#giftGradient)' : 'none'}
+                                            />
+                                        </Box>
+                                    ) : (
+                                        // Spacer to keep alignment
+                                        !isCurrencyExchange && <Box sx={{ height: 22 }} />
+                                    )}
                                 </Box>
                             )
                         })}
