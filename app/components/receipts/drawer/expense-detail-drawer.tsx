@@ -108,6 +108,8 @@ export const ExpenseDetailDrawer = ({
                         overflow: 'hidden',
                         borderTop: `2px solid ${colors.primaryBlack}`,
                         boxShadow: `0px -3px 0px ${colors.primaryBlack}`,
+                        display: 'flex',
+                        flexDirection: 'column',
                     },
                 }}>
                 {/* Drag handle */}
@@ -117,6 +119,7 @@ export const ExpenseDetailDrawer = ({
                         justifyContent: 'center',
                         pt: 1.5,
                         pb: 0.5,
+                        flexShrink: 0,
                     }}>
                     <Box
                         sx={{
@@ -132,8 +135,11 @@ export const ExpenseDetailDrawer = ({
                 {/* Scrollable content */}
                 <Box
                     sx={{
+                        flex: 1,
+                        minHeight: 0,
                         overflowY: 'auto',
                         overflowX: 'hidden',
+                        WebkitOverflowScrolling: 'touch',
                         pb: 3,
                     }}>
                     {/* Header */}
@@ -204,6 +210,7 @@ export const ExpenseDetailDrawer = ({
                         alignItems: 'center',
                         px: 2,
                         py: 1,
+                        flexShrink: 0,
                         borderTop: `2px solid ${colors.primaryBlack}`,
                         backgroundColor: colors.primaryYellow,
                     }}>
