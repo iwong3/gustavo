@@ -338,6 +338,7 @@ interface ICategoryIconProps {
 }
 
 export const CategoryIcon = ({ expense, size = 32 }: ICategoryIconProps) => {
+    const iconSize = Math.round(size * 0.55)
     return (
         <Box
             sx={{
@@ -348,8 +349,10 @@ export const CategoryIcon = ({ expense, size = 32 }: ICategoryIconProps) => {
                 height: size,
                 borderRadius: '100%',
                 backgroundColor: getColorForCategory(expense.categoryName),
+                border: '1px solid #090401',
+                boxShadow: '1.5px 1.5px 0px #090401',
             }}>
-            {getIconFromCategory(expense.categoryName, size)}
+            {getIconFromCategory(expense.categoryName, iconSize)}
         </Box>
     )
 }

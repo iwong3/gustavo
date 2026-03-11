@@ -117,7 +117,11 @@ type Category = { id: number; name: string; slug: string | null }
 
 const todayISO = () => {
     const d = new Date()
-    return d.toISOString().slice(0, 10)
+    // Use local date parts (not UTC) to avoid timezone shift
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
 }
 
 type Props = {
@@ -233,6 +237,9 @@ export default function ExpenseFormDialog({
                 }
             }
         } else {
+            // Clear fields that were auto-filled from the place
+            if (prefilled.name) setName('')
+            if (prefilled.category) setCategoryId('')
             setPrefilled({ name: false, category: false })
             if (!isLegacyTrip) {
                 setLocation('')
@@ -306,16 +313,21 @@ export default function ExpenseFormDialog({
             )
             setLocation(expense.locationName ?? '')
             setGooglePlace(
-                expense.googlePlaceId
+                expense.place
                     ? {
-                          placeId: expense.googlePlaceId,
-                          name: expense.googlePlaceName ?? '',
-                          address: expense.googlePlaceAddress ?? '',
-                          lat: expense.googlePlaceLat ?? 0,
-                          lng: expense.googlePlaceLng ?? 0,
+                          placeId: expense.place.googlePlaceId,
+                          name: expense.place.name,
+                          address: expense.place.address ?? '',
+                          lat: expense.place.lat ?? 0,
+                          lng: expense.place.lng ?? 0,
                           addressComponents: [], // Not needed for display
-                          types: [],
-                          primaryType: null,
+                          types: expense.place.types ?? [],
+                          primaryType: expense.place.primaryType ?? null,
+                          priceLevel: expense.place.priceLevel ?? null,
+                          rating: expense.place.rating ?? null,
+                          website: expense.place.website ?? null,
+                          hoursJson: expense.place.hoursJson ?? null,
+                          photoRefs: expense.place.photoRefs ?? null,
                       }
                     : null
             )
@@ -327,8 +339,6 @@ export default function ExpenseFormDialog({
             setCategoryDropdownOpen(false)
         } else if (open && mode === 'add') {
             resetForm()
-            // Auto-focus expense name after drawer animation
-            setTimeout(() => nameInputRef.current?.focus(), 350)
         }
     }, [open, mode, expense])
 
@@ -468,6 +478,13 @@ export default function ExpenseFormDialog({
             google_place_address: googlePlace?.address || undefined,
             google_place_lat: googlePlace?.lat || undefined,
             google_place_lng: googlePlace?.lng || undefined,
+            google_place_price_level: googlePlace?.priceLevel ?? undefined,
+            google_place_rating: googlePlace?.rating ?? undefined,
+            google_place_primary_type: googlePlace?.primaryType ?? undefined,
+            google_place_types: googlePlace?.types ?? undefined,
+            google_place_website: googlePlace?.website ?? undefined,
+            google_place_hours_json: googlePlace?.hoursJson ?? undefined,
+            google_place_photo_refs: googlePlace?.photoRefs ?? undefined,
         }
 
         try {

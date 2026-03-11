@@ -76,13 +76,33 @@ export function DebtDetailDrawer({
                         flexDirection: 'column',
                         overflow: 'hidden',
                     }}>
+                    {/* Drag handle */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            pt: 1.5,
+                            pb: 0.5,
+                        }}>
+                        <Box
+                            sx={{
+                                width: 36,
+                                height: 4,
+                                borderRadius: 2,
+                                backgroundColor: colors.primaryBlack,
+                                opacity: 0.3,
+                            }}
+                        />
+                    </Box>
+
                     {/* Header */}
                     <Box
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: 2,
+                            px: 2,
+                            pb: 1.5,
                             borderBottom: `1px solid ${colors.primaryBlack}`,
                         }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

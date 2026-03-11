@@ -78,8 +78,10 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '8.5px 14px',
+                    px: '14px',
+                    py: '6px',
                     minHeight: '48px',
+                    boxSizing: 'border-box',
                     backgroundColor: colors.primaryWhite,
                     border: `1px solid ${colors.primaryBlack}`,
                     borderRadius: '4px',
@@ -129,6 +131,7 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
     return (
         <Autocomplete
             freeSolo
+            open={options.length > 0 || loading}
             options={options}
             getOptionLabel={(opt) =>
                 typeof opt === 'string' ? opt : opt.name
@@ -158,9 +161,9 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
             }}
             renderOption={(props, option) => {
                 if (typeof option === 'string') return null
-                const { key, ...rest } = props
+                const { key: _key, ...rest } = props
                 return (
-                    <li key={key} {...rest}>
+                    <li key={option.placeId} {...rest}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
                             <IconMapPin size={16} color={colors.primaryBlack} style={{ marginTop: 2, flexShrink: 0 }} />
                             <Box sx={{ minWidth: 0 }}>

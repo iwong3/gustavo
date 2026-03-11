@@ -56,10 +56,23 @@ export type Expense = {
     receiptImageUrl: string | null
     localCurrencyReceived: number | null
     googlePlaceId: string | null
-    googlePlaceName: string | null
-    googlePlaceAddress: string | null
-    googlePlaceLat: number | null
-    googlePlaceLng: number | null
+    place: PlaceInfo | null
+}
+
+/** Place data from the place_details table, returned via JOIN on expenses. */
+export type PlaceInfo = {
+    googlePlaceId: string
+    name: string
+    address: string | null
+    lat: number | null
+    lng: number | null
+    priceLevel: number | null        // 0-4
+    rating: number | null            // e.g. 4.2
+    primaryType: string | null       // e.g. 'japanese_restaurant'
+    types: string[] | null
+    website: string | null
+    hoursJson: Record<string, unknown> | null
+    photoRefs: string[] | null
 }
 
 export type ExpenseCategory = {
@@ -111,6 +124,11 @@ export type PlaceDetails = {
     addressComponents: AddressComponent[]
     types: string[]
     primaryType: string | null
+    priceLevel: number | null
+    rating: number | null
+    website: string | null
+    hoursJson: Record<string, unknown> | null
+    photoRefs: string[] | null
 }
 
 export type AddressComponent = {

@@ -15,11 +15,6 @@
 - [ ] End of trip report generator? Standalone page or image or pdf gen. Include
       fun stats.
 - [ ] Copy expense (useful for similar expenses)
-- [ ] Infer expense fields from name?
-- [ ] Google Places autocomplete search for creating/editing an expense, along
-      with showing the Google Maps view, linking to the Google Place results
-      with details, possibly linking to Google Maps list. ~70,000 req per month
-      free tier, can set $0 budget
 
 ## UX / Design
 
@@ -32,6 +27,20 @@
 - [ ] Update version git commit hash to include datetime of deployment
 - [ ] Update debt UX
 - [ ] Update expense row UX
+- [ ] Ask for location and filter place search results by closest to you
+- [ ] New expenses
+    - [ ] Instead of dividers, maybe colors or backgrounds to divide sections?
+    - [ ] Re-think the cost/boba section
+    - [ ] Fix small spacing issues with split between section. Also, should
+          single person paying omit?
+    - [ ] Do we need the website? Maybe there's a better spot to put it?
+    - [ ] Reconsider "also on today" section
+    - [ ] Swipe to go left/right
+    - [ ] Shrink width a little to show cards on left/right?
+    - [ ] Expense X of X text centered looks a lil awkward
+    - [ ] Make graph show covered costs better?
+    - [ ] What does $0 total this trip mean for the "Paid by X" section? is this
+          how much that person covered you? if so, make it clearer
 
 ## Tech Debt
 
@@ -42,6 +51,14 @@
 ## Others
 
 - [ ] Update app documentation
+
+## Non-Trip Related
+
+- [ ] Track exercise
+    - [ ] High level categories with optional more detailed sub-categories (e.g.
+          Back > Lats)
+- [ ] Send Apple Fitness data to app? e.g. running - map path - distance -
+      calories - heart rate
 
 ## Done
 
@@ -78,3 +95,7 @@
 - [x] Activity log
 - [x] Update "manage categories" and "manage locations" settings
 - [x] When adding expense, add ability to "cover" for user(s)
+- [x] Google Places!
+    - [x] Google Places search with autocomplete
+    - [x] Pre-fill name, location, category from autocomplete
+    - [x] Google Places name, address, and map view with link to Google Maps

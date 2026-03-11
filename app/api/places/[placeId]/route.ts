@@ -3,7 +3,7 @@ import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
-const FIELD_MASK = 'id,displayName,formattedAddress,location,addressComponents,types,primaryType'
+const FIELD_MASK = 'id,displayName,formattedAddress,location,addressComponents,types,primaryType,priceLevel,rating,regularOpeningHours,websiteUri,photos'
 
 export async function GET(
     _request: NextRequest,
@@ -33,6 +33,18 @@ export async function GET(
 
     const data = await response.json()
 
+    // Google Places API (New) returns priceLevel as string enum — convert to integer
+    const priceLevelMap: Record<string, number> = {
+        'PRICE_LEVEL_FREE': 0,
+        'PRICE_LEVEL_INEXPENSIVE': 1,
+        'PRICE_LEVEL_MODERATE': 2,
+        'PRICE_LEVEL_EXPENSIVE': 3,
+        'PRICE_LEVEL_VERY_EXPENSIVE': 4,
+    }
+    const priceLevelInt = typeof data.priceLevel === 'string'
+        ? (priceLevelMap[data.priceLevel] ?? null)
+        : (data.priceLevel ?? null)
+
     const addressComponents = (data.addressComponents || []).map(
         (c: { longText: string; shortText: string; types: string[] }) => ({
             longText: c.longText,
@@ -40,6 +52,12 @@ export async function GET(
             types: c.types,
         })
     )
+
+    // Extract photo resource names (for Places Photos API)
+    const photoRefs = (data.photos || [])
+        .slice(0, 3) // Keep top 3 photos max
+        .map((p: { name: string }) => p.name)
+        .filter(Boolean)
 
     return NextResponse.json({
         placeId: data.id,
@@ -50,5 +68,10 @@ export async function GET(
         addressComponents,
         types: data.types || [],
         primaryType: data.primaryType || null,
+        priceLevel: priceLevelInt,
+        rating: data.rating != null ? data.rating : null,
+        website: data.websiteUri || null,
+        hoursJson: data.regularOpeningHours || null,
+        photoRefs: photoRefs.length > 0 ? photoRefs : null,
     })
 }

@@ -35,8 +35,13 @@ export async function GET(
             e.category_id, ec.name AS category_name, ec.slug AS category_slug,
             e.local_currency_received,
             e.location_id, l.name AS location_name,
-            e.google_place_id, e.google_place_name, e.google_place_address,
-            e.google_place_lat, e.google_place_lng,
+            e.google_place_id,
+            pd.name AS place_name, pd.address AS place_address,
+            pd.lat AS place_lat, pd.lng AS place_lng,
+            pd.price_level AS place_price_level, pd.rating AS place_rating,
+            pd.primary_type AS place_primary_type, pd.types AS place_types,
+            pd.website AS place_website, pd.hours_json AS place_hours_json,
+            pd.photo_refs AS place_photo_refs,
             e.notes, e.reported_at,
             payer.id AS payer_id, payer.name AS payer_name, payer.email AS payer_email,
             payer.avatar_url AS payer_avatar_url, payer.initials AS payer_initials,
@@ -50,6 +55,7 @@ export async function GET(
         LEFT JOIN users reporter ON e.reported_by = reporter.id
         LEFT JOIN expense_categories ec ON e.category_id = ec.id
         LEFT JOIN locations l ON e.location_id = l.id
+        LEFT JOIN place_details pd ON e.google_place_id = pd.google_place_id
         WHERE e.trip_id = $1 AND e.deleted_at IS NULL
         ORDER BY e.date, e.created_at`,
         [id]
@@ -123,10 +129,20 @@ export async function GET(
             isEveryone: splitBetween.length === tripParticipantCount,
             localCurrencyReceived: e.local_currency_received ? parseFloat(e.local_currency_received) : null,
             googlePlaceId: e.google_place_id || null,
-            googlePlaceName: e.google_place_name || null,
-            googlePlaceAddress: e.google_place_address || null,
-            googlePlaceLat: e.google_place_lat ? parseFloat(e.google_place_lat) : null,
-            googlePlaceLng: e.google_place_lng ? parseFloat(e.google_place_lng) : null,
+            place: e.google_place_id ? {
+                googlePlaceId: e.google_place_id,
+                name: e.place_name,
+                address: e.place_address || null,
+                lat: e.place_lat != null ? parseFloat(e.place_lat) : null,
+                lng: e.place_lng != null ? parseFloat(e.place_lng) : null,
+                priceLevel: e.place_price_level != null ? e.place_price_level : null,
+                rating: e.place_rating != null ? parseFloat(e.place_rating) : null,
+                primaryType: e.place_primary_type || null,
+                types: e.place_types || null,
+                website: e.place_website || null,
+                hoursJson: e.place_hours_json || null,
+                photoRefs: e.place_photo_refs || null,
+            } : null,
             receiptImageUrl: null,
         }
     })
@@ -147,10 +163,18 @@ type CreateExpenseBody = {
     notes?: string
     local_currency_received?: number
     google_place_id?: string
+    // Place details for upsert into place_details table
     google_place_name?: string
     google_place_address?: string
     google_place_lat?: number
     google_place_lng?: number
+    google_place_price_level?: number | null
+    google_place_rating?: number | null
+    google_place_primary_type?: string | null
+    google_place_types?: string[] | null
+    google_place_website?: string | null
+    google_place_hours_json?: Record<string, unknown> | null
+    google_place_photo_refs?: string[] | null
 }
 
 export async function POST(
@@ -203,12 +227,43 @@ export async function POST(
                 }
             }
 
-            // Insert expense
+            // Upsert place_details if Google Place data is provided
+            if (body.google_place_id && body.google_place_name) {
+                await client.query(
+                    `INSERT INTO place_details (google_place_id, name, address, lat, lng, price_level, rating, primary_type, types, website, hours_json, photo_refs)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                     ON CONFLICT (google_place_id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        address = EXCLUDED.address,
+                        lat = EXCLUDED.lat,
+                        lng = EXCLUDED.lng,
+                        price_level = COALESCE(EXCLUDED.price_level, place_details.price_level),
+                        rating = COALESCE(EXCLUDED.rating, place_details.rating),
+                        primary_type = COALESCE(EXCLUDED.primary_type, place_details.primary_type),
+                        types = COALESCE(EXCLUDED.types, place_details.types),
+                        website = COALESCE(EXCLUDED.website, place_details.website),
+                        hours_json = COALESCE(EXCLUDED.hours_json, place_details.hours_json),
+                        photo_refs = COALESCE(EXCLUDED.photo_refs, place_details.photo_refs),
+                        fetched_at = NOW()`,
+                    [
+                        body.google_place_id, body.google_place_name,
+                        body.google_place_address || null, body.google_place_lat || null, body.google_place_lng || null,
+                        body.google_place_price_level ?? null, body.google_place_rating ?? null,
+                        body.google_place_primary_type ?? null,
+                        body.google_place_types ? JSON.stringify(body.google_place_types) : null,
+                        body.google_place_website ?? null,
+                        body.google_place_hours_json ? JSON.stringify(body.google_place_hours_json) : null,
+                        body.google_place_photo_refs ? JSON.stringify(body.google_place_photo_refs) : null,
+                    ]
+                )
+            }
+
+            // Insert expense (only google_place_id FK, details are in place_details)
             const expenseRes = await client.query(
-                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at, local_currency_received, google_place_id, google_place_name, google_place_address, google_place_lat, google_place_lng)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13, $14, $15, $16)
+                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at, local_currency_received, google_place_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12)
                  RETURNING id`,
-                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId, body.local_currency_received || null, body.google_place_id || null, body.google_place_name || null, body.google_place_address || null, body.google_place_lat || null, body.google_place_lng || null]
+                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId, body.local_currency_received || null, body.google_place_id || null]
             )
             const expId = expenseRes.rows[0].id
 

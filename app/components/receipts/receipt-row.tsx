@@ -274,13 +274,13 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                     marginBottom: 1,
                                 }}>
                                 {/* Google Place */}
-                                {expense.googlePlaceName && (
+                                {expense.place && (
                                     <Box sx={{ marginBottom: 1.5 }}>
                                         <Link
                                             href={
-                                                expense.googlePlaceId
-                                                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.googlePlaceName)}&query_place_id=${expense.googlePlaceId}`
-                                                    : `https://www.google.com/maps/search/?api=1&query=${expense.googlePlaceLat},${expense.googlePlaceLng}`
+                                                expense.place.googlePlaceId
+                                                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.place.name)}&query_place_id=${expense.place.googlePlaceId}`
+                                                    : `https://www.google.com/maps/search/?api=1&query=${expense.place.lat},${expense.place.lng}`
                                             }
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -295,16 +295,16 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                             <IconMapPin size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                                             <Box>
                                                 <Typography sx={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
-                                                    {expense.googlePlaceName}
+                                                    {expense.place.name}
                                                 </Typography>
-                                                {expense.googlePlaceAddress && (
+                                                {expense.place.address && (
                                                     <Typography sx={{ fontSize: 11, color: 'text.secondary', lineHeight: 1.3 }}>
-                                                        {expense.googlePlaceAddress}
+                                                        {expense.place.address}
                                                     </Typography>
                                                 )}
                                             </Box>
                                         </Link>
-                                        {expense.googlePlaceLat && expense.googlePlaceLng && (
+                                        {expense.place.lat && expense.place.lng && (
                                             <Box
                                                 sx={{
                                                     position: 'relative',
@@ -314,7 +314,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                     boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                                 }}>
                                                 <iframe
-                                                    src={`https://www.google.com/maps?q=${encodeURIComponent(expense.googlePlaceName + (expense.googlePlaceAddress ? ', ' + expense.googlePlaceAddress : ''))}&output=embed`}
+                                                    src={`https://www.google.com/maps?q=${encodeURIComponent(expense.place.name + (expense.place.address ? ', ' + expense.place.address : ''))}&output=embed`}
                                                     width="100%"
                                                     height="180"
                                                     style={{ border: 0, display: 'block', pointerEvents: 'none' }}
@@ -324,9 +324,9 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                 {/* Transparent overlay — opens Maps in new tab instead of navigating the PWA */}
                                                 <Link
                                                     href={
-                                                        expense.googlePlaceId
-                                                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.googlePlaceName)}&query_place_id=${expense.googlePlaceId}`
-                                                            : `https://www.google.com/maps/search/?api=1&query=${expense.googlePlaceLat},${expense.googlePlaceLng}`
+                                                        expense.place.googlePlaceId
+                                                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.place.name)}&query_place_id=${expense.place.googlePlaceId}`
+                                                            : `https://www.google.com/maps/search/?api=1&query=${expense.place.lat},${expense.place.lng}`
                                                     }
                                                     target="_blank"
                                                     rel="noopener noreferrer"

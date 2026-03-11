@@ -95,6 +95,13 @@ export type AddExpenseData = {
     google_place_address?: string
     google_place_lat?: number
     google_place_lng?: number
+    google_place_price_level?: number | null
+    google_place_rating?: number | null
+    google_place_primary_type?: string | null
+    google_place_types?: string[] | null
+    google_place_website?: string | null
+    google_place_hours_json?: Record<string, unknown> | null
+    google_place_photo_refs?: string[] | null
 }
 
 export const addExpense = async (tripId: number, data: AddExpenseData): Promise<{ id: number }> => {
