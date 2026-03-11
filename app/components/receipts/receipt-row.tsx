@@ -307,6 +307,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                         {expense.googlePlaceLat && expense.googlePlaceLng && (
                                             <Box
                                                 sx={{
+                                                    position: 'relative',
                                                     borderRadius: '4px',
                                                     overflow: 'hidden',
                                                     border: `1px solid ${colors.primaryBlack}`,
@@ -316,9 +317,23 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                     src={`https://www.google.com/maps?q=${encodeURIComponent(expense.googlePlaceName + (expense.googlePlaceAddress ? ', ' + expense.googlePlaceAddress : ''))}&output=embed`}
                                                     width="100%"
                                                     height="180"
-                                                    style={{ border: 0, display: 'block' }}
+                                                    style={{ border: 0, display: 'block', pointerEvents: 'none' }}
                                                     loading="lazy"
                                                     referrerPolicy="no-referrer-when-downgrade"
+                                                />
+                                                {/* Transparent overlay — opens Maps in new tab instead of navigating the PWA */}
+                                                <Link
+                                                    href={
+                                                        expense.googlePlaceId
+                                                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.googlePlaceName)}&query_place_id=${expense.googlePlaceId}`
+                                                            : `https://www.google.com/maps/search/?api=1&query=${expense.googlePlaceLat},${expense.googlePlaceLng}`
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                    }}
                                                 />
                                             </Box>
                                         )}
