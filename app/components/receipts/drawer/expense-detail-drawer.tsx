@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, IconButton, SwipeableDrawer } from '@mui/material'
+import { Box, Drawer, IconButton } from '@mui/material'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { useCallback, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
@@ -82,13 +82,10 @@ export const ExpenseDetailDrawer = ({
 
     return (
         <>
-            <SwipeableDrawer
+            <Drawer
                 anchor="bottom"
                 open={open}
                 onClose={onClose}
-                onOpen={() => {}}
-                disableSwipeToOpen
-                swipeAreaWidth={0}
                 ModalProps={{
                     keepMounted: false,
                     slotProps: {
@@ -210,6 +207,7 @@ export const ExpenseDetailDrawer = ({
                         alignItems: 'center',
                         px: 2,
                         py: 1,
+                        pb: 'calc(8px + env(safe-area-inset-bottom, 0px))',
                         flexShrink: 0,
                         borderTop: `2px solid ${colors.primaryBlack}`,
                         backgroundColor: colors.primaryYellow,
@@ -261,7 +259,7 @@ export const ExpenseDetailDrawer = ({
                         <IconChevronRight size={20} />
                     </IconButton>
                 </Box>
-            </SwipeableDrawer>
+            </Drawer>
 
             {/* Edit dialog */}
             <ExpenseFormDialog
