@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { colors } from '@/lib/colors'
 import { Fab } from '@mui/material'
@@ -67,6 +67,11 @@ export default function GustavoLayout({
     const pathname = usePathname()
 
     const [drawerOpen, setDrawerOpen] = useState(false)
+
+    // Scroll main content to top on route change
+    useEffect(() => {
+        document.getElementById('main-scroll')?.scrollTo(0, 0)
+    }, [pathname])
 
     const getActiveTab = () => {
         if (pathname.startsWith('/gustavo/trips')) return '/gustavo/trips'

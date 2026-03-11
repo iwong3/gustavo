@@ -279,8 +279,8 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                         <Link
                                             href={
                                                 expense.googlePlaceId
-                                                    ? `https://www.google.com/maps/place/?q=place_id:${expense.googlePlaceId}`
-                                                    : `https://www.google.com/maps?q=${expense.googlePlaceLat},${expense.googlePlaceLng}`
+                                                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(expense.googlePlaceName)}&query_place_id=${expense.googlePlaceId}`
+                                                    : `https://www.google.com/maps/search/?api=1&query=${expense.googlePlaceLat},${expense.googlePlaceLng}`
                                             }
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -313,7 +313,7 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                                     boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                                 }}>
                                                 <iframe
-                                                    src={`https://www.google.com/maps?q=${expense.googlePlaceLat},${expense.googlePlaceLng}&output=embed`}
+                                                    src={`https://www.google.com/maps?q=${encodeURIComponent(expense.googlePlaceName + (expense.googlePlaceAddress ? ', ' + expense.googlePlaceAddress : ''))}&output=embed`}
                                                     width="100%"
                                                     height="180"
                                                     style={{ border: 0, display: 'block' }}
