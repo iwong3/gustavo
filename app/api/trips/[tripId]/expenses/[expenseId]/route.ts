@@ -20,6 +20,11 @@ type UpdateExpenseBody = {
     location?: string | null // location name
     notes?: string
     local_currency_received?: number | null
+    google_place_id?: string | null
+    google_place_name?: string | null
+    google_place_address?: string | null
+    google_place_lat?: number | null
+    google_place_lng?: number | null
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -121,6 +126,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                     sets.push(`location_id = $${idx++}`)
                     values.push(locRes.rows.length > 0 ? locRes.rows[0].id : null)
                 }
+            }
+
+            // Google Place fields
+            if (body.google_place_id !== undefined) {
+                sets.push(`google_place_id = $${idx++}`)
+                values.push(body.google_place_id)
+            }
+            if (body.google_place_name !== undefined) {
+                sets.push(`google_place_name = $${idx++}`)
+                values.push(body.google_place_name)
+            }
+            if (body.google_place_address !== undefined) {
+                sets.push(`google_place_address = $${idx++}`)
+                values.push(body.google_place_address)
+            }
+            if (body.google_place_lat !== undefined) {
+                sets.push(`google_place_lat = $${idx++}`)
+                values.push(body.google_place_lat)
+            }
+            if (body.google_place_lng !== undefined) {
+                sets.push(`google_place_lng = $${idx++}`)
+                values.push(body.google_place_lng)
             }
 
             if (sets.length > 0) {

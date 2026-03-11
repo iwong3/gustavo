@@ -81,6 +81,49 @@ export const fieldSx = {
     },
 } as const
 
+/**
+ * Field with startAdornment (icon/symbol) — moves padding from the <input>
+ * to the OutlinedInput root so adornment and input share uniform padding
+ * and equal height. Use instead of fieldSx when the field has a startAdornment.
+ */
+export const adornedFieldSx = {
+    ...fieldSx,
+    // Override root: keep shadow + add padding that was on the input
+    '& .MuiOutlinedInput-root': {
+        boxShadow: fieldShadow,
+        padding: '8.5px 14px',
+        gap: '6px',
+    },
+    '& .MuiOutlinedInput-root.Mui-focused': {
+        boxShadow: focusShadow,
+    },
+    // Strip padding from the actual <input> — root handles it now
+    '& .MuiOutlinedInput-input': {
+        padding: 0,
+    },
+} as const
+
+/** Pre-filled variant — blue border, shadow, and tinted background to indicate auto-filled value. */
+const prefillShadow = `2px 2px 0px ${colors.primaryBlue}`
+const prefillBackground = `${colors.primaryBlue}12` // ~7% opacity tint
+export const prefilledFieldSx = {
+    ...fieldSx,
+    '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.primaryBlue,
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.primaryBlue,
+    },
+    '& .MuiOutlinedInput-root': {
+        boxShadow: prefillShadow,
+        backgroundColor: prefillBackground,
+    },
+    '&.MuiOutlinedInput-root': {
+        boxShadow: prefillShadow,
+        backgroundColor: prefillBackground,
+    },
+} as const
+
 /** Error variant — red border + shadow, overrides focus styles too. */
 export const errorFieldSx = {
     ...fieldSx,

@@ -16,6 +16,10 @@
       fun stats.
 - [ ] Copy expense (useful for similar expenses)
 - [ ] Infer expense fields from name?
+- [ ] Google Places autocomplete search for creating/editing an expense, along
+      with showing the Google Maps view, linking to the Google Place results
+      with details, possibly linking to Google Maps list. ~70,000 req per month
+      free tier, can set $0 budget
 
 ## UX / Design
 

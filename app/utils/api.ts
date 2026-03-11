@@ -3,7 +3,7 @@
  * All types are DB-driven — no enum mappings.
  */
 
-import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole } from '@/lib/types'
+import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails } from '@/lib/types'
 
 // ── Trips ──
 
@@ -90,6 +90,11 @@ export type AddExpenseData = {
     covered_participants?: string[] // first names of participants whose cost is covered by payer
     location?: string // location name
     notes?: string
+    google_place_id?: string
+    google_place_name?: string
+    google_place_address?: string
+    google_place_lat?: number
+    google_place_lng?: number
 }
 
 export const addExpense = async (tripId: number, data: AddExpenseData): Promise<{ id: number }> => {
@@ -131,6 +136,25 @@ export const deleteExpense = async (tripId: number, expenseId: number): Promise<
         const err = await res.json()
         throw new Error(err.error || 'Failed to delete expense')
     }
+}
+
+// ── Google Places ──
+
+export const searchPlaces = async (query: string, sessionToken?: string): Promise<PlacePrediction[]> => {
+    const res = await fetch('/api/places/autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, sessionToken }),
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.predictions ?? []
+}
+
+export const getPlaceDetails = async (placeId: string): Promise<PlaceDetails | null> => {
+    const res = await fetch(`/api/places/${encodeURIComponent(placeId)}`)
+    if (!res.ok) return null
+    return res.json()
 }
 
 // ── Categories ──

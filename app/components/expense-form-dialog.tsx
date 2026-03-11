@@ -13,18 +13,22 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { colors } from '@/lib/colors'
+import type { PlaceDetails } from '@/lib/types'
 import {
+    adornedFieldSx,
     dropdownMenuItemSx,
     dropdownPaperSx,
     errorMessageSx,
     fieldSx,
     labelSx,
+    prefilledFieldSx,
     primaryButtonSx,
     secondaryButtonSx,
     selectMenuProps,
 } from '@/lib/form-styles'
 import { IconGift } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
+import PlaceAutocomplete from 'components/place-autocomplete'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, updateExpense } from 'utils/api'
 import { Currency, formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
@@ -35,6 +39,79 @@ import {
 } from 'utils/icons'
 
 import type { Expense } from '@/lib/types'
+
+// Legacy trips that still use the manual Location dropdown.
+// All other trips auto-derive location from Google Places.
+const LEGACY_TRIP_IDS = new Set([1, 2, 3, 4])
+
+// Google Places type → app category name mapping.
+// First match wins, so order matters (more specific types first).
+const GOOGLE_TYPE_TO_CATEGORY: Record<string, string> = {
+    // Food & drink
+    restaurant: 'Food', cafe: 'Food', bakery: 'Food', bar: 'Food',
+    meal_delivery: 'Food', meal_takeaway: 'Food', food: 'Food',
+    coffee_shop: 'Food', ice_cream_shop: 'Food', pizza_restaurant: 'Food',
+    seafood_restaurant: 'Food', steak_house: 'Food', sushi_restaurant: 'Food',
+    ramen_restaurant: 'Food', sandwich_shop: 'Food', breakfast_restaurant: 'Food',
+    brunch_restaurant: 'Food', fast_food_restaurant: 'Food',
+    // Lodging
+    lodging: 'Lodging', hotel: 'Lodging', motel: 'Lodging',
+    resort_hotel: 'Lodging', guest_house: 'Lodging', hostel: 'Lodging',
+    bed_and_breakfast: 'Lodging', campground: 'Lodging',
+    // Transit
+    transit_station: 'Transit', train_station: 'Transit',
+    bus_station: 'Transit', subway_station: 'Transit', airport: 'Transit',
+    light_rail_station: 'Transit', taxi_stand: 'Transit',
+    car_rental: 'Transit', bus_stop: 'Transit',
+    // Attraction
+    tourist_attraction: 'Attraction', museum: 'Attraction',
+    art_gallery: 'Attraction', amusement_park: 'Attraction',
+    zoo: 'Attraction', aquarium: 'Attraction', park: 'Attraction',
+    national_park: 'Attraction', historical_landmark: 'Attraction',
+    performing_arts_theater: 'Attraction', stadium: 'Attraction',
+    // Shopping
+    store: 'Shopping', shopping_mall: 'Shopping',
+    clothing_store: 'Shopping', electronics_store: 'Shopping',
+    convenience_store: 'Shopping', supermarket: 'Shopping',
+    department_store: 'Shopping', book_store: 'Shopping',
+    gift_shop: 'Shopping', grocery_store: 'Shopping', market: 'Shopping',
+}
+
+// Substring patterns for fuzzy category matching when exact type lookup misses.
+// Checked in order — first match wins.
+const CATEGORY_PATTERNS: [string, string][] = [
+    ['restaurant', 'Food'], ['cafe', 'Food'], ['bakery', 'Food'],
+    ['bar', 'Food'], ['food', 'Food'], ['coffee', 'Food'],
+    ['grill', 'Food'], ['diner', 'Food'], ['eatery', 'Food'],
+    ['pub', 'Food'], ['bistro', 'Food'], ['tavern', 'Food'],
+    ['hotel', 'Lodging'], ['hostel', 'Lodging'], ['motel', 'Lodging'],
+    ['lodge', 'Lodging'], ['resort', 'Lodging'], ['inn', 'Lodging'],
+    ['station', 'Transit'], ['airport', 'Transit'], ['terminal', 'Transit'],
+    ['rental', 'Transit'], ['ferry', 'Transit'],
+    ['museum', 'Attraction'], ['park', 'Attraction'], ['theater', 'Attraction'],
+    ['theatre', 'Attraction'], ['gallery', 'Attraction'], ['zoo', 'Attraction'],
+    ['store', 'Shopping'], ['shop', 'Shopping'], ['mall', 'Shopping'],
+    ['market', 'Shopping'], ['supermarket', 'Shopping'],
+]
+
+const inferCategoryFromPlace = (types: string[], primaryType: string | null): string | null => {
+    // 1. Exact match on primaryType
+    if (primaryType && GOOGLE_TYPE_TO_CATEGORY[primaryType]) {
+        return GOOGLE_TYPE_TO_CATEGORY[primaryType]
+    }
+    // 2. Exact match on any type
+    for (const t of types) {
+        if (GOOGLE_TYPE_TO_CATEGORY[t]) return GOOGLE_TYPE_TO_CATEGORY[t]
+    }
+    // 3. Substring match on primaryType + types
+    const allTypes = primaryType ? [primaryType, ...types] : types
+    for (const t of allTypes) {
+        for (const [pattern, category] of CATEGORY_PATTERNS) {
+            if (t.includes(pattern)) return category
+        }
+    }
+    return null
+}
 
 type Category = { id: number; name: string; slug: string | null }
 
@@ -77,11 +154,91 @@ export default function ExpenseFormDialog({
     const [notes, setNotes] = useState('')
     const [localCurrencyReceived, setLocalCurrencyReceived] = useState('')
     const [coveredParticipants, setCoveredParticipants] = useState<string[]>([])
+    const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [tripLocations, setTripLocations] = useState<string[]>([])
     const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+    // Track which fields were auto-filled from Google Place (blue highlight until edited)
+    const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
     const nameInputRef = useRef<HTMLInputElement>(null)
+
+    const isLegacyTrip = LEGACY_TRIP_IDS.has(trip.id)
+
+    // Derive city name from Google Place address components
+    const deriveCityFromPlace = (place: PlaceDetails): string | null => {
+        const components = place.addressComponents
+        // Prefer administrative_area_level_1 for Japan (returns "Tokyo" instead of "Shibuya City")
+        const country = components.find((c) => c.types.includes('country'))
+        const adminLevel1 = components.find((c) => c.types.includes('administrative_area_level_1'))
+        const locality = components.find((c) => c.types.includes('locality'))
+
+        if (country?.shortText === 'JP' && adminLevel1) {
+            return adminLevel1.longText
+        }
+        return locality?.longText || adminLevel1?.longText || country?.longText || null
+    }
+
+    // Handle Google Place selection — auto-derive location, pre-fill name + category
+    const handlePlaceChange = async (place: PlaceDetails | null) => {
+        setGooglePlace(place)
+
+        if (place) {
+            const newPrefill = { name: false, category: false }
+
+            // Pre-fill expense name if empty
+            if (!name.trim()) {
+                setName(place.name)
+                newPrefill.name = true
+            }
+
+            // Pre-fill category if not set
+            if (categoryId === '') {
+                const inferred = inferCategoryFromPlace(place.types, place.primaryType)
+                if (inferred) {
+                    const match = categories.find(
+                        (c) => c.name.toLowerCase() === inferred.toLowerCase()
+                    )
+                    if (match) {
+                        setCategoryId(match.id)
+                        newPrefill.category = true
+                    }
+                }
+            }
+
+            setPrefilled(newPrefill)
+
+            // Auto-derive location for non-legacy trips
+            if (!isLegacyTrip) {
+                const city = deriveCityFromPlace(place)
+                if (city) {
+                    const existingLoc = tripLocations.find(
+                        (l) => l.toLowerCase() === city.toLowerCase()
+                    )
+                    if (existingLoc) {
+                        setLocation(existingLoc)
+                    } else {
+                        try {
+                            await fetch(`/api/trips/${trip.id}/locations`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: city }),
+                            })
+                            setTripLocations((prev) => [...prev, city])
+                            setLocation(city)
+                        } catch {
+                            setLocation(city)
+                        }
+                    }
+                }
+            }
+        } else {
+            setPrefilled({ name: false, category: false })
+            if (!isLegacyTrip) {
+                setLocation('')
+            }
+        }
+    }
 
     // Count category usage from trip expenses to rank options
     const categoryUsage = useMemo(() => {
@@ -148,6 +305,20 @@ export default function ExpenseFormDialog({
                 expense.coveredParticipants.map((u) => u.firstName)
             )
             setLocation(expense.locationName ?? '')
+            setGooglePlace(
+                expense.googlePlaceId
+                    ? {
+                          placeId: expense.googlePlaceId,
+                          name: expense.googlePlaceName ?? '',
+                          address: expense.googlePlaceAddress ?? '',
+                          lat: expense.googlePlaceLat ?? 0,
+                          lng: expense.googlePlaceLng ?? 0,
+                          addressComponents: [], // Not needed for display
+                          types: [],
+                          primaryType: null,
+                      }
+                    : null
+            )
             setNotes(expense.notes ?? '')
             setLocalCurrencyReceived(
                 expense.localCurrencyReceived?.toFixed(2) ?? ''
@@ -236,10 +407,12 @@ export default function ExpenseFormDialog({
         setSplitBetween(['Everyone'])
         setCoveredParticipants([])
         setLocation('')
+        setGooglePlace(null)
         setNotes('')
         setLocalCurrencyReceived('')
         setError('')
         setCategoryDropdownOpen(false)
+        setPrefilled({ name: false, category: false })
     }
 
     const handleClose = () => {
@@ -290,6 +463,11 @@ export default function ExpenseFormDialog({
             location: location || undefined,
             notes: notes.trim() || undefined,
             local_currency_received: localReceivedNum || undefined,
+            google_place_id: googlePlace?.placeId || undefined,
+            google_place_name: googlePlace?.name || undefined,
+            google_place_address: googlePlace?.address || undefined,
+            google_place_lat: googlePlace?.lat || undefined,
+            google_place_lng: googlePlace?.lng || undefined,
         }
 
         try {
@@ -336,19 +514,31 @@ export default function ExpenseFormDialog({
                     flex: 1,
                     overflowY: 'auto',
                 }}>
-                {/* 1. Expense name */}
+                {/* 1. Place (Google Places autocomplete) */}
+                <Box>
+                    <Typography sx={labelSx}>Place</Typography>
+                    <PlaceAutocomplete
+                        value={googlePlace}
+                        onChange={handlePlaceChange}
+                    />
+                </Box>
+
+                {/* 2. Expense name */}
                 <Box>
                     <Typography sx={labelSx}>Expense name *</Typography>
                     <TextField
                         inputRef={nameInputRef}
                         placeholder="e.g. Lunch at cafe"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                            setName(e.target.value)
+                            if (prefilled.name) setPrefilled((p) => ({ ...p, name: false }))
+                        }}
                         required
                         fullWidth
                         size="small"
                         slotProps={{ htmlInput: { maxLength: 200 } }}
-                        sx={fieldSx}
+                        sx={prefilled.name ? prefilledFieldSx : fieldSx}
                     />
                 </Box>
 
@@ -361,7 +551,10 @@ export default function ExpenseFormDialog({
                             </Typography>
                             <TextField
                                 value={cost}
-                                onChange={(e) => setCost(e.target.value)}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    if (v === '' || /^\d*\.?\d*$/.test(v)) setCost(v)
+                                }}
                                 onBlur={() => {
                                     const n = parseFloat(cost)
                                     if (!isNaN(n))
@@ -380,27 +573,28 @@ export default function ExpenseFormDialog({
                                 slotProps={{
                                     htmlInput: {
                                         inputMode: 'decimal',
-                                        min: 0,
-                                        step: isCurrencyExchange
-                                            ? '0.01'
-                                            : getCurrencyMeta(currency).step,
                                     },
                                     input: {
                                         startAdornment: (
-                                            <Typography
+                                            <Box
+                                                component="span"
                                                 sx={{
-                                                    marginRight: 0.5,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                     color: 'text.secondary',
+                                                    flexShrink: 0,
+                                                    userSelect: 'none',
                                                 }}>
                                                 {isCurrencyExchange
                                                     ? '$'
                                                     : getCurrencyMeta(currency)
                                                           .symbol}
-                                            </Typography>
+                                            </Box>
                                         ),
                                     },
                                 }}
-                                sx={fieldSx}
+                                sx={adornedFieldSx}
                             />
                         </Box>
                         {!isCurrencyExchange && (
@@ -509,9 +703,10 @@ export default function ExpenseFormDialog({
                                     }>{`Local currency received (${tripCurrency}) *`}</Typography>
                                 <TextField
                                     value={localCurrencyReceived}
-                                    onChange={(e) =>
-                                        setLocalCurrencyReceived(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        const v = e.target.value
+                                        if (v === '' || /^\d*\.?\d*$/.test(v)) setLocalCurrencyReceived(v)
+                                    }}
                                     onBlur={() => {
                                         const n = parseFloat(
                                             localCurrencyReceived
@@ -527,22 +722,25 @@ export default function ExpenseFormDialog({
                                     slotProps={{
                                         htmlInput: {
                                             inputMode: 'decimal',
-                                            min: 0,
-                                            step: localMeta.step,
                                         },
                                         input: {
                                             startAdornment: (
-                                                <Typography
+                                                <Box
+                                                    component="span"
                                                     sx={{
-                                                        marginRight: 0.5,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
                                                         color: 'text.secondary',
+                                                        flexShrink: 0,
+                                                        userSelect: 'none',
                                                     }}>
                                                     {localMeta.symbol}
-                                                </Typography>
+                                                </Box>
                                             ),
                                         },
                                     }}
-                                    sx={fieldSx}
+                                    sx={adornedFieldSx}
                                 />
                             </Box>
                         )
@@ -563,7 +761,7 @@ export default function ExpenseFormDialog({
                     </defs>
                 </svg>
 
-                {/* 5. Split between — multi-select avatar row with gift toggle */}
+                {/* 5. Split between — multi-select avatar row with gift toggle (Place field follows) */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                     <Box
                         sx={{
@@ -702,7 +900,7 @@ export default function ExpenseFormDialog({
                     </Box>
                 </Box>
 
-                {/* 6. Date (pre-filled to today) */}
+                {/* 7. Date (pre-filled to today) */}
                 <Box sx={{ maxWidth: 180 }}>
                     <Typography sx={labelSx}>Date *</Typography>
                     <TextField
@@ -717,7 +915,7 @@ export default function ExpenseFormDialog({
                     />
                 </Box>
 
-                {/* 7. Category */}
+                {/* 8. Category */}
                 <Box>
                     <Typography sx={labelSx}>Category</Typography>
                     <Autocomplete
@@ -730,6 +928,7 @@ export default function ExpenseFormDialog({
                         onChange={(_, val) => {
                             setCategoryId(val ? val.id : '')
                             setCategoryDropdownOpen(false)
+                            if (prefilled.category) setPrefilled((p) => ({ ...p, category: false }))
                         }}
                         isOptionEqualToValue={(opt, val) => opt.id === val.id}
                         disablePortal
@@ -787,35 +986,37 @@ export default function ExpenseFormDialog({
                             <TextField
                                 {...params}
                                 placeholder="Search categories..."
-                                sx={fieldSx}
+                                sx={prefilled.category ? prefilledFieldSx : fieldSx}
                             />
                         )}
                     />
                 </Box>
 
-                {/* 8. Location */}
-                <Box>
-                    <Typography sx={labelSx}>Location</Typography>
-                    <FormControl size="small" fullWidth>
-                        <Select
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            displayEmpty
-                            MenuProps={selectMenuProps}
-                            sx={fieldSx}>
-                            <MenuItem value="">
-                                <em>None</em>
-                            </MenuItem>
-                            {tripLocations.map((l) => (
-                                <MenuItem key={l} value={l}>
-                                    {l}
+                {/* 9. Location (legacy trips only) */}
+                {isLegacyTrip && (
+                    <Box>
+                        <Typography sx={labelSx}>Location</Typography>
+                        <FormControl size="small" fullWidth>
+                            <Select
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                displayEmpty
+                                MenuProps={selectMenuProps}
+                                sx={fieldSx}>
+                                <MenuItem value="">
+                                    <em>None</em>
                                 </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
+                                {tripLocations.map((l) => (
+                                    <MenuItem key={l} value={l}>
+                                        {l}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                )}
 
-                {/* 9. Notes */}
+                {/* 10. Notes */}
                 <Box>
                     <Typography sx={labelSx}>Notes</Typography>
                     <TextField

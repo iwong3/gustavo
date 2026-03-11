@@ -74,6 +74,11 @@ export const TripToolbar = () => {
         [expenses]
     )
 
+    // Keep location filter store in sync when expenses change (e.g. new location added)
+    useEffect(() => {
+        useFilterLocationStore.getState().sync(locationNames)
+    }, [locationNames])
+
     // Register sort resets
     const sortDateReset = useSortDateStore((s) => s.reset)
     const sortCostReset = useSortCostStore((s) => s.reset)

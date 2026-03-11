@@ -35,6 +35,8 @@ export async function GET(
             e.category_id, ec.name AS category_name, ec.slug AS category_slug,
             e.local_currency_received,
             e.location_id, l.name AS location_name,
+            e.google_place_id, e.google_place_name, e.google_place_address,
+            e.google_place_lat, e.google_place_lng,
             e.notes, e.reported_at,
             payer.id AS payer_id, payer.name AS payer_name, payer.email AS payer_email,
             payer.avatar_url AS payer_avatar_url, payer.initials AS payer_initials,
@@ -120,6 +122,11 @@ export async function GET(
             coveredParticipants,
             isEveryone: splitBetween.length === tripParticipantCount,
             localCurrencyReceived: e.local_currency_received ? parseFloat(e.local_currency_received) : null,
+            googlePlaceId: e.google_place_id || null,
+            googlePlaceName: e.google_place_name || null,
+            googlePlaceAddress: e.google_place_address || null,
+            googlePlaceLat: e.google_place_lat ? parseFloat(e.google_place_lat) : null,
+            googlePlaceLng: e.google_place_lng ? parseFloat(e.google_place_lng) : null,
             receiptImageUrl: null,
         }
     })
@@ -139,6 +146,11 @@ type CreateExpenseBody = {
     location?: string // location name
     notes?: string
     local_currency_received?: number
+    google_place_id?: string
+    google_place_name?: string
+    google_place_address?: string
+    google_place_lat?: number
+    google_place_lng?: number
 }
 
 export async function POST(
@@ -193,10 +205,10 @@ export async function POST(
 
             // Insert expense
             const expenseRes = await client.query(
-                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at, local_currency_received)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
+                `INSERT INTO expenses (trip_id, name, date, cost_original, currency, category_id, location_id, paid_by, notes, reported_by, reported_at, local_currency_received, google_place_id, google_place_name, google_place_address, google_place_lat, google_place_lng)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13, $14, $15, $16)
                  RETURNING id`,
-                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId, body.local_currency_received || null]
+                [id, body.name, body.date, body.cost, body.currency, body.category_id || null, locationId, payerId, body.notes || '', reporterId, body.local_currency_received || null, body.google_place_id || null, body.google_place_name || null, body.google_place_address || null, body.google_place_lat || null, body.google_place_lng || null]
             )
             const expId = expenseRes.rows[0].id
 

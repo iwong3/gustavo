@@ -55,6 +55,11 @@ export type Expense = {
     notes: string
     receiptImageUrl: string | null
     localCurrencyReceived: number | null
+    googlePlaceId: string | null
+    googlePlaceName: string | null
+    googlePlaceAddress: string | null
+    googlePlaceLat: number | null
+    googlePlaceLng: number | null
 }
 
 export type ExpenseCategory = {
@@ -88,6 +93,30 @@ export type ActivityEntry = {
     } | null
     changedAt: string // ISO timestamp
     summary: string   // human-readable description
+}
+
+// Google Places API types
+export type PlacePrediction = {
+    placeId: string
+    name: string
+    address: string
+}
+
+export type PlaceDetails = {
+    placeId: string
+    name: string
+    address: string
+    lat: number
+    lng: number
+    addressComponents: AddressComponent[]
+    types: string[]
+    primaryType: string | null
+}
+
+export type AddressComponent = {
+    longText: string
+    shortText: string
+    types: string[]
 }
 
 export type UserPreferences = {

@@ -1,6 +1,6 @@
-import { Box, IconButton, Tooltip } from '@mui/material'
+import { Box, IconButton, Link, Tooltip, Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconMapPin, IconTrash } from '@tabler/icons-react'
 import { colors } from '@/lib/colors'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -273,6 +273,57 @@ export const ReceiptsRow = ({ expense, onRefresh }: IReceiptsRowProps) => {
                                     marginTop: 2,
                                     marginBottom: 1,
                                 }}>
+                                {/* Google Place */}
+                                {expense.googlePlaceName && (
+                                    <Box sx={{ marginBottom: 1.5 }}>
+                                        <Link
+                                            href={
+                                                expense.googlePlaceId
+                                                    ? `https://www.google.com/maps/place/?q=place_id:${expense.googlePlaceId}`
+                                                    : `https://www.google.com/maps?q=${expense.googlePlaceLat},${expense.googlePlaceLng}`
+                                            }
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            underline="none"
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                gap: 0.5,
+                                                color: colors.primaryBlack,
+                                                marginBottom: 1,
+                                            }}>
+                                            <IconMapPin size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+                                            <Box>
+                                                <Typography sx={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
+                                                    {expense.googlePlaceName}
+                                                </Typography>
+                                                {expense.googlePlaceAddress && (
+                                                    <Typography sx={{ fontSize: 11, color: 'text.secondary', lineHeight: 1.3 }}>
+                                                        {expense.googlePlaceAddress}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        </Link>
+                                        {expense.googlePlaceLat && expense.googlePlaceLng && (
+                                            <Box
+                                                sx={{
+                                                    borderRadius: '4px',
+                                                    overflow: 'hidden',
+                                                    border: `1px solid ${colors.primaryBlack}`,
+                                                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                                }}>
+                                                <iframe
+                                                    src={`https://www.google.com/maps?q=${expense.googlePlaceLat},${expense.googlePlaceLng}&output=embed`}
+                                                    width="100%"
+                                                    height="180"
+                                                    style={{ border: 0, display: 'block' }}
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                />
+                                            </Box>
+                                        )}
+                                    </Box>
+                                )}
                                 {/* Receipt Image */}
                                 {expense.receiptImageUrl && (
                                     <Box

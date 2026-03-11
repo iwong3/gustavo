@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
 import { colors } from '@/lib/colors'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { getTablerIcon } from 'utils/icons'
 
 type FilterLocationState = {
@@ -15,6 +15,7 @@ type FilterLocationActions = {
     isActive: () => boolean
     setFilters: (filters: Map<string, boolean>) => void
     reset: (locationNames: string[]) => void
+    sync: (locationNames: string[]) => void
 }
 
 const initialState: FilterLocationState = {
@@ -47,6 +48,19 @@ export const useFilterLocationStore = create<
     reset: (locationNames: string[]) => {
         set(() => ({ filters: filtersFromNames(locationNames) }))
     },
+    sync: (locationNames: string[]) => {
+        const { filters } = get()
+        const nameSet = new Set(locationNames)
+        const newFilters = new Map<string, boolean>()
+        // Keep existing selections for locations that still exist
+        for (const name of locationNames) {
+            newFilters.set(name, filters.get(name) ?? false)
+        }
+        // Only update if the set of keys actually changed
+        if (newFilters.size !== filters.size || Array.from(nameSet).some((n) => !filters.has(n))) {
+            set(() => ({ filters: newFilters }))
+        }
+    },
 }))
 
 export const FilterLocation = ({
@@ -54,13 +68,20 @@ export const FilterLocation = ({
 }: {
     locationNames: string[]
 }) => {
-    const { filters, handleFilterClick, reset } = useFilterLocationStore(
+    const { filters, handleFilterClick, reset, sync } = useFilterLocationStore(
         useShallow((state) => state)
     )
 
+    // Initial mount: reset all filters. Subsequent updates: sync (preserve selections).
+    const isInitialMount = useRef(true)
     useEffect(() => {
-        reset(locationNames)
-    }, [])
+        if (isInitialMount.current) {
+            reset(locationNames)
+            isInitialMount.current = false
+        } else {
+            sync(locationNames)
+        }
+    }, [locationNames])
 
     return (
         <Box
