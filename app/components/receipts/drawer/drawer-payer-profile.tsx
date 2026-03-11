@@ -12,20 +12,22 @@ import type { Expense, UserSummary } from '@/lib/types'
 
 interface DrawerPayerProfileProps {
     payer: UserSummary
-    allExpenses: Expense[] // all trip expenses for stats
+    allExpenses: Expense[] // all UNFILTERED trip expenses for stats
+    getUsdValue: (exp: Expense) => number
     currentUserId: number
 }
 
 export const DrawerPayerProfile = ({
     payer,
     allExpenses,
+    getUsdValue,
     currentUserId,
 }: DrawerPayerProfileProps) => {
     const [historyOpen, setHistoryOpen] = useState(false)
 
-    // Payer trip stats
+    // Payer trip stats — always computed from full (unfiltered) trip expenses
     const payerExpenses = allExpenses.filter((e) => e.paidBy.id === payer.id)
-    const payerTotal = payerExpenses.reduce((sum, e) => sum + e.costConvertedUsd, 0)
+    const payerTotal = payerExpenses.reduce((sum, e) => sum + getUsdValue(e), 0)
 
     // "Share history with payer" — how many times current user was covered by this payer
     const coveredByPayer = allExpenses.filter((e) =>
@@ -34,7 +36,7 @@ export const DrawerPayerProfile = ({
     )
     const coveredTotal = coveredByPayer.reduce((sum, e) => {
         const activeSplit = e.splitBetween.length - e.coveredParticipants.length
-        return sum + (activeSplit > 0 ? e.costConvertedUsd / activeSplit : 0)
+        return sum + (activeSplit > 0 ? getUsdValue(e) / activeSplit : 0)
     }, 0)
 
     const showCoveredHistory = coveredByPayer.length > 0 && payer.id !== currentUserId
@@ -62,9 +64,7 @@ export const DrawerPayerProfile = ({
                             Paid by {payer.firstName}
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
-                            {payerExpenses.length} expense{payerExpenses.length !== 1 ? 's' : ''}
-                            {' · '}
-                            {FormattedMoney('USD', 0).format(payerTotal)} total this trip
+                            {FormattedMoney('USD', 0).format(payerTotal)} paid across {payerExpenses.length} expense{payerExpenses.length !== 1 ? 's' : ''} this trip
                         </Typography>
                     </Box>
 

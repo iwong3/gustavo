@@ -1,10 +1,10 @@
 'use client'
 
-import { Box, Collapse, Typography } from '@mui/material'
-import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
+import { Box, Collapse, Link, Typography } from '@mui/material'
+import { IconChevronDown, IconChevronRight, IconExternalLink } from '@tabler/icons-react'
 import { useState } from 'react'
 
-import { colors } from '@/lib/colors'
+import { colors, hardShadow } from '@/lib/colors'
 
 import type { Expense, PlaceInfo } from '@/lib/types'
 
@@ -18,6 +18,21 @@ function humanizeType(type: string): string {
 /** Render price level as $ signs. */
 function priceLevelDisplay(level: number): string {
     return '$'.repeat(Math.max(1, Math.min(4, level)))
+}
+
+/** Rating → background color (heat gradient: red = bad, yellow/green = good). */
+function ratingColor(rating: number): string {
+    if (rating >= 4.5) return '#d4edda' // green
+    if (rating >= 4.0) return '#e8f5c8' // yellow-green
+    if (rating >= 3.5) return '#fff3cd' // yellow
+    if (rating >= 3.0) return '#ffe0b2' // orange
+    return '#f8d7da' // red
+}
+
+interface ChipData {
+    label: string
+    href?: string
+    bg?: string
 }
 
 interface DrawerPlaceMetadataProps {
@@ -35,22 +50,26 @@ export const DrawerPlaceMetadata = ({
 }: DrawerPlaceMetadataProps) => {
     const [alsoVisitedOpen, setAlsoVisitedOpen] = useState(false)
 
-    const hasMetadata = place.priceLevel != null || place.rating != null || place.primaryType
+    const hasMetadata = place.priceLevel != null || place.rating != null || place.primaryType || place.website
     const otherExpensesAtPlace = allExpenses.filter(
         (e) => e.googlePlaceId === place.googlePlaceId && e.id !== currentExpenseId
     )
 
     if (!hasMetadata && otherExpensesAtPlace.length === 0) return null
 
-    const chips: string[] = []
-    if (place.priceLevel != null && place.priceLevel > 0) {
-        chips.push(priceLevelDisplay(place.priceLevel))
-    }
+    // Build chips — order: rating, price, type, website
+    const chips: ChipData[] = []
     if (place.rating != null) {
-        chips.push(`${place.rating}★`)
+        chips.push({ label: `${place.rating}★`, bg: ratingColor(place.rating) })
+    }
+    if (place.priceLevel != null && place.priceLevel > 0) {
+        chips.push({ label: priceLevelDisplay(place.priceLevel), bg: '#d4edda' }) // green
     }
     if (place.primaryType) {
-        chips.push(humanizeType(place.primaryType))
+        chips.push({ label: humanizeType(place.primaryType) })
+    }
+    if (place.website) {
+        chips.push({ label: 'Website', href: place.website, bg: '#d6e4f0' }) // blue tint
     }
 
     return (
@@ -61,48 +80,61 @@ export const DrawerPlaceMetadata = ({
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 1,
+                        gap: 0.75,
                         flexWrap: 'wrap',
                         mb: otherExpensesAtPlace.length > 0 ? 1.5 : 0,
                     }}>
-                    {chips.map((chip) => (
-                        <Typography
-                            key={chip}
-                            sx={{
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: colors.primaryBlack,
-                                px: 1,
-                                py: 0.25,
-                                borderRadius: '4px',
-                                border: `1px solid ${colors.primaryBlack}`,
-                                backgroundColor: colors.primaryWhite,
-                            }}>
-                            {chip}
-                        </Typography>
-                    ))}
+                    {chips.map((chip) =>
+                        chip.href ? (
+                            <Link
+                                key={chip.label}
+                                href={chip.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: colors.primaryBlack,
+                                    textDecoration: 'none',
+                                    px: 1,
+                                    py: 0.25,
+                                    borderRadius: '4px',
+                                    ...hardShadow,
+                                    backgroundColor: chip.bg || colors.primaryWhite,
+                                    '&:hover': { opacity: 0.85 },
+                                    transition: 'opacity 150ms ease',
+                                }}>
+                                <IconExternalLink size={12} style={{ flexShrink: 0 }} />
+                                <Typography
+                                    component="span"
+                                    sx={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                    }}>
+                                    {chip.label}
+                                </Typography>
+                            </Link>
+                        ) : (
+                            <Typography
+                                key={chip.label}
+                                sx={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: colors.primaryBlack,
+                                    px: 1,
+                                    py: 0.25,
+                                    borderRadius: '4px',
+                                    ...hardShadow,
+                                    backgroundColor: chip.bg || colors.primaryWhite,
+                                }}>
+                                {chip.label}
+                            </Typography>
+                        )
+                    )}
                 </Box>
-            )}
-
-            {/* Website */}
-            {place.website && (
-                <Typography
-                    component="a"
-                    href={place.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                        display: 'block',
-                        fontSize: 12,
-                        color: colors.primaryBlue,
-                        textDecoration: 'underline',
-                        mb: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                    }}>
-                    {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
-                </Typography>
             )}
 
             {/* Also visited */}

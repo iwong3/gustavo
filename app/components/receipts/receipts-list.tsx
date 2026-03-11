@@ -44,6 +44,12 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
 
     const displayData = expenses || filteredExpenses
 
+    // Keep selectedExpense in sync with refreshed data
+    const resolvedExpense = useMemo(() => {
+        if (!selectedExpense) return null
+        return displayData.find((e) => e.id === selectedExpense.id) ?? selectedExpense
+    }, [selectedExpense, displayData])
+
     // Group expenses by date, most recent date first
     const dateGroups = useMemo<DateGroup[]>(() => {
         const groupMap = new Map<string, Expense[]>()
@@ -160,7 +166,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
 
             {/* Detail drawer */}
             <ExpenseDetailDrawer
-                expense={selectedExpense}
+                expense={resolvedExpense}
                 open={drawerOpen}
                 onClose={handleCloseDrawer}
                 allExpenses={displayData}

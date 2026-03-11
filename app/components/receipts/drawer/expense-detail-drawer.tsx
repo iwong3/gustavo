@@ -1,11 +1,10 @@
 'use client'
 
-import { Box, Drawer, IconButton } from '@mui/material'
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
-import { useCallback, useMemo, useState } from 'react'
+import { Box, SwipeableDrawer } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
-import { colors, hardShadow } from '@/lib/colors'
+import { colors } from '@/lib/colors'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { canEditExpense as canEditExpenseFn, canDeleteExpense as canDeleteExpenseFn } from 'utils/permissions'
@@ -13,11 +12,11 @@ import { deleteExpense } from 'utils/api'
 
 import { DrawerHeader } from './drawer-header'
 import { DrawerCostSection } from './drawer-cost-section'
+import { DrawerPayerProfile } from './drawer-payer-profile'
 import { DrawerSplitSection } from './drawer-split-section'
 import { DrawerMapSection } from './drawer-map-section'
 import { DrawerPlaceMetadata } from './drawer-place-metadata'
 import { DrawerNotes } from './drawer-notes'
-import { DrawerPayerProfile } from './drawer-payer-profile'
 import { DrawerMetadataFooter } from './drawer-metadata-footer'
 
 import ExpenseFormDialog from 'components/expense-form-dialog'
@@ -43,27 +42,29 @@ export const ExpenseDetailDrawer = ({
     onSelectExpense,
 }: ExpenseDetailDrawerProps) => {
     const { trip } = useTripData()
-    const { getUsdValue } = useSpendData()
+    const { expenses: allTripExpenses, getUsdValue } = useSpendData()
 
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+    // Darken the phone status bar when drawer is open
+    useEffect(() => {
+        const meta = document.querySelector('meta[name="theme-color"]')
+        if (!meta) return
+        const original = meta.getAttribute('content') || '#fefae0'
+        if (open) {
+            meta.setAttribute('content', '#c8c5b3') // dimmed version of secondaryYellow
+        }
+        return () => {
+            meta.setAttribute('content', original)
+        }
+    }, [open])
 
     // Navigation
     const currentIndex = useMemo(
         () => (expense ? allExpenses.findIndex((e) => e.id === expense.id) : -1),
         [expense, allExpenses]
     )
-
-    const hasPrev = currentIndex > 0
-    const hasNext = currentIndex < allExpenses.length - 1
-
-    const goToPrev = useCallback(() => {
-        if (hasPrev) onSelectExpense(allExpenses[currentIndex - 1])
-    }, [hasPrev, currentIndex, allExpenses, onSelectExpense])
-
-    const goToNext = useCallback(() => {
-        if (hasNext) onSelectExpense(allExpenses[currentIndex + 1])
-    }, [hasNext, currentIndex, allExpenses, onSelectExpense])
 
     if (!expense) return null
 
@@ -82,16 +83,22 @@ export const ExpenseDetailDrawer = ({
 
     return (
         <>
-            <Drawer
+            <SwipeableDrawer
                 anchor="bottom"
                 open={open}
                 onClose={onClose}
+                onOpen={() => {}}
+                disableSwipeToOpen
+                swipeAreaWidth={0}
                 ModalProps={{
                     keepMounted: false,
+                    // Disable focus trap when edit/delete dialogs are open
+                    // so the FormDrawer's inputs can receive focus
+                    disableEnforceFocus: editDialogOpen || deleteDialogOpen,
                     slotProps: {
                         backdrop: {
                             sx: {
-                                backgroundColor: 'transparent',
+                                backgroundColor: 'rgba(0,0,0,0.25)',
                             },
                         },
                     },
@@ -137,15 +144,11 @@ export const ExpenseDetailDrawer = ({
                         overflowY: 'auto',
                         overflowX: 'hidden',
                         WebkitOverflowScrolling: 'touch',
-                        pb: 3,
+                        pb: 'calc(24px + env(safe-area-inset-bottom, 0px))',
                     }}>
                     {/* Header */}
                     <DrawerHeader
                         expense={expense}
-                        expenseIndex={currentIndex}
-                        totalExpenses={allExpenses.length}
-                        dayNumber={isWithinTrip ? dayNumber : null}
-                        totalDays={isWithinTrip ? totalDays : null}
                         canEdit={canEdit}
                         canDelete={canDelete}
                         onEdit={() => setEditDialogOpen(true)}
@@ -154,6 +157,14 @@ export const ExpenseDetailDrawer = ({
 
                     {/* Cost */}
                     <DrawerCostSection expense={expense} costUsd={costUsd} />
+
+                    {/* Payer profile — uses unfiltered trip expenses for stats */}
+                    <DrawerPayerProfile
+                        payer={expense.paidBy}
+                        allExpenses={allTripExpenses}
+                        getUsdValue={getUsdValue}
+                        currentUserId={trip.currentUserId}
+                    />
 
                     {/* Split */}
                     <DrawerSplitSection
@@ -180,86 +191,27 @@ export const ExpenseDetailDrawer = ({
                         </DrawerMapSection>
                     )}
 
-                    {/* --- Section divider (only if notes or payer follow) --- */}
-                    {(expense.notes?.trim() || expense.paidBy) && (
+                    {/* --- Section divider (only if notes follow) --- */}
+                    {expense.notes?.trim() && (
                         <Box sx={{ mx: 2.5, mb: 2, borderBottom: '1px solid', borderColor: 'divider' }} />
                     )}
 
                     {/* Notes */}
-                    <DrawerNotes notes={expense.notes} />
-
-                    {/* Payer profile */}
-                    <DrawerPayerProfile
-                        payer={expense.paidBy}
-                        allExpenses={allExpenses}
-                        currentUserId={trip.currentUserId}
+                    <DrawerNotes
+                        notes={expense.notes}
+                        onEdit={canEdit ? () => setEditDialogOpen(true) : undefined}
                     />
 
                     {/* Metadata footer */}
-                    <DrawerMetadataFooter expense={expense} />
+                    <DrawerMetadataFooter
+                        expense={expense}
+                        expenseIndex={currentIndex}
+                        totalExpenses={allExpenses.length}
+                        dayNumber={isWithinTrip ? dayNumber : null}
+                        totalDays={isWithinTrip ? totalDays : null}
+                    />
                 </Box>
-
-                {/* Bottom navigation bar — neo-brutalist */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 1,
-                        pb: 'calc(8px + env(safe-area-inset-bottom, 0px))',
-                        flexShrink: 0,
-                        borderTop: `2px solid ${colors.primaryBlack}`,
-                        backgroundColor: colors.primaryYellow,
-                    }}>
-                    <IconButton
-                        onClick={goToPrev}
-                        disabled={!hasPrev}
-                        size="small"
-                        sx={{
-                            ...hardShadow,
-                            borderRadius: '4px',
-                            opacity: hasPrev ? 1 : 0.3,
-                            backgroundColor: colors.primaryWhite,
-                            '&:hover': { backgroundColor: colors.secondaryYellow },
-                        }}>
-                        <IconChevronLeft size={20} />
-                    </IconButton>
-
-                    <Box
-                        onClick={onClose}
-                        sx={{
-                            ...hardShadow,
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: colors.primaryBlack,
-                            cursor: 'pointer',
-                            px: 2.5,
-                            py: 0.5,
-                            borderRadius: '4px',
-                            backgroundColor: colors.primaryWhite,
-                            '&:hover': { backgroundColor: colors.secondaryYellow },
-                            '&:active': { backgroundColor: colors.primaryYellow },
-                            transition: 'background-color 150ms ease',
-                        }}>
-                        Close
-                    </Box>
-
-                    <IconButton
-                        onClick={goToNext}
-                        disabled={!hasNext}
-                        size="small"
-                        sx={{
-                            ...hardShadow,
-                            borderRadius: '4px',
-                            opacity: hasNext ? 1 : 0.3,
-                            backgroundColor: colors.primaryWhite,
-                            '&:hover': { backgroundColor: colors.secondaryYellow },
-                        }}>
-                        <IconChevronRight size={20} />
-                    </IconButton>
-                </Box>
-            </Drawer>
+            </SwipeableDrawer>
 
             {/* Edit dialog */}
             <ExpenseFormDialog

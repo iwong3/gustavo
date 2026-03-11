@@ -24,7 +24,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     sx={{
                         position: 'fixed',
                         inset: 0,
-                        zIndex: 1200,
+                        zIndex: 1400,
                     }}
                 />
             )}
@@ -49,7 +49,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         borderTopRightRadius: '16px',
                         borderTop: `2px solid ${colors.primaryBlack}`,
                         boxShadow: `2px -2px 0px ${colors.primaryBlack}`,
-                        zIndex: 1300,
+                        zIndex: 1500,
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',

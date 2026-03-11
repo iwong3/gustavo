@@ -11,10 +11,6 @@ import type { Expense } from '@/lib/types'
 
 interface DrawerHeaderProps {
     expense: Expense
-    expenseIndex: number // 0-based index in the full expense list
-    totalExpenses: number
-    dayNumber: number | null
-    totalDays: number | null
     canEdit: boolean
     canDelete: boolean
     onEdit: () => void
@@ -23,19 +19,13 @@ interface DrawerHeaderProps {
 
 export const DrawerHeader = ({
     expense,
-    expenseIndex,
-    totalExpenses,
-    dayNumber,
-    totalDays,
     canEdit,
     canDelete,
     onEdit,
     onDelete,
 }: DrawerHeaderProps) => {
-    const locationDisplay = expense.place?.address?.split(',')[0] || expense.locationName
+    const locationDisplay = expense.locationName || expense.place?.name
     const dateDisplay = dayjs(expense.date + 'T00:00:00').format('M/D')
-    const positionLabel = `Expense ${expenseIndex + 1} of ${totalExpenses}`
-    const dayLabel = dayNumber && totalDays ? ` · Day ${dayNumber} of ${totalDays}` : ''
 
     return (
         <Box sx={{ px: 2.5, pt: 1, pb: 1.5 }}>
@@ -110,17 +100,6 @@ export const DrawerHeader = ({
                     </Box>
                 )}
             </Box>
-
-            {/* Position label */}
-            <Typography
-                sx={{
-                    fontSize: 11,
-                    color: 'text.secondary',
-                    mt: 0.75,
-                    textAlign: 'center',
-                }}>
-                {positionLabel}{dayLabel}
-            </Typography>
         </Box>
     )
 }
