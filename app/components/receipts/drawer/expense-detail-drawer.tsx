@@ -66,6 +66,16 @@ export const ExpenseDetailDrawer = ({
         [expense, allExpenses]
     )
 
+    // Swipe-to-close on drag handle only
+    const touchStartY = useRef(0)
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY
+    }, [])
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        const deltaY = e.changedTouches[0].clientY - touchStartY.current
+        if (deltaY > 50) onClose()
+    }, [onClose])
+
     if (!expense) return null
 
     const costUsd = getUsdValue(expense)
@@ -80,16 +90,6 @@ export const ExpenseDetailDrawer = ({
     const totalDays = tripEnd.diff(tripStart, 'day') + 1
     const dayNumber = expenseDate.diff(tripStart, 'day') + 1
     const isWithinTrip = dayNumber >= 1 && dayNumber <= totalDays
-
-    // Swipe-to-close on drag handle only
-    const touchStartY = useRef(0)
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        touchStartY.current = e.touches[0].clientY
-    }, [])
-    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        const deltaY = e.changedTouches[0].clientY - touchStartY.current
-        if (deltaY > 50) onClose()
-    }, [onClose])
 
     return (
         <>
