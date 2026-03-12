@@ -1,7 +1,7 @@
 'use client'
 
-import { Box, SwipeableDrawer } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { Box, Drawer } from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 
 import { colors } from '@/lib/colors'
@@ -81,19 +81,24 @@ export const ExpenseDetailDrawer = ({
     const dayNumber = expenseDate.diff(tripStart, 'day') + 1
     const isWithinTrip = dayNumber >= 1 && dayNumber <= totalDays
 
+    // Swipe-to-close on drag handle only
+    const touchStartY = useRef(0)
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY
+    }, [])
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        const deltaY = e.changedTouches[0].clientY - touchStartY.current
+        if (deltaY > 50) onClose()
+    }, [onClose])
+
     return (
         <>
-            <SwipeableDrawer
+            <Drawer
                 anchor="bottom"
                 open={open}
                 onClose={onClose}
-                onOpen={() => {}}
-                disableSwipeToOpen
-                swipeAreaWidth={0}
                 ModalProps={{
                     keepMounted: false,
-                    // Disable focus trap when edit/delete dialogs are open
-                    // so the FormDrawer's inputs can receive focus
                     disableEnforceFocus: editDialogOpen || deleteDialogOpen,
                     slotProps: {
                         backdrop: {
@@ -116,14 +121,17 @@ export const ExpenseDetailDrawer = ({
                         flexDirection: 'column',
                     },
                 }}>
-                {/* Drag handle */}
+                {/* Drag handle — swipe down here to close */}
                 <Box
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
                         pt: 1.5,
                         pb: 0.5,
                         flexShrink: 0,
+                        cursor: 'grab',
                     }}>
                     <Box
                         sx={{
@@ -211,7 +219,7 @@ export const ExpenseDetailDrawer = ({
                         totalDays={isWithinTrip ? totalDays : null}
                     />
                 </Box>
-            </SwipeableDrawer>
+            </Drawer>
 
             {/* Edit dialog */}
             <ExpenseFormDialog
