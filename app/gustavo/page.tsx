@@ -19,6 +19,12 @@ const apps = [
         icon: 'IconPlaneDeparture',
         bg: '#e8edca',
     },
+    {
+        name: 'Health',
+        href: '/gustavo/health',
+        icon: 'IconHeartbeat',
+        bg: '#f0b8b4',
+    },
 ]
 
 export default function GustavoHomePage() {

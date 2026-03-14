@@ -1,3 +1,8 @@
+# DEPRECATED
+
+This was for the old Gustavo app that lived on Github Pages and ingested data
+from Google Sheets populated via Google Forms.
+
 # Guide: Adding a New Trip
 
 This document outlines all the steps required to add a new trip to the app.
@@ -100,10 +105,10 @@ also add its abbreviation in `getLocationAbbr`.
 
 Add links for the new trip in the `LinksByTrip` Map. Common links include:
 
--   Itinerary (Google Doc)
--   Google Maps List
--   Submit Receipt (Google Form)
--   Spend Data (Google Sheet)
+- Itinerary (Google Doc)
+- Google Maps List
+- Submit Receipt (Google Form)
+- Spend Data (Google Sheet)
 
 ```typescript
 [
@@ -141,9 +146,9 @@ Add links for the new trip in the `LinksByTrip` Map. Common links include:
 
 Add the trip image file to `src/images/` directory.
 
--   Recommended format: `.jpg` or `.png`
--   Recommended naming: `trip-name-year.jpg` (e.g., `japan-2025.jpg`)
--   The image will be used as the background for the trip card in the trips menu
+- Recommended format: `.jpg` or `.png`
+- Recommended naming: `trip-name-year.jpg` (e.g., `japan-2025.jpg`)
+- The image will be used as the background for the trip card in the trips menu
 
 ## Google Sheets Setup
 
@@ -151,19 +156,19 @@ Add the trip image file to `src/images/` directory.
 
 Your Google Sheet must have these columns (in any order):
 
--   `Item Name`
--   `Date`
--   `Cost`
--   `Currency`
--   `Converted Cost`
--   `Paid By`
--   `Split Between`
--   `Location`
--   `Type of Spend`
--   `Notes`
--   `Email Address`
--   `Timestamp`
--   `Upload Receipt`
+- `Item Name`
+- `Date`
+- `Cost`
+- `Currency`
+- `Converted Cost`
+- `Paid By`
+- `Split Between`
+- `Location`
+- `Type of Spend`
+- `Notes`
+- `Email Address`
+- `Timestamp`
+- `Upload Receipt`
 
 ### Sharing Permissions
 
@@ -192,25 +197,25 @@ After making all changes:
 
 ## Checklist
 
--   [ ] Added trip to `Trip` enum in `src/helpers/trips.ts`
--   [ ] Added trip to `ActiveTrips` or `PastTrips` in `src/helpers/trips.ts`
--   [ ] Added Google Form and Sheet URLs in `src/helpers/data-mapping.ts`
--   [ ] Added optional Itinerary and Maps URLs in `src/helpers/data-mapping.ts`
--   [ ] Added image import in `src/views/trips.tsx`
--   [ ] Added image case in `getBackgroundImageUrlForTrip` in
-        `src/views/trips.tsx`
--   [ ] Added people list in `src/helpers/person.ts`
--   [ ] Added locations in `src/helpers/location.ts`
--   [ ] Added links in `src/helpers/links.ts`
--   [ ] Added trip image file to `src/images/`
--   [ ] Set Google Sheet to "Anyone with the link" → "Viewer"
--   [ ] Tested CSV export URL works
--   [ ] Tested trip loads in app
--   [ ] Tested expense calculations work correctly
+- [ ] Added trip to `Trip` enum in `src/helpers/trips.ts`
+- [ ] Added trip to `ActiveTrips` or `PastTrips` in `src/helpers/trips.ts`
+- [ ] Added Google Form and Sheet URLs in `src/helpers/data-mapping.ts`
+- [ ] Added optional Itinerary and Maps URLs in `src/helpers/data-mapping.ts`
+- [ ] Added image import in `src/views/trips.tsx`
+- [ ] Added image case in `getBackgroundImageUrlForTrip` in
+      `src/views/trips.tsx`
+- [ ] Added people list in `src/helpers/person.ts`
+- [ ] Added locations in `src/helpers/location.ts`
+- [ ] Added links in `src/helpers/links.ts`
+- [ ] Added trip image file to `src/images/`
+- [ ] Set Google Sheet to "Anyone with the link" → "Viewer"
+- [ ] Tested CSV export URL works
+- [ ] Tested trip loads in app
+- [ ] Tested expense calculations work correctly
 
 ## Manual Steps
 
--   In the Google Sheet, you'll have to add a new column "Converted Cost" which
-    will always convert the cost of an item to USD for that given day using the
-    Google Finance API. Reference existing Google Sheets to get the formula.
--   Make sure to update the app version before deploying!
+- In the Google Sheet, you'll have to add a new column "Converted Cost" which
+  will always convert the cost of an item to USD for that given day using the
+  Google Finance API. Reference existing Google Sheets to get the formula.
+- Make sure to update the app version before deploying!

@@ -27,6 +27,7 @@ import {
     IconExclamationCircle,
     IconExternalLink,
     IconHandFingerLeft,
+    IconHeartbeat,
     IconHandFingerRight,
     IconHistory,
     IconLayoutList,
@@ -118,6 +119,8 @@ export const getTablerIcon = ({
             return <IconExternalLink {...props} />
         case 'IconHandFingerLeft':
             return <IconHandFingerLeft {...props} />
+        case 'IconHeartbeat':
+            return <IconHeartbeat {...props} />
         case 'IconHandFingerRight':
             return <IconHandFingerRight {...props} />
         case 'IconHistory':

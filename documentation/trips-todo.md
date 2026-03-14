@@ -1,4 +1,4 @@
-# To-Do List
+# Trips To-Do List
 
 ## High Priority
 
@@ -51,14 +51,6 @@
 ## Others
 
 - [ ] Update app documentation
-
-## Non-Trip Related
-
-- [ ] Track exercise
-    - [ ] High level categories with optional more detailed sub-categories (e.g.
-          Back > Lats)
-- [ ] Send Apple Fitness data to app? e.g. running - map path - distance -
-      calories - heart rate
 
 ## Done
 

@@ -4,9 +4,12 @@ import { colors, hardShadow } from '@/lib/colors'
 import type { TripSummary } from '@/lib/types'
 import { Box, CircularProgress, Collapse, Drawer, Typography } from '@mui/material'
 import {
+    IconBarbell,
     IconChevronDown,
     IconChevronRight,
+    IconHeartbeat,
     IconHome,
+    IconPill,
     IconPlaneDeparture,
     IconSettings,
 } from '@tabler/icons-react'
@@ -366,6 +369,41 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                         )}
                     </>
                 )}
+
+                {/* Health */}
+                <Box
+                    component={Link}
+                    href="/gustavo/health"
+                    onClick={onClose}
+                    sx={{ ...navItemSx(isExact('/gustavo/health')), mt: 0.5 }}>
+                    <IconBadge>
+                        <IconHeartbeat
+                            size={17}
+                            stroke={2}
+                            color={colors.primaryBlack}
+                            fill={isExact('/gustavo/health') ? colors.secondaryYellow : 'none'}
+                        />
+                    </IconBadge>
+                    Health
+                </Box>
+
+                {/* Health sub-items */}
+                <Box
+                    component={Link}
+                    href="/gustavo/health/exercise"
+                    onClick={onClose}
+                    sx={tripItemSx(isWithin('/gustavo/health/exercise'))}>
+                    <IconBarbell size={14} stroke={2} color={colors.primaryBrown} />
+                    Exercise
+                </Box>
+                <Box
+                    component={Link}
+                    href="/gustavo/health/supplements"
+                    onClick={onClose}
+                    sx={tripItemSx(isWithin('/gustavo/health/supplements'))}>
+                    <IconPill size={14} stroke={2} color={colors.primaryBrown} />
+                    Supplements
+                </Box>
 
                 {/* Settings */}
                 <Box

@@ -75,6 +75,7 @@ export default function GustavoLayout({
 
     const getActiveTab = () => {
         if (pathname.startsWith('/gustavo/trips')) return '/gustavo/trips'
+        if (pathname.startsWith('/gustavo/health')) return '/gustavo'
         if (pathname.startsWith('/gustavo/settings'))
             return '/gustavo/settings'
         return '/gustavo'
@@ -164,6 +165,14 @@ export default function GustavoLayout({
                                 }
                                 // /gustavo/trips → home
                                 else if (pathname === '/gustavo/trips') {
+                                    backHref = '/gustavo'
+                                }
+                                // /gustavo/health/<sub> → health
+                                else if (/^\/gustavo\/health\/.+$/.test(pathname)) {
+                                    backHref = '/gustavo/health'
+                                }
+                                // /gustavo/health → home
+                                else if (pathname === '/gustavo/health') {
                                     backHref = '/gustavo'
                                 }
                                 // /gustavo/settings/<sub> → settings
