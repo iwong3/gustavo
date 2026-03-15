@@ -37,7 +37,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
         }
     }, [open])
 
-    // Drag-to-dismiss: only from the handle zone
+    // Drag-to-dismiss from handle zone
     useEffect(() => {
         const handle = handleRef.current
         const panel = panelRef.current
@@ -51,8 +51,6 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             startY = e.touches[0].clientY
             dragOffset = 0
             active = true
-            // Kill the CSS transition so drag feels immediate
-            panel.style.transition = 'none'
         }
 
         const handleTouchMove = (e: TouchEvent) => {
@@ -61,6 +59,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
 
             const deltaY = e.touches[0].clientY - startY
             dragOffset = Math.max(0, deltaY)
+            panel.style.transition = 'none'
             panel.style.transform = `translateY(${dragOffset}px)`
         }
 
@@ -69,7 +68,6 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             active = false
 
             if (dragOffset > DISMISS_THRESHOLD) {
-                // Animate off-screen, then close
                 panel.style.transition = 'transform 0.25s ease-out'
                 panel.style.transform = `translateY(${window.innerHeight}px)`
                 setTimeout(() => {
@@ -78,7 +76,6 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     panel.style.transform = ''
                 }, 250)
             } else {
-                // Snap back
                 panel.style.transition = 'transform 0.25s ease-out'
                 panel.style.transform = ''
             }
@@ -136,7 +133,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     transform: visible ? 'translateY(0)' : 'translateY(100%)',
                     transition: 'transform 0.3s ease-out',
                 }}>
-                {/* Drag handle zone — tall enough to grab easily */}
+                {/* Drag handle — sits above children, can't be overlapped */}
                 <Box
                     ref={handleRef}
                     sx={{
@@ -147,6 +144,8 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         cursor: 'grab',
                         flexShrink: 0,
                         touchAction: 'none',
+                        position: 'relative',
+                        zIndex: 1,
                     }}>
                     <Box
                         sx={{
@@ -157,7 +156,17 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         }}
                     />
                 </Box>
-                {children}
+                {/* Children wrapper — takes remaining space, can't overlap handle */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                        minHeight: 0,
+                        overflow: 'hidden',
+                    }}>
+                    {children}
+                </Box>
             </Box>
         </>,
         document.body
