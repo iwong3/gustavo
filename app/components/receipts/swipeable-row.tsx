@@ -72,7 +72,7 @@ export const SwipeableRow = ({
             if (!isHorizontalRef.current) return
 
             // Prevent vertical scroll while swiping horizontally
-            e.preventDefault()
+            if (e.cancelable) e.preventDefault()
             setSwiping(true)
 
             let newOffset = currentOffsetRef.current + dx
