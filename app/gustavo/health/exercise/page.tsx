@@ -9,6 +9,7 @@ import {
     primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
+import { useRegisterFab } from 'providers/fab-provider'
 import {
     Box,
     Button,
@@ -17,7 +18,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconCopy, IconDots, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconCopy, IconDots, IconPencil, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
 
@@ -107,7 +108,7 @@ export default function ExercisePage() {
                 setEditingWorkout({
                     ...workout,
                     id: -1, // sentinel: duplicate mode
-                    date: new Date().toISOString().split('T')[0],
+                    date: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}` })(),
                 })
             }, 0)
         },
@@ -124,6 +125,9 @@ export default function ExercisePage() {
         setMenuOpenId(null)
         setDrawerOpen(true)
     }, [])
+
+    const fabCallback = useCallback(() => openAdd(), [openAdd])
+    useRegisterFab(fabCallback)
 
     if (loading) {
         return (
@@ -145,23 +149,14 @@ export default function ExercisePage() {
                 gap: 2,
             }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography
-                    sx={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        fontFamily: 'var(--font-serif)',
-                    }}>
-                    Exercise
-                </Typography>
-                <Button
-                    onClick={openAdd}
-                    size="small"
-                    startIcon={<IconPlus size={16} />}
-                    sx={primaryButtonSx}>
-                    Log Workout
-                </Button>
-            </Box>
+            <Typography
+                sx={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-serif)',
+                }}>
+                Exercise
+            </Typography>
 
             {/* Workout list */}
             {workouts.length === 0 ? (
@@ -461,7 +456,10 @@ function WorkoutFormDrawer({
     const isEdit = editingWorkout !== null && editingWorkout.id !== -1
     const isDuplicate = editingWorkout !== null && editingWorkout.id === -1
 
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [date, setDate] = useState(() => {
+        const now = new Date()
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    })
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
     const [notes, setNotes] = useState('')
     const [saving, setSaving] = useState(false)
@@ -474,7 +472,8 @@ function WorkoutFormDrawer({
                 setSelectedIds(new Set(editingWorkout.muscleGroups.map((mg) => Number(mg.id))))
                 setNotes(editingWorkout.notes || '')
             } else {
-                setDate(new Date().toISOString().split('T')[0])
+                const now = new Date()
+                setDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`)
                 setSelectedIds(new Set())
                 setNotes('')
             }

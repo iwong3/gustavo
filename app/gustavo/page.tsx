@@ -110,7 +110,7 @@ export default function GustavoHomePage() {
                                 size: 22,
                                 stroke: 1.8,
                                 color: colors.primaryBlack,
-                                fill: 'none',
+                                fill: colors.primaryWhite,
                             })}
                         </Box>
                         <Typography

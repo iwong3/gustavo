@@ -240,7 +240,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                             size={17}
                             stroke={2}
                             color={colors.primaryBlack}
-                            fill={isExact('/gustavo') ? colors.secondaryYellow : 'none'}
+                            fill={isExact('/gustavo') ? colors.secondaryYellow : colors.primaryWhite}
                         />
                     </IconBadge>
                     Home
@@ -257,7 +257,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                             size={17}
                             stroke={2}
                             color={colors.primaryBlack}
-                            fill={isExact('/gustavo/trips') ? colors.secondaryYellow : 'none'}
+                            fill={isExact('/gustavo/trips') ? colors.secondaryYellow : colors.primaryWhite}
                         />
                     </IconBadge>
                     Trips
@@ -381,7 +381,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                             size={17}
                             stroke={2}
                             color={colors.primaryBlack}
-                            fill={isExact('/gustavo/health') ? colors.secondaryYellow : 'none'}
+                            fill={isExact('/gustavo/health') ? colors.secondaryYellow : colors.primaryWhite}
                         />
                     </IconBadge>
                     Health
@@ -393,7 +393,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     href="/gustavo/health/exercise"
                     onClick={onClose}
                     sx={tripItemSx(isWithin('/gustavo/health/exercise'))}>
-                    <IconBarbell size={14} stroke={2} color={colors.primaryBrown} />
+                    <IconBarbell size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
                     Exercise
                 </Box>
                 <Box
@@ -401,7 +401,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     href="/gustavo/health/supplements"
                     onClick={onClose}
                     sx={tripItemSx(isWithin('/gustavo/health/supplements'))}>
-                    <IconPill size={14} stroke={2} color={colors.primaryBrown} />
+                    <IconPill size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
                     Supplements
                 </Box>
 
@@ -416,7 +416,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                             size={17}
                             stroke={2}
                             color={colors.primaryBlack}
-                            fill={isWithin('/gustavo/settings') ? colors.secondaryYellow : 'none'}
+                            fill={isWithin('/gustavo/settings') ? colors.secondaryYellow : colors.primaryWhite}
                         />
                     </IconBadge>
                     Settings

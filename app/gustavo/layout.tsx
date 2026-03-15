@@ -3,6 +3,7 @@
 import { Box, Typography } from '@mui/material'
 import {
     IconArrowLeft,
+    IconHeartbeat,
     IconHome,
     IconPlaneDeparture,
     IconSettings,
@@ -55,6 +56,7 @@ const HEADER_HEIGHT = 56
 const tabs = [
     { label: 'Home', href: '/gustavo', icon: IconHome },
     { label: 'Trips', href: '/gustavo/trips', icon: IconPlaneDeparture },
+    { label: 'Health', href: '/gustavo/health', icon: IconHeartbeat },
     { label: 'Settings', href: '/gustavo/settings', icon: IconSettings },
 ]
 
@@ -75,7 +77,7 @@ export default function GustavoLayout({
 
     const getActiveTab = () => {
         if (pathname.startsWith('/gustavo/trips')) return '/gustavo/trips'
-        if (pathname.startsWith('/gustavo/health')) return '/gustavo'
+        if (pathname.startsWith('/gustavo/health')) return '/gustavo/health'
         if (pathname.startsWith('/gustavo/settings'))
             return '/gustavo/settings'
         return '/gustavo'

@@ -59,114 +59,142 @@ export default function HealthPage() {
                 paddingY: 2,
                 gap: 3,
             }}>
-            {/* Tools */}
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-                {tools.map((tool) => {
-                    const Icon = tool.icon
-                    return (
-                        <Box
-                            key={tool.name}
-                            component={Link}
-                            href={tool.path}
-                            sx={{
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 1.5,
-                                'padding': 2,
-                                'flex': 1,
-                                ...cardSx,
-                                'textDecoration': 'none',
-                                'color': colors.primaryBlack,
-                                '&:active': {
-                                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                    transform: 'translate(1px, 1px)',
-                                },
-                                'transition': 'box-shadow 0.1s, transform 0.1s',
-                            }}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: '50%',
-                                    backgroundColor: tool.bg,
-                                    border: `1.5px solid ${colors.primaryBlack}`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    flexShrink: 0,
-                                }}>
-                                <Icon size={18} stroke={1.8} color={colors.primaryBlack} />
-                            </Box>
-                            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                {tool.name}
-                            </Typography>
-                        </Box>
-                    )
-                })}
-            </Box>
-
             {/* Days Since Last Workout */}
             <Box>
                 <Typography
                     sx={{
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: 1,
                         color: colors.primaryBrown,
-                        mb: 1.5,
+                        mb: 1,
                     }}>
                     Days Since Last Workout
                 </Typography>
 
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                        <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                        <CircularProgress size={20} sx={{ color: colors.primaryYellow }} />
                     </Box>
                 ) : daysSince.length === 0 ? (
-                    <Typography sx={{ fontSize: 14, color: colors.primaryBrown }}>
+                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>
                         No workouts logged yet. Start tracking!
                     </Typography>
                 ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: 0.75,
+                        }}>
                         {daysSince.map((item) => (
                             <Box
                                 key={item.muscleGroup}
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '10px 14px',
-                                    ...cardSx,
+                                    gap: 0.75,
+                                    padding: '6px 8px',
+                                    borderRadius: '4px',
+                                    border: `1.5px solid ${colors.primaryBlack}`,
+                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                    backgroundColor: colors.primaryWhite,
                                 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: getDaysSinceColor(item.daysSince),
+                                        border: `1px solid ${colors.primaryBlack}`,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <Box sx={{ minWidth: 0 }}>
+                                    <Typography
                                         sx={{
-                                            width: 10,
-                                            height: 10,
-                                            borderRadius: '50%',
-                                            backgroundColor: getDaysSinceColor(item.daysSince),
-                                            border: `1px solid ${colors.primaryBlack}`,
-                                            flexShrink: 0,
-                                        }}
-                                    />
-                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            lineHeight: 1.2,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                        }}>
                                         {item.muscleGroup}
                                     </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 11,
+                                            color: colors.primaryBrown,
+                                            lineHeight: 1.2,
+                                        }}>
+                                        {formatDaysSince(item.daysSince)}
+                                    </Typography>
                                 </Box>
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        color: colors.primaryBrown,
-                                        fontWeight: 500,
-                                    }}>
-                                    {formatDaysSince(item.daysSince)}
-                                </Typography>
                             </Box>
                         ))}
                     </Box>
                 )}
+            </Box>
+
+            {/* Tools */}
+            <Box>
+                <Typography
+                    sx={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                        color: colors.primaryBrown,
+                        mb: 1,
+                    }}>
+                    Tools
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {tools.map((tool) => {
+                        const Icon = tool.icon
+                        return (
+                            <Box
+                                key={tool.name}
+                                component={Link}
+                                href={tool.path}
+                                sx={{
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'gap': 2,
+                                    'padding': 2,
+                                    ...cardSx,
+                                    'textDecoration': 'none',
+                                    'color': colors.primaryBlack,
+                                    '&:active': {
+                                        boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                        transform: 'translate(1px, 1px)',
+                                    },
+                                    'transition': 'box-shadow 0.1s, transform 0.1s',
+                                }}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: '50%',
+                                        backgroundColor: tool.bg,
+                                        border: `1.5px solid ${colors.primaryBlack}`,
+                                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                        flexShrink: 0,
+                                    }}>
+                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                                </Box>
+                                <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
+                                    {tool.name}
+                                </Typography>
+                            </Box>
+                        )
+                    })}
+                </Box>
             </Box>
         </Box>
     )
