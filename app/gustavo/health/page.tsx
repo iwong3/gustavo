@@ -2,7 +2,7 @@
 
 import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
-import { Box, CircularProgress, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { IconBarbell, IconPill } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -74,8 +74,54 @@ export default function HealthPage() {
                 </Typography>
 
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                        <CircularProgress size={20} sx={{ color: colors.primaryYellow }} />
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: 0.75,
+                        }}>
+                        {Array.from({ length: 9 }).map((_, i) => (
+                            <Box
+                                key={i}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.75,
+                                    padding: '6px 8px',
+                                    borderRadius: '4px',
+                                    border: `1.5px solid ${colors.primaryBlack}20`,
+                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}20`,
+                                    backgroundColor: `${colors.primaryBlack}05`,
+                                }}>
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: `${colors.primaryBlack}15`,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <Box>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 12,
+                                            lineHeight: 1.2,
+                                            color: 'transparent',
+                                        }}>
+                                        &nbsp;
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 11,
+                                            lineHeight: 1.2,
+                                            color: 'transparent',
+                                        }}>
+                                        &nbsp;
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        ))}
                     </Box>
                 ) : daysSince.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>

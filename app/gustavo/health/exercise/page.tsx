@@ -539,9 +539,6 @@ function WorkoutFormDrawer({
                 {/* Header */}
                 <Box
                     sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
                         px: 2.5,
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
@@ -549,9 +546,6 @@ function WorkoutFormDrawer({
                     <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
                         {isEdit ? 'Edit Workout' : isDuplicate ? 'Duplicate Workout' : 'Log Workout'}
                     </Typography>
-                    <Button onClick={onClose} size="small" sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
                 </Box>
 
                 {/* Form body */}
@@ -656,25 +650,27 @@ function WorkoutFormDrawer({
                 {/* Footer */}
                 <Box
                     sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: 2,
                         px: 2.5,
                         py: 2,
                         borderTop: `1px solid ${colors.primaryBlack}20`,
-                        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
                     }}>
+                    <Button
+                        onClick={onClose}
+                        disabled={saving}
+                        size="large"
+                        sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
                     <Button
                         onClick={handleSubmit}
                         disabled={selectedIds.size === 0 || saving}
-                        fullWidth
-                        sx={{
-                            ...primaryButtonSx,
-                            '&.Mui-disabled': {
-                                backgroundColor: `${colors.primaryYellow}60`,
-                                color: `${colors.primaryBlack}60`,
-                                border: `1px solid ${colors.primaryBlack}40`,
-                                boxShadow: `2px 2px 0px ${colors.primaryBlack}40`,
-                            },
-                        }}>
-                        {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Log Workout'}
+                        size="large"
+                        sx={primaryButtonSx}>
+                        {saving ? 'Saving...' : isEdit ? 'Save' : 'Log'}
                     </Button>
                 </Box>
             </Box>

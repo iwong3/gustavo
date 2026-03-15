@@ -320,60 +320,84 @@ function SupplementDrawer({
 }: SupplementDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
-    const [togglingId, setTogglingId] = useState<number | null>(null)
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+    const [saving, setSaving] = useState(false)
 
     // Manage mode state
     const [editingSupp, setEditingSupp] = useState<Supplement | null>(null)
     const [name, setName] = useState('')
     const [dosage, setDosage] = useState('')
     const [isActive, setIsActive] = useState(true)
-    const [saving, setSaving] = useState(false)
 
     const activeSupplements = supplements.filter((s) => s.isActive)
 
-    // Logs for selected date
+    // Logs for selected date (from DB)
     const dateLogs = allLogs.filter((l) => l.date === date)
 
     // Reset when opened
     useEffect(() => {
         if (open) {
+            const d = initialDate || getLocalDate()
             setMode('log')
-            setDate(initialDate || getLocalDate())
+            setDate(d)
             setEditingSupp(null)
             setName('')
             setDosage('')
             setIsActive(true)
+            // Pre-fill selected supplements from existing logs for this date
+            const logsForDate = allLogs.filter((l) => l.date === d)
+            setSelectedIds(new Set(logsForDate.map((l) => Number(l.supplementId))))
         }
-    }, [open, initialDate])
+    }, [open, initialDate, allLogs])
 
-    const toggleLog = useCallback(
-        async (supplement: Supplement) => {
-            setTogglingId(supplement.id)
-            const existingLog = dateLogs.find(
-                (l) => Number(l.supplementId) === Number(supplement.id)
-            )
+    // Change date but keep current selections
+    const handleDateChange = useCallback(
+        (newDate: string) => {
+            setDate(newDate)
+        },
+        []
+    )
 
-            try {
-                if (existingLog) {
-                    await fetch(`/api/health/supplement-logs/${existingLog.id}`, {
-                        method: 'DELETE',
-                    })
-                } else {
-                    await fetch('/api/health/supplement-logs', {
+    const toggleSupplementSelection = useCallback((suppId: number) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev)
+            if (next.has(suppId)) {
+                next.delete(suppId)
+            } else {
+                next.add(suppId)
+            }
+            return next
+        })
+    }, [])
+
+    const handleLogSubmit = useCallback(async () => {
+        setSaving(true)
+        try {
+            // Determine what changed vs what's already logged
+            const alreadyLogged = new Set(dateLogs.map((l) => Number(l.supplementId)))
+            const toAdd = Array.from(selectedIds).filter((id) => !alreadyLogged.has(id))
+            const toRemove = dateLogs.filter((l) => !selectedIds.has(Number(l.supplementId)))
+
+            await Promise.all([
+                ...toAdd.map((suppId) =>
+                    fetch('/api/health/supplement-logs', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date, supplementId: supplement.id }),
+                        body: JSON.stringify({ date, supplementId: suppId }),
                     })
-                }
-                onDataChanged()
-            } catch (err) {
-                console.error('Failed to toggle supplement log:', err)
-            } finally {
-                setTogglingId(null)
-            }
-        },
-        [date, dateLogs, onDataChanged]
-    )
+                ),
+                ...toRemove.map((log) =>
+                    fetch(`/api/health/supplement-logs/${log.id}`, { method: 'DELETE' })
+                ),
+            ])
+            onDataChanged()
+            onClose()
+        } catch (err) {
+            console.error('Failed to save supplement log:', err)
+        } finally {
+            setSaving(false)
+        }
+    }, [date, selectedIds, dateLogs, onDataChanged, onClose])
 
     const startEdit = useCallback((supp: Supplement) => {
         setEditingSupp(supp)
@@ -466,18 +490,7 @@ function SupplementDrawer({
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: 1.5,
-                        }}>
-                        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>Supplements</Typography>
-                        <Button onClick={onClose} size="small" sx={secondaryButtonSx}>
-                            Cancel
-                        </Button>
-                    </Box>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>Supplements</Typography>
 
                     {/* Mode toggle */}
                     <Box sx={{ display: 'flex', gap: 0.75 }}>
@@ -509,7 +522,7 @@ function SupplementDrawer({
                                 <TextField
                                     type="date"
                                     value={date}
-                                    onChange={(e) => setDate(e.target.value)}
+                                    onChange={(e) => handleDateChange(e.target.value)}
                                     size="small"
                                     sx={{ ...fieldSx, maxWidth: 180 }}
                                 />
@@ -537,17 +550,11 @@ function SupplementDrawer({
                                         gap: 0.75,
                                     }}>
                                     {activeSupplements.map((supp) => {
-                                        const isLogged = dateLogs.some(
-                                            (l) =>
-                                                Number(l.supplementId) === Number(supp.id)
-                                        )
-                                        const isToggling = togglingId === supp.id
+                                        const isSelected = selectedIds.has(supp.id)
                                         return (
                                             <Box
                                                 key={supp.id}
-                                                onClick={() =>
-                                                    !isToggling && toggleLog(supp)
-                                                }
+                                                onClick={() => toggleSupplementSelection(supp.id)}
                                                 sx={{
                                                     'display': 'flex',
                                                     'alignItems': 'center',
@@ -555,23 +562,23 @@ function SupplementDrawer({
                                                     'padding': '8px 12px',
                                                     ...cardSx,
                                                     'cursor': 'pointer',
-                                                    'backgroundColor': isLogged
+                                                    'backgroundColor': isSelected
                                                         ? '#f1f8e9'
                                                         : colors.primaryWhite,
-                                                    'borderColor': isLogged
+                                                    'borderColor': isSelected
                                                         ? '#4caf50'
                                                         : colors.primaryBlack,
-                                                    'boxShadow': `2px 2px 0px ${isLogged ? '#4caf50' : colors.primaryBlack}`,
+                                                    'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
                                                     'transition':
                                                         'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
                                                     '&:active': {
-                                                        boxShadow: `1px 1px 0px ${isLogged ? '#4caf50' : colors.primaryBlack}`,
+                                                        boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
                                                         transform:
                                                             'translate(1px, 1px)',
                                                     },
                                                 }}>
                                                 <Checkbox
-                                                    checked={isLogged}
+                                                    checked={isSelected}
                                                     size="small"
                                                     sx={{
                                                         'padding': 0,
@@ -588,13 +595,6 @@ function SupplementDrawer({
                                                         sx={{
                                                             fontSize: 14,
                                                             fontWeight: 600,
-                                                            textDecoration:
-                                                                isLogged
-                                                                    ? 'line-through'
-                                                                    : 'none',
-                                                            opacity: isLogged
-                                                                ? 0.7
-                                                                : 1,
                                                         }}>
                                                         {supp.name}
                                                     </Typography>
@@ -608,14 +608,6 @@ function SupplementDrawer({
                                                         </Typography>
                                                     )}
                                                 </Box>
-                                                {isToggling && (
-                                                    <CircularProgress
-                                                        size={16}
-                                                        sx={{
-                                                            color: colors.primaryYellow,
-                                                        }}
-                                                    />
-                                                )}
                                             </Box>
                                         )
                                     })}
@@ -691,36 +683,14 @@ function SupplementDrawer({
                                         </Typography>
                                     </Box>
                                 )}
-                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                {editingSupp && (
                                     <Button
-                                        onClick={handleSaveSupplement}
-                                        disabled={!name.trim() || saving}
+                                        onClick={() => startAdd()}
                                         size="small"
-                                        sx={{
-                                            ...primaryButtonSx,
-                                            'flex': 1,
-                                            '&.Mui-disabled': {
-                                                backgroundColor: `${colors.primaryYellow}60`,
-                                                color: `${colors.primaryBlack}60`,
-                                                border: `1px solid ${colors.primaryBlack}40`,
-                                                boxShadow: `2px 2px 0px ${colors.primaryBlack}40`,
-                                            },
-                                        }}>
-                                        {saving
-                                            ? 'Saving...'
-                                            : editingSupp
-                                              ? 'Save'
-                                              : 'Add'}
+                                        sx={secondaryButtonSx}>
+                                        Cancel Edit
                                     </Button>
-                                    {editingSupp && (
-                                        <Button
-                                            onClick={() => startAdd()}
-                                            size="small"
-                                            sx={secondaryButtonSx}>
-                                            Cancel
-                                        </Button>
-                                    )}
-                                </Box>
+                                )}
                             </Box>
 
                             {/* Existing supplements list */}
@@ -837,6 +807,47 @@ function SupplementDrawer({
                                 )}
                             </Box>
                         </>
+                    )}
+                </Box>
+
+                {/* Footer */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: 2,
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    <Button
+                        onClick={onClose}
+                        disabled={saving}
+                        size="large"
+                        sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
+                    {mode === 'log' ? (
+                        <Button
+                            onClick={handleLogSubmit}
+                            disabled={selectedIds.size === 0 || saving}
+                            size="large"
+                            sx={primaryButtonSx}>
+                            {saving ? 'Saving...' : 'Log'}
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={handleSaveSupplement}
+                            disabled={!name.trim() || saving}
+                            size="large"
+                            sx={primaryButtonSx}>
+                            {saving
+                                ? 'Saving...'
+                                : editingSupp
+                                  ? 'Save'
+                                  : 'Add'}
+                        </Button>
                     )}
                 </Box>
             </Box>
