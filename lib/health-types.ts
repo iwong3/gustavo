@@ -22,3 +22,18 @@ export type DaysSince = {
     daysSince: number | null // null = never worked out
     lastDate: string | null  // ISO YYYY-MM-DD
 }
+
+export type Supplement = {
+    id: number
+    name: string
+    dosage: string | null
+    isActive: boolean
+}
+
+export type SupplementLog = {
+    id: number
+    supplementId: number
+    supplementName: string
+    date: string            // ISO YYYY-MM-DD
+    createdAt: string       // ISO timestamp
+}
