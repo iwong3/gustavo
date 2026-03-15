@@ -2,7 +2,7 @@
 
 import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 const HEADER_HEIGHT = 56
@@ -16,12 +16,11 @@ type Props = {
 
 export default function FormDrawer({ open, onClose, children }: Props) {
     const panelRef = useRef<HTMLDivElement>(null)
-    const handleRef = useRef<HTMLDivElement>(null)
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
-
-    const onCloseRef = useRef(onClose)
-    onCloseRef.current = onClose
+    const [dragOffset, setDragOffset] = useState(0)
+    const [isDragging, setIsDragging] = useState(false)
+    const touchStartY = useRef(0)
 
     // Mount/unmount with slide animation
     useEffect(() => {
@@ -32,71 +31,50 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             })
         } else {
             setVisible(false)
+            setDragOffset(0)
+            setIsDragging(false)
             const timer = setTimeout(() => setMounted(false), 300)
             return () => clearTimeout(timer)
         }
     }, [open])
 
-    // Drag-to-dismiss from handle zone
-    useEffect(() => {
-        const handle = handleRef.current
-        const panel = panelRef.current
-        if (!handle || !panel || !open) return
+    // React touch handlers on the drag handle — no timing issues with refs
+    const onHandleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY
+        setIsDragging(true)
+    }, [])
 
-        let startY = 0
-        let dragOffset = 0
-        let active = false
+    const onHandleTouchMove = useCallback((e: React.TouchEvent) => {
+        const deltaY = e.touches[0].clientY - touchStartY.current
+        setDragOffset(Math.max(0, deltaY))
+    }, [])
 
-        const handleTouchStart = (e: TouchEvent) => {
-            startY = e.touches[0].clientY
-            dragOffset = 0
-            active = true
+    const onHandleTouchEnd = useCallback(() => {
+        if (dragOffset > DISMISS_THRESHOLD) {
+            // Animate off, then close
+            setDragOffset(window.innerHeight)
+            setIsDragging(false) // re-enable transition for animate-out
+            setTimeout(() => {
+                onClose()
+                setDragOffset(0)
+            }, 250)
+        } else {
+            setDragOffset(0)
+            setIsDragging(false)
         }
-
-        const handleTouchMove = (e: TouchEvent) => {
-            if (!active) return
-            e.preventDefault()
-
-            const deltaY = e.touches[0].clientY - startY
-            dragOffset = Math.max(0, deltaY)
-            panel.style.transition = 'none'
-            panel.style.transform = `translateY(${dragOffset}px)`
-        }
-
-        const handleTouchEnd = () => {
-            if (!active) return
-            active = false
-
-            if (dragOffset > DISMISS_THRESHOLD) {
-                panel.style.transition = 'transform 0.25s ease-out'
-                panel.style.transform = `translateY(${window.innerHeight}px)`
-                setTimeout(() => {
-                    onCloseRef.current()
-                    panel.style.transition = ''
-                    panel.style.transform = ''
-                }, 250)
-            } else {
-                panel.style.transition = 'transform 0.25s ease-out'
-                panel.style.transform = ''
-            }
-
-            dragOffset = 0
-        }
-
-        handle.addEventListener('touchstart', handleTouchStart, { passive: true })
-        handle.addEventListener('touchmove', handleTouchMove, { passive: false })
-        handle.addEventListener('touchend', handleTouchEnd, { passive: true })
-        handle.addEventListener('touchcancel', handleTouchEnd, { passive: true })
-
-        return () => {
-            handle.removeEventListener('touchstart', handleTouchStart)
-            handle.removeEventListener('touchmove', handleTouchMove)
-            handle.removeEventListener('touchend', handleTouchEnd)
-            handle.removeEventListener('touchcancel', handleTouchEnd)
-        }
-    }, [open])
+    }, [dragOffset, onClose])
 
     if (typeof document === 'undefined' || !mounted) return null
+
+    // Compute transform: drag offset takes priority over slide animation
+    const transform = dragOffset > 0
+        ? `translateY(${dragOffset}px)`
+        : visible
+            ? 'translateY(0)'
+            : 'translateY(100%)'
+
+    // No transition while actively dragging (follow thumb), animate otherwise
+    const transition = isDragging ? 'none' : 'transform 0.3s ease-out'
 
     return createPortal(
         <>
@@ -130,22 +108,23 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
-                    transform: visible ? 'translateY(0)' : 'translateY(100%)',
-                    transition: 'transform 0.3s ease-out',
+                    transform,
+                    transition,
                 }}>
-                {/* Drag handle — sits above children, can't be overlapped */}
+                {/* Drag handle zone */}
                 <Box
-                    ref={handleRef}
+                    onTouchStart={onHandleTouchStart}
+                    onTouchMove={onHandleTouchMove}
+                    onTouchEnd={onHandleTouchEnd}
+                    onTouchCancel={onHandleTouchEnd}
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        height: 28,
+                        height: 32,
                         cursor: 'grab',
                         flexShrink: 0,
                         touchAction: 'none',
-                        position: 'relative',
-                        zIndex: 1,
                     }}>
                     <Box
                         sx={{
@@ -156,7 +135,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                         }}
                     />
                 </Box>
-                {/* Children wrapper — takes remaining space, can't overlap handle */}
+                {/* Children wrapper */}
                 <Box
                     sx={{
                         display: 'flex',
