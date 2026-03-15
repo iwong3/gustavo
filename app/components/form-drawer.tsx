@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom'
 
 const HEADER_HEIGHT = 56
 const DISMISS_THRESHOLD = 120
-const SCROLL_LOCK_TIMEOUT = 300
 
 type Props = {
     open: boolean
@@ -15,32 +14,12 @@ type Props = {
     children: React.ReactNode
 }
 
-/**
- * Walk from the touch target up the DOM tree. If any scrollable ancestor
- * has scrollTop > 0, the user is mid-scroll and we must yield to native scrolling.
- * This is the standard "scrollTop gating" algorithm used by vaul, MUI SwipeableDrawer, etc.
- */
-function shouldDrag(target: EventTarget | null, panelEl: HTMLElement): boolean {
-    let el = target as HTMLElement | null
-    while (el && el !== panelEl) {
-        const style = window.getComputedStyle(el)
-        const isScrollable =
-            (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
-            el.scrollHeight > el.clientHeight
-        if (isScrollable && el.scrollTop > 0) {
-            return false
-        }
-        el = el.parentElement
-    }
-    return true
-}
-
 export default function FormDrawer({ open, onClose, children }: Props) {
     const panelRef = useRef<HTMLDivElement>(null)
+    const handleRef = useRef<HTMLDivElement>(null)
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
 
-    // Stable ref for onClose so touch handlers don't go stale
     const onCloseRef = useRef(onClose)
     onCloseRef.current = onClose
 
@@ -58,81 +37,36 @@ export default function FormDrawer({ open, onClose, children }: Props) {
         }
     }, [open])
 
-    // ── Touch gesture handling ───────────────────────────────────────────
+    // Drag-to-dismiss: only from the handle zone
     useEffect(() => {
+        const handle = handleRef.current
         const panel = panelRef.current
-        if (!panel || !open) return
+        if (!handle || !panel || !open) return
 
         let startY = 0
         let dragOffset = 0
-        let decided = false       // Have we classified this gesture?
-        let dragging = false      // Is it a drag (vs scroll)?
-        let lastScrollTime = 0    // For scroll lock timeout
-
-        // Track when content scrolls — suppress drag briefly after
-        const handleScroll = () => {
-            lastScrollTime = Date.now()
-        }
-
-        // Attach scroll listener to all scrollable descendants
-        const scrollables: HTMLElement[] = []
-        panel.querySelectorAll('*').forEach((el) => {
-            const style = window.getComputedStyle(el)
-            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                const htmlEl = el as HTMLElement
-                scrollables.push(htmlEl)
-                htmlEl.addEventListener('scroll', handleScroll, { passive: true })
-            }
-        })
+        let active = false
 
         const handleTouchStart = (e: TouchEvent) => {
             startY = e.touches[0].clientY
             dragOffset = 0
-            decided = false
-            dragging = false
+            active = true
+            // Kill the CSS transition so drag feels immediate
+            panel.style.transition = 'none'
         }
 
         const handleTouchMove = (e: TouchEvent) => {
-            const currentY = e.touches[0].clientY
-            const deltaY = currentY - startY
-
-            if (!decided) {
-                // Wait for enough movement to decide
-                if (Math.abs(deltaY) < 8) return
-
-                // Scroll lock: if content was scrolling recently, don't drag
-                if (Date.now() - lastScrollTime < SCROLL_LOCK_TIMEOUT) {
-                    decided = true
-                    dragging = false
-                    return
-                }
-
-                // Walk from touch target up — if any scrollable ancestor has scrollTop > 0, yield
-                if (deltaY > 0 && shouldDrag(e.target, panel)) {
-                    decided = true
-                    dragging = true
-                } else {
-                    decided = true
-                    dragging = false
-                    return
-                }
-            }
-
-            if (!dragging) return
-
-            // We've committed to dragging — suppress native scroll
+            if (!active) return
             e.preventDefault()
 
+            const deltaY = e.touches[0].clientY - startY
             dragOffset = Math.max(0, deltaY)
-            panel.style.transition = 'none'
             panel.style.transform = `translateY(${dragOffset}px)`
         }
 
         const handleTouchEnd = () => {
-            if (!dragging) {
-                decided = false
-                return
-            }
+            if (!active) return
+            active = false
 
             if (dragOffset > DISMISS_THRESHOLD) {
                 // Animate off-screen, then close
@@ -150,21 +84,18 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             }
 
             dragOffset = 0
-            decided = false
-            dragging = false
         }
 
-        panel.addEventListener('touchstart', handleTouchStart, { passive: true })
-        panel.addEventListener('touchmove', handleTouchMove, { passive: false })
-        panel.addEventListener('touchend', handleTouchEnd, { passive: true })
-        panel.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+        handle.addEventListener('touchstart', handleTouchStart, { passive: true })
+        handle.addEventListener('touchmove', handleTouchMove, { passive: false })
+        handle.addEventListener('touchend', handleTouchEnd, { passive: true })
+        handle.addEventListener('touchcancel', handleTouchEnd, { passive: true })
 
         return () => {
-            panel.removeEventListener('touchstart', handleTouchStart)
-            panel.removeEventListener('touchmove', handleTouchMove)
-            panel.removeEventListener('touchend', handleTouchEnd)
-            panel.removeEventListener('touchcancel', handleTouchEnd)
-            scrollables.forEach((el) => el.removeEventListener('scroll', handleScroll))
+            handle.removeEventListener('touchstart', handleTouchStart)
+            handle.removeEventListener('touchmove', handleTouchMove)
+            handle.removeEventListener('touchend', handleTouchEnd)
+            handle.removeEventListener('touchcancel', handleTouchEnd)
         }
     }, [open])
 
@@ -205,14 +136,17 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     transform: visible ? 'translateY(0)' : 'translateY(100%)',
                     transition: 'transform 0.3s ease-out',
                 }}>
-                {/* Drag handle */}
+                {/* Drag handle zone — tall enough to grab easily */}
                 <Box
+                    ref={handleRef}
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
-                        py: 1,
+                        alignItems: 'center',
+                        height: 28,
                         cursor: 'grab',
                         flexShrink: 0,
+                        touchAction: 'none',
                     }}>
                     <Box
                         sx={{
