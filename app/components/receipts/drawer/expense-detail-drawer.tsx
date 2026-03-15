@@ -1,7 +1,7 @@
 'use client'
 
-import { Box, Drawer } from '@mui/material'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Box } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
 import { colors } from '@/lib/colors'
@@ -21,6 +21,7 @@ import { DrawerMetadataFooter } from './drawer-metadata-footer'
 
 import ExpenseFormDialog from 'components/expense-form-dialog'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
+import FormDrawer from 'components/form-drawer'
 
 import type { Expense } from '@/lib/types'
 
@@ -66,16 +67,6 @@ export const ExpenseDetailDrawer = ({
         [expense, allExpenses]
     )
 
-    // Swipe-to-close on drag handle only
-    const touchStartY = useRef(0)
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        touchStartY.current = e.touches[0].clientY
-    }, [])
-    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        const deltaY = e.changedTouches[0].clientY - touchStartY.current
-        if (deltaY > 50) onClose()
-    }, [onClose])
-
     if (!expense) return null
 
     const costUsd = getUsdValue(expense)
@@ -93,57 +84,7 @@ export const ExpenseDetailDrawer = ({
 
     return (
         <>
-            <Drawer
-                anchor="bottom"
-                open={open}
-                onClose={onClose}
-                ModalProps={{
-                    keepMounted: false,
-                    disableEnforceFocus: editDialogOpen || deleteDialogOpen,
-                    slotProps: {
-                        backdrop: {
-                            sx: {
-                                backgroundColor: 'rgba(0,0,0,0.25)',
-                            },
-                        },
-                    },
-                }}
-                PaperProps={{
-                    sx: {
-                        maxHeight: '92vh',
-                        borderTopLeftRadius: '12px',
-                        borderTopRightRadius: '12px',
-                        backgroundColor: colors.primaryWhite,
-                        overflow: 'hidden',
-                        borderTop: `2px solid ${colors.primaryBlack}`,
-                        boxShadow: `0px -3px 0px ${colors.primaryBlack}`,
-                        display: 'flex',
-                        flexDirection: 'column',
-                    },
-                }}>
-                {/* Drag handle — swipe down here to close */}
-                <Box
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        pt: 1.5,
-                        pb: 0.5,
-                        flexShrink: 0,
-                        cursor: 'grab',
-                    }}>
-                    <Box
-                        sx={{
-                            width: 36,
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: colors.primaryBlack,
-                            opacity: 0.3,
-                        }}
-                    />
-                </Box>
-
+            <FormDrawer open={open} onClose={onClose}>
                 {/* Scrollable content */}
                 <Box
                     sx={{
@@ -219,7 +160,7 @@ export const ExpenseDetailDrawer = ({
                         totalDays={isWithinTrip ? totalDays : null}
                     />
                 </Box>
-            </Drawer>
+            </FormDrawer>
 
             {/* Edit dialog */}
             <ExpenseFormDialog
