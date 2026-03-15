@@ -19,11 +19,12 @@ export default function FormDrawer({ open, onClose, children }: Props) {
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
 
-    // Drag state — use refs for perf, only setState for final render
+    // Drag state refs
     const dragOffsetRef = useRef(0)
     const touchStartY = useRef(0)
     const gestureDecided = useRef(false)
     const gestureDragging = useRef(false)
+    const lockedScrollContainer = useRef<HTMLElement | null>(null)
     const onCloseRef = useRef(onClose)
     onCloseRef.current = onClose
 
@@ -31,7 +32,6 @@ export default function FormDrawer({ open, onClose, children }: Props) {
     useEffect(() => {
         if (open) {
             setMounted(true)
-            // Trigger slide-up on next frame after mount
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setVisible(true)
@@ -39,7 +39,6 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             })
         } else {
             setVisible(false)
-            // Unmount after transition completes
             const timer = setTimeout(() => setMounted(false), 300)
             return () => clearTimeout(timer)
         }
@@ -58,23 +57,14 @@ export default function FormDrawer({ open, onClose, children }: Props) {
         return null
     }, [])
 
-    // Apply drag offset directly to DOM for performance (no React re-renders)
     const applyDragOffset = useCallback((offset: number, animate: boolean) => {
         const panel = panelRef.current
         if (!panel) return
-        if (animate) {
-            panel.style.transition = 'transform 0.25s ease-out'
-        } else {
-            panel.style.transition = 'none'
-        }
-        if (offset > 0) {
-            panel.style.transform = `translateY(${offset}px)`
-        } else {
-            panel.style.transform = ''
-        }
+        panel.style.transition = animate ? 'transform 0.25s ease-out' : 'none'
+        panel.style.transform = offset > 0 ? `translateY(${offset}px)` : ''
     }, [])
 
-    // Touch event listeners — capture phase to intercept before scroll container
+    // Touch event listeners
     useEffect(() => {
         const panel = panelRef.current
         if (!panel || !open) return
@@ -98,6 +88,12 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                 if (deltaY > 0 && scrollTop <= 0) {
                     gestureDecided.current = true
                     gestureDragging.current = true
+                    // Lock the scroll container to prevent it from scrolling
+                    if (scrollContainer) {
+                        lockedScrollContainer.current = scrollContainer
+                        scrollContainer.style.overflow = 'hidden'
+                        scrollContainer.style.touchAction = 'none'
+                    }
                 } else {
                     gestureDecided.current = true
                     gestureDragging.current = false
@@ -108,25 +104,33 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             if (!gestureDragging.current) return
 
             e.preventDefault()
-            e.stopPropagation()
 
             const offset = Math.max(0, deltaY)
             dragOffsetRef.current = offset
             applyDragOffset(offset, false)
         }
 
+        const unlockScroll = () => {
+            if (lockedScrollContainer.current) {
+                lockedScrollContainer.current.style.overflow = ''
+                lockedScrollContainer.current.style.touchAction = ''
+                lockedScrollContainer.current = null
+            }
+        }
+
         const handleTouchEnd = () => {
             if (gestureDragging.current) {
                 if (dragOffsetRef.current > DISMISS_THRESHOLD) {
-                    // Animate off-screen then close
                     applyDragOffset(window.innerHeight, true)
                     setTimeout(() => {
+                        unlockScroll()
                         onCloseRef.current()
                         applyDragOffset(0, false)
                     }, 250)
                 } else {
-                    // Snap back
                     applyDragOffset(0, true)
+                    // Restore scroll after snap-back animation
+                    setTimeout(unlockScroll, 250)
                 }
                 dragOffsetRef.current = 0
             }
@@ -134,15 +138,17 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             gestureDragging.current = false
         }
 
-        // Use capture phase so we see events before the scroll container
-        panel.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true })
-        panel.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
-        panel.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true })
+        panel.addEventListener('touchstart', handleTouchStart, { passive: true })
+        panel.addEventListener('touchmove', handleTouchMove, { passive: false })
+        panel.addEventListener('touchend', handleTouchEnd, { passive: true })
+        panel.addEventListener('touchcancel', handleTouchEnd, { passive: true })
 
         return () => {
-            panel.removeEventListener('touchstart', handleTouchStart, { capture: true })
-            panel.removeEventListener('touchmove', handleTouchMove, { capture: true })
-            panel.removeEventListener('touchend', handleTouchEnd, { capture: true })
+            panel.removeEventListener('touchstart', handleTouchStart)
+            panel.removeEventListener('touchmove', handleTouchMove)
+            panel.removeEventListener('touchend', handleTouchEnd)
+            panel.removeEventListener('touchcancel', handleTouchEnd)
+            unlockScroll()
         }
     }, [open, findScrollContainer, applyDragOffset])
 
