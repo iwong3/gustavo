@@ -2,11 +2,12 @@
 
 import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 const HEADER_HEIGHT = 56
 const DISMISS_THRESHOLD = 120
+const SCROLL_LOCK_TIMEOUT = 300
 
 type Props = {
     open: boolean
@@ -14,28 +15,41 @@ type Props = {
     children: React.ReactNode
 }
 
+/**
+ * Walk from the touch target up the DOM tree. If any scrollable ancestor
+ * has scrollTop > 0, the user is mid-scroll and we must yield to native scrolling.
+ * This is the standard "scrollTop gating" algorithm used by vaul, MUI SwipeableDrawer, etc.
+ */
+function shouldDrag(target: EventTarget | null, panelEl: HTMLElement): boolean {
+    let el = target as HTMLElement | null
+    while (el && el !== panelEl) {
+        const style = window.getComputedStyle(el)
+        const isScrollable =
+            (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+            el.scrollHeight > el.clientHeight
+        if (isScrollable && el.scrollTop > 0) {
+            return false
+        }
+        el = el.parentElement
+    }
+    return true
+}
+
 export default function FormDrawer({ open, onClose, children }: Props) {
     const panelRef = useRef<HTMLDivElement>(null)
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
 
-    // Drag state refs
-    const dragOffsetRef = useRef(0)
-    const touchStartY = useRef(0)
-    const gestureDecided = useRef(false)
-    const gestureDragging = useRef(false)
-    const lockedScrollContainer = useRef<HTMLElement | null>(null)
+    // Stable ref for onClose so touch handlers don't go stale
     const onCloseRef = useRef(onClose)
     onCloseRef.current = onClose
 
-    // Mount/unmount with animation
+    // Mount/unmount with slide animation
     useEffect(() => {
         if (open) {
             setMounted(true)
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setVisible(true)
-                })
+                requestAnimationFrame(() => setVisible(true))
             })
         } else {
             setVisible(false)
@@ -44,98 +58,100 @@ export default function FormDrawer({ open, onClose, children }: Props) {
         }
     }, [open])
 
-    const findScrollContainer = useCallback((): HTMLElement | null => {
-        if (!panelRef.current) return null
-        const candidates = panelRef.current.querySelectorAll('*')
-        for (let i = 0; i < candidates.length; i++) {
-            const el = candidates[i] as HTMLElement
-            const style = window.getComputedStyle(el)
-            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                return el
-            }
-        }
-        return null
-    }, [])
-
-    const applyDragOffset = useCallback((offset: number, animate: boolean) => {
-        const panel = panelRef.current
-        if (!panel) return
-        panel.style.transition = animate ? 'transform 0.25s ease-out' : 'none'
-        panel.style.transform = offset > 0 ? `translateY(${offset}px)` : ''
-    }, [])
-
-    // Touch event listeners
+    // ── Touch gesture handling ───────────────────────────────────────────
     useEffect(() => {
         const panel = panelRef.current
         if (!panel || !open) return
 
+        let startY = 0
+        let dragOffset = 0
+        let decided = false       // Have we classified this gesture?
+        let dragging = false      // Is it a drag (vs scroll)?
+        let lastScrollTime = 0    // For scroll lock timeout
+
+        // Track when content scrolls — suppress drag briefly after
+        const handleScroll = () => {
+            lastScrollTime = Date.now()
+        }
+
+        // Attach scroll listener to all scrollable descendants
+        const scrollables: HTMLElement[] = []
+        panel.querySelectorAll('*').forEach((el) => {
+            const style = window.getComputedStyle(el)
+            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                const htmlEl = el as HTMLElement
+                scrollables.push(htmlEl)
+                htmlEl.addEventListener('scroll', handleScroll, { passive: true })
+            }
+        })
+
         const handleTouchStart = (e: TouchEvent) => {
-            touchStartY.current = e.touches[0].clientY
-            gestureDecided.current = false
-            gestureDragging.current = false
-            dragOffsetRef.current = 0
+            startY = e.touches[0].clientY
+            dragOffset = 0
+            decided = false
+            dragging = false
         }
 
         const handleTouchMove = (e: TouchEvent) => {
-            const deltaY = e.touches[0].clientY - touchStartY.current
+            const currentY = e.touches[0].clientY
+            const deltaY = currentY - startY
 
-            if (!gestureDecided.current) {
+            if (!decided) {
+                // Wait for enough movement to decide
                 if (Math.abs(deltaY) < 8) return
 
-                const scrollContainer = findScrollContainer()
-                const scrollTop = scrollContainer?.scrollTop ?? 0
+                // Scroll lock: if content was scrolling recently, don't drag
+                if (Date.now() - lastScrollTime < SCROLL_LOCK_TIMEOUT) {
+                    decided = true
+                    dragging = false
+                    return
+                }
 
-                if (deltaY > 0 && scrollTop <= 0) {
-                    gestureDecided.current = true
-                    gestureDragging.current = true
-                    // Lock the scroll container to prevent it from scrolling
-                    if (scrollContainer) {
-                        lockedScrollContainer.current = scrollContainer
-                        scrollContainer.style.overflow = 'hidden'
-                        scrollContainer.style.touchAction = 'none'
-                    }
+                // Walk from touch target up — if any scrollable ancestor has scrollTop > 0, yield
+                if (deltaY > 0 && shouldDrag(e.target, panel)) {
+                    decided = true
+                    dragging = true
                 } else {
-                    gestureDecided.current = true
-                    gestureDragging.current = false
+                    decided = true
+                    dragging = false
                     return
                 }
             }
 
-            if (!gestureDragging.current) return
+            if (!dragging) return
 
+            // We've committed to dragging — suppress native scroll
             e.preventDefault()
 
-            const offset = Math.max(0, deltaY)
-            dragOffsetRef.current = offset
-            applyDragOffset(offset, false)
-        }
-
-        const unlockScroll = () => {
-            if (lockedScrollContainer.current) {
-                lockedScrollContainer.current.style.overflow = ''
-                lockedScrollContainer.current.style.touchAction = ''
-                lockedScrollContainer.current = null
-            }
+            dragOffset = Math.max(0, deltaY)
+            panel.style.transition = 'none'
+            panel.style.transform = `translateY(${dragOffset}px)`
         }
 
         const handleTouchEnd = () => {
-            if (gestureDragging.current) {
-                if (dragOffsetRef.current > DISMISS_THRESHOLD) {
-                    applyDragOffset(window.innerHeight, true)
-                    setTimeout(() => {
-                        unlockScroll()
-                        onCloseRef.current()
-                        applyDragOffset(0, false)
-                    }, 250)
-                } else {
-                    applyDragOffset(0, true)
-                    // Restore scroll after snap-back animation
-                    setTimeout(unlockScroll, 250)
-                }
-                dragOffsetRef.current = 0
+            if (!dragging) {
+                decided = false
+                return
             }
-            gestureDecided.current = false
-            gestureDragging.current = false
+
+            if (dragOffset > DISMISS_THRESHOLD) {
+                // Animate off-screen, then close
+                panel.style.transition = 'transform 0.25s ease-out'
+                panel.style.transform = `translateY(${window.innerHeight}px)`
+                setTimeout(() => {
+                    onCloseRef.current()
+                    panel.style.transition = ''
+                    panel.style.transform = ''
+                }, 250)
+            } else {
+                // Snap back
+                panel.style.transition = 'transform 0.25s ease-out'
+                panel.style.transform = ''
+            }
+
+            dragOffset = 0
+            decided = false
+            dragging = false
         }
 
         panel.addEventListener('touchstart', handleTouchStart, { passive: true })
@@ -148,9 +164,9 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             panel.removeEventListener('touchmove', handleTouchMove)
             panel.removeEventListener('touchend', handleTouchEnd)
             panel.removeEventListener('touchcancel', handleTouchEnd)
-            unlockScroll()
+            scrollables.forEach((el) => el.removeEventListener('scroll', handleScroll))
         }
-    }, [open, findScrollContainer, applyDragOffset])
+    }, [open])
 
     if (typeof document === 'undefined' || !mounted) return null
 
