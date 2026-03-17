@@ -1,0 +1,470 @@
+'use client'
+
+import { cardSx, colors } from '@/lib/colors'
+import type { Exercise, MuscleGroupWithParents } from '@/lib/health-types'
+import { GROUP_TARGETS, isTarget } from '@/lib/health/muscle-groups'
+import {
+    fieldSx,
+    labelSx,
+    primaryButtonSx,
+    secondaryButtonSx,
+} from '@/lib/form-styles'
+import { useRegisterFab } from 'providers/fab-provider'
+import {
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Switch,
+    TextField,
+    Typography,
+} from '@mui/material'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { useCallback, useEffect, useState } from 'react'
+import FormDrawer from 'components/form-drawer'
+
+export default function ExercisesPage() {
+    const [exercises, setExercises] = useState<Exercise[]>([])
+    const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>([])
+    const [loading, setLoading] = useState(true)
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [editingExercise, setEditingExercise] = useState<Exercise | null>(null)
+
+    const fetchData = useCallback(() => {
+        Promise.all([
+            fetch('/api/health/exercises').then((r) => r.json()),
+            fetch('/api/health/muscle-groups').then((r) => r.json()),
+        ])
+            .then(([ex, mg]) => {
+                setExercises(ex)
+                setMuscleGroups(mg)
+            })
+            .catch((err) => console.error('Failed to load:', err))
+            .finally(() => setLoading(false))
+    }, [])
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
+
+    const openAdd = useCallback(() => {
+        setEditingExercise(null)
+        setDrawerOpen(true)
+    }, [])
+
+    const openEdit = useCallback((exercise: Exercise) => {
+        setEditingExercise(exercise)
+        setDrawerOpen(true)
+    }, [])
+
+    const handleDelete = useCallback(
+        async (id: number) => {
+            const res = await fetch(`/api/health/exercises/${id}`, { method: 'DELETE' })
+            if (res.ok) fetchData()
+        },
+        [fetchData]
+    )
+
+    useRegisterFab(openAdd)
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
+            </Box>
+        )
+    }
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                maxWidth: 600,
+                paddingX: 2,
+                paddingY: 2,
+                gap: 2,
+            }}>
+            <Typography
+                sx={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-serif)',
+                }}>
+                Exercises
+            </Typography>
+
+            {exercises.length === 0 ? (
+                <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
+                    No exercises yet. Tap + to add one.
+                </Typography>
+            ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {exercises.map((exercise) => (
+                        <Box
+                            key={exercise.id}
+                            sx={{
+                                padding: '12px 14px',
+                                ...cardSx,
+                            }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                            {exercise.name}
+                                        </Typography>
+                                        {exercise.isBodyweight && (
+                                            <Chip
+                                                label="BW"
+                                                size="small"
+                                                sx={{
+                                                    'height': 20,
+                                                    'fontSize': 10,
+                                                    'fontWeight': 700,
+                                                    'backgroundColor': '#e3f2fd',
+                                                    'border': '1px solid #1565c0',
+                                                    'borderRadius': '3px',
+                                                    '& .MuiChip-label': { px: 0.75 },
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {exercise.muscleGroups.map((mg) => {
+                                            const isTargetMuscle = isTarget(mg.name)
+                                            return (
+                                                <Chip
+                                                    key={mg.id}
+                                                    label={mg.name}
+                                                    size="small"
+                                                    sx={{
+                                                        'height': 22,
+                                                        'fontSize': 11,
+                                                        'fontWeight': isTargetMuscle ? 500 : 600,
+                                                        'backgroundColor': isTargetMuscle ? '#f5f0eb' : '#fff8e1',
+                                                        'border': `1px solid ${isTargetMuscle ? '#a0612a' : '#b57b00'}`,
+                                                        'borderRadius': '3px',
+                                                        '& .MuiChip-label': { px: 0.75 },
+                                                    }}
+                                                />
+                                            )
+                                        })}
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                                    <Box
+                                        onClick={() => openEdit(exercise)}
+                                        sx={{
+                                            'cursor': 'pointer',
+                                            'p': 0.5,
+                                            'borderRadius': '4px',
+                                            '&:active': { backgroundColor: `${colors.primaryYellow}40` },
+                                        }}>
+                                        <IconPencil size={16} stroke={2} color={colors.primaryBrown} />
+                                    </Box>
+                                    <Box
+                                        onClick={() => handleDelete(exercise.id)}
+                                        sx={{
+                                            'cursor': 'pointer',
+                                            'p': 0.5,
+                                            'borderRadius': '4px',
+                                            '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                        }}>
+                                        <IconTrash size={16} stroke={2} color={colors.primaryRed} />
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Box>
+                    ))}
+                </Box>
+            )}
+
+            <ExerciseFormDrawer
+                open={drawerOpen}
+                onClose={() => {
+                    setDrawerOpen(false)
+                    setEditingExercise(null)
+                }}
+                muscleGroups={muscleGroups}
+                editingExercise={editingExercise}
+                onSaved={fetchData}
+            />
+        </Box>
+    )
+}
+
+// ── Exercise Form Drawer ─────────────────────────────────────────────────────
+
+type ExerciseFormDrawerProps = {
+    open: boolean
+    onClose: () => void
+    muscleGroups: MuscleGroupWithParents[]
+    editingExercise: Exercise | null
+    onSaved: () => void
+}
+
+function ExerciseFormDrawer({
+    open,
+    onClose,
+    muscleGroups,
+    editingExercise,
+    onSaved,
+}: ExerciseFormDrawerProps) {
+    const [name, setName] = useState('')
+    const [isBodyweight, setIsBodyweight] = useState(false)
+    const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState('')
+
+    // Groups only (no targets that also appear under groups)
+    const groups = muscleGroups.filter((mg) => !isTarget(mg.name))
+
+    useEffect(() => {
+        if (open) {
+            if (editingExercise) {
+                setName(editingExercise.name)
+                setIsBodyweight(editingExercise.isBodyweight)
+                setSelectedMgIds(new Set(editingExercise.muscleGroups.map((mg) => mg.id)))
+            } else {
+                setName('')
+                setIsBodyweight(false)
+                setSelectedMgIds(new Set())
+            }
+            setError('')
+        }
+    }, [open, editingExercise])
+
+    const toggleMuscle = useCallback(
+        (mgName: string, mgId: number) => {
+            setSelectedMgIds((prev) => {
+                const next = new Set(prev)
+                if (next.has(mgId)) {
+                    next.delete(mgId)
+                    // If deselecting a group, also deselect its targets
+                    if (!isTarget(mgName)) {
+                        const targets = GROUP_TARGETS[mgName] || []
+                        for (const t of targets) {
+                            const tid = muscleGroups.find((g) => g.name === t)?.id
+                            if (tid) next.delete(tid)
+                        }
+                    }
+                } else {
+                    next.add(mgId)
+                    // If selecting a target, auto-select parent group(s)
+                    if (isTarget(mgName)) {
+                        const mg = muscleGroups.find((g) => g.name === mgName)
+                        if (mg && 'parents' in mg) {
+                            for (const p of (mg as MuscleGroupWithParents).parents) {
+                                next.add(p.id)
+                            }
+                        }
+                    }
+                }
+                return next
+            })
+        },
+        [muscleGroups]
+    )
+
+    const handleSubmit = useCallback(async () => {
+        if (!name.trim() || selectedMgIds.size === 0) return
+        setSaving(true)
+        setError('')
+
+        const url = editingExercise
+            ? `/api/health/exercises/${editingExercise.id}`
+            : '/api/health/exercises'
+        const method = editingExercise ? 'PUT' : 'POST'
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    isBodyweight,
+                    muscleGroupIds: Array.from(selectedMgIds),
+                }),
+            })
+
+            if (res.ok) {
+                onSaved()
+                onClose()
+            } else {
+                const data = await res.json()
+                setError(data.error || 'Failed to save')
+            }
+        } catch {
+            setError('Failed to save')
+        } finally {
+            setSaving(false)
+        }
+    }, [name, isBodyweight, selectedMgIds, editingExercise, onSaved, onClose])
+
+    return (
+        <FormDrawer open={open} onClose={onClose}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    overflow: 'hidden',
+                }}>
+                {/* Header */}
+                <Box
+                    sx={{
+                        px: 2.5,
+                        py: 2,
+                        borderBottom: `1px solid ${colors.primaryBlack}20`,
+                    }}>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+                        {editingExercise ? 'Edit Exercise' : 'New Exercise'}
+                    </Typography>
+                </Box>
+
+                {/* Body */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        px: 2.5,
+                        py: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                    }}>
+                    {/* Name */}
+                    <Box>
+                        <Typography sx={labelSx}>Name</Typography>
+                        <TextField
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                            placeholder="Bench Press, Dumbbell Curl..."
+                            sx={fieldSx}
+                        />
+                    </Box>
+
+                    {/* Bodyweight toggle */}
+                    <Box
+                        onClick={() => setIsBodyweight(!isBodyweight)}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            cursor: 'pointer',
+                        }}>
+                        <Switch
+                            checked={isBodyweight}
+                            size="small"
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                    color: colors.primaryBlack,
+                                },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                    backgroundColor: colors.primaryYellow,
+                                },
+                            }}
+                            tabIndex={-1}
+                        />
+                        <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
+                            Bodyweight exercise
+                        </Typography>
+                    </Box>
+
+                    {/* Muscle group selection */}
+                    <Box>
+                        <Typography sx={labelSx}>Muscle Groups</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                            {groups.map((group) => {
+                                const isGroupSelected = selectedMgIds.has(group.id)
+                                const targets = GROUP_TARGETS[group.name] || []
+                                return (
+                                    <Box key={group.id}>
+                                        <Chip
+                                            label={group.name}
+                                            onClick={() => toggleMuscle(group.name, group.id)}
+                                            size="small"
+                                            sx={{
+                                                'height': 30,
+                                                'fontSize': 12,
+                                                'fontWeight': 700,
+                                                'backgroundColor': isGroupSelected ? '#fff8e1' : colors.primaryWhite,
+                                                'border': `1.5px solid ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
+                                                'boxShadow': `1.5px 1.5px 0px ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
+                                                'borderRadius': '4px',
+                                                'cursor': 'pointer',
+                                                'mb': targets.length > 0 && isGroupSelected ? 0.75 : 0,
+                                                '& .MuiChip-label': { px: 1.5 },
+                                            }}
+                                        />
+                                        {targets.length > 0 && isGroupSelected && (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1.5 }}>
+                                                {targets.map((targetName) => {
+                                                    const target = muscleGroups.find((g) => g.name === targetName)
+                                                    if (!target) return null
+                                                    const isTargetSelected = selectedMgIds.has(target.id)
+                                                    return (
+                                                        <Chip
+                                                            key={targetName}
+                                                            label={targetName}
+                                                            onClick={() => toggleMuscle(targetName, target.id)}
+                                                            size="small"
+                                                            sx={{
+                                                                'height': 26,
+                                                                'fontSize': 11,
+                                                                'fontWeight': isTargetSelected ? 700 : 400,
+                                                                'backgroundColor': isTargetSelected ? '#e8c196' : 'transparent',
+                                                                'border': `1px solid ${isTargetSelected ? '#a0612a' : `${colors.primaryBlack}25`}`,
+                                                                'boxShadow': isTargetSelected ? '1px 1px 0px #a0612a' : 'none',
+                                                                'borderRadius': '3px',
+                                                                'cursor': 'pointer',
+                                                                '& .MuiChip-label': { px: 1 },
+                                                            }}
+                                                        />
+                                                    )
+                                                })}
+                                            </Box>
+                                        )}
+                                    </Box>
+                                )
+                            })}
+                        </Box>
+                    </Box>
+
+                    {error && (
+                        <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                            {error}
+                        </Typography>
+                    )}
+                </Box>
+
+                {/* Footer */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: 2,
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    <Button onClick={onClose} disabled={saving} size="large" sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!name.trim() || selectedMgIds.size === 0 || saving}
+                        size="large"
+                        sx={primaryButtonSx}>
+                        {saving ? 'Saving...' : editingExercise ? 'Save' : 'Add'}
+                    </Button>
+                </Box>
+            </Box>
+        </FormDrawer>
+    )
+}

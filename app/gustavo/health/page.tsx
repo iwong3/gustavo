@@ -3,7 +3,7 @@
 import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
-import { IconBarbell, IconPill } from '@tabler/icons-react'
+import { IconBarbell, IconList, IconPill } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -23,10 +23,16 @@ function formatDaysSince(days: number | null): string {
 
 const tools = [
     {
-        name: 'Exercise',
+        name: 'Workouts',
         path: '/gustavo/health/exercise',
         icon: IconBarbell,
         bg: '#dae6a3',
+    },
+    {
+        name: 'Exercises',
+        path: '/gustavo/health/exercises',
+        icon: IconList,
+        bg: '#d4e8f0',
     },
     {
         name: 'Supplements',

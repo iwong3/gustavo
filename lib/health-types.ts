@@ -9,11 +9,32 @@ export type MuscleGroupWithParents = MuscleGroup & {
     parents: MuscleGroup[]  // empty = group-level, populated = target
 }
 
+export type Exercise = {
+    id: number
+    name: string
+    isBodyweight: boolean
+    muscleGroups: MuscleGroup[]
+}
+
+export type WorkoutExerciseSet = {
+    setNumber: number
+    reps: number | null
+}
+
+export type WorkoutExercise = {
+    id: number
+    exercise: Exercise
+    weightLbs: number | null
+    sortOrder: number
+    sets: WorkoutExerciseSet[]
+}
+
 export type Workout = {
     id: number
     date: string            // ISO YYYY-MM-DD
     notes: string | null
     muscleGroups: MuscleGroup[]
+    exercises: WorkoutExercise[]  // empty if none logged
     createdAt: string       // ISO timestamp
 }
 

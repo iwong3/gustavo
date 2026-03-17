@@ -9,6 +9,7 @@ import {
     IconChevronRight,
     IconHeartbeat,
     IconHome,
+    IconList,
     IconPill,
     IconPlaneDeparture,
     IconSettings,
@@ -394,7 +395,15 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     onClick={onClose}
                     sx={tripItemSx(isWithin('/gustavo/health/exercise'))}>
                     <IconBarbell size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
-                    Exercise
+                    Workouts
+                </Box>
+                <Box
+                    component={Link}
+                    href="/gustavo/health/exercises"
+                    onClick={onClose}
+                    sx={tripItemSx(isWithin('/gustavo/health/exercises'))}>
+                    <IconList size={14} stroke={2} color={colors.primaryBrown} />
+                    Exercises
                 </Box>
                 <Box
                     component={Link}

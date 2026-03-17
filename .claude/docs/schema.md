@@ -85,6 +85,74 @@ audit_log
   new_data JSONB
   changed_by BIGINT
   changed_at TIMESTAMPTZ
+
+muscle_groups
+  id BIGINT PK
+  name TEXT (unique)
+  created_at TIMESTAMPTZ
+
+muscle_group_parents
+  id BIGINT PK
+  child_id BIGINT FK -> muscle_groups
+  parent_id BIGINT FK -> muscle_groups
+  UNIQUE(child_id, parent_id)
+
+workouts
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  date DATE
+  notes TEXT
+  created_at, updated_at, deleted_at
+
+workout_muscle_groups
+  id BIGINT PK
+  workout_id BIGINT FK -> workouts (CASCADE)
+  muscle_group_id BIGINT FK -> muscle_groups
+  UNIQUE(workout_id, muscle_group_id)
+
+exercises
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT
+  is_bodyweight BOOLEAN (default false)
+  created_at, updated_at, deleted_at
+  UNIQUE(user_id, name) WHERE deleted_at IS NULL
+
+exercise_muscle_groups
+  id BIGINT PK
+  exercise_id BIGINT FK -> exercises (CASCADE)
+  muscle_group_id BIGINT FK -> muscle_groups
+  UNIQUE(exercise_id, muscle_group_id)
+
+workout_exercises
+  id BIGINT PK
+  workout_id BIGINT FK -> workouts (CASCADE)
+  exercise_id BIGINT FK -> exercises
+  sort_order INT (default 0)
+  created_at TIMESTAMPTZ
+
+workout_exercise_sets
+  id BIGINT PK
+  workout_exercise_id BIGINT FK -> workout_exercises (CASCADE)
+  set_number INT
+  weight_lbs NUMERIC
+  reps INT
+  UNIQUE(workout_exercise_id, set_number)
+
+supplements
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT
+  dosage TEXT
+  is_active BOOLEAN (default true)
+  created_at, updated_at, deleted_at
+
+supplement_logs
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  supplement_id BIGINT FK -> supplements
+  date DATE
+  created_at, updated_at
 ```
 
 ## Relationships
@@ -241,3 +309,17 @@ WHERE email = $1 AND deleted_at IS NULL;
 | idx_expenses_category (partial) | expenses | Filter by category |
 | idx_expense_participants_expense_id | expense_participants | Participants per expense |
 | idx_expense_participants_user_id | expense_participants | Expenses per participant |
+| idx_workouts_user_id | workouts | Workouts per user |
+| idx_workouts_user_date | workouts | Workouts by user + date |
+| idx_workouts_deleted_at (partial) | workouts | Filter active workouts |
+| idx_workout_muscle_groups_workout | workout_muscle_groups | Muscle groups per workout |
+| idx_workout_muscle_groups_muscle | workout_muscle_groups | Workouts per muscle group |
+| idx_muscle_group_parents_child | muscle_group_parents | Parents of a muscle group |
+| idx_muscle_group_parents_parent | muscle_group_parents | Children of a parent group |
+| idx_exercises_user_name (partial, unique) | exercises | Unique exercise name per user |
+| idx_exercises_user | exercises | Exercises per user |
+| idx_exercise_muscle_groups_exercise | exercise_muscle_groups | Muscle groups per exercise |
+| idx_exercise_muscle_groups_muscle | exercise_muscle_groups | Exercises per muscle group |
+| idx_workout_exercises_workout | workout_exercises | Exercises per workout |
+| idx_workout_exercises_exercise | workout_exercises | Workouts per exercise |
+| idx_workout_exercise_sets_we | workout_exercise_sets | Sets per workout exercise |
