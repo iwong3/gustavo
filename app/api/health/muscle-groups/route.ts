@@ -23,9 +23,9 @@ export async function GET() {
     )
 
     const muscleGroups: MuscleGroupWithParents[] = rows.map((r) => ({
-        id: r.id,
+        id: Number(r.id),
         name: r.name,
-        parents: r.parents,
+        parents: r.parents.map((p: { id: number; name: string }) => ({ ...p, id: Number(p.id) })),
     }))
 
     return NextResponse.json(muscleGroups)

@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
         )
     }
 
+    // Deduplicate and cast to numbers (frontend may send string IDs from BIGINT columns)
+    const uniqueMgIds = Array.from(new Set(muscleGroupIds.map(Number)))
+
     try {
         const exercise = await withAuditUser(authUser.userId, async (client) => {
             const res = await client.query(
@@ -65,12 +68,12 @@ export async function POST(request: NextRequest) {
             const exerciseId = res.rows[0].id
 
             // Insert muscle group associations
-            const values = muscleGroupIds
+            const values = uniqueMgIds
                 .map((_: number, i: number) => `($1, $${i + 2})`)
                 .join(', ')
             await client.query(
                 `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
-                [exerciseId, ...muscleGroupIds]
+                [exerciseId, ...uniqueMgIds]
             )
 
             // Fetch muscle groups for response

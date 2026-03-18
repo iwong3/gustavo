@@ -18,9 +18,11 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconCopy, IconDots, IconPencil, IconPlus, IconTrash, IconX, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
+import { IconPlus, IconX, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
+import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
 
 type WorkoutFormData = {
     date: string
@@ -41,7 +43,8 @@ export default function ExercisePage() {
     const [loading, setLoading] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
-    const [menuOpenId, setMenuOpenId] = useState<number | null>(null)
+    const [detailWorkout, setDetailWorkout] = useState<Workout | null>(null)
+    const [detailOpen, setDetailOpen] = useState(false)
 
     const fetchWorkouts = useCallback(() => {
         fetch('/api/health/workouts')
@@ -100,7 +103,6 @@ export default function ExercisePage() {
         async (id: number) => {
             const res = await fetch(`/api/health/workouts/${id}`, { method: 'DELETE' })
             if (res.ok) {
-                setMenuOpenId(null)
                 fetchWorkouts()
             }
         },
@@ -130,9 +132,39 @@ export default function ExercisePage() {
 
     const openEdit = useCallback((workout: Workout) => {
         setEditingWorkout(workout)
-        setMenuOpenId(null)
         setDrawerOpen(true)
     }, [])
+
+    const openDetail = useCallback((workout: Workout) => {
+        setDetailWorkout(workout)
+        setDetailOpen(true)
+    }, [])
+
+    // For each workout + muscle group, compute days since the previous time that group was worked
+    // Returns Map<workoutId, Map<muscleGroupName, daysSincePrevious>>
+    const daysSincePrevMap = useMemo(() => {
+        const result = new Map<number, Map<string, number>>()
+        // Iterate oldest-first, tracking last-seen date per group
+        const lastSeen = new Map<string, string>() // group name → ISO date
+        const sorted = [...workouts].reverse()
+        for (const w of sorted) {
+            const perGroup = new Map<string, number>()
+            for (const mg of w.muscleGroups) {
+                if (isTarget(mg.name)) continue
+                const prev = lastSeen.get(mg.name)
+                if (prev) {
+                    const days = Math.round(
+                        (new Date(w.date + 'T00:00:00').getTime() -
+                         new Date(prev + 'T00:00:00').getTime()) / 86400000
+                    )
+                    perGroup.set(mg.name, days)
+                }
+                lastSeen.set(mg.name, w.date)
+            }
+            result.set(w.id, perGroup)
+        }
+        return result
+    }, [workouts])
 
     const fabCallback = useCallback(() => openAdd(), [openAdd])
     useRegisterFab(fabCallback)
@@ -166,209 +198,185 @@ export default function ExercisePage() {
                 Workouts
             </Typography>
 
-            {/* Workout list */}
+            {/* Workout timeline */}
             {workouts.length === 0 ? (
                 <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
                     No workouts logged yet.
                 </Typography>
             ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {workouts.map((workout) => {
+                <Box sx={{ position: 'relative' }}>
+                    {/* Vertical timeline line */}
+                    <Box sx={{
+                        position: 'absolute',
+                        left: 15, // center of 32px gutter
+                        top: 6, // align with first node center
+                        bottom: 6,
+                        width: 2,
+                        backgroundColor: `${colors.primaryBlack}25`,
+                    }} />
+
+                    {workouts.map((workout, i) => {
                         const parentGroups = workout.muscleGroups.filter((mg) => !isTarget(mg.name))
                         const targets = workout.muscleGroups.filter((mg) => isTarget(mg.name))
                         const d = new Date(workout.date + 'T00:00:00')
                         const weekday = d.toLocaleDateString('en-US', { weekday: 'short' })
                         const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
+
+                        // Days gap to next entry
+                        const daysBetween = i < workouts.length - 1
+                            ? Math.round(
+                                (new Date(workout.date + 'T00:00:00').getTime() -
+                                 new Date(workouts[i + 1].date + 'T00:00:00').getTime()) / 86400000
+                            )
+                            : 0
+
                         return (
-                        <Box
-                            key={workout.id}
-                            sx={{
-                                display: 'flex',
-                                gap: 0,
-                                ...cardSx,
-                                padding: 0,
-                                overflow: 'hidden',
-                                minHeight: 76,
-                            }}>
-                            {/* Date cards — left side */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 0.5,
-                                    minWidth: 56,
-                                    px: 1,
-                                }}>
-                                <Box sx={{
-                                    px: 0.75,
-                                    py: 0.25,
-                                    backgroundColor: colors.primaryYellow,
-                                    border: `1px solid ${colors.primaryBlack}`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    borderRadius: '3px',
-                                    textAlign: 'center',
-                                }}>
-                                    <Typography sx={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1 }}>
-                                        {weekday}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{
-                                    px: 0.75,
-                                    py: 0.25,
-                                    backgroundColor: colors.primaryWhite,
-                                    border: `1px solid ${colors.primaryBlack}`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    borderRadius: '3px',
-                                    textAlign: 'center',
-                                }}>
-                                    <Typography sx={{ fontSize: 11, fontWeight: 800, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                                        {monthDay}
-                                    </Typography>
-                                </Box>
-                            </Box>
-
-                            {/* Content */}
-                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75, padding: '10px 12px' }}>
-                                {/* Parent groups */}
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {parentGroups.map((mg) => (
-                                        <Chip
-                                            key={mg.id}
-                                            label={mg.name}
-                                            size="small"
-                                            sx={{
-                                                'height': 22,
-                                                'fontSize': 11,
-                                                'fontWeight': 700,
-                                                'backgroundColor': selectedBg,
-                                                'border': `1px solid ${selectedBorder}`,
-                                                'boxShadow': `1px 1px 0px ${selectedBorder}`,
-                                                'borderRadius': '3px',
-                                                'color': colors.primaryBlack,
-                                                '& .MuiChip-label': { px: 0.75 },
-                                            }}
-                                        />
-                                    ))}
-                                </Box>
-
-                                {/* Target muscles */}
-                                {targets.length > 0 && (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {targets.map((mg) => (
-                                            <Chip
-                                                key={mg.id}
-                                                label={mg.name}
-                                                size="small"
+                            <Box key={workout.id}>
+                                {/* ── Card row with date aligned to top ── */}
+                                <Box sx={{ display: 'flex' }}>
+                                    {/* Timeline gutter with node */}
+                                    <Box sx={{
+                                        width: 32,
+                                        flexShrink: 0,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        pt: '4px', // align node with date badge center
+                                    }}>
+                                        <Box sx={{
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: '50%',
+                                            backgroundColor: colors.primaryYellow,
+                                            border: `2px solid ${colors.primaryBlack}`,
+                                            zIndex: 1,
+                                        }} />
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        {/* Date label */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+                                            <Box sx={{
+                                                px: 0.75,
+                                                py: 0.25,
+                                                backgroundColor: colors.primaryYellow,
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                borderRadius: '3px',
+                                            }}>
+                                                <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1.2 }}>
+                                                    {weekday}
+                                                </Typography>
+                                            </Box>
+                                            <Typography sx={{
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                color: colors.primaryBrown,
+                                            }}>
+                                                {monthDay}
+                                            </Typography>
+                                        </Box>
+                                        {/* Card */}
+                                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                        <SwipeableRow
+                                            canEdit
+                                            canDelete
+                                            onEdit={() => openEdit(workout)}
+                                            onDelete={() => handleDelete(workout.id)}
+                                            backgroundColor={colors.primaryWhite}
+                                        >
+                                            <Box
+                                                onClick={() => openDetail(workout)}
                                                 sx={{
-                                                    'height': 20,
-                                                    'fontSize': 11,
-                                                    'fontWeight': 500,
-                                                    'backgroundColor': selectedTargetBg,
-                                                    'border': `1px solid ${selectedTargetBorder}`,
-                                                    'boxShadow': `1px 1px 0px ${selectedTargetBorder}`,
-                                                    'borderRadius': '3px',
-                                                    'color': colors.primaryBlack,
-                                                    '& .MuiChip-label': { px: 0.75 },
-                                                }}
-                                            />
-                                        ))}
+                                                    'p': 1.5,
+                                                    'cursor': 'pointer',
+                                                    'backgroundColor': colors.primaryWhite,
+                                                    '&:active': { backgroundColor: colors.secondaryYellow },
+                                                    'transition': 'background-color 150ms ease',
+                                                }}>
+                                                {/* Muscle group chips */}
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                                    {parentGroups.map((mg) => {
+                                                        const workoutDays = daysSincePrevMap.get(workout.id)
+                                                        const days = workoutDays?.get(mg.name)
+                                                        return (
+                                                            <Box key={mg.id} sx={{ position: 'relative' }}>
+                                                                <Chip
+                                                                    label={mg.name}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        'height': 22,
+                                                                        'fontSize': 11,
+                                                                        'fontWeight': 700,
+                                                                        'backgroundColor': selectedBg,
+                                                                        'border': `1px solid ${selectedBorder}`,
+                                                                        'boxShadow': `1px 1px 0px ${selectedBorder}`,
+                                                                        'borderRadius': '3px',
+                                                                        'color': colors.primaryBlack,
+                                                                        '& .MuiChip-label': { px: 0.75 },
+                                                                    }}
+                                                                />
+                                                                {days !== undefined && (
+                                                                    <Box sx={{
+                                                                        position: 'absolute',
+                                                                        bottom: -6,
+                                                                        right: -4,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        minWidth: 16,
+                                                                        height: 14,
+                                                                        px: 0.25,
+                                                                        borderRadius: '7px',
+                                                                        backgroundColor: colors.primaryWhite,
+                                                                        border: `1px solid ${colors.primaryBlack}`,
+                                                                        zIndex: 1,
+                                                                    }}>
+                                                                        <Typography sx={{
+                                                                            fontSize: 8,
+                                                                            fontWeight: 800,
+                                                                            lineHeight: 1,
+                                                                            color: colors.primaryBlack,
+                                                                        }}>
+                                                                            {days}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                )}
+                                                            </Box>
+                                                        )
+                                                    })}
+                                                </Box>
+
+                                            </Box>
+                                        </SwipeableRow>
+                                    </Box>
+                                    </Box>
+                                </Box>
+
+                                {/* ── Days gap indicator ── */}
+                                {i < workouts.length - 1 && (
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        py: daysBetween > 1 ? 1.25 : 0.75,
+                                    }}>
+                                        <Box sx={{ width: 32, flexShrink: 0 }} />
+                                        <Typography sx={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: `${colors.primaryBrown}90`,
+                                            letterSpacing: 0.2,
+                                        }}>
+                                            {daysBetween === 0
+                                                ? 'same day'
+                                                : daysBetween === 1
+                                                    ? '1 day'
+                                                    : `${daysBetween} days`}
+                                        </Typography>
                                     </Box>
                                 )}
-
-                                {/* Notes */}
-                                {workout.notes && (
-                                    <Typography
-                                        sx={{
-                                            fontSize: 12,
-                                            color: colors.primaryBrown,
-                                            fontStyle: 'italic',
-                                        }}>
-                                        {workout.notes}
-                                    </Typography>
-                                )}
                             </Box>
-
-                            {/* Actions menu */}
-                            <Box sx={{ position: 'relative', pt: 0.75, pr: 0.75 }}>
-                                <Box
-                                    onClick={() => setMenuOpenId(menuOpenId === workout.id ? null : workout.id)}
-                                    sx={{
-                                        'cursor': 'pointer',
-                                        'p': 0.5,
-                                        'borderRadius': '4px',
-                                        '&:active': { backgroundColor: `${colors.primaryYellow}40` },
-                                    }}>
-                                    <IconDots size={18} stroke={2} color={colors.primaryBrown} />
-                                </Box>
-                                {menuOpenId === workout.id && (
-                                    <>
-                                        <Box
-                                            onClick={() => setMenuOpenId(null)}
-                                            sx={{ position: 'fixed', inset: 0, zIndex: 10 }}
-                                        />
-                                        <Box
-                                            sx={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                right: 0,
-                                                zIndex: 11,
-                                                ...cardSx,
-                                                backgroundColor: colors.primaryWhite,
-                                                minWidth: 140,
-                                                py: 0.5,
-                                            }}>
-                                            <Box
-                                                onClick={() => openEdit(workout)}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'gap': 1,
-                                                    'px': 1.5,
-                                                    'py': 0.75,
-                                                    'fontSize': 13,
-                                                    'cursor': 'pointer',
-                                                    '&:hover': { backgroundColor: `${colors.primaryYellow}30` },
-                                                }}>
-                                                <IconPencil size={14} /> Edit
-                                            </Box>
-                                            <Box
-                                                onClick={() => handleDuplicate(workout)}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'gap': 1,
-                                                    'px': 1.5,
-                                                    'py': 0.75,
-                                                    'fontSize': 13,
-                                                    'cursor': 'pointer',
-                                                    '&:hover': { backgroundColor: `${colors.primaryYellow}30` },
-                                                }}>
-                                                <IconCopy size={14} /> Duplicate
-                                            </Box>
-                                            <Box
-                                                onClick={() => handleDelete(workout.id)}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'gap': 1,
-                                                    'px': 1.5,
-                                                    'py': 0.75,
-                                                    'fontSize': 13,
-                                                    'cursor': 'pointer',
-                                                    'color': colors.primaryRed,
-                                                    '&:hover': { backgroundColor: `${colors.primaryRed}15` },
-                                                }}>
-                                                <IconTrash size={14} /> Delete
-                                            </Box>
-                                        </Box>
-                                    </>
-                                )}
-                            </Box>
-                        </Box>
-                    )})}
+                        )
+                    })}
                 </Box>
             )}
 
@@ -384,6 +392,17 @@ export default function ExercisePage() {
                 exercises={exercises}
                 editingWorkout={editingWorkout}
                 onExerciseCreated={fetchExercises}
+            />
+
+            {/* Workout detail drawer */}
+            <WorkoutDetailDrawer
+                workout={detailWorkout}
+                open={detailOpen}
+                onClose={() => { setDetailOpen(false); setDetailWorkout(null) }}
+                onEdit={openEdit}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+                allWorkouts={workouts}
             />
         </Box>
     )
@@ -419,9 +438,9 @@ const selectedBg = '#fff8e1'
 const selectedTargetBg = '#e8c196'
 const selectedTargetBorder = '#a0612a'
 
-// Exercise colors — purple palette
-const exerciseBg = '#f3e8ff'
-const exerciseBorder = '#7c3aed'
+// Exercise colors — warm green palette (matches app theme)
+const exerciseBg = '#e8f0dc'
+const exerciseBorder = '#5a6e3c'
 
 function MuscleGroupCard({
     groupName,
@@ -531,7 +550,7 @@ function defaultEntry(exercise: Exercise): FormExerciseEntry {
         exerciseId: exercise.id,
         exerciseName: exercise.name,
         isBodyweight: exercise.isBodyweight,
-        sets: 3,
+        sets: 0,
         reps: '',
         weightLbs: '',
         expandedSets: null,
@@ -958,8 +977,8 @@ function WorkoutFormDrawer({
                                                     'height': 18,
                                                     'fontSize': 9,
                                                     'fontWeight': 700,
-                                                    'backgroundColor': '#e3f2fd',
-                                                    'border': '1px solid #1565c0',
+                                                    'backgroundColor': '#e0ebe0',
+                                                    'border': `1px solid ${colors.primaryBrown}`,
                                                     'borderRadius': '3px',
                                                     '& .MuiChip-label': { px: 0.5 },
                                                 }}
@@ -999,6 +1018,15 @@ function WorkoutFormDrawer({
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                         <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
                                             <CompactField
+                                                label="lbs"
+                                                type="number"
+                                                value={entry.weightLbs}
+                                                onChange={(v) => updateEntry(index, { weightLbs: v })}
+                                                width={64}
+                                                placeholder="–"
+                                                htmlInputProps={{ min: 0, step: 'any' }}
+                                            />
+                                            <CompactField
                                                 label="sets"
                                                 type="number"
                                                 value={entry.sets || ''}
@@ -1007,7 +1035,7 @@ function WorkoutFormDrawer({
                                                     updateEntry(index, { sets: isNaN(val) ? 0 : Math.max(0, val) })
                                                 }}
                                                 width={48}
-                                                placeholder="3"
+                                                placeholder="–"
                                                 htmlInputProps={{ min: 0 }}
                                             />
                                             <CompactField
@@ -1018,15 +1046,6 @@ function WorkoutFormDrawer({
                                                 width={56}
                                                 placeholder="–"
                                                 htmlInputProps={{ min: 0 }}
-                                            />
-                                            <CompactField
-                                                label="lbs"
-                                                type="number"
-                                                value={entry.weightLbs}
-                                                onChange={(v) => updateEntry(index, { weightLbs: v })}
-                                                width={64}
-                                                placeholder="–"
-                                                htmlInputProps={{ min: 0, step: 'any' }}
                                             />
                                             {entry.sets > 1 && (
                                                 <Box

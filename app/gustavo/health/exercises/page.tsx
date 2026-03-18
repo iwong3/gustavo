@@ -15,13 +15,15 @@ import {
     Button,
     Chip,
     CircularProgress,
-    Switch,
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { SlidingToggle } from 'components/sliding-toggle'
+
+const chipShadow = `1px 1px 0px`
 
 export default function ExercisesPage() {
     const [exercises, setExercises] = useState<Exercise[]>([])
@@ -100,17 +102,24 @@ export default function ExercisesPage() {
                     No exercises yet. Tap + to add one.
                 </Typography>
             ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {exercises.map((exercise) => (
-                        <Box
-                            key={exercise.id}
-                            sx={{
-                                padding: '12px 14px',
-                                ...cardSx,
-                            }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Box sx={{ flex: 1 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Box key={exercise.id} sx={{ ...cardSx, overflow: 'hidden' }}>
+                            <SwipeableRow
+                                canEdit
+                                canDelete
+                                onEdit={() => openEdit(exercise)}
+                                onDelete={() => handleDelete(exercise.id)}
+                                backgroundColor={colors.primaryWhite}
+                            >
+                                <Box
+                                    onClick={() => openEdit(exercise)}
+                                    sx={{
+                                        'padding': '12px 14px',
+                                        'cursor': 'pointer',
+                                        '&:active': { backgroundColor: `${colors.primaryYellow}15` },
+                                    }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
                                         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
                                             {exercise.name}
                                         </Typography>
@@ -122,8 +131,9 @@ export default function ExercisesPage() {
                                                     'height': 20,
                                                     'fontSize': 10,
                                                     'fontWeight': 700,
-                                                    'backgroundColor': '#e3f2fd',
-                                                    'border': '1px solid #1565c0',
+                                                    'backgroundColor': '#e0ebe0',
+                                                    'border': `1px solid ${colors.primaryBrown}`,
+                                                    'boxShadow': `${chipShadow} ${colors.primaryBrown}`,
                                                     'borderRadius': '3px',
                                                     '& .MuiChip-label': { px: 0.75 },
                                                 }}
@@ -144,6 +154,7 @@ export default function ExercisesPage() {
                                                         'fontWeight': isTargetMuscle ? 500 : 600,
                                                         'backgroundColor': isTargetMuscle ? '#f5f0eb' : '#fff8e1',
                                                         'border': `1px solid ${isTargetMuscle ? '#a0612a' : '#b57b00'}`,
+                                                        'boxShadow': `${chipShadow} ${isTargetMuscle ? '#a0612a' : '#b57b00'}`,
                                                         'borderRadius': '3px',
                                                         '& .MuiChip-label': { px: 0.75 },
                                                     }}
@@ -152,30 +163,7 @@ export default function ExercisesPage() {
                                         })}
                                     </Box>
                                 </Box>
-
-                                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                                    <Box
-                                        onClick={() => openEdit(exercise)}
-                                        sx={{
-                                            'cursor': 'pointer',
-                                            'p': 0.5,
-                                            'borderRadius': '4px',
-                                            '&:active': { backgroundColor: `${colors.primaryYellow}40` },
-                                        }}>
-                                        <IconPencil size={16} stroke={2} color={colors.primaryBrown} />
-                                    </Box>
-                                    <Box
-                                        onClick={() => handleDelete(exercise.id)}
-                                        sx={{
-                                            'cursor': 'pointer',
-                                            'p': 0.5,
-                                            'borderRadius': '4px',
-                                            '&:active': { backgroundColor: `${colors.primaryRed}20` },
-                                        }}>
-                                        <IconTrash size={16} stroke={2} color={colors.primaryRed} />
-                                    </Box>
-                                </Box>
-                            </Box>
+                            </SwipeableRow>
                         </Box>
                     ))}
                 </Box>
@@ -303,6 +291,9 @@ function ExerciseFormDrawer({
         }
     }, [name, isBodyweight, selectedMgIds, editingExercise, onSaved, onClose])
 
+    // Collect selected groups and their targets for the two-row layout
+    const selectedGroups = groups.filter((g) => selectedMgIds.has(g.id))
+
     return (
         <FormDrawer open={open} onClose={onClose}>
             <Box
@@ -319,7 +310,7 @@ function ExerciseFormDrawer({
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
                         {editingExercise ? 'Edit Exercise' : 'New Exercise'}
                     </Typography>
                 </Box>
@@ -333,7 +324,7 @@ function ExerciseFormDrawer({
                         py: 2,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 2,
+                        gap: 2.5,
                     }}>
                     {/* Name */}
                     <Box>
@@ -349,60 +340,77 @@ function ExerciseFormDrawer({
                     </Box>
 
                     {/* Bodyweight toggle */}
-                    <Box
-                        onClick={() => setIsBodyweight(!isBodyweight)}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            cursor: 'pointer',
-                        }}>
-                        <Switch
-                            checked={isBodyweight}
-                            size="small"
-                            sx={{
-                                '& .MuiSwitch-switchBase.Mui-checked': {
-                                    color: colors.primaryBlack,
-                                },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                    backgroundColor: colors.primaryYellow,
-                                },
-                            }}
-                            tabIndex={-1}
+                    <Box>
+                        <Typography sx={labelSx}>Type</Typography>
+                        <SlidingToggle
+                            value={isBodyweight ? 'bw' : 'weighted'}
+                            options={[
+                                { value: 'weighted', label: 'Weighted' },
+                                { value: 'bw', label: 'Bodyweight' },
+                            ]}
+                            onChange={(v) => setIsBodyweight(v === 'bw')}
+                            fontSize={13}
+                            borderWidth={1}
                         />
-                        <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
-                            Bodyweight exercise
-                        </Typography>
                     </Box>
 
-                    {/* Muscle group selection */}
+                    {/* Muscle group selection — main groups as a chip grid */}
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                             {groups.map((group) => {
                                 const isGroupSelected = selectedMgIds.has(group.id)
-                                const targets = GROUP_TARGETS[group.name] || []
                                 return (
-                                    <Box key={group.id}>
-                                        <Chip
-                                            label={group.name}
-                                            onClick={() => toggleMuscle(group.name, group.id)}
-                                            size="small"
-                                            sx={{
-                                                'height': 30,
-                                                'fontSize': 12,
-                                                'fontWeight': 700,
-                                                'backgroundColor': isGroupSelected ? '#fff8e1' : colors.primaryWhite,
-                                                'border': `1.5px solid ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
-                                                'boxShadow': `1.5px 1.5px 0px ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
-                                                'borderRadius': '4px',
-                                                'cursor': 'pointer',
-                                                'mb': targets.length > 0 && isGroupSelected ? 0.75 : 0,
-                                                '& .MuiChip-label': { px: 1.5 },
-                                            }}
-                                        />
-                                        {targets.length > 0 && isGroupSelected && (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: 1.5 }}>
+                                    <Chip
+                                        key={group.id}
+                                        label={group.name}
+                                        onClick={() => toggleMuscle(group.name, group.id)}
+                                        size="small"
+                                        sx={{
+                                            'height': 30,
+                                            'fontSize': 12,
+                                            'fontWeight': 700,
+                                            'backgroundColor': isGroupSelected ? colors.primaryYellow : colors.primaryWhite,
+                                            'border': `1.5px solid ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
+                                            'boxShadow': `1.5px 1.5px 0px ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
+                                            'borderRadius': '4px',
+                                            'cursor': 'pointer',
+                                            '& .MuiChip-label': { px: 1.5 },
+                                        }}
+                                    />
+                                )
+                            })}
+                        </Box>
+
+                        {/* Target muscles — shown below, grouped by parent */}
+                        {selectedGroups.length > 0 && (
+                            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {selectedGroups.map((group) => {
+                                    const targets = GROUP_TARGETS[group.name] || []
+                                    if (targets.length === 0) return null
+                                    return (
+                                        <Box key={group.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+                                            {/* Parent label */}
+                                            <Typography sx={{
+                                                fontSize: 10,
+                                                fontWeight: 600,
+                                                color: '#b57b00',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: 0.3,
+                                                lineHeight: '26px',
+                                                whiteSpace: 'nowrap',
+                                                minWidth: 'fit-content',
+                                            }}>
+                                                {group.name}
+                                            </Typography>
+                                            <Box sx={{
+                                                width: '1px',
+                                                alignSelf: 'stretch',
+                                                backgroundColor: '#b57b00',
+                                                flexShrink: 0,
+                                                opacity: 0.4,
+                                            }} />
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {targets.map((targetName) => {
                                                     const target = muscleGroups.find((g) => g.name === targetName)
                                                     if (!target) return null
@@ -419,7 +427,7 @@ function ExerciseFormDrawer({
                                                                 'fontWeight': isTargetSelected ? 700 : 400,
                                                                 'backgroundColor': isTargetSelected ? '#e8c196' : 'transparent',
                                                                 'border': `1px solid ${isTargetSelected ? '#a0612a' : `${colors.primaryBlack}25`}`,
-                                                                'boxShadow': isTargetSelected ? '1px 1px 0px #a0612a' : 'none',
+                                                                'boxShadow': isTargetSelected ? `${chipShadow} #a0612a` : 'none',
                                                                 'borderRadius': '3px',
                                                                 'cursor': 'pointer',
                                                                 '& .MuiChip-label': { px: 1 },
@@ -428,11 +436,11 @@ function ExerciseFormDrawer({
                                                     )
                                                 })}
                                             </Box>
-                                        )}
-                                    </Box>
-                                )
-                            })}
-                        </Box>
+                                        </Box>
+                                    )
+                                })}
+                            </Box>
+                        )}
                     </Box>
 
                     {error && (

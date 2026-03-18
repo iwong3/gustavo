@@ -3,7 +3,7 @@
 import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
-import { IconBarbell, IconList, IconPill } from '@tabler/icons-react'
+import { IconBarbell, IconPill, IconStretching } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -31,7 +31,7 @@ const tools = [
     {
         name: 'Exercises',
         path: '/gustavo/health/exercises',
-        icon: IconList,
+        icon: IconStretching,
         bg: '#d4e8f0',
     },
     {

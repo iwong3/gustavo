@@ -30,6 +30,9 @@ export async function PUT(
         )
     }
 
+    // Deduplicate and cast to numbers
+    const uniqueMgIds = Array.from(new Set(muscleGroupIds.map(Number)))
+
     // Verify ownership
     const check = await pool.query(
         'SELECT id FROM exercises WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
@@ -52,12 +55,12 @@ export async function PUT(
                 [exerciseId]
             )
 
-            const values = muscleGroupIds
+            const values = uniqueMgIds
                 .map((_: number, i: number) => `($1, $${i + 2})`)
                 .join(', ')
             await client.query(
                 `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
-                [exerciseId, ...muscleGroupIds]
+                [exerciseId, ...uniqueMgIds]
             )
 
             // Fetch updated data
