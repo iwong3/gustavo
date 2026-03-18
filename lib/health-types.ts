@@ -56,5 +56,19 @@ export type SupplementLog = {
     supplementId: number
     supplementName: string
     date: string            // ISO YYYY-MM-DD
+    quantity: number
     createdAt: string       // ISO timestamp
+}
+
+export type WorkoutPreset = {
+    id: number
+    name: string
+    muscleGroups: MuscleGroup[]
+    exercises: Exercise[]
+}
+
+export type SupplementPreset = {
+    id: number
+    name: string
+    supplements: Supplement[]
 }

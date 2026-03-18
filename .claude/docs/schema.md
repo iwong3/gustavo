@@ -152,7 +152,36 @@ supplement_logs
   user_id BIGINT FK -> users
   supplement_id BIGINT FK -> supplements
   date DATE
+  quantity INT (default 1)
   created_at, updated_at
+  UNIQUE(user_id, supplement_id, date)
+
+presets
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT
+  type TEXT ('workout' | 'supplement')
+  created_at, updated_at, deleted_at
+  UNIQUE(user_id, name, type) WHERE deleted_at IS NULL
+
+preset_muscle_groups
+  id BIGINT PK
+  preset_id BIGINT FK -> presets (CASCADE)
+  muscle_group_id BIGINT FK -> muscle_groups
+  UNIQUE(preset_id, muscle_group_id)
+
+preset_exercises
+  id BIGINT PK
+  preset_id BIGINT FK -> presets (CASCADE)
+  exercise_id BIGINT FK -> exercises
+  sort_order INT (default 0)
+  UNIQUE(preset_id, exercise_id)
+
+preset_supplements
+  id BIGINT PK
+  preset_id BIGINT FK -> presets (CASCADE)
+  supplement_id BIGINT FK -> supplements
+  UNIQUE(preset_id, supplement_id)
 ```
 
 ## Relationships

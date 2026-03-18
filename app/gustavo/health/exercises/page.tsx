@@ -25,6 +25,99 @@ import { SlidingToggle } from 'components/sliding-toggle'
 
 const chipShadow = `1px 1px 0px`
 
+// Selected state colors — warm palette (matches workout form)
+const selectedBorder = '#b57b00'
+const selectedBg = '#fff8e1'
+const selectedTargetBg = '#e8c196'
+const selectedTargetBorder = '#a0612a'
+
+function MuscleGroupCard({
+    groupName,
+    muscleGroups,
+    selectedIds,
+    onToggle,
+    sx: sxOverride,
+}: {
+    groupName: string
+    muscleGroups: MuscleGroupWithParents[]
+    selectedIds: Set<number>
+    onToggle: (name: string, id: number) => void
+    sx?: Record<string, unknown>
+}) {
+    const group = muscleGroups.find((g) => g.name === groupName)
+    if (!group) return null
+
+    const isGroupSelected = selectedIds.has(Number(group.id))
+    const targets = GROUP_TARGETS[groupName] || []
+
+    return (
+        <Box
+            sx={{
+                'display': 'flex',
+                'flexDirection': 'column',
+                'gap': 1,
+                'padding': '10px',
+                'backgroundColor': isGroupSelected ? selectedBg : colors.primaryWhite,
+                'border': `1.5px solid ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
+                'boxShadow': `2px 2px 0px ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
+                'borderRadius': '4px',
+                'cursor': 'pointer',
+                'transition': 'background-color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s',
+                '&:active': {
+                    boxShadow: `1px 1px 0px ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
+                    transform: 'translate(1px, 1px)',
+                },
+                ...sxOverride,
+            }}
+            onClick={() => onToggle(groupName, group.id)}>
+            <Typography
+                sx={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    color: colors.primaryBlack,
+                }}>
+                {groupName}
+            </Typography>
+
+            {targets.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                    {targets.map((targetName) => {
+                        const target = muscleGroups.find((g) => g.name === targetName)
+                        if (!target) return null
+                        const isTargetSelected = selectedIds.has(Number(target.id))
+                        return (
+                            <Chip
+                                key={targetName}
+                                label={targetName}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onToggle(targetName, target.id)
+                                }}
+                                size="small"
+                                sx={{
+                                    'height': 26,
+                                    'fontSize': 11,
+                                    'fontWeight': isTargetSelected ? 700 : 400,
+                                    'backgroundColor': isTargetSelected ? selectedTargetBg : 'transparent',
+                                    'border': `1px solid ${isTargetSelected ? selectedTargetBorder : `${colors.primaryBlack}25`}`,
+                                    'boxShadow': isTargetSelected ? `1px 1px 0px ${selectedTargetBorder}` : 'none',
+                                    'borderRadius': '3px',
+                                    'cursor': 'pointer',
+                                    'color': colors.primaryBlack,
+                                    '& .MuiChip-label': { px: 1 },
+                                    'transition': 'all 0.12s',
+                                }}
+                            />
+                        )
+                    })}
+                </Box>
+            )}
+        </Box>
+    )
+}
+
 export default function ExercisesPage() {
     const [exercises, setExercises] = useState<Exercise[]>([])
     const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>([])
@@ -206,9 +299,6 @@ function ExerciseFormDrawer({
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
 
-    // Groups only (no targets that also appear under groups)
-    const groups = muscleGroups.filter((mg) => !isTarget(mg.name))
-
     useEffect(() => {
         if (open) {
             if (editingExercise) {
@@ -291,8 +381,7 @@ function ExerciseFormDrawer({
         }
     }, [name, isBodyweight, selectedMgIds, editingExercise, onSaved, onClose])
 
-    // Collect selected groups and their targets for the two-row layout
-    const selectedGroups = groups.filter((g) => selectedMgIds.has(g.id))
+    const mgCardProps = { muscleGroups, selectedIds: selectedMgIds, onToggle: toggleMuscle }
 
     return (
         <FormDrawer open={open} onClose={onClose}>
@@ -354,93 +443,32 @@ function ExerciseFormDrawer({
                         />
                     </Box>
 
-                    {/* Muscle group selection — main groups as a chip grid */}
+                    {/* Muscle group grid — same layout as workout form */}
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                            {groups.map((group) => {
-                                const isGroupSelected = selectedMgIds.has(group.id)
-                                return (
-                                    <Chip
-                                        key={group.id}
-                                        label={group.name}
-                                        onClick={() => toggleMuscle(group.name, group.id)}
-                                        size="small"
-                                        sx={{
-                                            'height': 30,
-                                            'fontSize': 12,
-                                            'fontWeight': 700,
-                                            'backgroundColor': isGroupSelected ? colors.primaryYellow : colors.primaryWhite,
-                                            'border': `1.5px solid ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
-                                            'boxShadow': `1.5px 1.5px 0px ${isGroupSelected ? '#b57b00' : colors.primaryBlack}`,
-                                            'borderRadius': '4px',
-                                            'cursor': 'pointer',
-                                            '& .MuiChip-label': { px: 1.5 },
-                                        }}
-                                    />
-                                )
-                            })}
-                        </Box>
-
-                        {/* Target muscles — shown below, grouped by parent */}
-                        {selectedGroups.length > 0 && (
-                            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {selectedGroups.map((group) => {
-                                    const targets = GROUP_TARGETS[group.name] || []
-                                    if (targets.length === 0) return null
-                                    return (
-                                        <Box key={group.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
-                                            {/* Parent label */}
-                                            <Typography sx={{
-                                                fontSize: 10,
-                                                fontWeight: 600,
-                                                color: '#b57b00',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: 0.3,
-                                                lineHeight: '26px',
-                                                whiteSpace: 'nowrap',
-                                                minWidth: 'fit-content',
-                                            }}>
-                                                {group.name}
-                                            </Typography>
-                                            <Box sx={{
-                                                width: '1px',
-                                                alignSelf: 'stretch',
-                                                backgroundColor: '#b57b00',
-                                                flexShrink: 0,
-                                                opacity: 0.4,
-                                            }} />
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {targets.map((targetName) => {
-                                                    const target = muscleGroups.find((g) => g.name === targetName)
-                                                    if (!target) return null
-                                                    const isTargetSelected = selectedMgIds.has(target.id)
-                                                    return (
-                                                        <Chip
-                                                            key={targetName}
-                                                            label={targetName}
-                                                            onClick={() => toggleMuscle(targetName, target.id)}
-                                                            size="small"
-                                                            sx={{
-                                                                'height': 26,
-                                                                'fontSize': 11,
-                                                                'fontWeight': isTargetSelected ? 700 : 400,
-                                                                'backgroundColor': isTargetSelected ? '#e8c196' : 'transparent',
-                                                                'border': `1px solid ${isTargetSelected ? '#a0612a' : `${colors.primaryBlack}25`}`,
-                                                                'boxShadow': isTargetSelected ? `${chipShadow} #a0612a` : 'none',
-                                                                'borderRadius': '3px',
-                                                                'cursor': 'pointer',
-                                                                '& .MuiChip-label': { px: 1 },
-                                                            }}
-                                                        />
-                                                    )
-                                                })}
-                                            </Box>
-                                        </Box>
-                                    )
-                                })}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {/* Back + Biceps/Forearms row */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1 }}>
+                                <MuscleGroupCard groupName="Back" {...mgCardProps} />
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
+                                    <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
+                                </Box>
                             </Box>
-                        )}
+                            {/* Chest / Shoulders / Triceps */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Chest" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
+                            </Box>
+                            {/* Legs */}
+                            <MuscleGroupCard groupName="Legs" {...mgCardProps} />
+                            {/* Core / Cardio */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Core" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Cardio" {...mgCardProps} />
+                            </Box>
+                        </Box>
                     </Box>
 
                     {error && (

@@ -1,7 +1,7 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import type { Supplement, SupplementLog } from '@/lib/health-types'
+import type { Supplement, SupplementLog, SupplementPreset } from '@/lib/health-types'
 import {
     fieldSx,
     labelSx,
@@ -17,7 +17,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconDots, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconBolt, IconDots, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
 import { useRegisterFab } from 'providers/fab-provider'
@@ -53,19 +53,25 @@ function groupLogsByDate(logs: SupplementLog[]): DayGroup[] {
 export default function SupplementsPage() {
     const [supplements, setSupplements] = useState<Supplement[]>([])
     const [allLogs, setAllLogs] = useState<SupplementLog[]>([])
+    const [presets, setPresets] = useState<SupplementPreset[]>([])
     const [loading, setLoading] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(null)
     const [menuOpenDate, setMenuOpenDate] = useState<string | null>(null)
+    const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
+    const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(null)
 
     const fetchData = useCallback(() => {
         Promise.all([
             fetch('/api/health/supplements?all=true').then((r) => r.json()),
             fetch('/api/health/supplement-logs').then((r) => r.json()),
+            fetch('/api/health/presets?type=supplement').then((r) => r.json()),
         ])
-            .then(([supps, logs]) => {
+            .then(([supps, logs, p]) => {
                 setSupplements(supps)
                 setAllLogs(logs)
+                setPresets(p)
             })
             .catch((err) => console.error('Failed to load:', err))
             .finally(() => setLoading(false))
@@ -104,6 +110,25 @@ export default function SupplementsPage() {
         [allLogs, fetchData]
     )
 
+    const applyPreset = useCallback(
+        async (presetId: number) => {
+            setApplyingPreset(presetId)
+            try {
+                const res = await fetch(`/api/health/presets/${presetId}/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: getLocalDate() }),
+                })
+                if (res.ok) fetchData()
+            } catch (err) {
+                console.error('Failed to apply preset:', err)
+            } finally {
+                setApplyingPreset(null)
+            }
+        },
+        [fetchData]
+    )
+
     useRegisterFab(openAdd)
 
     const activeSupplements = supplements.filter((s) => s.isActive)
@@ -137,6 +162,55 @@ export default function SupplementsPage() {
                 }}>
                 Supplements
             </Typography>
+
+            {/* Preset quick-actions */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                {presets.map((preset) => (
+                    <Box
+                        key={preset.id}
+                        onClick={() => applyingPreset === null && applyPreset(preset.id)}
+                        sx={{
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'gap': 0.75,
+                            'px': 1.5,
+                            'py': 0.75,
+                            'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
+                            'border': `1.5px solid ${colors.primaryBlack}`,
+                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                            'borderRadius': '4px',
+                            'cursor': applyingPreset !== null ? 'default' : 'pointer',
+                            'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
+                            'transition': 'all 0.15s',
+                            '&:active': applyingPreset === null ? {
+                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                transform: 'translate(1px, 1px)',
+                            } : {},
+                        }}>
+                        <IconBolt size={14} stroke={2} color={colors.primaryBrown} />
+                        <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                            {preset.name}
+                        </Typography>
+                    </Box>
+                ))}
+                <Box
+                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
+                    sx={{
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'justifyContent': 'center',
+                        'width': 32,
+                        'height': 32,
+                        'borderRadius': '50%',
+                        'border': `1.5px solid ${colors.primaryBlack}`,
+                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                        'backgroundColor': colors.primaryWhite,
+                        'cursor': 'pointer',
+                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
+                    }}>
+                    <IconPlus size={16} stroke={2} color={colors.primaryBrown} />
+                </Box>
+            </Box>
 
             {/* Horizontal supplement chips */}
             {activeSupplements.length > 0 && (
@@ -193,7 +267,7 @@ export default function SupplementsPage() {
                                         {group.logs.map((log) => (
                                             <Chip
                                                 key={log.id}
-                                                label={log.supplementName}
+                                                label={log.quantity > 1 ? `${log.supplementName} ×${log.quantity}` : log.supplementName}
                                                 size="small"
                                                 sx={{
                                                     'height': 24,
@@ -292,6 +366,21 @@ export default function SupplementsPage() {
                 allLogs={allLogs}
                 initialDate={drawerInitialDate}
                 onDataChanged={fetchData}
+            />
+
+            {/* Supplement preset drawer */}
+            <SupplementPresetDrawer
+                open={presetDrawerOpen}
+                onClose={() => { setPresetDrawerOpen(false); setEditingPreset(null) }}
+                supplements={supplements}
+                editingPreset={editingPreset}
+                existingPresets={presets}
+                onSaved={() => { fetchData(); setPresetDrawerOpen(false); setEditingPreset(null) }}
+                onEdit={(p) => { setEditingPreset(p); setPresetDrawerOpen(true) }}
+                onDelete={async (id) => {
+                    await fetch(`/api/health/presets/${id}`, { method: 'DELETE' })
+                    fetchData()
+                }}
             />
         </Box>
     )
@@ -849,6 +938,257 @@ function SupplementDrawer({
                                   : 'Add'}
                         </Button>
                     )}
+                </Box>
+            </Box>
+        </FormDrawer>
+    )
+}
+
+// ── Supplement Preset Drawer ────────────────────────────────────────────────
+
+type SupplementPresetDrawerProps = {
+    open: boolean
+    onClose: () => void
+    supplements: Supplement[]
+    editingPreset: SupplementPreset | null
+    existingPresets: SupplementPreset[]
+    onSaved: () => void
+    onEdit: (preset: SupplementPreset) => void
+    onDelete: (id: number) => Promise<void>
+}
+
+function SupplementPresetDrawer({
+    open,
+    onClose,
+    supplements,
+    editingPreset,
+    existingPresets,
+    onSaved,
+    onEdit,
+    onDelete,
+}: SupplementPresetDrawerProps) {
+    const [name, setName] = useState('')
+    const [selectedSupIds, setSelectedSupIds] = useState<Set<number>>(new Set())
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState('')
+
+    const activeSupplements = supplements.filter((s) => s.isActive)
+
+    useEffect(() => {
+        if (open) {
+            if (editingPreset) {
+                setName(editingPreset.name)
+                setSelectedSupIds(new Set(editingPreset.supplements.map((s) => s.id)))
+            } else {
+                setName('')
+                setSelectedSupIds(new Set())
+            }
+            setError('')
+        }
+    }, [open, editingPreset])
+
+    const toggleSupplement = useCallback((id: number) => {
+        setSelectedSupIds((prev) => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }, [])
+
+    const handleSubmit = useCallback(async () => {
+        if (!name.trim() || selectedSupIds.size === 0) return
+        setSaving(true)
+        setError('')
+
+        const url = editingPreset
+            ? `/api/health/presets/${editingPreset.id}`
+            : '/api/health/presets'
+        const method = editingPreset ? 'PUT' : 'POST'
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    type: 'supplement',
+                    supplementIds: Array.from(selectedSupIds),
+                }),
+            })
+            if (res.ok) {
+                onSaved()
+            } else {
+                const data = await res.json()
+                setError(data.error || 'Failed to save')
+            }
+        } catch {
+            setError('Failed to save')
+        } finally {
+            setSaving(false)
+        }
+    }, [name, selectedSupIds, editingPreset, onSaved])
+
+    return (
+        <FormDrawer open={open} onClose={onClose}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                {/* Header */}
+                <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${colors.primaryBlack}20` }}>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                        {editingPreset ? 'Edit Group' : 'Supplement Groups'}
+                    </Typography>
+                </Box>
+
+                {/* Body */}
+                <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Existing presets list */}
+                    {!editingPreset && existingPresets.length > 0 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {existingPresets.map((p) => (
+                                <Box key={p.id} sx={{ ...cardSx, p: 1.5 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
+                                                {p.name}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: 12, color: colors.primaryBrown }}>
+                                                {p.supplements.map((s) => s.name).join(', ')}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                                            <Box
+                                                onClick={() => onEdit(p)}
+                                                sx={{
+                                                    'cursor': 'pointer',
+                                                    'p': 0.5,
+                                                    'borderRadius': '4px',
+                                                    '&:active': { backgroundColor: `${colors.primaryYellow}40` },
+                                                }}>
+                                                <IconPencil size={16} stroke={2} color={colors.primaryBrown} />
+                                            </Box>
+                                            <Box
+                                                onClick={() => onDelete(p.id)}
+                                                sx={{
+                                                    'cursor': 'pointer',
+                                                    'p': 0.5,
+                                                    'borderRadius': '4px',
+                                                    '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                                }}>
+                                                <IconTrash size={16} stroke={2} color={colors.primaryRed} />
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
+
+                    {!editingPreset && existingPresets.length > 0 && (
+                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}15`, my: 0.5 }} />
+                    )}
+
+                    {/* Form */}
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {editingPreset ? 'Edit' : 'New Group'}
+                    </Typography>
+
+                    <Box>
+                        <Typography sx={labelSx}>Name</Typography>
+                        <TextField
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                            placeholder="Daily, Workout, Evening..."
+                            sx={fieldSx}
+                        />
+                    </Box>
+
+                    {/* Supplement selection */}
+                    <Box>
+                        <Typography sx={labelSx}>Supplements</Typography>
+                        {activeSupplements.length === 0 ? (
+                            <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>
+                                No active supplements. Add some first.
+                            </Typography>
+                        ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                {activeSupplements.map((supp) => {
+                                    const isSelected = selectedSupIds.has(supp.id)
+                                    return (
+                                        <Box
+                                            key={supp.id}
+                                            onClick={() => toggleSupplement(supp.id)}
+                                            sx={{
+                                                'display': 'flex',
+                                                'alignItems': 'center',
+                                                'gap': 1,
+                                                'padding': '8px 12px',
+                                                ...cardSx,
+                                                'cursor': 'pointer',
+                                                'backgroundColor': isSelected ? '#f1f8e9' : colors.primaryWhite,
+                                                'borderColor': isSelected ? '#4caf50' : colors.primaryBlack,
+                                                'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                'transition': 'all 0.15s',
+                                                '&:active': {
+                                                    boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                    transform: 'translate(1px, 1px)',
+                                                },
+                                            }}>
+                                            <Checkbox
+                                                checked={isSelected}
+                                                size="small"
+                                                sx={{
+                                                    'padding': 0,
+                                                    'color': colors.primaryBlack,
+                                                    '&.Mui-checked': { color: '#4caf50' },
+                                                }}
+                                                tabIndex={-1}
+                                            />
+                                            <Box>
+                                                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                    {supp.name}
+                                                </Typography>
+                                                {supp.dosage && (
+                                                    <Typography sx={{ fontSize: 12, color: colors.primaryBrown }}>
+                                                        {supp.dosage}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    )
+                                })}
+                            </Box>
+                        )}
+                    </Box>
+
+                    {error && (
+                        <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                            {error}
+                        </Typography>
+                    )}
+                </Box>
+
+                {/* Footer */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: 2,
+                    px: 2.5,
+                    py: 2,
+                    borderTop: `1px solid ${colors.primaryBlack}20`,
+                    paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                }}>
+                    <Button onClick={onClose} disabled={saving} size="large" sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!name.trim() || selectedSupIds.size === 0 || saving}
+                        size="large"
+                        sx={primaryButtonSx}>
+                        {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                    </Button>
                 </Box>
             </Box>
         </FormDrawer>

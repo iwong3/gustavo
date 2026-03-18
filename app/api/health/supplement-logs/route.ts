@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date')
 
     let query = `
-        SELECT sl.id, sl.supplement_id, s.name AS supplement_name, sl.date, sl.created_at
+        SELECT sl.id, sl.supplement_id, s.name AS supplement_name, sl.date, sl.quantity, sl.created_at
         FROM supplement_logs sl
         JOIN supplements s ON s.id = sl.supplement_id
         WHERE sl.user_id = $1`
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
             supplementId: r.supplement_id,
             supplementName: r.supplement_name,
             date: r.date.toISOString().split('T')[0],
+            quantity: r.quantity,
             createdAt: r.created_at.toISOString(),
         }))
     )

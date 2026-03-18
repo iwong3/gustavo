@@ -1,7 +1,7 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import type { Exercise, MuscleGroupWithParents, Workout, WorkoutExercise } from '@/lib/health-types'
+import type { Exercise, MuscleGroupWithParents, Workout, WorkoutExercise, WorkoutPreset } from '@/lib/health-types'
 import { GROUP_TARGETS, getParents, isTarget } from '@/lib/health/muscle-groups'
 import {
     fieldSx,
@@ -18,7 +18,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPlus, IconX, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
+import { IconPlus, IconX, IconChevronDown, IconChevronUp, IconBolt } from '@tabler/icons-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
 import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
@@ -40,11 +40,15 @@ export default function ExercisePage() {
     const [workouts, setWorkouts] = useState<Workout[]>([])
     const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>([])
     const [exercises, setExercises] = useState<Exercise[]>([])
+    const [presets, setPresets] = useState<WorkoutPreset[]>([])
     const [loading, setLoading] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
     const [detailWorkout, setDetailWorkout] = useState<Workout | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)
+    const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
+    const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+    const [editingPreset, setEditingPreset] = useState<WorkoutPreset | null>(null)
 
     const fetchWorkouts = useCallback(() => {
         fetch('/api/health/workouts')
@@ -60,16 +64,25 @@ export default function ExercisePage() {
             .catch((err) => console.error('Failed to fetch exercises:', err))
     }, [])
 
+    const fetchPresets = useCallback(() => {
+        fetch('/api/health/presets?type=workout')
+            .then((res) => res.json())
+            .then(setPresets)
+            .catch((err) => console.error('Failed to fetch presets:', err))
+    }, [])
+
     useEffect(() => {
         Promise.all([
             fetch('/api/health/muscle-groups').then((r) => r.json()),
             fetch('/api/health/workouts').then((r) => r.json()),
             fetch('/api/health/exercises').then((r) => r.json()),
+            fetch('/api/health/presets?type=workout').then((r) => r.json()),
         ])
-            .then(([mg, w, ex]) => {
+            .then(([mg, w, ex, p]) => {
                 setMuscleGroups(mg)
                 setWorkouts(w)
                 setExercises(ex)
+                setPresets(p)
             })
             .catch((err) => console.error('Failed to load:', err))
             .finally(() => setLoading(false))
@@ -123,6 +136,29 @@ export default function ExercisePage() {
             }, 0)
         },
         []
+    )
+
+    const applyPreset = useCallback(
+        async (presetId: number) => {
+            setApplyingPreset(presetId)
+            try {
+                const today = new Date()
+                const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+                const res = await fetch(`/api/health/presets/${presetId}/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date }),
+                })
+                if (res.ok) {
+                    fetchWorkouts()
+                }
+            } catch (err) {
+                console.error('Failed to apply preset:', err)
+            } finally {
+                setApplyingPreset(null)
+            }
+        },
+        [fetchWorkouts]
     )
 
     const openAdd = useCallback(() => {
@@ -198,6 +234,56 @@ export default function ExercisePage() {
                 Workouts
             </Typography>
 
+            {/* Routine quick-actions */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                {presets.map((preset) => (
+                    <Box
+                        key={preset.id}
+                        onClick={() => applyingPreset === null && applyPreset(preset.id)}
+                        sx={{
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'gap': 0.75,
+                            'px': 1.5,
+                            'py': 0.75,
+                            'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
+                            'border': `1.5px solid ${colors.primaryBlack}`,
+                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                            'borderRadius': '4px',
+                            'cursor': applyingPreset !== null ? 'default' : 'pointer',
+                            'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
+                            'transition': 'all 0.15s',
+                            '&:active': applyingPreset === null ? {
+                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                transform: 'translate(1px, 1px)',
+                            } : {},
+                        }}>
+                        <IconBolt size={14} stroke={2} color={colors.primaryBrown} />
+                        <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                            {preset.name}
+                        </Typography>
+                    </Box>
+                ))}
+                {/* Add/manage routines */}
+                <Box
+                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
+                    sx={{
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'justifyContent': 'center',
+                        'width': 32,
+                        'height': 32,
+                        'borderRadius': '50%',
+                        'border': `1.5px solid ${colors.primaryBlack}`,
+                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                        'backgroundColor': colors.primaryWhite,
+                        'cursor': 'pointer',
+                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
+                    }}>
+                    <IconPlus size={16} stroke={2} color={colors.primaryBrown} />
+                </Box>
+            </Box>
+
             {/* Workout timeline */}
             {workouts.length === 0 ? (
                 <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
@@ -217,7 +303,7 @@ export default function ExercisePage() {
 
                     {workouts.map((workout, i) => {
                         const parentGroups = workout.muscleGroups.filter((mg) => !isTarget(mg.name))
-                        const targets = workout.muscleGroups.filter((mg) => isTarget(mg.name))
+
                         const d = new Date(workout.date + 'T00:00:00')
                         const weekday = d.toLocaleDateString('en-US', { weekday: 'short' })
                         const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -235,22 +321,51 @@ export default function ExercisePage() {
                             <Box key={workout.id}>
                                 {/* ── Card row with date aligned to top ── */}
                                 <Box sx={{ display: 'flex' }}>
-                                    {/* Timeline gutter with node */}
+                                    {/* Timeline gutter with days-since node */}
                                     <Box sx={{
                                         width: 32,
                                         flexShrink: 0,
                                         display: 'flex',
                                         justifyContent: 'center',
-                                        pt: '4px', // align node with date badge center
+                                        pt: '1px',
                                     }}>
-                                        <Box sx={{
-                                            width: 12,
-                                            height: 12,
-                                            borderRadius: '50%',
-                                            backgroundColor: colors.primaryYellow,
-                                            border: `2px solid ${colors.primaryBlack}`,
-                                            zIndex: 1,
-                                        }} />
+                                        {daysBetween > 0 ? (() => {
+                                            const bg = daysBetween <= 2 ? '#e8f5e9' : daysBetween <= 6 ? '#fff3e0' : '#fbe9e7'
+                                            const borderColor = daysBetween <= 2 ? '#4caf50' : daysBetween <= 6 ? '#f57c00' : colors.primaryRed
+                                            return (
+                                                <Box sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    minWidth: 18,
+                                                    height: 18,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: bg,
+                                                    border: `1.5px solid ${borderColor}`,
+                                                    boxShadow: `1.5px 1.5px 0px ${borderColor}`,
+                                                    zIndex: 1,
+                                                }}>
+                                                    <Typography sx={{
+                                                        fontSize: 9,
+                                                        fontWeight: 800,
+                                                        lineHeight: 1,
+                                                        color: borderColor,
+                                                    }}>
+                                                        {daysBetween}
+                                                    </Typography>
+                                                </Box>
+                                            )
+                                        })() : (
+                                            <Box sx={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: '50%',
+                                                backgroundColor: colors.primaryYellow,
+                                                border: `1.5px solid ${colors.primaryBlack}`,
+                                                zIndex: 1,
+                                                mt: '5px',
+                                            }} />
+                                        )}
                                     </Box>
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
                                         {/* Date label */}
@@ -352,27 +467,9 @@ export default function ExercisePage() {
                                     </Box>
                                 </Box>
 
-                                {/* ── Days gap indicator ── */}
+                                {/* ── Gap between entries ── */}
                                 {i < workouts.length - 1 && (
-                                    <Box sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        py: daysBetween > 1 ? 1.25 : 0.75,
-                                    }}>
-                                        <Box sx={{ width: 32, flexShrink: 0 }} />
-                                        <Typography sx={{
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            color: `${colors.primaryBrown}90`,
-                                            letterSpacing: 0.2,
-                                        }}>
-                                            {daysBetween === 0
-                                                ? 'same day'
-                                                : daysBetween === 1
-                                                    ? '1 day'
-                                                    : `${daysBetween} days`}
-                                        </Typography>
-                                    </Box>
+                                    <Box sx={{ height: 12 }} />
                                 )}
                             </Box>
                         )
@@ -404,7 +501,316 @@ export default function ExercisePage() {
                 onDelete={handleDelete}
                 allWorkouts={workouts}
             />
+
+            {/* Preset form drawer */}
+            <PresetFormDrawer
+                open={presetDrawerOpen}
+                onClose={() => { setPresetDrawerOpen(false); setEditingPreset(null) }}
+                muscleGroups={muscleGroups}
+                exercises={exercises}
+                editingPreset={editingPreset}
+                existingPresets={presets}
+                onSaved={() => { fetchPresets(); setPresetDrawerOpen(false); setEditingPreset(null) }}
+                onEdit={(p) => { setEditingPreset(p); setPresetDrawerOpen(true) }}
+                onDelete={async (id) => {
+                    await fetch(`/api/health/presets/${id}`, { method: 'DELETE' })
+                    fetchPresets()
+                }}
+            />
         </Box>
+    )
+}
+
+// ── Preset Form Drawer ──────────────────────────────────────────────────────
+
+type PresetFormDrawerProps = {
+    open: boolean
+    onClose: () => void
+    muscleGroups: MuscleGroupWithParents[]
+    exercises: Exercise[]
+    editingPreset: WorkoutPreset | null
+    existingPresets: WorkoutPreset[]
+    onSaved: () => void
+    onEdit: (preset: WorkoutPreset) => void
+    onDelete: (id: number) => Promise<void>
+}
+
+function PresetFormDrawer({
+    open,
+    onClose,
+    muscleGroups,
+    exercises,
+    editingPreset,
+    existingPresets,
+    onSaved,
+    onEdit,
+    onDelete,
+}: PresetFormDrawerProps) {
+    const [name, setName] = useState('')
+    const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
+    const [selectedExIds, setSelectedExIds] = useState<number[]>([])
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        if (open) {
+            if (editingPreset) {
+                setName(editingPreset.name)
+                setSelectedMgIds(new Set(editingPreset.muscleGroups.map((mg) => mg.id)))
+                setSelectedExIds(editingPreset.exercises.map((ex) => ex.id))
+            } else {
+                setName('')
+                setSelectedMgIds(new Set())
+                setSelectedExIds([])
+            }
+            setError('')
+        }
+    }, [open, editingPreset])
+
+    const toggleMuscle = useCallback(
+        (mgName: string, mgId: number) => {
+            setSelectedMgIds((prev) => {
+                const next = new Set(prev)
+                if (next.has(mgId)) {
+                    next.delete(mgId)
+                    if (!isTarget(mgName)) {
+                        const targets = GROUP_TARGETS[mgName] || []
+                        for (const t of targets) {
+                            const tid = muscleGroups.find((g) => g.name === t)?.id
+                            if (tid) next.delete(tid)
+                        }
+                    }
+                } else {
+                    next.add(mgId)
+                    if (isTarget(mgName)) {
+                        const mg = muscleGroups.find((g) => g.name === mgName)
+                        if (mg && 'parents' in mg) {
+                            for (const p of (mg as MuscleGroupWithParents).parents) {
+                                next.add(p.id)
+                            }
+                        }
+                    }
+                }
+                return next
+            })
+        },
+        [muscleGroups]
+    )
+
+    const toggleExercise = useCallback((exId: number) => {
+        setSelectedExIds((prev) =>
+            prev.includes(exId) ? prev.filter((id) => id !== exId) : [...prev, exId]
+        )
+    }, [])
+
+    const handleSubmit = useCallback(async () => {
+        if (!name.trim()) return
+        setSaving(true)
+        setError('')
+
+        const url = editingPreset
+            ? `/api/health/presets/${editingPreset.id}`
+            : '/api/health/presets'
+        const method = editingPreset ? 'PUT' : 'POST'
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    type: 'workout',
+                    muscleGroupIds: Array.from(selectedMgIds),
+                    exerciseIds: selectedExIds,
+                }),
+            })
+            if (res.ok) {
+                onSaved()
+            } else {
+                const data = await res.json()
+                setError(data.error || 'Failed to save')
+            }
+        } catch {
+            setError('Failed to save')
+        } finally {
+            setSaving(false)
+        }
+    }, [name, selectedMgIds, selectedExIds, editingPreset, onSaved])
+
+    const mgCardProps = { muscleGroups, selectedIds: selectedMgIds, onToggle: toggleMuscle }
+
+    // Show list view when not editing
+    return (
+        <FormDrawer open={open} onClose={onClose}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                {/* Header */}
+                <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${colors.primaryBlack}20` }}>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                        {editingPreset ? 'Edit Routine' : 'Routines'}
+                    </Typography>
+                </Box>
+
+                {/* Body */}
+                <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Existing presets list */}
+                    {!editingPreset && existingPresets.length > 0 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {existingPresets.map((p) => (
+                                <Box key={p.id} sx={{ ...cardSx, overflow: 'hidden' }}>
+                                    <SwipeableRow
+                                        canEdit
+                                        canDelete
+                                        onEdit={() => onEdit(p)}
+                                        onDelete={() => onDelete(p.id)}
+                                        backgroundColor={colors.primaryWhite}
+                                    >
+                                        <Box
+                                            onClick={() => onEdit(p)}
+                                            sx={{
+                                                'p': 1.5,
+                                                'cursor': 'pointer',
+                                                '&:active': { backgroundColor: colors.secondaryYellow },
+                                            }}>
+                                            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
+                                                {p.name}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {p.muscleGroups.filter((mg) => !isTarget(mg.name)).map((mg) => (
+                                                    <Chip
+                                                        key={mg.id}
+                                                        label={mg.name}
+                                                        size="small"
+                                                        sx={{
+                                                            'height': 20,
+                                                            'fontSize': 10,
+                                                            'fontWeight': 600,
+                                                            'backgroundColor': selectedBg,
+                                                            'border': `1px solid ${selectedBorder}`,
+                                                            'borderRadius': '3px',
+                                                            '& .MuiChip-label': { px: 0.75 },
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                            {p.exercises.length > 0 && (
+                                                <Typography sx={{ fontSize: 11, color: colors.primaryBrown, mt: 0.5 }}>
+                                                    {p.exercises.map((e) => e.name).join(', ')}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </SwipeableRow>
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
+
+                    {/* Divider between list and form */}
+                    {!editingPreset && existingPresets.length > 0 && (
+                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}15`, my: 0.5 }} />
+                    )}
+
+                    {/* Form */}
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {editingPreset ? 'Edit' : 'New Routine'}
+                    </Typography>
+
+                    <Box>
+                        <Typography sx={labelSx}>Name</Typography>
+                        <TextField
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            size="small"
+                            fullWidth
+                            placeholder="Push Day, Pull Day..."
+                            sx={fieldSx}
+                        />
+                    </Box>
+
+                    {/* Muscle group grid */}
+                    <Box>
+                        <Typography sx={labelSx}>Muscle Groups</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1 }}>
+                                <MuscleGroupCard groupName="Back" {...mgCardProps} />
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
+                                    <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Chest" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
+                            </Box>
+                            <MuscleGroupCard groupName="Legs" {...mgCardProps} />
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Core" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Cardio" {...mgCardProps} />
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    {/* Exercise selection */}
+                    {exercises.length > 0 && (
+                        <Box>
+                            <Typography sx={labelSx}>Exercises (optional)</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                {exercises.map((ex) => {
+                                    const isSelected = selectedExIds.includes(ex.id)
+                                    return (
+                                        <Chip
+                                            key={ex.id}
+                                            label={ex.name}
+                                            onClick={() => toggleExercise(ex.id)}
+                                            size="small"
+                                            sx={{
+                                                'height': 28,
+                                                'fontSize': 12,
+                                                'fontWeight': isSelected ? 700 : 400,
+                                                'backgroundColor': isSelected ? exerciseBg : colors.primaryWhite,
+                                                'border': `1px solid ${isSelected ? exerciseBorder : `${colors.primaryBlack}25`}`,
+                                                'boxShadow': isSelected ? `1.5px 1.5px 0px ${exerciseBorder}` : 'none',
+                                                'borderRadius': '4px',
+                                                'cursor': 'pointer',
+                                                '& .MuiChip-label': { px: 1 },
+                                            }}
+                                        />
+                                    )
+                                })}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {error && (
+                        <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                            {error}
+                        </Typography>
+                    )}
+                </Box>
+
+                {/* Footer */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: 2,
+                    px: 2.5,
+                    py: 2,
+                    borderTop: `1px solid ${colors.primaryBlack}20`,
+                    paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                }}>
+                    <Button onClick={onClose} disabled={saving} size="large" sx={secondaryButtonSx}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!name.trim() || saving}
+                        size="large"
+                        sx={primaryButtonSx}>
+                        {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                    </Button>
+                </Box>
+            </Box>
+        </FormDrawer>
     )
 }
 
