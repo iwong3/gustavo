@@ -207,8 +207,8 @@ const ParticipantRow = ({
             {isCovered && (
                 <Typography
                     component="span"
-                    sx={{ fontSize: 9, color: 'text.secondary', ml: 0.5 }}>
-                    covered <IconGift size={9} color={colors.primaryRed} style={{ verticalAlign: 'middle' }} />
+                    sx={{ fontSize: 9, color: 'text.secondary', ml: 0.5, display: 'inline-flex', alignItems: 'center' }}>
+                    <IconGift size={9} color={colors.primaryRed} />
                 </Typography>
             )}
         </Typography>
