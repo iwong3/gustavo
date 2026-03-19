@@ -17,6 +17,8 @@ interface SwipeableRowProps {
     onDelete: () => void
     backgroundColor?: string
     showBottomBorder?: boolean
+    borderRadius?: string | number
+    boxShadow?: string
 }
 
 export const SwipeableRow = ({
@@ -27,6 +29,8 @@ export const SwipeableRow = ({
     onDelete,
     backgroundColor = colors.primaryWhite,
     showBottomBorder = false,
+    borderRadius,
+    boxShadow,
 }: SwipeableRowProps) => {
     const [offset, setOffset] = useState(0)
     const [swiping, setSwiping] = useState(false)
@@ -124,6 +128,8 @@ export const SwipeableRow = ({
                     borderBottom: '1px solid',
                     borderColor: 'divider',
                 }),
+                ...(borderRadius != null && { borderRadius }),
+                ...(boxShadow != null && { boxShadow }),
             }}>
                 {children}
             </Box>
@@ -138,6 +144,8 @@ export const SwipeableRow = ({
                 borderBottom: '1px solid',
                 borderColor: 'divider',
             }),
+            ...(borderRadius != null && { borderRadius }),
+            ...(boxShadow != null && { boxShadow }),
         }}>
             {/* Left action (edit) — revealed by swiping right */}
             {canEdit && (

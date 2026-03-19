@@ -74,7 +74,7 @@ export default function DeleteTripDialog({ open, trip, onClose, onConfirm }: Pro
                     />
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ padding: '8px 24px 16px' }}>
+            <DialogActions sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
                 <Button onClick={onClose} sx={secondaryButtonSx}>
                     Cancel
                 </Button>

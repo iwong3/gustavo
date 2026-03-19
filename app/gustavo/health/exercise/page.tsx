@@ -221,7 +221,6 @@ export default function ExercisePage() {
                 width: '100%',
                 maxWidth: 600,
                 paddingX: 2,
-                paddingY: 2,
                 gap: 2,
             }}>
             {/* Header */}
@@ -235,54 +234,50 @@ export default function ExercisePage() {
             </Typography>
 
             {/* Routine quick-actions */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                {presets.map((preset) => (
-                    <Box
-                        key={preset.id}
-                        onClick={() => applyingPreset === null && applyPreset(preset.id)}
-                        sx={{
-                            'display': 'flex',
-                            'alignItems': 'center',
-                            'gap': 0.75,
-                            'px': 1.5,
-                            'py': 0.75,
-                            'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
-                            'border': `1.5px solid ${colors.primaryBlack}`,
-                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                            'borderRadius': '4px',
-                            'cursor': applyingPreset !== null ? 'default' : 'pointer',
-                            'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
-                            'transition': 'all 0.15s',
-                            '&:active': applyingPreset === null ? {
-                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                transform: 'translate(1px, 1px)',
-                            } : {},
-                        }}>
-                        <IconBolt size={14} stroke={2} color={colors.primaryBrown} />
-                        <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-                            {preset.name}
-                        </Typography>
-                    </Box>
-                ))}
-                {/* Add/manage routines */}
-                <Box
-                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
-                    sx={{
-                        'display': 'flex',
-                        'alignItems': 'center',
-                        'justifyContent': 'center',
-                        'width': 32,
-                        'height': 32,
-                        'borderRadius': '50%',
-                        'border': `1.5px solid ${colors.primaryBlack}`,
-                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                        'backgroundColor': colors.primaryWhite,
-                        'cursor': 'pointer',
-                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
+            {presets.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                    {/* Lightning circle icon */}
+                    <Box sx={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        backgroundColor: colors.primaryYellow,
+                        border: `1.5px solid ${colors.primaryBlack}`,
+                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        mr: 0.5,
                     }}>
-                    <IconPlus size={16} stroke={2} color={colors.primaryBrown} />
+                        <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
+                    </Box>
+                    {presets.map((preset) => (
+                        <Box
+                            key={preset.id}
+                            onClick={() => applyingPreset === null && applyPreset(preset.id)}
+                            sx={{
+                                'px': 1.25,
+                                'py': 0.5,
+                                'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
+                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                'borderRadius': '4px',
+                                'cursor': applyingPreset !== null ? 'default' : 'pointer',
+                                'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
+                                'transition': 'all 0.15s',
+                                '&:active': applyingPreset === null ? {
+                                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                    transform: 'translate(1px, 1px)',
+                                } : {},
+                            }}>
+                            <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                                {preset.name}
+                            </Typography>
+                        </Box>
+                    ))}
                 </Box>
-            </Box>
+            )}
 
             {/* Workout timeline */}
             {workouts.length === 0 ? (
@@ -489,6 +484,8 @@ export default function ExercisePage() {
                 exercises={exercises}
                 editingWorkout={editingWorkout}
                 onExerciseCreated={fetchExercises}
+                presets={presets}
+                onPresetSaved={fetchPresets}
             />
 
             {/* Workout detail drawer */}
@@ -794,8 +791,7 @@ function PresetFormDrawer({
                 {/* Footer */}
                 <Box sx={{
                     display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: 2,
+                    justifyContent: 'space-between',
                     px: 2.5,
                     py: 2,
                     borderTop: `1px solid ${colors.primaryBlack}20`,
@@ -827,6 +823,8 @@ type WorkoutFormDrawerProps = {
     exercises: Exercise[]
     editingWorkout: Workout | null
     onExerciseCreated: () => void
+    presets: WorkoutPreset[]
+    onPresetSaved: () => void
 }
 
 // Grid layout for muscle group selection — all rows use a 3-column grid.
@@ -1021,6 +1019,8 @@ function WorkoutFormDrawer({
     exercises,
     editingWorkout,
     onExerciseCreated,
+    presets,
+    onPresetSaved,
 }: WorkoutFormDrawerProps) {
     const isEdit = editingWorkout !== null && editingWorkout.id !== -1
     const isDuplicate = editingWorkout !== null && editingWorkout.id === -1
@@ -1035,12 +1035,16 @@ function WorkoutFormDrawer({
 
     // Exercise entries in the workout
     const [exerciseEntries, setExerciseEntries] = useState<FormExerciseEntry[]>([])
-    const [showExercisePicker, setShowExercisePicker] = useState(false)
     const [exerciseSearch, setExerciseSearch] = useState('')
+    const [exerciseSectionOpen, setExerciseSectionOpen] = useState(true)
+    const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
 
-    // Quick-add exercise state
-    const [quickAddName, setQuickAddName] = useState('')
     const [quickAddSaving, setQuickAddSaving] = useState(false)
+
+    // Save-as-preset state
+    const [showSavePreset, setShowSavePreset] = useState(false)
+    const [presetName, setPresetName] = useState('')
+    const [savingPreset, setSavingPreset] = useState(false)
 
     // Reset form when opened
     useEffect(() => {
@@ -1059,9 +1063,9 @@ function WorkoutFormDrawer({
                 setNotes('')
                 setExerciseEntries([])
             }
-            setShowExercisePicker(false)
             setExerciseSearch('')
-            setQuickAddName('')
+            setShowSavePreset(false)
+            setPresetName('')
         }
     }, [open, editingWorkout])
 
@@ -1095,6 +1099,42 @@ function WorkoutFormDrawer({
         [muscleGroups]
     )
 
+    // Apply a preset to prefill the form
+    const applyPresetToForm = useCallback(
+        (preset: WorkoutPreset) => {
+            setSelectedIds(new Set(preset.muscleGroups.map((mg) => mg.id)))
+            setExerciseEntries(preset.exercises.map((ex) => defaultEntry(ex)))
+        },
+        []
+    )
+
+    // Save current form state as a new preset
+    const saveAsPreset = useCallback(async () => {
+        if (!presetName.trim()) return
+        setSavingPreset(true)
+        try {
+            const res = await fetch('/api/health/presets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: presetName.trim(),
+                    type: 'workout',
+                    muscleGroupIds: Array.from(selectedIds),
+                    exerciseIds: exerciseEntries.map((e) => e.exerciseId),
+                }),
+            })
+            if (res.ok) {
+                setShowSavePreset(false)
+                setPresetName('')
+                onPresetSaved()
+            }
+        } catch {
+            // silent fail
+        } finally {
+            setSavingPreset(false)
+        }
+    }, [presetName, selectedIds, exerciseEntries, onPresetSaved])
+
     // Add an exercise to the workout
     const addExercise = useCallback(
         (exercise: Exercise) => {
@@ -1120,7 +1160,6 @@ function WorkoutFormDrawer({
                 return next
             })
 
-            setShowExercisePicker(false)
             setExerciseSearch('')
         },
         [exerciseEntries, muscleGroups]
@@ -1128,6 +1167,14 @@ function WorkoutFormDrawer({
 
     const removeExercise = useCallback((index: number) => {
         setExerciseEntries((prev) => prev.filter((_, i) => i !== index))
+        setExpandedEntries((prev) => {
+            const next = new Set<number>()
+            Array.from(prev).forEach((i) => {
+                if (i < index) next.add(i)
+                else if (i > index) next.add(i - 1)
+            })
+            return next
+        })
     }, [])
 
     const updateEntry = useCallback((index: number, updates: Partial<FormExerciseEntry>) => {
@@ -1136,15 +1183,6 @@ function WorkoutFormDrawer({
         )
     }, [])
 
-    const moveExercise = useCallback((index: number, direction: -1 | 1) => {
-        setExerciseEntries((prev) => {
-            const next = [...prev]
-            const targetIndex = index + direction
-            if (targetIndex < 0 || targetIndex >= next.length) return prev
-            ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
-            return next
-        })
-    }, [])
 
     // Toggle expanded sets view
     const toggleExpandedSets = useCallback((index: number) => {
@@ -1181,18 +1219,17 @@ function WorkoutFormDrawer({
 
     // Quick-add a new exercise
     const handleQuickAdd = useCallback(async () => {
-        if (!quickAddName.trim()) return
+        if (!exerciseSearch.trim()) return
         setQuickAddSaving(true)
         try {
             // Create exercise with currently selected muscle groups
             const mgIds = Array.from(selectedIds)
-            if (mgIds.length === 0) return
 
             const res = await fetch('/api/health/exercises', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: quickAddName.trim(),
+                    name: exerciseSearch.trim(),
                     muscleGroupIds: mgIds,
                 }),
             })
@@ -1201,25 +1238,29 @@ function WorkoutFormDrawer({
                 const newExercise: Exercise = await res.json()
                 onExerciseCreated()
                 addExercise(newExercise)
-                setQuickAddName('')
+                setExerciseSearch('')
             }
         } finally {
             setQuickAddSaving(false)
         }
-    }, [quickAddName, selectedIds, onExerciseCreated, addExercise])
+    }, [exerciseSearch, selectedIds, onExerciseCreated, addExercise])
 
-    // Filter exercises for picker
-    const filteredExercises = useMemo(() => {
+    // All exercises sorted: matching selected muscle groups first
+    const sortedExercisesForBrowse = useMemo(() => {
         const alreadyAdded = new Set(exerciseEntries.map((e) => e.exerciseId))
-        let filtered = exercises.filter((e) => !alreadyAdded.has(e.id))
+        const available = exercises.filter((e) => !alreadyAdded.has(e.id))
 
-        if (exerciseSearch.trim()) {
-            const search = exerciseSearch.toLowerCase()
-            filtered = filtered.filter((e) => e.name.toLowerCase().includes(search))
+        if (selectedIds.size === 0) return available
+
+        const matching: typeof available = []
+        const nonMatching: typeof available = []
+        for (const ex of available) {
+            const hasMatch = ex.muscleGroups.some((mg) => selectedIds.has(mg.id))
+            if (hasMatch) matching.push(ex)
+            else nonMatching.push(ex)
         }
-
-        return filtered
-    }, [exercises, exerciseEntries, exerciseSearch])
+        return [...matching, ...nonMatching]
+    }, [exercises, exerciseEntries, selectedIds])
 
     const handleSubmit = useCallback(async () => {
         if (selectedIds.size === 0) return
@@ -1296,8 +1337,88 @@ function WorkoutFormDrawer({
                         flexDirection: 'column',
                         gap: 2.5,
                     }}>
+                    {/* Routines + save-as-routine */}
+                    {!isEdit && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography sx={labelSx}>Routines</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                                {/* New routine button */}
+                                <Box
+                                    onClick={() => {
+                                        setShowSavePreset((v) => !v)
+                                        if (showSavePreset) setPresetName('')
+                                    }}
+                                    sx={{
+                                        'display': 'flex',
+                                        'alignItems': 'center',
+                                        'justifyContent': 'center',
+                                        'width': 28,
+                                        'height': 28,
+                                        'borderRadius': '50%',
+                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                        'boxShadow': showSavePreset
+                                            ? `1px 1px 0px ${colors.primaryBlack}`
+                                            : `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                        'backgroundColor': showSavePreset ? colors.primaryYellow : colors.primaryWhite,
+                                        'cursor': 'pointer',
+                                        'transition': 'all 0.15s',
+                                        'transform': showSavePreset ? 'translate(0.5px, 0.5px)' : 'none',
+                                        '&:active': {
+                                            boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                            transform: 'translate(1px, 1px)',
+                                        },
+                                    }}>
+                                    <IconPlus size={14} stroke={2.5} color={colors.primaryBlack} />
+                                </Box>
+                                {/* Preset chips */}
+                                {presets.map((preset) => (
+                                    <Chip
+                                        key={preset.id}
+                                        label={preset.name}
+                                        onClick={() => applyPresetToForm(preset)}
+                                        size="small"
+                                        sx={{
+                                            'height': 28,
+                                            'fontSize': 12,
+                                            'fontWeight': 600,
+                                            'backgroundColor': colors.primaryWhite,
+                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                            'borderRadius': '4px',
+                                            'cursor': 'pointer',
+                                            '& .MuiChip-label': { px: 0.75 },
+                                            '&:active': {
+                                                boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                transform: 'translate(1px, 1px)',
+                                            },
+                                        }}
+                                    />
+                                ))}
+                            </Box>
+                            {/* New routine name input — revealed when + is active */}
+                            {showSavePreset && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: colors.primaryBrown, mb: 0.5 }}>
+                                        New routine name
+                                    </Typography>
+                                    <TextField
+                                        value={presetName}
+                                        onChange={(e) => setPresetName(e.target.value)}
+                                        size="small"
+                                        fullWidth
+                                        autoFocus
+                                        placeholder="Push Day, Pull Day..."
+                                        sx={{ ...fieldSx, '& .MuiInputBase-input': { fontSize: 13, py: 0.75 } }}
+                                    />
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
                     {/* Muscle group grid */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box>
+                        <Typography sx={labelSx}>Muscle Groups</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {GRID_ROWS.map((row, rowIdx) => {
                             if (row.type === 'pull') {
                                 return (
@@ -1326,297 +1447,320 @@ function WorkoutFormDrawer({
                                 </Box>
                             )
                         })}
+                        </Box>
                     </Box>
 
                     {/* Exercises section */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <Typography sx={labelSx}>Exercises (optional)</Typography>
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        border: `1.5px solid ${colors.primaryBlack}`,
+                        borderRadius: '6px',
+                        backgroundColor: colors.primaryWhite,
+                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        padding: '10px 12px',
+                    }}>
+                        <Box
+                            onClick={() => setExerciseSectionOpen((v) => !v)}
+                            sx={{
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'justifyContent': 'space-between',
+                                'cursor': 'pointer',
+                                'userSelect': 'none',
+                                '&:active': { opacity: 0.6 },
+                            }}>
+                            <Typography sx={{ ...labelSx, mb: 0 }}>
+                                Exercises{exerciseEntries.length > 0 ? ` (${exerciseEntries.length})` : ' (optional)'}
+                            </Typography>
+                            {exerciseSectionOpen
+                                ? <IconChevronUp size={16} stroke={2} color={colors.primaryBrown} />
+                                : <IconChevronDown size={16} stroke={2} color={colors.primaryBrown} />}
+                        </Box>
 
-                        {/* Existing exercise entries */}
-                        {exerciseEntries.map((entry, index) => (
-                            <Box
-                                key={`${entry.exerciseId}-${index}`}
-                                sx={{
-                                    padding: '10px 12px',
-                                    backgroundColor: exerciseBg,
-                                    border: `1.5px solid ${exerciseBorder}`,
-                                    boxShadow: `2px 2px 0px ${exerciseBorder}`,
-                                    borderRadius: '4px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1,
-                                }}>
-                                {/* Exercise header */}
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-                                            {entry.exerciseName}
-                                        </Typography>
-                                        {entry.isBodyweight && (
-                                            <Chip
-                                                label="BW"
-                                                size="small"
-                                                sx={{
-                                                    'height': 18,
-                                                    'fontSize': 9,
-                                                    'fontWeight': 700,
-                                                    'backgroundColor': '#e0ebe0',
-                                                    'border': `1px solid ${colors.primaryBrown}`,
-                                                    'borderRadius': '3px',
-                                                    '& .MuiChip-label': { px: 0.5 },
-                                                }}
-                                            />
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
-                                        {index > 0 && (
-                                            <Box
-                                                onClick={() => moveExercise(index, -1)}
-                                                sx={{ 'cursor': 'pointer', 'p': 0.25, '&:active': { opacity: 0.5 } }}>
-                                                <IconChevronUp size={14} stroke={2} />
-                                            </Box>
-                                        )}
-                                        {index < exerciseEntries.length - 1 && (
-                                            <Box
-                                                onClick={() => moveExercise(index, 1)}
-                                                sx={{ 'cursor': 'pointer', 'p': 0.25, '&:active': { opacity: 0.5 } }}>
-                                                <IconChevronDown size={14} stroke={2} />
-                                            </Box>
-                                        )}
-                                        <Box
-                                            onClick={() => removeExercise(index)}
-                                            sx={{
-                                                'cursor': 'pointer',
-                                                'p': 0.25,
-                                                'ml': 0.5,
-                                                '&:active': { opacity: 0.5 },
-                                            }}>
-                                            <IconX size={14} stroke={2} color={colors.primaryRed} />
-                                        </Box>
-                                    </Box>
-                                </Box>
-
-                                {/* Set/rep/weight inputs — each field independent */}
-                                {!entry.expandedSets ? (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                                        <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                                            <CompactField
-                                                label="lbs"
-                                                type="number"
-                                                value={entry.weightLbs}
-                                                onChange={(v) => updateEntry(index, { weightLbs: v })}
-                                                width={64}
-                                                placeholder="–"
-                                                htmlInputProps={{ min: 0, step: 'any' }}
-                                            />
-                                            <CompactField
-                                                label="sets"
-                                                type="number"
-                                                value={entry.sets || ''}
-                                                onChange={(v) => {
-                                                    const val = parseInt(v, 10)
-                                                    updateEntry(index, { sets: isNaN(val) ? 0 : Math.max(0, val) })
-                                                }}
-                                                width={48}
-                                                placeholder="–"
-                                                htmlInputProps={{ min: 0 }}
-                                            />
-                                            <CompactField
-                                                label="reps"
-                                                type="number"
-                                                value={entry.reps}
-                                                onChange={(v) => updateEntry(index, { reps: v })}
-                                                width={56}
-                                                placeholder="–"
-                                                htmlInputProps={{ min: 0 }}
-                                            />
-                                            {entry.sets > 1 && (
-                                                <Box
-                                                    onClick={() => toggleExpandedSets(index)}
-                                                    sx={{
-                                                        'cursor': 'pointer',
-                                                        'fontSize': 11,
-                                                        'color': exerciseBorder,
-                                                        'fontWeight': 600,
-                                                        'whiteSpace': 'nowrap',
-                                                        '&:active': { opacity: 0.5 },
-                                                    }}>
-                                                    per set
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                ) : (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {entry.expandedSets.map((set, si) => (
-                                            <Box key={si} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                                                <Typography sx={{ fontSize: 11, color: colors.primaryBrown, width: 32, flexShrink: 0, pt: 0.5 }}>
-                                                    Set {si + 1}
-                                                </Typography>
-                                                <CompactField
-                                                    label="reps"
-                                                    type="number"
-                                                    value={set.reps}
-                                                    onChange={(v) => updateExpandedSet(index, si, v)}
-                                                    width={56}
-                                                    placeholder="–"
-                                                    htmlInputProps={{ min: 0 }}
-                                                />
-                                            </Box>
-                                        ))}
-                                        <Box
-                                            onClick={() => toggleExpandedSets(index)}
-                                            sx={{
-                                                'cursor': 'pointer',
-                                                'fontSize': 11,
-                                                'color': exerciseBorder,
-                                                'fontWeight': 600,
-                                                'mt': 0.25,
-                                                '&:active': { opacity: 0.5 },
-                                            }}>
-                                            collapse
-                                        </Box>
-                                    </Box>
-                                )}
-                            </Box>
-                        ))}
-
-                        {/* Add exercise button / picker */}
-                        {!showExercisePicker ? (
-                            <Box
-                                onClick={() => setShowExercisePicker(true)}
-                                sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'gap': 0.75,
-                                    'padding': '8px 12px',
-                                    'border': `1.5px dashed ${colors.primaryBlack}30`,
-                                    'borderRadius': '4px',
-                                    'cursor': 'pointer',
-                                    'color': colors.primaryBrown,
-                                    'fontSize': 13,
-                                    '&:active': { backgroundColor: `${colors.primaryYellow}20` },
-                                }}>
-                                <IconPlus size={14} stroke={2} />
-                                Add Exercise
-                            </Box>
-                        ) : (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
-                                    padding: '10px 12px',
-                                    border: `1.5px solid ${colors.primaryBlack}`,
-                                    borderRadius: '4px',
-                                    backgroundColor: colors.primaryWhite,
-                                }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography sx={{ fontSize: 12, fontWeight: 700 }}>
-                                        Pick Exercise
-                                    </Typography>
-                                    <Box
-                                        onClick={() => {
-                                            setShowExercisePicker(false)
-                                            setExerciseSearch('')
-                                            setQuickAddName('')
-                                        }}
-                                        sx={{ 'cursor': 'pointer', 'p': 0.25, '&:active': { opacity: 0.5 } }}>
-                                        <IconX size={14} stroke={2} />
-                                    </Box>
-                                </Box>
-
-                                <TextField
-                                    value={exerciseSearch}
-                                    onChange={(e) => setExerciseSearch(e.target.value)}
-                                    size="small"
-                                    placeholder="Search exercises..."
-                                    autoFocus
-                                    sx={{ ...fieldSx, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
-                                />
-
-                                {/* Exercise list */}
-                                <Box sx={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                    {filteredExercises.length === 0 && !exerciseSearch.trim() && (
-                                        <Typography sx={{ fontSize: 12, color: colors.primaryBrown, py: 1, textAlign: 'center' }}>
-                                            No exercises yet. Create one below.
-                                        </Typography>
-                                    )}
-                                    {filteredExercises.length === 0 && exerciseSearch.trim() && (
-                                        <Typography sx={{ fontSize: 12, color: colors.primaryBrown, py: 1, textAlign: 'center' }}>
-                                            No matches. Create it below.
-                                        </Typography>
-                                    )}
-                                    {filteredExercises.map((ex) => (
-                                        <Box
-                                            key={ex.id}
-                                            onClick={() => addExercise(ex)}
-                                            sx={{
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'gap': 0.75,
-                                                'px': 1,
-                                                'py': 0.5,
-                                                'borderRadius': '3px',
-                                                'cursor': 'pointer',
-                                                'fontSize': 13,
-                                                '&:hover': { backgroundColor: `${exerciseBorder}15` },
-                                                '&:active': { backgroundColor: `${exerciseBorder}25` },
-                                            }}>
-                                            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                                                {ex.name}
-                                            </Typography>
-                                            {ex.isBodyweight && (
-                                                <Chip
-                                                    label="BW"
-                                                    size="small"
-                                                    sx={{
-                                                        'height': 16,
-                                                        'fontSize': 9,
-                                                        'fontWeight': 700,
-                                                        'backgroundColor': '#e3f2fd',
-                                                        'border': '1px solid #1565c0',
-                                                        'borderRadius': '2px',
-                                                        '& .MuiChip-label': { px: 0.5 },
-                                                    }}
-                                                />
-                                            )}
-                                        </Box>
-                                    ))}
-                                </Box>
-
-                                {/* Quick-add */}
-                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', borderTop: `1px solid ${colors.primaryBlack}15`, pt: 0.75 }}>
+                        {exerciseSectionOpen && (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                {/* Combined search + create field */}
+                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                                     <TextField
-                                        value={quickAddName}
-                                        onChange={(e) => setQuickAddName(e.target.value)}
+                                        value={exerciseSearch}
+                                        onChange={(e) => setExerciseSearch(e.target.value)}
                                         size="small"
-                                        placeholder="New exercise name..."
-                                        sx={{ ...fieldSx, flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 12 } }}
+                                        placeholder="Search or create exercise..."
+                                        sx={{ ...fieldSx, flex: 1, '& .MuiInputBase-input': { py: 0.75, fontSize: 13 } }}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleQuickAdd()
+                                            if (e.key === 'Enter' && exerciseSearch.trim()) handleQuickAdd()
                                         }}
                                     />
-                                    <Button
-                                        onClick={handleQuickAdd}
-                                        disabled={!quickAddName.trim() || quickAddSaving || selectedIds.size === 0}
-                                        size="small"
-                                        sx={{
-                                            ...primaryButtonSx,
-                                            minWidth: 'unset',
-                                            px: 1.5,
-                                            py: 0.5,
-                                            fontSize: 11,
-                                        }}>
-                                        {quickAddSaving ? '...' : 'Add'}
-                                    </Button>
+                                    {exerciseSearch.trim() && (
+                                        <Button
+                                            onClick={handleQuickAdd}
+                                            disabled={quickAddSaving}
+                                            size="small"
+                                            sx={{
+                                                ...primaryButtonSx,
+                                                minWidth: 'unset',
+                                                px: 1.5,
+                                                py: 0.5,
+                                                fontSize: 11,
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                            {quickAddSaving ? '...' : 'Create'}
+                                        </Button>
+                                    )}
                                 </Box>
-                                {selectedIds.size === 0 && (
-                                    <Typography sx={{ fontSize: 11, color: colors.primaryBrown }}>
-                                        Select muscle groups first to quick-add an exercise
-                                    </Typography>
-                                )}
-                            </Box>
+                                    {/* Selected exercises */}
+                                    {exerciseEntries.map((entry, index) => {
+                                        const isExpanded = expandedEntries.has(index)
+                                        const ex = exercises.find((e) => e.id === entry.exerciseId)
+                                        const entryMuscleGroups = ex?.muscleGroups ?? []
+                                        const toggleExpand = () => setExpandedEntries((prev) => {
+                                            const next = new Set(prev)
+                                            if (next.has(index)) next.delete(index)
+                                            else next.add(index)
+                                            return next
+                                        })
+                                        return (
+                                            <SwipeableRow
+                                                key={`selected-${entry.exerciseId}`}
+                                                canEdit={false}
+                                                canDelete={true}
+                                                onEdit={() => {}}
+                                                onDelete={() => removeExercise(index)}
+                                                backgroundColor={colors.secondaryYellow}
+                                                borderRadius="4px"
+                                                boxShadow={`2px 2px 0px ${colors.primaryYellow}`}>
+                                                <Box
+                                                    onClick={toggleExpand}
+                                                    sx={{
+                                                        'display': 'flex',
+                                                        'flexDirection': 'column',
+                                                        'gap': 0.25,
+                                                        'padding': '6px 10px',
+                                                        'cursor': 'pointer',
+                                                        'border': `1.5px solid ${colors.primaryYellow}`,
+                                                        'backgroundColor': colors.secondaryYellow,
+                                                        'borderRadius': '4px',
+                                                        '&:active': { opacity: 0.7 },
+                                                    }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                                                                {entry.exerciseName}
+                                                            </Typography>
+                                                            {entry.isBodyweight && (
+                                                                <Chip
+                                                                    label="BW"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        'height': 16,
+                                                                        'fontSize': 9,
+                                                                        'fontWeight': 700,
+                                                                        'backgroundColor': '#e3f2fd',
+                                                                        'border': '1px solid #1565c0',
+                                                                        'borderRadius': '2px',
+                                                                        '& .MuiChip-label': { px: 0.5 },
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                        {isExpanded
+                                                            ? <IconChevronUp size={12} stroke={2} color={colors.primaryBrown} />
+                                                            : <IconChevronDown size={12} stroke={2} color={colors.primaryBrown} />}
+                                                    </Box>
+                                                    {entryMuscleGroups.length > 0 && (
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
+                                                            {entryMuscleGroups.map((mg) => (
+                                                                <Typography
+                                                                    key={mg.id}
+                                                                    sx={{
+                                                                        fontSize: 9,
+                                                                        fontWeight: 600,
+                                                                        color: selectedIds.has(mg.id) ? exerciseBorder : colors.primaryBrown,
+                                                                        backgroundColor: selectedIds.has(mg.id) ? `${exerciseBorder}15` : `${colors.primaryBrown}10`,
+                                                                        border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
+                                                                        borderRadius: '2px',
+                                                                        px: 0.5,
+                                                                        py: 0.125,
+                                                                        lineHeight: 1.3,
+                                                                    }}>
+                                                                    {mg.name}
+                                                                </Typography>
+                                                            ))}
+                                                        </Box>
+                                                    )}
+                                                    {/* Expanded: weight/sets/reps inputs */}
+                                                    {isExpanded && (
+                                                        <Box onClick={(e) => e.stopPropagation()}>
+                                                            {!entry.expandedSets ? (
+                                                                <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                                                                    <CompactField
+                                                                        label="lbs"
+                                                                        type="number"
+                                                                        value={entry.weightLbs}
+                                                                        onChange={(v) => updateEntry(index, { weightLbs: v })}
+                                                                        width={64}
+                                                                        placeholder="–"
+                                                                        htmlInputProps={{ min: 0, step: 'any' }}
+                                                                    />
+                                                                    <CompactField
+                                                                        label="sets"
+                                                                        type="number"
+                                                                        value={entry.sets || ''}
+                                                                        onChange={(v) => {
+                                                                            const val = parseInt(v, 10)
+                                                                            updateEntry(index, { sets: isNaN(val) ? 0 : Math.max(0, val) })
+                                                                        }}
+                                                                        width={48}
+                                                                        placeholder="–"
+                                                                        htmlInputProps={{ min: 0 }}
+                                                                    />
+                                                                    <CompactField
+                                                                        label="reps"
+                                                                        type="number"
+                                                                        value={entry.reps}
+                                                                        onChange={(v) => updateEntry(index, { reps: v })}
+                                                                        width={56}
+                                                                        placeholder="–"
+                                                                        htmlInputProps={{ min: 0 }}
+                                                                    />
+                                                                    {entry.sets > 1 && (
+                                                                        <Box
+                                                                            onClick={() => toggleExpandedSets(index)}
+                                                                            sx={{
+                                                                                'cursor': 'pointer',
+                                                                                'fontSize': 11,
+                                                                                'color': exerciseBorder,
+                                                                                'fontWeight': 600,
+                                                                                'whiteSpace': 'nowrap',
+                                                                                '&:active': { opacity: 0.5 },
+                                                                            }}>
+                                                                            per set
+                                                                        </Box>
+                                                                    )}
+                                                                </Box>
+                                                            ) : (
+                                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                                    {entry.expandedSets.map((set, si) => (
+                                                                        <Box key={si} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
+                                                                            <Typography sx={{ fontSize: 11, color: colors.primaryBrown, width: 32, flexShrink: 0, pt: 0.5 }}>
+                                                                                Set {si + 1}
+                                                                            </Typography>
+                                                                            <CompactField
+                                                                                label="reps"
+                                                                                type="number"
+                                                                                value={set.reps}
+                                                                                onChange={(v) => updateExpandedSet(index, si, v)}
+                                                                                width={56}
+                                                                                placeholder="–"
+                                                                                htmlInputProps={{ min: 0 }}
+                                                                            />
+                                                                        </Box>
+                                                                    ))}
+                                                                    <Box
+                                                                        onClick={() => toggleExpandedSets(index)}
+                                                                        sx={{
+                                                                            'cursor': 'pointer',
+                                                                            'fontSize': 11,
+                                                                            'color': exerciseBorder,
+                                                                            'fontWeight': 600,
+                                                                            'mt': 0.25,
+                                                                            '&:active': { opacity: 0.5 },
+                                                                        }}>
+                                                                        collapse
+                                                                    </Box>
+                                                                </Box>
+                                                            )}
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            </SwipeableRow>
+                                        )
+                                    })}
+
+                                    {/* Unselected exercises */}
+                                    {(() => {
+                                        const list = exerciseSearch.trim()
+                                            ? sortedExercisesForBrowse.filter((e) =>
+                                                e.name.toLowerCase().includes(exerciseSearch.toLowerCase()))
+                                            : sortedExercisesForBrowse
+
+                                        if (list.length === 0 && exerciseEntries.length === 0 && !exerciseSearch.trim()) {
+                                            return (
+                                                <Typography sx={{ fontSize: 12, color: colors.primaryBrown, py: 1, textAlign: 'center' }}>
+                                                    No exercises yet. Type above to create one.
+                                                </Typography>
+                                            )
+                                        }
+
+                                        return list.map((ex) => {
+                                            const matches = selectedIds.size > 0 && ex.muscleGroups.some((mg) => selectedIds.has(mg.id))
+                                            return (
+                                                <Box
+                                                    key={ex.id}
+                                                    onClick={() => addExercise(ex)}
+                                                    sx={{
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'justifyContent': 'space-between',
+                                                        'padding': '6px 10px',
+                                                        'borderRadius': '4px',
+                                                        'cursor': 'pointer',
+                                                        'border': `1.5px solid ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
+                                                        'backgroundColor': matches ? exerciseBg : colors.primaryWhite,
+                                                        'boxShadow': `2px 2px 0px ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
+                                                        '&:active': { opacity: 0.6 },
+                                                    }}>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                            <Typography sx={{ fontSize: 13, fontWeight: matches ? 600 : 500 }}>
+                                                                {ex.name}
+                                                            </Typography>
+                                                            {ex.isBodyweight && (
+                                                                <Chip
+                                                                    label="BW"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        'height': 16,
+                                                                        'fontSize': 9,
+                                                                        'fontWeight': 700,
+                                                                        'backgroundColor': '#e3f2fd',
+                                                                        'border': '1px solid #1565c0',
+                                                                        'borderRadius': '2px',
+                                                                        '& .MuiChip-label': { px: 0.5 },
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                        {ex.muscleGroups.length > 0 && (
+                                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
+                                                                {ex.muscleGroups.map((mg) => (
+                                                                    <Typography
+                                                                        key={mg.id}
+                                                                        sx={{
+                                                                            fontSize: 9,
+                                                                            fontWeight: 600,
+                                                                            color: selectedIds.has(mg.id) ? exerciseBorder : colors.primaryBrown,
+                                                                            backgroundColor: selectedIds.has(mg.id) ? `${exerciseBorder}15` : `${colors.primaryBrown}10`,
+                                                                            border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
+                                                                            borderRadius: '2px',
+                                                                            px: 0.5,
+                                                                            py: 0.125,
+                                                                            lineHeight: 1.3,
+                                                                        }}>
+                                                                        {mg.name}
+                                                                    </Typography>
+                                                                ))}
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                    <IconPlus size={14} stroke={2} color={colors.primaryBrown} style={{ flexShrink: 0 }} />
+                                                </Box>
+                                            )
+                                        })
+                                    })()}
+                                </Box>
                         )}
                     </Box>
 
@@ -1646,14 +1790,14 @@ function WorkoutFormDrawer({
                             sx={fieldSx}
                         />
                     </Box>
+
                 </Box>
 
                 {/* Footer */}
                 <Box
                     sx={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: 2,
+                        justifyContent: 'space-between',
                         px: 2.5,
                         py: 2,
                         borderTop: `1px solid ${colors.primaryBlack}20`,
@@ -1667,11 +1811,13 @@ function WorkoutFormDrawer({
                         Cancel
                     </Button>
                     <Button
-                        onClick={handleSubmit}
-                        disabled={selectedIds.size === 0 || saving}
+                        onClick={showSavePreset ? saveAsPreset : handleSubmit}
+                        disabled={showSavePreset ? (!presetName.trim() || savingPreset) : (selectedIds.size === 0 || saving)}
                         size="large"
                         sx={primaryButtonSx}>
-                        {saving ? 'Saving...' : isEdit ? 'Save' : 'Log'}
+                        {showSavePreset
+                            ? (savingPreset ? 'Saving...' : 'Save Routine')
+                            : (saving ? 'Saving...' : isEdit ? 'Save' : 'Log')}
                     </Button>
                 </Box>
             </Box>

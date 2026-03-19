@@ -150,7 +150,7 @@ export default function SupplementsPage() {
                 width: '100%',
                 maxWidth: 600,
                 paddingX: 2,
-                paddingY: 2,
+                paddingBottom: 2,
                 gap: 2,
             }}>
             {/* Header */}
@@ -903,8 +903,7 @@ function SupplementDrawer({
                 <Box
                     sx={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: 2,
+                        justifyContent: 'space-between',
                         px: 2.5,
                         py: 2,
                         borderTop: `1px solid ${colors.primaryBlack}20`,
@@ -1172,8 +1171,7 @@ function SupplementPresetDrawer({
                 {/* Footer */}
                 <Box sx={{
                     display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: 2,
+                    justifyContent: 'space-between',
                     px: 2.5,
                     py: 2,
                     borderTop: `1px solid ${colors.primaryBlack}20`,

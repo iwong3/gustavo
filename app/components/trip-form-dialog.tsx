@@ -1011,8 +1011,7 @@ export default function TripFormDialog({
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: 2,
+                    justifyContent: 'space-between',
                     padding: '24px',
                     paddingBottom: `calc(24px + env(safe-area-inset-bottom, 0px))`,
                 }}>

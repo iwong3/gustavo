@@ -45,7 +45,7 @@ export default function DeleteExpenseDialog({ open, expense, onClose, onConfirm 
                     Are you sure you want to delete <strong>{expense?.name}</strong>?
                 </Typography>
             </DialogContent>
-            <DialogActions sx={{ padding: '8px 24px 16px' }}>
+            <DialogActions sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
                 <Button onClick={onClose} sx={secondaryButtonSx}>
                     Cancel
                 </Button>

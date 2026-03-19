@@ -178,7 +178,7 @@ export default function ExercisesPage() {
                 width: '100%',
                 maxWidth: 600,
                 paddingX: 2,
-                paddingY: 2,
+                paddingBottom: 2,
                 gap: 2,
             }}>
             <Typography
@@ -485,8 +485,7 @@ function ExerciseFormDrawer({
                 <Box
                     sx={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: 2,
+                        justifyContent: 'space-between',
                         px: 2.5,
                         py: 2,
                         borderTop: `1px solid ${colors.primaryBlack}20`,

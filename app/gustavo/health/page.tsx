@@ -80,7 +80,7 @@ export default function HealthPage() {
                 width: '100%',
                 maxWidth: 600,
                 paddingX: 2,
-                paddingY: 2,
+                paddingBottom: 2,
                 gap: 3,
             }}>
             {/* Days Since Last Workout */}
