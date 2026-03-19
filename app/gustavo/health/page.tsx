@@ -3,6 +3,7 @@
 import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
+import { useMemo } from 'react'
 import { IconBarbell, IconPill, IconStretching } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -42,6 +43,17 @@ const tools = [
     },
 ]
 
+// Each card is 1/3 of the row width minus gaps (gap = 6px = 0.75 MUI spacing)
+const daysSinceCardWidth = 'calc((100% - 12px) / 3)'
+
+/** Muscle groups organized by training split — push / pull / legs / other */
+const DAYS_SINCE_ROWS: { label: string; groups: string[] }[] = [
+    { label: 'Push', groups: ['Chest', 'Shoulders', 'Triceps'] },
+    { label: 'Pull', groups: ['Upper Back', 'Biceps', 'Forearms'] },
+    { label: 'Legs', groups: ['Legs', 'Lower Back'] },
+    { label: 'Other', groups: ['Core', 'Cardio'] },
+]
+
 export default function HealthPage() {
     const [daysSince, setDaysSince] = useState<DaysSince[]>([])
     const [loading, setLoading] = useState(true)
@@ -53,6 +65,12 @@ export default function HealthPage() {
             .catch((err) => console.error('Failed to fetch days since:', err))
             .finally(() => setLoading(false))
     }, [])
+
+    const daysSinceMap = useMemo(() => {
+        const map = new Map<string, DaysSince>()
+        for (const item of daysSince) map.set(item.muscleGroup, item)
+        return map
+    }, [daysSince])
 
     return (
         <Box
@@ -80,51 +98,49 @@ export default function HealthPage() {
                 </Typography>
 
                 {loading ? (
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: 0.75,
-                        }}>
-                        {Array.from({ length: 9 }).map((_, i) => (
-                            <Box
-                                key={i}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.75,
-                                    padding: '6px 8px',
-                                    borderRadius: '4px',
-                                    border: `1.5px solid ${colors.primaryBlack}20`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}20`,
-                                    backgroundColor: `${colors.primaryBlack}05`,
-                                }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {DAYS_SINCE_ROWS.map((row) => (
+                            <Box key={row.label}>
                                 <Box
                                     sx={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
-                                        backgroundColor: `${colors.primaryBlack}15`,
-                                        flexShrink: 0,
-                                    }}
-                                />
-                                <Box>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 12,
-                                            lineHeight: 1.2,
-                                            color: 'transparent',
-                                        }}>
-                                        &nbsp;
-                                    </Typography>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 11,
-                                            lineHeight: 1.2,
-                                            color: 'transparent',
-                                        }}>
-                                        &nbsp;
-                                    </Typography>
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'center',
+                                        gap: 0.75,
+                                    }}>
+                                    {row.groups.map((g) => (
+                                        <Box
+                                            key={g}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.75,
+                                                width: daysSinceCardWidth,
+                                                padding: '6px 8px',
+                                                borderRadius: '4px',
+                                                border: `1.5px solid ${colors.primaryBlack}20`,
+                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}20`,
+                                                backgroundColor: `${colors.primaryBlack}05`,
+                                            }}>
+                                            <Box
+                                                sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: `${colors.primaryBlack}15`,
+                                                    flexShrink: 0,
+                                                }}
+                                            />
+                                            <Box>
+                                                <Typography sx={{ fontSize: 12, lineHeight: 1.2, color: 'transparent' }}>
+                                                    &nbsp;
+                                                </Typography>
+                                                <Typography sx={{ fontSize: 11, lineHeight: 1.2, color: 'transparent' }}>
+                                                    &nbsp;
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    ))}
                                 </Box>
                             </Box>
                         ))}
@@ -134,55 +150,66 @@ export default function HealthPage() {
                         No workouts logged yet. Start tracking!
                     </Typography>
                 ) : (
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: 0.75,
-                        }}>
-                        {daysSince.map((item) => (
-                            <Box
-                                key={item.muscleGroup}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.75,
-                                    padding: '6px 8px',
-                                    borderRadius: '4px',
-                                    border: `1.5px solid ${colors.primaryBlack}`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    backgroundColor: colors.primaryWhite,
-                                }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {DAYS_SINCE_ROWS.map((row) => (
+                            <Box key={row.label}>
                                 <Box
                                     sx={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
-                                        backgroundColor: getDaysSinceColor(item.daysSince),
-                                        border: `1px solid ${colors.primaryBlack}`,
-                                        flexShrink: 0,
-                                    }}
-                                />
-                                <Box sx={{ minWidth: 0 }}>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 12,
-                                            fontWeight: 600,
-                                            lineHeight: 1.2,
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                        }}>
-                                        {item.muscleGroup}
-                                    </Typography>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 11,
-                                            color: colors.primaryBrown,
-                                            lineHeight: 1.2,
-                                        }}>
-                                        {formatDaysSince(item.daysSince)}
-                                    </Typography>
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'center',
+                                        gap: 0.75,
+                                    }}>
+                                    {row.groups.map((groupName) => {
+                                        const item = daysSinceMap.get(groupName)
+                                        return (
+                                            <Box
+                                                key={groupName}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 0.75,
+                                                    width: daysSinceCardWidth,
+                                                    padding: '6px 8px',
+                                                    borderRadius: '4px',
+                                                    border: `1.5px solid ${colors.primaryBlack}`,
+                                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                    backgroundColor: colors.primaryWhite,
+                                                }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 8,
+                                                        height: 8,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: getDaysSinceColor(item?.daysSince ?? null),
+                                                        border: `1px solid ${colors.primaryBlack}`,
+                                                        flexShrink: 0,
+                                                    }}
+                                                />
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography
+                                                        sx={{
+                                                            fontSize: 12,
+                                                            fontWeight: 600,
+                                                            lineHeight: 1.2,
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }}>
+                                                        {groupName}
+                                                    </Typography>
+                                                    <Typography
+                                                        sx={{
+                                                            fontSize: 11,
+                                                            color: colors.primaryBrown,
+                                                            lineHeight: 1.2,
+                                                        }}>
+                                                        {formatDaysSince(item?.daysSince ?? null)}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        )
+                                    })}
                                 </Box>
                             </Box>
                         ))}

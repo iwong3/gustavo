@@ -46,15 +46,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
 
-    if (!muscleGroupIds || !Array.isArray(muscleGroupIds) || muscleGroupIds.length === 0) {
+    if (!Array.isArray(muscleGroupIds)) {
         return NextResponse.json(
-            { error: 'muscleGroupIds (non-empty array) is required' },
+            { error: 'muscleGroupIds (array) is required' },
             { status: 400 }
         )
     }
 
     // Deduplicate and cast to numbers (frontend may send string IDs from BIGINT columns)
-    const uniqueMgIds = Array.from(new Set(muscleGroupIds.map(Number)))
+    const uniqueMgIds: number[] = Array.from(new Set((muscleGroupIds as number[]).map(Number)))
 
     try {
         const exercise = await withAuditUser(authUser.userId, async (client) => {
@@ -67,14 +67,16 @@ export async function POST(request: NextRequest) {
 
             const exerciseId = res.rows[0].id
 
-            // Insert muscle group associations
-            const values = uniqueMgIds
-                .map((_: number, i: number) => `($1, $${i + 2})`)
-                .join(', ')
-            await client.query(
-                `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
-                [exerciseId, ...uniqueMgIds]
-            )
+            // Insert muscle group associations (if any)
+            if (uniqueMgIds.length > 0) {
+                const values = uniqueMgIds
+                    .map((_: number, i: number) => `($1, $${i + 2})`)
+                    .join(', ')
+                await client.query(
+                    `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
+                    [exerciseId, ...uniqueMgIds]
+                )
+            }
 
             // Fetch muscle groups for response
             const mgRes = await client.query(

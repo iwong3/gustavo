@@ -23,15 +23,15 @@ export async function PUT(
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
 
-    if (!muscleGroupIds || !Array.isArray(muscleGroupIds) || muscleGroupIds.length === 0) {
+    if (!Array.isArray(muscleGroupIds)) {
         return NextResponse.json(
-            { error: 'muscleGroupIds (non-empty array) is required' },
+            { error: 'muscleGroupIds (array) is required' },
             { status: 400 }
         )
     }
 
     // Deduplicate and cast to numbers
-    const uniqueMgIds = Array.from(new Set(muscleGroupIds.map(Number)))
+    const uniqueMgIds: number[] = Array.from(new Set((muscleGroupIds as number[]).map(Number)))
 
     // Verify ownership
     const check = await pool.query(
@@ -55,13 +55,15 @@ export async function PUT(
                 [exerciseId]
             )
 
-            const values = uniqueMgIds
-                .map((_: number, i: number) => `($1, $${i + 2})`)
-                .join(', ')
-            await client.query(
-                `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
-                [exerciseId, ...uniqueMgIds]
-            )
+            if (uniqueMgIds.length > 0) {
+                const values = uniqueMgIds
+                    .map((_: number, i: number) => `($1, $${i + 2})`)
+                    .join(', ')
+                await client.query(
+                    `INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES ${values}`,
+                    [exerciseId, ...uniqueMgIds]
+                )
+            }
 
             // Fetch updated data
             const res = await client.query(

@@ -730,21 +730,24 @@ function PresetFormDrawer({
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1 }}>
-                                <MuscleGroupCard groupName="Back" {...mgCardProps} />
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Chest" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
+                            </Box>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Upper Back" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
                                     <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
                                 </Box>
                             </Box>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Chest" {...mgCardProps} />
-                                <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
-                                <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
+                                <MuscleGroupCard groupName="Legs" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
+                                <MuscleGroupCard groupName="Lower Back" {...mgCardProps} />
                             </Box>
-                            <MuscleGroupCard groupName="Legs" {...mgCardProps} />
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Core" {...mgCardProps} />
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Core" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
                                 <MuscleGroupCard groupName="Cardio" {...mgCardProps} />
                             </Box>
                         </Box>
@@ -826,16 +829,18 @@ type WorkoutFormDrawerProps = {
     onExerciseCreated: () => void
 }
 
-// Grid layout for muscle group selection
+// Grid layout for muscle group selection — all rows use a 3-column grid.
+// 'span2' rows have the first group spanning 2 columns.
 type GridRow =
-    | { type: 'simple'; groups: string[]; columns: number }
-    | { type: 'custom'; id: string }
+    | { type: 'grid'; groups: string[] }
+    | { type: 'pull' }
+    | { type: 'span2'; groups: [string, string] }
 
 const GRID_ROWS: GridRow[] = [
-    { type: 'custom', id: 'back-row' },
-    { type: 'simple', groups: ['Chest', 'Shoulders', 'Triceps'], columns: 3 },
-    { type: 'simple', groups: ['Legs'], columns: 1 },
-    { type: 'simple', groups: ['Core', 'Cardio'], columns: 2 },
+    { type: 'grid', groups: ['Chest', 'Shoulders', 'Triceps'] },
+    { type: 'pull' },
+    { type: 'span2', groups: ['Legs', 'Lower Back'] },
+    { type: 'span2', groups: ['Core', 'Cardio'] },
 ]
 
 // Selected state colors — warm palette
@@ -1294,57 +1299,29 @@ function WorkoutFormDrawer({
                     {/* Muscle group grid */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {GRID_ROWS.map((row, rowIdx) => {
-                            if (row.type === 'custom' && row.id === 'back-row') {
+                            if (row.type === 'pull') {
                                 return (
-                                    <Box
-                                        key={rowIdx}
-                                        sx={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '2fr 1fr',
-                                            gap: 1,
-                                        }}>
-                                        <MuscleGroupCard
-                                            groupName="Back"
-                                            muscleGroups={muscleGroups}
-                                            selectedIds={selectedIds}
-                                            onToggle={toggleMuscle}
-                                        />
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minHeight: '100%' }}>
-                                            <MuscleGroupCard
-                                                groupName="Biceps"
-                                                muscleGroups={muscleGroups}
-                                                selectedIds={selectedIds}
-                                                onToggle={toggleMuscle}
-                                                sx={{ flex: 1 }}
-                                            />
-                                            <MuscleGroupCard
-                                                groupName="Forearms"
-                                                muscleGroups={muscleGroups}
-                                                selectedIds={selectedIds}
-                                                onToggle={toggleMuscle}
-                                                sx={{ flex: 1 }}
-                                            />
+                                    <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                        <MuscleGroupCard groupName="Upper Back" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ gridColumn: 'span 2' }} />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            <MuscleGroupCard groupName="Biceps" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ flex: 1 }} />
+                                            <MuscleGroupCard groupName="Forearms" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ flex: 1 }} />
                                         </Box>
                                     </Box>
                                 )
                             }
-                            if (row.type !== 'simple') return null
+                            if (row.type === 'span2') {
+                                return (
+                                    <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                        <MuscleGroupCard groupName={row.groups[0]} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ gridColumn: 'span 2' }} />
+                                        <MuscleGroupCard groupName={row.groups[1]} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} />
+                                    </Box>
+                                )
+                            }
                             return (
-                                <Box
-                                    key={rowIdx}
-                                    sx={{
-                                        display: 'grid',
-                                        gridTemplateColumns: `repeat(${row.columns}, 1fr)`,
-                                        gap: 1,
-                                    }}>
-                                    {row.groups.map((groupName) => (
-                                        <MuscleGroupCard
-                                            key={groupName}
-                                            groupName={groupName}
-                                            muscleGroups={muscleGroups}
-                                            selectedIds={selectedIds}
-                                            onToggle={toggleMuscle}
-                                        />
+                                <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                    {row.groups.map((groupName: string) => (
+                                        <MuscleGroupCard key={groupName} groupName={groupName} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} />
                                     ))}
                                 </Box>
                             )

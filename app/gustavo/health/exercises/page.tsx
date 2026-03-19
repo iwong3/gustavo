@@ -347,7 +347,7 @@ function ExerciseFormDrawer({
     )
 
     const handleSubmit = useCallback(async () => {
-        if (!name.trim() || selectedMgIds.size === 0) return
+        if (!name.trim()) return
         setSaving(true)
         setError('')
 
@@ -447,25 +447,28 @@ function ExerciseFormDrawer({
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {/* Back + Biceps/Forearms row */}
-                            <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1 }}>
-                                <MuscleGroupCard groupName="Back" {...mgCardProps} />
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
-                                    <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
-                                </Box>
-                            </Box>
-                            {/* Chest / Shoulders / Triceps */}
+                            {/* Push: Chest / Shoulders / Triceps */}
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
                                 <MuscleGroupCard groupName="Chest" {...mgCardProps} />
                                 <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
                                 <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
                             </Box>
-                            {/* Legs */}
-                            <MuscleGroupCard groupName="Legs" {...mgCardProps} />
+                            {/* Pull: Upper Back / Biceps / Forearms */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Upper Back" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
+                                    <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
+                                </Box>
+                            </Box>
+                            {/* Legs / Lower Back */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Legs" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
+                                <MuscleGroupCard groupName="Lower Back" {...mgCardProps} />
+                            </Box>
                             {/* Core / Cardio */}
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Core" {...mgCardProps} />
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                                <MuscleGroupCard groupName="Core" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
                                 <MuscleGroupCard groupName="Cardio" {...mgCardProps} />
                             </Box>
                         </Box>
@@ -494,7 +497,7 @@ function ExerciseFormDrawer({
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!name.trim() || selectedMgIds.size === 0 || saving}
+                        disabled={!name.trim() || saving}
                         size="large"
                         sx={primaryButtonSx}>
                         {saving ? 'Saving...' : editingExercise ? 'Save' : 'Add'}

@@ -10,7 +10,7 @@
 
 /** Top-level muscle groups (no parents in muscle_group_parents) */
 export const MUSCLE_GROUPS = [
-    'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+    'Chest', 'Upper Back', 'Lower Back', 'Shoulders', 'Biceps', 'Triceps',
     'Forearms', 'Legs', 'Core', 'Cardio',
 ] as const
 
@@ -20,13 +20,12 @@ export type MuscleGroupName = typeof MUSCLE_GROUPS[number]
 export const TARGET_PARENTS: Record<string, string[]> = {
     'Upper Chest':  ['Chest'],
     'Lower Chest':  ['Chest'],
-    'Lats':         ['Back'],
-    'Rhomboids':    ['Back'],
-    'Lower Back':   ['Back'],
-    'Traps':        ['Back'],
+    'Traps':        ['Upper Back'],
+    'Rear Delts':   ['Upper Back'],
+    'Rhomboids':    ['Upper Back'],
+    'Lats':         ['Upper Back'],
     'Front Delts':  ['Shoulders'],
     'Side Delts':   ['Shoulders'],
-    'Rear Delts':   ['Shoulders', 'Back'],
     'Quads':        ['Legs'],
     'Hamstrings':   ['Legs'],
     'Glutes':       ['Legs'],
@@ -65,7 +64,7 @@ export const DISPLAY_ORDER = [
     // Push
     'Chest', 'Shoulders', 'Triceps',
     // Pull
-    'Back', 'Biceps', 'Forearms',
+    'Upper Back', 'Lower Back', 'Biceps', 'Forearms',
     // Legs
     'Legs',
     // Other

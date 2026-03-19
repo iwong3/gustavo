@@ -338,7 +338,7 @@ function ExerciseCard({ we, workout, allWorkouts }: {
     )
 
     const weightPoints = useMemo(
-        () => we.exercise.isBodyweight ? [] : getExerciseWeightHistory(we.exercise.id, workout.date, we.weightLbs, allWorkouts),
+        () => (!we.exercise.isBodyweight || we.weightLbs) ? getExerciseWeightHistory(we.exercise.id, workout.date, we.weightLbs, allWorkouts) : [],
         [we.exercise.id, workout.date, we.weightLbs, we.exercise.isBodyweight, allWorkouts]
     )
 
@@ -346,7 +346,7 @@ function ExerciseCard({ we, workout, allWorkouts }: {
 
     // Format weight consistently for alignment
     const weightStr = we.exercise.isBodyweight
-        ? 'BW'
+        ? we.weightLbs ? `BW + ${we.weightLbs} lbs` : 'BW'
         : we.weightLbs
             ? `${we.weightLbs} lbs`
             : null
@@ -355,7 +355,7 @@ function ExerciseCard({ we, workout, allWorkouts }: {
     const rows: { date: string | null; label: string; sets: string; weight: string | null; delta: number | null; isCurrent: boolean }[] = []
 
     // Current workout row — delta vs most recent history entry
-    const currentDelta = (!we.exercise.isBodyweight && we.weightLbs && history.length > 0 && history[0].weightLbs)
+    const currentDelta = (we.weightLbs && history.length > 0 && history[0].weightLbs)
         ? we.weightLbs - history[0].weightLbs
         : null
     rows.push({
@@ -369,9 +369,11 @@ function ExerciseCard({ we, workout, allWorkouts }: {
 
     // History rows — delta vs the row below (older entry)
     history.forEach((h, i) => {
-        const hWeight = we.exercise.isBodyweight ? 'BW' : h.weightLbs ? `${h.weightLbs} lbs` : null
+        const hWeight = we.exercise.isBodyweight
+            ? h.weightLbs ? `BW + ${h.weightLbs} lbs` : 'BW'
+            : h.weightLbs ? `${h.weightLbs} lbs` : null
         const nextEntry = history[i + 1]
-        const delta = (!we.exercise.isBodyweight && h.weightLbs && nextEntry?.weightLbs)
+        const delta = (h.weightLbs && nextEntry?.weightLbs)
             ? h.weightLbs - nextEntry.weightLbs
             : null
         rows.push({
