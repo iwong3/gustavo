@@ -164,52 +164,51 @@ export default function SupplementsPage() {
             </Typography>
 
             {/* Preset quick-actions */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                {/* Lightning circle icon — opens preset drawer */}
+                <Box
+                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
+                    sx={{
+                        'width': 30,
+                        'height': 30,
+                        'borderRadius': '50%',
+                        'backgroundColor': colors.primaryYellow,
+                        'border': `1.5px solid ${colors.primaryBlack}`,
+                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'justifyContent': 'center',
+                        'flexShrink': 0,
+                        'mr': 0.5,
+                        'cursor': 'pointer',
+                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
+                    }}>
+                    <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
+                </Box>
                 {presets.map((preset) => (
                     <Box
                         key={preset.id}
                         onClick={() => applyingPreset === null && applyPreset(preset.id)}
                         sx={{
-                            'display': 'flex',
-                            'alignItems': 'center',
-                            'gap': 0.75,
-                            'px': 1.5,
-                            'py': 0.75,
+                            'px': 1.25,
+                            'py': 0.5,
                             'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
                             'border': `1.5px solid ${colors.primaryBlack}`,
-                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
                             'borderRadius': '4px',
                             'cursor': applyingPreset !== null ? 'default' : 'pointer',
                             'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
                             'transition': 'all 0.15s',
                             '&:active': applyingPreset === null ? {
-                                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
                                 transform: 'translate(1px, 1px)',
                             } : {},
                         }}>
-                        <IconBolt size={14} stroke={2} color={colors.primaryBrown} />
-                        <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
                             {preset.name}
                         </Typography>
                     </Box>
                 ))}
-                <Box
-                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
-                    sx={{
-                        'display': 'flex',
-                        'alignItems': 'center',
-                        'justifyContent': 'center',
-                        'width': 32,
-                        'height': 32,
-                        'borderRadius': '50%',
-                        'border': `1.5px solid ${colors.primaryBlack}`,
-                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                        'backgroundColor': colors.primaryWhite,
-                        'cursor': 'pointer',
-                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
-                    }}>
-                    <IconPlus size={16} stroke={2} color={colors.primaryBrown} />
-                </Box>
             </Box>
 
             {/* Horizontal supplement chips */}
