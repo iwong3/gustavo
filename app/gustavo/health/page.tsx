@@ -15,6 +15,13 @@ function getDaysSinceColor(days: number | null): string {
     return '#f44336'                       // red
 }
 
+function getDaysSinceBg(days: number | null): string {
+    if (days === null) return '#9e9e9e12'  // grey tint
+    if (days <= 3) return '#4caf5012'      // green tint
+    if (days <= 6) return '#ff980012'      // orange tint
+    return '#f4433612'                     // red tint
+}
+
 function formatDaysSince(days: number | null): string {
     if (days === null) return 'Never'
     if (days === 0) return 'Today'
@@ -174,7 +181,7 @@ export default function HealthPage() {
                                                     borderRadius: '4px',
                                                     border: `1.5px solid ${colors.primaryBlack}`,
                                                     boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                                    backgroundColor: colors.primaryWhite,
+                                                    backgroundColor: getDaysSinceBg(item?.daysSince ?? null),
                                                 }}>
                                                 <Box
                                                     sx={{
