@@ -16,21 +16,12 @@ import type {
 } from '@/lib/health-types'
 import { GROUP_TARGETS, getParents, isTarget } from '@/lib/health/muscle-groups'
 import {
-    DndContext,
-    PointerSensor,
-    TouchSensor,
-    closestCenter,
-    useSensor,
-    useSensors,
-    type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-    SortableContext,
     arrayMove,
-    horizontalListSortingStrategy,
-    useSortable,
-    verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+    SortablePresetChip,
+    SortablePresetRow,
+    HorizontalSortableList,
+    VerticalSortableList,
+} from 'components/health/sortable-preset'
 import {
     Box,
     Button,
@@ -43,7 +34,6 @@ import {
     IconBolt,
     IconChevronDown,
     IconChevronUp,
-    IconGripVertical,
     IconPlus,
 } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
@@ -51,117 +41,6 @@ import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-// Inline CSS.Transform.toString from @dnd-kit/utilities to avoid extra dependency
-function toCssTransform(
-    transform: { x: number; y: number; scaleX: number; scaleY: number } | null
-): string | undefined {
-    if (!transform) return undefined
-    return `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${transform.scaleX}) scaleY(${transform.scaleY})`
-}
-
-// ── DnD helpers ─────────────────────────────────────────────────────────────
-
-function useDndSensors() {
-    return useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(TouchSensor, {
-            activationConstraint: { delay: 200, tolerance: 5 },
-        })
-    )
-}
-
-function handleDragEnd(
-    event: DragEndEvent,
-    items: { id: number }[],
-    reorder: (from: number, to: number) => void
-) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = items.findIndex((i) => i.id === Number(active.id))
-    const newIndex = items.findIndex((i) => i.id === Number(over.id))
-    if (oldIndex !== -1 && newIndex !== -1) reorder(oldIndex, newIndex)
-}
-
-// Sortable chip for horizontal preset rows
-function SortablePresetChip({
-    preset,
-    children,
-}: {
-    preset: WorkoutPreset
-    children: React.ReactNode
-}) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: preset.id })
-    return (
-        <Box
-            ref={setNodeRef}
-            {...attributes}
-            {...listeners}
-            sx={{
-                transform: toCssTransform(transform),
-                transition,
-                opacity: isDragging ? 0.5 : 1,
-                zIndex: isDragging ? 10 : 'auto',
-                touchAction: 'none',
-            }}>
-            {children}
-        </Box>
-    )
-}
-
-// Sortable row for vertical preset list in drawer
-function SortablePresetRow({
-    preset,
-    children,
-}: {
-    preset: WorkoutPreset
-    children: React.ReactNode
-}) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        setActivatorNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: preset.id })
-    return (
-        <Box
-            ref={setNodeRef}
-            sx={{
-                transform: toCssTransform(transform),
-                transition,
-                opacity: isDragging ? 0.5 : 1,
-                zIndex: isDragging ? 10 : 'auto',
-                display: 'flex',
-                alignItems: 'stretch',
-            }}>
-            <Box
-                ref={setActivatorNodeRef}
-                {...attributes}
-                {...listeners}
-                sx={{
-                    'display': 'flex',
-                    'alignItems': 'center',
-                    'px': 0.5,
-                    'cursor': 'grab',
-                    'touchAction': 'none',
-                    'color': colors.primaryBrown,
-                    '&:active': { cursor: 'grabbing' },
-                }}>
-                <IconGripVertical size={16} stroke={1.5} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
-        </Box>
-    )
-}
 
 type WorkoutFormData = {
     date: string
@@ -324,7 +203,7 @@ export default function ExercisePage() {
         })
     }, [])
 
-    const dndSensors = useDndSensors()
+
 
     const openAdd = useCallback(() => {
         setEditingWorkout(null)
@@ -404,23 +283,15 @@ export default function ExercisePage() {
 
             {/* Routine quick-actions */}
             {presets.length > 0 && (
-                <DndContext
-                    sensors={dndSensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(e) =>
-                        handleDragEnd(e, presets, reorderPresets)
-                    }>
-                    <SortableContext
-                        items={presets.map((p) => p.id)}
-                        strategy={horizontalListSortingStrategy}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 1,
-                                alignItems: 'center',
-                            }}>
-                            {/* Lightning circle icon — opens preset drawer */}
+                <HorizontalSortableList items={presets} onReorder={reorderPresets}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            alignItems: 'center',
+                        }}>
+                        {/* Lightning circle icon — opens preset drawer */}
                             <Box
                                 onClick={() => setPresetDrawerOpen(true)}
                                 sx={{
@@ -450,7 +321,7 @@ export default function ExercisePage() {
                             {presets.map((preset) => (
                                 <SortablePresetChip
                                     key={preset.id}
-                                    preset={preset}>
+                                    id={preset.id}>
                                     <Box
                                         onClick={() =>
                                             applyingPreset === null &&
@@ -495,9 +366,8 @@ export default function ExercisePage() {
                                     </Box>
                                 </SortablePresetChip>
                             ))}
-                        </Box>
-                    </SortableContext>
-                </DndContext>
+                    </Box>
+                </HorizontalSortableList>
             )}
 
             {/* Workout timeline */}
@@ -892,7 +762,7 @@ function PresetFormDrawer({
     onDelete,
     onReorder,
 }: PresetFormDrawerProps) {
-    const dndSensors = useDndSensors()
+
     const [name, setName] = useState('')
     const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
     const [selectedExIds, setSelectedExIds] = useState<number[]>([])
@@ -1037,16 +907,8 @@ function PresetFormDrawer({
                     }}>
                     {/* Existing presets list */}
                     {!editingPreset && existingPresets.length > 0 && (
-                        <DndContext
-                            sensors={dndSensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={(e) =>
-                                handleDragEnd(e, existingPresets, onReorder)
-                            }>
-                            <SortableContext
-                                items={existingPresets.map((p) => p.id)}
-                                strategy={verticalListSortingStrategy}>
-                                <Box
+                        <VerticalSortableList items={existingPresets} onReorder={onReorder}>
+                            <Box
                                     sx={{
                                         display: 'flex',
                                         flexDirection: 'column',
@@ -1055,7 +917,7 @@ function PresetFormDrawer({
                                     {existingPresets.map((p) => (
                                         <SortablePresetRow
                                             key={p.id}
-                                            preset={p}>
+                                            id={p.id}>
                                             <Box
                                                 sx={{
                                                     ...cardSx,
@@ -1153,8 +1015,7 @@ function PresetFormDrawer({
                                         </SortablePresetRow>
                                     ))}
                                 </Box>
-                            </SortableContext>
-                        </DndContext>
+                        </VerticalSortableList>
                     )}
 
                     {/* Divider between list and form */}
@@ -1589,7 +1450,7 @@ function WorkoutFormDrawer({
     onPresetSaved,
     onReorderPresets,
 }: WorkoutFormDrawerProps) {
-    const dndSensors = useDndSensors()
+
     const isEdit = editingWorkout !== null && editingWorkout.id !== -1
     const isDuplicate = editingWorkout !== null && editingWorkout.id === -1
 
@@ -1976,25 +1837,11 @@ function WorkoutFormDrawer({
                                     />
                                 </Box>
                                 {/* Preset chips */}
-                                <DndContext
-                                    sensors={dndSensors}
-                                    collisionDetection={closestCenter}
-                                    onDragEnd={(e) =>
-                                        handleDragEnd(
-                                            e,
-                                            presets,
-                                            onReorderPresets
-                                        )
-                                    }>
-                                    <SortableContext
-                                        items={presets.map((p) => p.id)}
-                                        strategy={
-                                            horizontalListSortingStrategy
-                                        }>
-                                        {presets.map((preset) => (
+                                <HorizontalSortableList items={presets} onReorder={onReorderPresets}>
+                                    {presets.map((preset) => (
                                             <SortablePresetChip
                                                 key={preset.id}
-                                                preset={preset}>
+                                                id={preset.id}>
                                                 <Chip
                                                     label={preset.name}
                                                     onClick={() =>
@@ -2025,8 +1872,7 @@ function WorkoutFormDrawer({
                                                 />
                                             </SortablePresetChip>
                                         ))}
-                                    </SortableContext>
-                                </DndContext>
+                                </HorizontalSortableList>
                             </Box>
                             {/* New routine name input — revealed when + is active */}
                             {showSavePreset && (

@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
         rows.map((r) => ({
-            id: r.id,
-            supplementId: r.supplement_id,
+            id: Number(r.id),
+            supplementId: Number(r.supplement_id),
             supplementName: r.supplement_name,
             date: r.date.toISOString().split('T')[0],
             quantity: r.quantity,

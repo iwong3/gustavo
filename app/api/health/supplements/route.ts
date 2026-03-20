@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { rows } = await pool.query(query, [authUser.userId])
 
     const supplements: Supplement[] = rows.map((r) => ({
-        id: r.id,
+        id: Number(r.id),
         name: r.name,
         dosage: r.dosage,
         isActive: r.is_active,
