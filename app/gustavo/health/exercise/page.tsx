@@ -14,14 +14,7 @@ import type {
     WorkoutExercise,
     WorkoutPreset,
 } from '@/lib/health-types'
-import { GROUP_TARGETS, getParents, isTarget } from '@/lib/health/muscle-groups'
-import {
-    arrayMove,
-    SortablePresetChip,
-    SortablePresetRow,
-    HorizontalSortableList,
-    VerticalSortableList,
-} from 'components/health/sortable-preset'
+import { getParents, GROUP_TARGETS, isTarget } from '@/lib/health/muscle-groups'
 import {
     Box,
     Button,
@@ -37,6 +30,13 @@ import {
     IconPlus,
 } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
+import {
+    arrayMove,
+    HorizontalSortableList,
+    SortablePresetChip,
+    SortablePresetRow,
+    VerticalSortableList,
+} from 'components/health/sortable-preset'
 import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
@@ -203,8 +203,6 @@ export default function ExercisePage() {
         })
     }, [])
 
-
-
     const openAdd = useCallback(() => {
         setEditingWorkout(null)
         setDrawerOpen(true)
@@ -269,6 +267,7 @@ export default function ExercisePage() {
                 width: '100%',
                 maxWidth: 600,
                 paddingX: 2,
+                paddingBottom: 2,
                 gap: 2,
             }}>
             {/* Header */}
@@ -283,7 +282,9 @@ export default function ExercisePage() {
 
             {/* Routine quick-actions */}
             {presets.length > 0 && (
-                <HorizontalSortableList items={presets} onReorder={reorderPresets}>
+                <HorizontalSortableList
+                    items={presets}
+                    onReorder={reorderPresets}>
                     <Box
                         sx={{
                             display: 'flex',
@@ -292,80 +293,78 @@ export default function ExercisePage() {
                             alignItems: 'center',
                         }}>
                         {/* Lightning circle icon — opens preset drawer */}
-                            <Box
-                                onClick={() => setPresetDrawerOpen(true)}
-                                sx={{
-                                    'width': 30,
-                                    'height': 30,
-                                    'borderRadius': '50%',
-                                    'backgroundColor': colors.primaryYellow,
-                                    'border': `1.5px solid ${colors.primaryBlack}`,
-                                    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'justifyContent': 'center',
-                                    'flexShrink': 0,
-                                    'cursor': 'pointer',
-                                    '&:active': {
-                                        boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                        transform: 'translate(1px, 1px)',
-                                    },
-                                }}>
-                                <IconBolt
-                                    size={14}
-                                    stroke={2.5}
-                                    fill={colors.primaryWhite}
-                                    color={colors.primaryBlack}
-                                />
-                            </Box>
-                            {presets.map((preset) => (
-                                <SortablePresetChip
-                                    key={preset.id}
-                                    id={preset.id}>
-                                    <Box
-                                        onClick={() =>
-                                            applyingPreset === null &&
-                                            applyPreset(preset.id)
-                                        }
+                        <Box
+                            onClick={() => setPresetDrawerOpen(true)}
+                            sx={{
+                                'width': 30,
+                                'height': 30,
+                                'borderRadius': '50%',
+                                'backgroundColor': colors.primaryYellow,
+                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'justifyContent': 'center',
+                                'flexShrink': 0,
+                                'cursor': 'pointer',
+                                '&:active': {
+                                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                    transform: 'translate(1px, 1px)',
+                                },
+                            }}>
+                            <IconBolt
+                                size={14}
+                                stroke={2.5}
+                                fill={colors.primaryWhite}
+                                color={colors.primaryBlack}
+                            />
+                        </Box>
+                        {presets.map((preset) => (
+                            <SortablePresetChip key={preset.id} id={preset.id}>
+                                <Box
+                                    onClick={() =>
+                                        applyingPreset === null &&
+                                        applyPreset(preset.id)
+                                    }
+                                    sx={{
+                                        'px': 1.25,
+                                        'py': 0.5,
+                                        'backgroundColor':
+                                            applyingPreset === preset.id
+                                                ? colors.primaryYellow
+                                                : colors.primaryWhite,
+                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                        'borderRadius': '4px',
+                                        'cursor':
+                                            applyingPreset !== null
+                                                ? 'default'
+                                                : 'pointer',
+                                        'opacity':
+                                            applyingPreset !== null &&
+                                            applyingPreset !== preset.id
+                                                ? 0.5
+                                                : 1,
+                                        'transition': 'all 0.15s',
+                                        '&:active':
+                                            applyingPreset === null
+                                                ? {
+                                                      boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                      transform:
+                                                          'translate(1px, 1px)',
+                                                  }
+                                                : {},
+                                    }}>
+                                    <Typography
                                         sx={{
-                                            'px': 1.25,
-                                            'py': 0.5,
-                                            'backgroundColor':
-                                                applyingPreset === preset.id
-                                                    ? colors.primaryYellow
-                                                    : colors.primaryWhite,
-                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                            'borderRadius': '4px',
-                                            'cursor':
-                                                applyingPreset !== null
-                                                    ? 'default'
-                                                    : 'pointer',
-                                            'opacity':
-                                                applyingPreset !== null &&
-                                                applyingPreset !== preset.id
-                                                    ? 0.5
-                                                    : 1,
-                                            'transition': 'all 0.15s',
-                                            '&:active':
-                                                applyingPreset === null
-                                                    ? {
-                                                          boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                          transform:
-                                                              'translate(1px, 1px)',
-                                                      }
-                                                    : {},
+                                            fontSize: 12,
+                                            fontWeight: 600,
                                         }}>
-                                        <Typography
-                                            sx={{
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                            }}>
-                                            {preset.name}
-                                        </Typography>
-                                    </Box>
-                                </SortablePresetChip>
-                            ))}
+                                        {preset.name}
+                                    </Typography>
+                                </Box>
+                            </SortablePresetChip>
+                        ))}
                     </Box>
                 </HorizontalSortableList>
             )}
@@ -436,18 +435,19 @@ export default function ExercisePage() {
                                             justifyContent: 'center',
                                             pt: '1px',
                                         }}>
-                                        {daysBetween > 0 ? (
+                                        {daysBetween >= 2 ? (
                                             (() => {
+                                                const restDays = daysBetween - 1
                                                 const bg =
-                                                    daysBetween <= 2
+                                                    restDays <= 2
                                                         ? '#e8f5e9'
-                                                        : daysBetween <= 6
+                                                        : restDays <= 5
                                                           ? '#fff3e0'
                                                           : '#fbe9e7'
                                                 const borderColor =
-                                                    daysBetween <= 2
+                                                    restDays <= 2
                                                         ? '#4caf50'
-                                                        : daysBetween <= 6
+                                                        : restDays <= 5
                                                           ? '#f57c00'
                                                           : colors.primaryRed
                                                 return (
@@ -473,7 +473,7 @@ export default function ExercisePage() {
                                                                 lineHeight: 1,
                                                                 color: borderColor,
                                                             }}>
-                                                            {daysBetween}
+                                                            {restDays}
                                                         </Typography>
                                                     </Box>
                                                 )
@@ -762,7 +762,6 @@ function PresetFormDrawer({
     onDelete,
     onReorder,
 }: PresetFormDrawerProps) {
-
     const [name, setName] = useState('')
     const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
     const [selectedExIds, setSelectedExIds] = useState<number[]>([])
@@ -907,114 +906,106 @@ function PresetFormDrawer({
                     }}>
                     {/* Existing presets list */}
                     {!editingPreset && existingPresets.length > 0 && (
-                        <VerticalSortableList items={existingPresets} onReorder={onReorder}>
+                        <VerticalSortableList
+                            items={existingPresets}
+                            onReorder={onReorder}>
                             <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 1,
-                                    }}>
-                                    {existingPresets.map((p) => (
-                                        <SortablePresetRow
-                                            key={p.id}
-                                            id={p.id}>
-                                            <Box
-                                                sx={{
-                                                    ...cardSx,
-                                                    overflow: 'hidden',
-                                                }}>
-                                                <SwipeableRow
-                                                    canEdit
-                                                    canDelete
-                                                    onEdit={() => onEdit(p)}
-                                                    onDelete={() =>
-                                                        onDelete(p.id)
-                                                    }
-                                                    backgroundColor={
-                                                        colors.primaryWhite
-                                                    }>
-                                                    <Box
-                                                        onClick={() =>
-                                                            onEdit(p)
-                                                        }
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1,
+                                }}>
+                                {existingPresets.map((p) => (
+                                    <SortablePresetRow key={p.id} id={p.id}>
+                                        <Box
+                                            sx={{
+                                                ...cardSx,
+                                                overflow: 'hidden',
+                                            }}>
+                                            <SwipeableRow
+                                                canEdit
+                                                canDelete
+                                                onEdit={() => onEdit(p)}
+                                                onDelete={() => onDelete(p.id)}
+                                                backgroundColor={
+                                                    colors.primaryWhite
+                                                }>
+                                                <Box
+                                                    onClick={() => onEdit(p)}
+                                                    sx={{
+                                                        'p': 1.5,
+                                                        'cursor': 'pointer',
+                                                        '&:active': {
+                                                            backgroundColor:
+                                                                colors.secondaryYellow,
+                                                        },
+                                                    }}>
+                                                    <Typography
                                                         sx={{
-                                                            'p': 1.5,
-                                                            'cursor': 'pointer',
-                                                            '&:active': {
-                                                                backgroundColor:
-                                                                    colors.secondaryYellow,
-                                                            },
+                                                            fontSize: 14,
+                                                            fontWeight: 600,
+                                                            mb: 0.5,
                                                         }}>
+                                                        {p.name}
+                                                    </Typography>
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            gap: 0.5,
+                                                        }}>
+                                                        {p.muscleGroups
+                                                            .filter(
+                                                                (mg) =>
+                                                                    !isTarget(
+                                                                        mg.name
+                                                                    )
+                                                            )
+                                                            .map((mg) => (
+                                                                <Chip
+                                                                    key={mg.id}
+                                                                    label={
+                                                                        mg.name
+                                                                    }
+                                                                    size="small"
+                                                                    sx={{
+                                                                        'height': 20,
+                                                                        'fontSize': 10,
+                                                                        'fontWeight': 600,
+                                                                        'backgroundColor':
+                                                                            selectedBg,
+                                                                        'border': `1px solid ${selectedBorder}`,
+                                                                        'borderRadius':
+                                                                            '3px',
+                                                                        '& .MuiChip-label':
+                                                                            {
+                                                                                px: 0.75,
+                                                                            },
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                    </Box>
+                                                    {p.exercises.length > 0 && (
                                                         <Typography
                                                             sx={{
-                                                                fontSize: 14,
-                                                                fontWeight: 600,
-                                                                mb: 0.5,
+                                                                fontSize: 11,
+                                                                color: colors.primaryBrown,
+                                                                mt: 0.5,
                                                             }}>
-                                                            {p.name}
-                                                        </Typography>
-                                                        <Box
-                                                            sx={{
-                                                                display: 'flex',
-                                                                flexWrap:
-                                                                    'wrap',
-                                                                gap: 0.5,
-                                                            }}>
-                                                            {p.muscleGroups
-                                                                .filter(
-                                                                    (mg) =>
-                                                                        !isTarget(
-                                                                            mg.name
-                                                                        )
+                                                            {p.exercises
+                                                                .map(
+                                                                    (e) =>
+                                                                        e.name
                                                                 )
-                                                                .map((mg) => (
-                                                                    <Chip
-                                                                        key={
-                                                                            mg.id
-                                                                        }
-                                                                        label={
-                                                                            mg.name
-                                                                        }
-                                                                        size="small"
-                                                                        sx={{
-                                                                            'height': 20,
-                                                                            'fontSize': 10,
-                                                                            'fontWeight': 600,
-                                                                            'backgroundColor':
-                                                                                selectedBg,
-                                                                            'border': `1px solid ${selectedBorder}`,
-                                                                            'borderRadius':
-                                                                                '3px',
-                                                                            '& .MuiChip-label':
-                                                                                {
-                                                                                    px: 0.75,
-                                                                                },
-                                                                        }}
-                                                                    />
-                                                                ))}
-                                                        </Box>
-                                                        {p.exercises.length >
-                                                            0 && (
-                                                            <Typography
-                                                                sx={{
-                                                                    fontSize: 11,
-                                                                    color: colors.primaryBrown,
-                                                                    mt: 0.5,
-                                                                }}>
-                                                                {p.exercises
-                                                                    .map(
-                                                                        (e) =>
-                                                                            e.name
-                                                                    )
-                                                                    .join(', ')}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                </SwipeableRow>
-                                            </Box>
-                                        </SortablePresetRow>
-                                    ))}
-                                </Box>
+                                                                .join(', ')}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </SwipeableRow>
+                                        </Box>
+                                    </SortablePresetRow>
+                                ))}
+                            </Box>
                         </VerticalSortableList>
                     )}
 
@@ -1450,7 +1441,6 @@ function WorkoutFormDrawer({
     onPresetSaved,
     onReorderPresets,
 }: WorkoutFormDrawerProps) {
-
     const isEdit = editingWorkout !== null && editingWorkout.id !== -1
     const isDuplicate = editingWorkout !== null && editingWorkout.id === -1
 
@@ -1837,41 +1827,41 @@ function WorkoutFormDrawer({
                                     />
                                 </Box>
                                 {/* Preset chips */}
-                                <HorizontalSortableList items={presets} onReorder={onReorderPresets}>
+                                <HorizontalSortableList
+                                    items={presets}
+                                    onReorder={onReorderPresets}>
                                     {presets.map((preset) => (
-                                            <SortablePresetChip
-                                                key={preset.id}
-                                                id={preset.id}>
-                                                <Chip
-                                                    label={preset.name}
-                                                    onClick={() =>
-                                                        applyPresetToForm(
-                                                            preset
-                                                        )
-                                                    }
-                                                    size="small"
-                                                    sx={{
-                                                        'height': 28,
-                                                        'fontSize': 12,
-                                                        'fontWeight': 600,
-                                                        'backgroundColor':
-                                                            colors.primaryWhite,
-                                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                                        'borderRadius': '4px',
-                                                        'cursor': 'pointer',
-                                                        '& .MuiChip-label': {
-                                                            px: 0.75,
-                                                        },
-                                                        '&:active': {
-                                                            boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                            transform:
-                                                                'translate(1px, 1px)',
-                                                        },
-                                                    }}
-                                                />
-                                            </SortablePresetChip>
-                                        ))}
+                                        <SortablePresetChip
+                                            key={preset.id}
+                                            id={preset.id}>
+                                            <Chip
+                                                label={preset.name}
+                                                onClick={() =>
+                                                    applyPresetToForm(preset)
+                                                }
+                                                size="small"
+                                                sx={{
+                                                    'height': 28,
+                                                    'fontSize': 12,
+                                                    'fontWeight': 600,
+                                                    'backgroundColor':
+                                                        colors.primaryWhite,
+                                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                                    'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                    'borderRadius': '4px',
+                                                    'cursor': 'pointer',
+                                                    '& .MuiChip-label': {
+                                                        px: 0.75,
+                                                    },
+                                                    '&:active': {
+                                                        boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                        transform:
+                                                            'translate(1px, 1px)',
+                                                    },
+                                                }}
+                                            />
+                                        </SortablePresetChip>
+                                    ))}
                                 </HorizontalSortableList>
                             </Box>
                             {/* New routine name input — revealed when + is active */}
