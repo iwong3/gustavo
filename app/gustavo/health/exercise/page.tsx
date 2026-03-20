@@ -1,15 +1,36 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import type { Exercise, MuscleGroupWithParents, Workout, WorkoutExercise, WorkoutPreset } from '@/lib/health-types'
-import { GROUP_TARGETS, getParents, isTarget } from '@/lib/health/muscle-groups'
 import {
     fieldSx,
     labelSx,
     primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
-import { useRegisterFab } from 'providers/fab-provider'
+import type {
+    Exercise,
+    MuscleGroupWithParents,
+    Workout,
+    WorkoutExercise,
+    WorkoutPreset,
+} from '@/lib/health-types'
+import { GROUP_TARGETS, getParents, isTarget } from '@/lib/health/muscle-groups'
+import {
+    DndContext,
+    PointerSensor,
+    TouchSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+    SortableContext,
+    arrayMove,
+    horizontalListSortingStrategy,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import {
     Box,
     Button,
@@ -18,11 +39,129 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPlus, IconX, IconChevronDown, IconChevronUp, IconBolt } from '@tabler/icons-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+    IconBolt,
+    IconChevronDown,
+    IconChevronUp,
+    IconGripVertical,
+    IconPlus,
+} from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { useRegisterFab } from 'providers/fab-provider'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+// Inline CSS.Transform.toString from @dnd-kit/utilities to avoid extra dependency
+function toCssTransform(
+    transform: { x: number; y: number; scaleX: number; scaleY: number } | null
+): string | undefined {
+    if (!transform) return undefined
+    return `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${transform.scaleX}) scaleY(${transform.scaleY})`
+}
+
+// ── DnD helpers ─────────────────────────────────────────────────────────────
+
+function useDndSensors() {
+    return useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 200, tolerance: 5 },
+        })
+    )
+}
+
+function handleDragEnd(
+    event: DragEndEvent,
+    items: { id: number }[],
+    reorder: (from: number, to: number) => void
+) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex((i) => i.id === Number(active.id))
+    const newIndex = items.findIndex((i) => i.id === Number(over.id))
+    if (oldIndex !== -1 && newIndex !== -1) reorder(oldIndex, newIndex)
+}
+
+// Sortable chip for horizontal preset rows
+function SortablePresetChip({
+    preset,
+    children,
+}: {
+    preset: WorkoutPreset
+    children: React.ReactNode
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: preset.id })
+    return (
+        <Box
+            ref={setNodeRef}
+            {...attributes}
+            {...listeners}
+            sx={{
+                transform: toCssTransform(transform),
+                transition,
+                opacity: isDragging ? 0.5 : 1,
+                zIndex: isDragging ? 10 : 'auto',
+                touchAction: 'none',
+            }}>
+            {children}
+        </Box>
+    )
+}
+
+// Sortable row for vertical preset list in drawer
+function SortablePresetRow({
+    preset,
+    children,
+}: {
+    preset: WorkoutPreset
+    children: React.ReactNode
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        setActivatorNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: preset.id })
+    return (
+        <Box
+            ref={setNodeRef}
+            sx={{
+                transform: toCssTransform(transform),
+                transition,
+                opacity: isDragging ? 0.5 : 1,
+                zIndex: isDragging ? 10 : 'auto',
+                display: 'flex',
+                alignItems: 'stretch',
+            }}>
+            <Box
+                ref={setActivatorNodeRef}
+                {...attributes}
+                {...listeners}
+                sx={{
+                    'display': 'flex',
+                    'alignItems': 'center',
+                    'px': 0.5,
+                    'cursor': 'grab',
+                    'touchAction': 'none',
+                    'color': colors.primaryBrown,
+                    '&:active': { cursor: 'grabbing' },
+                }}>
+                <IconGripVertical size={16} stroke={1.5} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
+        </Box>
+    )
+}
 
 type WorkoutFormData = {
     date: string
@@ -38,7 +177,9 @@ type WorkoutFormData = {
 
 export default function ExercisePage() {
     const [workouts, setWorkouts] = useState<Workout[]>([])
-    const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>([])
+    const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>(
+        []
+    )
     const [exercises, setExercises] = useState<Exercise[]>([])
     const [presets, setPresets] = useState<WorkoutPreset[]>([])
     const [loading, setLoading] = useState(true)
@@ -48,7 +189,9 @@ export default function ExercisePage() {
     const [detailOpen, setDetailOpen] = useState(false)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<WorkoutPreset | null>(null)
+    const [editingPreset, setEditingPreset] = useState<WorkoutPreset | null>(
+        null
+    )
 
     const fetchWorkouts = useCallback(() => {
         fetch('/api/health/workouts')
@@ -114,7 +257,9 @@ export default function ExercisePage() {
 
     const handleDelete = useCallback(
         async (id: number) => {
-            const res = await fetch(`/api/health/workouts/${id}`, { method: 'DELETE' })
+            const res = await fetch(`/api/health/workouts/${id}`, {
+                method: 'DELETE',
+            })
             if (res.ok) {
                 fetchWorkouts()
             }
@@ -122,21 +267,21 @@ export default function ExercisePage() {
         [fetchWorkouts]
     )
 
-    const handleDuplicate = useCallback(
-        (workout: Workout) => {
-            setEditingWorkout(null)
-            setDrawerOpen(true)
-            // Pre-fill handled via editingWorkout with sentinel id=-1
-            setTimeout(() => {
-                setEditingWorkout({
-                    ...workout,
-                    id: -1, // sentinel: duplicate mode
-                    date: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}` })(),
-                })
-            }, 0)
-        },
-        []
-    )
+    const handleDuplicate = useCallback((workout: Workout) => {
+        setEditingWorkout(null)
+        setDrawerOpen(true)
+        // Pre-fill handled via editingWorkout with sentinel id=-1
+        setTimeout(() => {
+            setEditingWorkout({
+                ...workout,
+                id: -1, // sentinel: duplicate mode
+                date: (() => {
+                    const n = new Date()
+                    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+                })(),
+            })
+        }, 0)
+    }, [])
 
     const applyPreset = useCallback(
         async (presetId: number) => {
@@ -144,11 +289,14 @@ export default function ExercisePage() {
             try {
                 const today = new Date()
                 const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-                const res = await fetch(`/api/health/presets/${presetId}/apply`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date }),
-                })
+                const res = await fetch(
+                    `/api/health/presets/${presetId}/apply`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date }),
+                    }
+                )
                 if (res.ok) {
                     fetchWorkouts()
                 }
@@ -160,6 +308,23 @@ export default function ExercisePage() {
         },
         [fetchWorkouts]
     )
+
+    const reorderPresets = useCallback((from: number, to: number) => {
+        setPresets((prev) => {
+            const next = arrayMove(prev, from, to)
+            // Persist to DB (fire-and-forget)
+            fetch('/api/health/presets/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ presetIds: next.map((p) => p.id) }),
+            }).catch((err) =>
+                console.error('Failed to save preset order:', err)
+            )
+            return next
+        })
+    }, [])
+
+    const dndSensors = useDndSensors()
 
     const openAdd = useCallback(() => {
         setEditingWorkout(null)
@@ -191,7 +356,8 @@ export default function ExercisePage() {
                 if (prev) {
                     const days = Math.round(
                         (new Date(w.date + 'T00:00:00').getTime() -
-                         new Date(prev + 'T00:00:00').getTime()) / 86400000
+                            new Date(prev + 'T00:00:00').getTime()) /
+                            86400000
                     )
                     perGroup.set(mg.name, days)
                 }
@@ -208,7 +374,10 @@ export default function ExercisePage() {
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
+                <CircularProgress
+                    size={24}
+                    sx={{ color: colors.primaryYellow }}
+                />
             </Box>
         )
     }
@@ -235,230 +404,391 @@ export default function ExercisePage() {
 
             {/* Routine quick-actions */}
             {presets.length > 0 && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
-                    {/* Lightning circle icon */}
-                    <Box sx={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: '50%',
-                        backgroundColor: colors.primaryYellow,
-                        border: `1.5px solid ${colors.primaryBlack}`,
-                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        mr: 0.5,
-                    }}>
-                        <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
-                    </Box>
-                    {presets.map((preset) => (
+                <DndContext
+                    sensors={dndSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) =>
+                        handleDragEnd(e, presets, reorderPresets)
+                    }>
+                    <SortableContext
+                        items={presets.map((p) => p.id)}
+                        strategy={horizontalListSortingStrategy}>
                         <Box
-                            key={preset.id}
-                            onClick={() => applyingPreset === null && applyPreset(preset.id)}
                             sx={{
-                                'px': 1.25,
-                                'py': 0.5,
-                                'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
-                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'cursor': applyingPreset !== null ? 'default' : 'pointer',
-                                'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
-                                'transition': 'all 0.15s',
-                                '&:active': applyingPreset === null ? {
-                                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                    transform: 'translate(1px, 1px)',
-                                } : {},
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 1,
+                                alignItems: 'center',
                             }}>
-                            <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                {preset.name}
-                            </Typography>
+                            {/* Lightning circle icon — opens preset drawer */}
+                            <Box
+                                onClick={() => setPresetDrawerOpen(true)}
+                                sx={{
+                                    'width': 30,
+                                    'height': 30,
+                                    'borderRadius': '50%',
+                                    'backgroundColor': colors.primaryYellow,
+                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'justifyContent': 'center',
+                                    'flexShrink': 0,
+                                    'cursor': 'pointer',
+                                    '&:active': {
+                                        boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                        transform: 'translate(1px, 1px)',
+                                    },
+                                }}>
+                                <IconBolt
+                                    size={14}
+                                    stroke={2.5}
+                                    fill={colors.primaryWhite}
+                                    color={colors.primaryBlack}
+                                />
+                            </Box>
+                            {presets.map((preset) => (
+                                <SortablePresetChip
+                                    key={preset.id}
+                                    preset={preset}>
+                                    <Box
+                                        onClick={() =>
+                                            applyingPreset === null &&
+                                            applyPreset(preset.id)
+                                        }
+                                        sx={{
+                                            'px': 1.25,
+                                            'py': 0.5,
+                                            'backgroundColor':
+                                                applyingPreset === preset.id
+                                                    ? colors.primaryYellow
+                                                    : colors.primaryWhite,
+                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                            'borderRadius': '4px',
+                                            'cursor':
+                                                applyingPreset !== null
+                                                    ? 'default'
+                                                    : 'pointer',
+                                            'opacity':
+                                                applyingPreset !== null &&
+                                                applyingPreset !== preset.id
+                                                    ? 0.5
+                                                    : 1,
+                                            'transition': 'all 0.15s',
+                                            '&:active':
+                                                applyingPreset === null
+                                                    ? {
+                                                          boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                          transform:
+                                                              'translate(1px, 1px)',
+                                                      }
+                                                    : {},
+                                        }}>
+                                        <Typography
+                                            sx={{
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                            }}>
+                                            {preset.name}
+                                        </Typography>
+                                    </Box>
+                                </SortablePresetChip>
+                            ))}
                         </Box>
-                    ))}
-                </Box>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {/* Workout timeline */}
             {workouts.length === 0 ? (
-                <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
+                <Typography
+                    sx={{
+                        fontSize: 14,
+                        color: colors.primaryBrown,
+                        textAlign: 'center',
+                        py: 4,
+                    }}>
                     No workouts logged yet.
                 </Typography>
             ) : (
                 <Box sx={{ position: 'relative' }}>
                     {/* Vertical timeline line */}
-                    <Box sx={{
-                        position: 'absolute',
-                        left: 15, // center of 32px gutter
-                        top: 6, // align with first node center
-                        bottom: 6,
-                        width: 2,
-                        backgroundColor: `${colors.primaryBlack}25`,
-                    }} />
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            left: 15, // center of 32px gutter
+                            top: 6, // align with first node center
+                            bottom: 6,
+                            width: 2,
+                            backgroundColor: `${colors.primaryBlack}25`,
+                        }}
+                    />
 
                     {workouts.map((workout, i) => {
-                        const parentGroups = workout.muscleGroups.filter((mg) => !isTarget(mg.name))
+                        const parentGroups = workout.muscleGroups.filter(
+                            (mg) => !isTarget(mg.name)
+                        )
 
                         const d = new Date(workout.date + 'T00:00:00')
-                        const weekday = d.toLocaleDateString('en-US', { weekday: 'short' })
-                        const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
+                        const weekday = d.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                        })
+                        const monthDay = d.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                        })
 
                         // Days gap to next entry
-                        const daysBetween = i < workouts.length - 1
-                            ? Math.round(
-                                (new Date(workout.date + 'T00:00:00').getTime() -
-                                 new Date(workouts[i + 1].date + 'T00:00:00').getTime()) / 86400000
-                            )
-                            : 0
+                        const daysBetween =
+                            i < workouts.length - 1
+                                ? Math.round(
+                                      (new Date(
+                                          workout.date + 'T00:00:00'
+                                      ).getTime() -
+                                          new Date(
+                                              workouts[i + 1].date + 'T00:00:00'
+                                          ).getTime()) /
+                                          86400000
+                                  )
+                                : 0
 
                         return (
                             <Box key={workout.id}>
                                 {/* ── Card row with date aligned to top ── */}
                                 <Box sx={{ display: 'flex' }}>
                                     {/* Timeline gutter with days-since node */}
-                                    <Box sx={{
-                                        width: 32,
-                                        flexShrink: 0,
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        pt: '1px',
-                                    }}>
-                                        {daysBetween > 0 ? (() => {
-                                            const bg = daysBetween <= 2 ? '#e8f5e9' : daysBetween <= 6 ? '#fff3e0' : '#fbe9e7'
-                                            const borderColor = daysBetween <= 2 ? '#4caf50' : daysBetween <= 6 ? '#f57c00' : colors.primaryRed
-                                            return (
-                                                <Box sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    minWidth: 18,
-                                                    height: 18,
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            flexShrink: 0,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            pt: '1px',
+                                        }}>
+                                        {daysBetween > 0 ? (
+                                            (() => {
+                                                const bg =
+                                                    daysBetween <= 2
+                                                        ? '#e8f5e9'
+                                                        : daysBetween <= 6
+                                                          ? '#fff3e0'
+                                                          : '#fbe9e7'
+                                                const borderColor =
+                                                    daysBetween <= 2
+                                                        ? '#4caf50'
+                                                        : daysBetween <= 6
+                                                          ? '#f57c00'
+                                                          : colors.primaryRed
+                                                return (
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            justifyContent:
+                                                                'center',
+                                                            minWidth: 18,
+                                                            height: 18,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: bg,
+                                                            border: `1.5px solid ${borderColor}`,
+                                                            boxShadow: `1.5px 1.5px 0px ${borderColor}`,
+                                                            zIndex: 1,
+                                                        }}>
+                                                        <Typography
+                                                            sx={{
+                                                                fontSize: 9,
+                                                                fontWeight: 800,
+                                                                lineHeight: 1,
+                                                                color: borderColor,
+                                                            }}>
+                                                            {daysBetween}
+                                                        </Typography>
+                                                    </Box>
+                                                )
+                                            })()
+                                        ) : (
+                                            <Box
+                                                sx={{
+                                                    width: 10,
+                                                    height: 10,
                                                     borderRadius: '50%',
-                                                    backgroundColor: bg,
-                                                    border: `1.5px solid ${borderColor}`,
-                                                    boxShadow: `1.5px 1.5px 0px ${borderColor}`,
+                                                    backgroundColor:
+                                                        colors.primaryYellow,
+                                                    border: `1.5px solid ${colors.primaryBlack}`,
                                                     zIndex: 1,
-                                                }}>
-                                                    <Typography sx={{
-                                                        fontSize: 9,
-                                                        fontWeight: 800,
-                                                        lineHeight: 1,
-                                                        color: borderColor,
-                                                    }}>
-                                                        {daysBetween}
-                                                    </Typography>
-                                                </Box>
-                                            )
-                                        })() : (
-                                            <Box sx={{
-                                                width: 10,
-                                                height: 10,
-                                                borderRadius: '50%',
-                                                backgroundColor: colors.primaryYellow,
-                                                border: `1.5px solid ${colors.primaryBlack}`,
-                                                zIndex: 1,
-                                                mt: '5px',
-                                            }} />
+                                                    mt: '5px',
+                                                }}
+                                            />
                                         )}
                                     </Box>
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
                                         {/* Date label */}
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-                                            <Box sx={{
-                                                px: 0.75,
-                                                py: 0.25,
-                                                backgroundColor: colors.primaryYellow,
-                                                border: `1px solid ${colors.primaryBlack}`,
-                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                                borderRadius: '3px',
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.75,
+                                                mb: 1,
                                             }}>
-                                                <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1.2 }}>
+                                            <Box
+                                                sx={{
+                                                    px: 0.75,
+                                                    py: 0.25,
+                                                    backgroundColor:
+                                                        colors.primaryYellow,
+                                                    border: `1px solid ${colors.primaryBlack}`,
+                                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                    borderRadius: '3px',
+                                                }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        textTransform:
+                                                            'uppercase',
+                                                        letterSpacing: 0.3,
+                                                        lineHeight: 1.2,
+                                                    }}>
                                                     {weekday}
                                                 </Typography>
                                             </Box>
-                                            <Typography sx={{
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                                color: colors.primaryBrown,
-                                            }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    color: colors.primaryBrown,
+                                                }}>
                                                 {monthDay}
                                             </Typography>
                                         </Box>
                                         {/* Card */}
-                                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                        <SwipeableRow
-                                            canEdit
-                                            canDelete
-                                            onEdit={() => openEdit(workout)}
-                                            onDelete={() => handleDelete(workout.id)}
-                                            backgroundColor={colors.primaryWhite}
-                                        >
-                                            <Box
-                                                onClick={() => openDetail(workout)}
-                                                sx={{
-                                                    'p': 1.5,
-                                                    'cursor': 'pointer',
-                                                    'backgroundColor': colors.primaryWhite,
-                                                    '&:active': { backgroundColor: colors.secondaryYellow },
-                                                    'transition': 'background-color 150ms ease',
-                                                }}>
-                                                {/* Muscle group chips */}
-                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                                    {parentGroups.map((mg) => {
-                                                        const workoutDays = daysSincePrevMap.get(workout.id)
-                                                        const days = workoutDays?.get(mg.name)
-                                                        return (
-                                                            <Box key={mg.id} sx={{ position: 'relative' }}>
-                                                                <Chip
-                                                                    label={mg.name}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        'height': 22,
-                                                                        'fontSize': 11,
-                                                                        'fontWeight': 700,
-                                                                        'backgroundColor': selectedBg,
-                                                                        'border': `1px solid ${selectedBorder}`,
-                                                                        'boxShadow': `1px 1px 0px ${selectedBorder}`,
-                                                                        'borderRadius': '3px',
-                                                                        'color': colors.primaryBlack,
-                                                                        '& .MuiChip-label': { px: 0.75 },
-                                                                    }}
-                                                                />
-                                                                {days !== undefined && (
-                                                                    <Box sx={{
-                                                                        position: 'absolute',
-                                                                        bottom: -6,
-                                                                        right: -4,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        minWidth: 16,
-                                                                        height: 14,
-                                                                        px: 0.25,
-                                                                        borderRadius: '7px',
-                                                                        backgroundColor: colors.primaryWhite,
-                                                                        border: `1px solid ${colors.primaryBlack}`,
-                                                                        zIndex: 1,
-                                                                    }}>
-                                                                        <Typography sx={{
-                                                                            fontSize: 8,
-                                                                            fontWeight: 800,
-                                                                            lineHeight: 1,
-                                                                            color: colors.primaryBlack,
+                                        <Box
+                                            sx={{
+                                                ...cardSx,
+                                                overflow: 'hidden',
+                                            }}>
+                                            <SwipeableRow
+                                                canEdit
+                                                canDelete
+                                                onEdit={() => openEdit(workout)}
+                                                onDelete={() =>
+                                                    handleDelete(workout.id)
+                                                }
+                                                backgroundColor={
+                                                    colors.primaryWhite
+                                                }>
+                                                <Box
+                                                    onClick={() =>
+                                                        openDetail(workout)
+                                                    }
+                                                    sx={{
+                                                        'p': 1.5,
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor':
+                                                            colors.primaryWhite,
+                                                        '&:active': {
+                                                            backgroundColor:
+                                                                colors.secondaryYellow,
+                                                        },
+                                                        'transition':
+                                                            'background-color 150ms ease',
+                                                    }}>
+                                                    {/* Muscle group chips */}
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            gap: 0.75,
+                                                        }}>
+                                                        {parentGroups.map(
+                                                            (mg) => {
+                                                                const workoutDays =
+                                                                    daysSincePrevMap.get(
+                                                                        workout.id
+                                                                    )
+                                                                const days =
+                                                                    workoutDays?.get(
+                                                                        mg.name
+                                                                    )
+                                                                return (
+                                                                    <Box
+                                                                        key={
+                                                                            mg.id
+                                                                        }
+                                                                        sx={{
+                                                                            position:
+                                                                                'relative',
                                                                         }}>
-                                                                            {days}
-                                                                        </Typography>
+                                                                        <Chip
+                                                                            label={
+                                                                                mg.name
+                                                                            }
+                                                                            size="small"
+                                                                            sx={{
+                                                                                'height': 22,
+                                                                                'fontSize': 11,
+                                                                                'fontWeight': 700,
+                                                                                'backgroundColor':
+                                                                                    selectedBg,
+                                                                                'border': `1px solid ${selectedBorder}`,
+                                                                                'boxShadow': `1px 1px 0px ${selectedBorder}`,
+                                                                                'borderRadius':
+                                                                                    '3px',
+                                                                                'color':
+                                                                                    colors.primaryBlack,
+                                                                                '& .MuiChip-label':
+                                                                                    {
+                                                                                        px: 0.75,
+                                                                                    },
+                                                                            }}
+                                                                        />
+                                                                        {days !==
+                                                                            undefined && (
+                                                                            <Box
+                                                                                sx={{
+                                                                                    position:
+                                                                                        'absolute',
+                                                                                    bottom: -6,
+                                                                                    right: -4,
+                                                                                    display:
+                                                                                        'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    justifyContent:
+                                                                                        'center',
+                                                                                    minWidth: 16,
+                                                                                    height: 14,
+                                                                                    px: 0.25,
+                                                                                    borderRadius:
+                                                                                        '7px',
+                                                                                    backgroundColor:
+                                                                                        colors.primaryWhite,
+                                                                                    border: `1px solid ${colors.primaryBlack}`,
+                                                                                    zIndex: 1,
+                                                                                }}>
+                                                                                <Typography
+                                                                                    sx={{
+                                                                                        fontSize: 8,
+                                                                                        fontWeight: 800,
+                                                                                        lineHeight: 1,
+                                                                                        color: colors.primaryBlack,
+                                                                                    }}>
+                                                                                    {
+                                                                                        days
+                                                                                    }
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        )}
                                                                     </Box>
-                                                                )}
-                                                            </Box>
-                                                        )
-                                                    })}
+                                                                )
+                                                            }
+                                                        )}
+                                                    </Box>
                                                 </Box>
-
-                                            </Box>
-                                        </SwipeableRow>
-                                    </Box>
+                                            </SwipeableRow>
+                                        </Box>
                                     </Box>
                                 </Box>
 
@@ -486,13 +816,17 @@ export default function ExercisePage() {
                 onExerciseCreated={fetchExercises}
                 presets={presets}
                 onPresetSaved={fetchPresets}
+                onReorderPresets={reorderPresets}
             />
 
             {/* Workout detail drawer */}
             <WorkoutDetailDrawer
                 workout={detailWorkout}
                 open={detailOpen}
-                onClose={() => { setDetailOpen(false); setDetailWorkout(null) }}
+                onClose={() => {
+                    setDetailOpen(false)
+                    setDetailWorkout(null)
+                }}
                 onEdit={openEdit}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
@@ -502,17 +836,30 @@ export default function ExercisePage() {
             {/* Preset form drawer */}
             <PresetFormDrawer
                 open={presetDrawerOpen}
-                onClose={() => { setPresetDrawerOpen(false); setEditingPreset(null) }}
+                onClose={() => {
+                    setPresetDrawerOpen(false)
+                    setEditingPreset(null)
+                }}
                 muscleGroups={muscleGroups}
                 exercises={exercises}
                 editingPreset={editingPreset}
                 existingPresets={presets}
-                onSaved={() => { fetchPresets(); setPresetDrawerOpen(false); setEditingPreset(null) }}
-                onEdit={(p) => { setEditingPreset(p); setPresetDrawerOpen(true) }}
+                onSaved={() => {
+                    fetchPresets()
+                    setPresetDrawerOpen(false)
+                    setEditingPreset(null)
+                }}
+                onEdit={(p) => {
+                    setEditingPreset(p)
+                    setPresetDrawerOpen(true)
+                }}
                 onDelete={async (id) => {
-                    await fetch(`/api/health/presets/${id}`, { method: 'DELETE' })
+                    await fetch(`/api/health/presets/${id}`, {
+                        method: 'DELETE',
+                    })
                     fetchPresets()
                 }}
+                onReorder={reorderPresets}
             />
         </Box>
     )
@@ -530,6 +877,7 @@ type PresetFormDrawerProps = {
     onSaved: () => void
     onEdit: (preset: WorkoutPreset) => void
     onDelete: (id: number) => Promise<void>
+    onReorder: (from: number, to: number) => void
 }
 
 function PresetFormDrawer({
@@ -542,7 +890,9 @@ function PresetFormDrawer({
     onSaved,
     onEdit,
     onDelete,
+    onReorder,
 }: PresetFormDrawerProps) {
+    const dndSensors = useDndSensors()
     const [name, setName] = useState('')
     const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
     const [selectedExIds, setSelectedExIds] = useState<number[]>([])
@@ -553,7 +903,9 @@ function PresetFormDrawer({
         if (open) {
             if (editingPreset) {
                 setName(editingPreset.name)
-                setSelectedMgIds(new Set(editingPreset.muscleGroups.map((mg) => mg.id)))
+                setSelectedMgIds(
+                    new Set(editingPreset.muscleGroups.map((mg) => mg.id))
+                )
                 setSelectedExIds(editingPreset.exercises.map((ex) => ex.id))
             } else {
                 setName('')
@@ -573,7 +925,9 @@ function PresetFormDrawer({
                     if (!isTarget(mgName)) {
                         const targets = GROUP_TARGETS[mgName] || []
                         for (const t of targets) {
-                            const tid = muscleGroups.find((g) => g.name === t)?.id
+                            const tid = muscleGroups.find(
+                                (g) => g.name === t
+                            )?.id
                             if (tid) next.delete(tid)
                         }
                     }
@@ -582,7 +936,8 @@ function PresetFormDrawer({
                     if (isTarget(mgName)) {
                         const mg = muscleGroups.find((g) => g.name === mgName)
                         if (mg && 'parents' in mg) {
-                            for (const p of (mg as MuscleGroupWithParents).parents) {
+                            for (const p of (mg as MuscleGroupWithParents)
+                                .parents) {
                                 next.add(p.id)
                             }
                         }
@@ -596,7 +951,9 @@ function PresetFormDrawer({
 
     const toggleExercise = useCallback((exId: number) => {
         setSelectedExIds((prev) =>
-            prev.includes(exId) ? prev.filter((id) => id !== exId) : [...prev, exId]
+            prev.includes(exId)
+                ? prev.filter((id) => id !== exId)
+                : [...prev, exId]
         )
     }, [])
 
@@ -634,80 +991,191 @@ function PresetFormDrawer({
         }
     }, [name, selectedMgIds, selectedExIds, editingPreset, onSaved])
 
-    const mgCardProps = { muscleGroups, selectedIds: selectedMgIds, onToggle: toggleMuscle }
+    const mgCardProps = {
+        muscleGroups,
+        selectedIds: selectedMgIds,
+        onToggle: toggleMuscle,
+    }
 
     // Show list view when not editing
     return (
         <FormDrawer open={open} onClose={onClose}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    overflow: 'hidden',
+                }}>
                 {/* Header */}
-                <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${colors.primaryBlack}20` }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                <Box
+                    sx={{
+                        px: 2.5,
+                        py: 2,
+                        borderBottom: `1px solid ${colors.primaryBlack}20`,
+                    }}>
+                    <Typography
+                        sx={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-serif)',
+                        }}>
                         {editingPreset ? 'Edit Routine' : 'Routines'}
                     </Typography>
                 </Box>
 
                 {/* Body */}
-                <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        px: 2.5,
+                        py: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                    }}>
                     {/* Existing presets list */}
                     {!editingPreset && existingPresets.length > 0 && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {existingPresets.map((p) => (
-                                <Box key={p.id} sx={{ ...cardSx, overflow: 'hidden' }}>
-                                    <SwipeableRow
-                                        canEdit
-                                        canDelete
-                                        onEdit={() => onEdit(p)}
-                                        onDelete={() => onDelete(p.id)}
-                                        backgroundColor={colors.primaryWhite}
-                                    >
-                                        <Box
-                                            onClick={() => onEdit(p)}
-                                            sx={{
-                                                'p': 1.5,
-                                                'cursor': 'pointer',
-                                                '&:active': { backgroundColor: colors.secondaryYellow },
-                                            }}>
-                                            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
-                                                {p.name}
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {p.muscleGroups.filter((mg) => !isTarget(mg.name)).map((mg) => (
-                                                    <Chip
-                                                        key={mg.id}
-                                                        label={mg.name}
-                                                        size="small"
+                        <DndContext
+                            sensors={dndSensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(e) =>
+                                handleDragEnd(e, existingPresets, onReorder)
+                            }>
+                            <SortableContext
+                                items={existingPresets.map((p) => p.id)}
+                                strategy={verticalListSortingStrategy}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 1,
+                                    }}>
+                                    {existingPresets.map((p) => (
+                                        <SortablePresetRow
+                                            key={p.id}
+                                            preset={p}>
+                                            <Box
+                                                sx={{
+                                                    ...cardSx,
+                                                    overflow: 'hidden',
+                                                }}>
+                                                <SwipeableRow
+                                                    canEdit
+                                                    canDelete
+                                                    onEdit={() => onEdit(p)}
+                                                    onDelete={() =>
+                                                        onDelete(p.id)
+                                                    }
+                                                    backgroundColor={
+                                                        colors.primaryWhite
+                                                    }>
+                                                    <Box
+                                                        onClick={() =>
+                                                            onEdit(p)
+                                                        }
                                                         sx={{
-                                                            'height': 20,
-                                                            'fontSize': 10,
-                                                            'fontWeight': 600,
-                                                            'backgroundColor': selectedBg,
-                                                            'border': `1px solid ${selectedBorder}`,
-                                                            'borderRadius': '3px',
-                                                            '& .MuiChip-label': { px: 0.75 },
-                                                        }}
-                                                    />
-                                                ))}
+                                                            'p': 1.5,
+                                                            'cursor': 'pointer',
+                                                            '&:active': {
+                                                                backgroundColor:
+                                                                    colors.secondaryYellow,
+                                                            },
+                                                        }}>
+                                                        <Typography
+                                                            sx={{
+                                                                fontSize: 14,
+                                                                fontWeight: 600,
+                                                                mb: 0.5,
+                                                            }}>
+                                                            {p.name}
+                                                        </Typography>
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                flexWrap:
+                                                                    'wrap',
+                                                                gap: 0.5,
+                                                            }}>
+                                                            {p.muscleGroups
+                                                                .filter(
+                                                                    (mg) =>
+                                                                        !isTarget(
+                                                                            mg.name
+                                                                        )
+                                                                )
+                                                                .map((mg) => (
+                                                                    <Chip
+                                                                        key={
+                                                                            mg.id
+                                                                        }
+                                                                        label={
+                                                                            mg.name
+                                                                        }
+                                                                        size="small"
+                                                                        sx={{
+                                                                            'height': 20,
+                                                                            'fontSize': 10,
+                                                                            'fontWeight': 600,
+                                                                            'backgroundColor':
+                                                                                selectedBg,
+                                                                            'border': `1px solid ${selectedBorder}`,
+                                                                            'borderRadius':
+                                                                                '3px',
+                                                                            '& .MuiChip-label':
+                                                                                {
+                                                                                    px: 0.75,
+                                                                                },
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                        </Box>
+                                                        {p.exercises.length >
+                                                            0 && (
+                                                            <Typography
+                                                                sx={{
+                                                                    fontSize: 11,
+                                                                    color: colors.primaryBrown,
+                                                                    mt: 0.5,
+                                                                }}>
+                                                                {p.exercises
+                                                                    .map(
+                                                                        (e) =>
+                                                                            e.name
+                                                                    )
+                                                                    .join(', ')}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </SwipeableRow>
                                             </Box>
-                                            {p.exercises.length > 0 && (
-                                                <Typography sx={{ fontSize: 11, color: colors.primaryBrown, mt: 0.5 }}>
-                                                    {p.exercises.map((e) => e.name).join(', ')}
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    </SwipeableRow>
+                                        </SortablePresetRow>
+                                    ))}
                                 </Box>
-                            ))}
-                        </Box>
+                            </SortableContext>
+                        </DndContext>
                     )}
 
                     {/* Divider between list and form */}
                     {!editingPreset && existingPresets.length > 0 && (
-                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}15`, my: 0.5 }} />
+                        <Box
+                            sx={{
+                                borderBottom: `1px solid ${colors.primaryBlack}15`,
+                                my: 0.5,
+                            }}
+                        />
                     )}
 
                     {/* Form */}
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <Typography
+                        sx={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: colors.primaryBrown,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}>
                         {editingPreset ? 'Edit' : 'New Routine'}
                     </Typography>
 
@@ -726,26 +1194,91 @@ function PresetFormDrawer({
                     {/* Muscle group grid */}
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Chest" {...mgCardProps} />
-                                <MuscleGroupCard groupName="Shoulders" {...mgCardProps} />
-                                <MuscleGroupCard groupName="Triceps" {...mgCardProps} />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 1,
+                            }}>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 1,
+                                }}>
+                                <MuscleGroupCard
+                                    groupName="Chest"
+                                    {...mgCardProps}
+                                />
+                                <MuscleGroupCard
+                                    groupName="Shoulders"
+                                    {...mgCardProps}
+                                />
+                                <MuscleGroupCard
+                                    groupName="Triceps"
+                                    {...mgCardProps}
+                                />
                             </Box>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Upper Back" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    <MuscleGroupCard groupName="Biceps" {...mgCardProps} sx={{ flex: 1 }} />
-                                    <MuscleGroupCard groupName="Forearms" {...mgCardProps} sx={{ flex: 1 }} />
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 1,
+                                }}>
+                                <MuscleGroupCard
+                                    groupName="Upper Back"
+                                    {...mgCardProps}
+                                    sx={{ gridColumn: 'span 2' }}
+                                />
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 1,
+                                    }}>
+                                    <MuscleGroupCard
+                                        groupName="Biceps"
+                                        {...mgCardProps}
+                                        sx={{ flex: 1 }}
+                                    />
+                                    <MuscleGroupCard
+                                        groupName="Forearms"
+                                        {...mgCardProps}
+                                        sx={{ flex: 1 }}
+                                    />
                                 </Box>
                             </Box>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Legs" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
-                                <MuscleGroupCard groupName="Lower Back" {...mgCardProps} />
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 1,
+                                }}>
+                                <MuscleGroupCard
+                                    groupName="Legs"
+                                    {...mgCardProps}
+                                    sx={{ gridColumn: 'span 2' }}
+                                />
+                                <MuscleGroupCard
+                                    groupName="Lower Back"
+                                    {...mgCardProps}
+                                />
                             </Box>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                <MuscleGroupCard groupName="Core" {...mgCardProps} sx={{ gridColumn: 'span 2' }} />
-                                <MuscleGroupCard groupName="Cardio" {...mgCardProps} />
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 1,
+                                }}>
+                                <MuscleGroupCard
+                                    groupName="Core"
+                                    {...mgCardProps}
+                                    sx={{ gridColumn: 'span 2' }}
+                                />
+                                <MuscleGroupCard
+                                    groupName="Cardio"
+                                    {...mgCardProps}
+                                />
                             </Box>
                         </Box>
                     </Box>
@@ -753,23 +1286,38 @@ function PresetFormDrawer({
                     {/* Exercise selection */}
                     {exercises.length > 0 && (
                         <Box>
-                            <Typography sx={labelSx}>Exercises (optional)</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            <Typography sx={labelSx}>Exercises</Typography>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 0.75,
+                                }}>
                                 {exercises.map((ex) => {
-                                    const isSelected = selectedExIds.includes(ex.id)
+                                    const isSelected = selectedExIds.includes(
+                                        ex.id
+                                    )
                                     return (
                                         <Chip
                                             key={ex.id}
                                             label={ex.name}
-                                            onClick={() => toggleExercise(ex.id)}
+                                            onClick={() =>
+                                                toggleExercise(ex.id)
+                                            }
                                             size="small"
                                             sx={{
                                                 'height': 28,
                                                 'fontSize': 12,
-                                                'fontWeight': isSelected ? 700 : 400,
-                                                'backgroundColor': isSelected ? exerciseBg : colors.primaryWhite,
+                                                'fontWeight': isSelected
+                                                    ? 700
+                                                    : 400,
+                                                'backgroundColor': isSelected
+                                                    ? exerciseBg
+                                                    : colors.primaryWhite,
                                                 'border': `1px solid ${isSelected ? exerciseBorder : `${colors.primaryBlack}25`}`,
-                                                'boxShadow': isSelected ? `1.5px 1.5px 0px ${exerciseBorder}` : 'none',
+                                                'boxShadow': isSelected
+                                                    ? `1.5px 1.5px 0px ${exerciseBorder}`
+                                                    : 'none',
                                                 'borderRadius': '4px',
                                                 'cursor': 'pointer',
                                                 '& .MuiChip-label': { px: 1 },
@@ -782,22 +1330,28 @@ function PresetFormDrawer({
                     )}
 
                     {error && (
-                        <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                        <Typography
+                            sx={{ fontSize: 13, color: colors.primaryRed }}>
                             {error}
                         </Typography>
                     )}
                 </Box>
 
                 {/* Footer */}
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    px: 2.5,
-                    py: 2,
-                    borderTop: `1px solid ${colors.primaryBlack}20`,
-                    paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                }}>
-                    <Button onClick={onClose} disabled={saving} size="large" sx={secondaryButtonSx}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    <Button
+                        onClick={onClose}
+                        disabled={saving}
+                        size="large"
+                        sx={secondaryButtonSx}>
                         Cancel
                     </Button>
                     <Button
@@ -805,7 +1359,11 @@ function PresetFormDrawer({
                         disabled={!name.trim() || saving}
                         size="large"
                         sx={primaryButtonSx}>
-                        {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                        {saving
+                            ? 'Saving...'
+                            : editingPreset
+                              ? 'Save'
+                              : 'Create'}
                     </Button>
                 </Box>
             </Box>
@@ -825,6 +1383,7 @@ type WorkoutFormDrawerProps = {
     onExerciseCreated: () => void
     presets: WorkoutPreset[]
     onPresetSaved: () => void
+    onReorderPresets: (from: number, to: number) => void
 }
 
 // Grid layout for muscle group selection — all rows use a 3-column grid.
@@ -877,12 +1436,15 @@ function MuscleGroupCard({
                 'flexDirection': 'column',
                 'gap': 1,
                 'padding': '10px',
-                'backgroundColor': isGroupSelected ? selectedBg : colors.primaryWhite,
+                'backgroundColor': isGroupSelected
+                    ? selectedBg
+                    : colors.primaryWhite,
                 'border': `1.5px solid ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
                 'boxShadow': `2px 2px 0px ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
                 'borderRadius': '4px',
                 'cursor': 'pointer',
-                'transition': 'background-color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s',
+                'transition':
+                    'background-color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s',
                 '&:active': {
                     boxShadow: `1px 1px 0px ${isGroupSelected ? selectedBorder : colors.primaryBlack}`,
                     transform: 'translate(1px, 1px)',
@@ -904,9 +1466,13 @@ function MuscleGroupCard({
             {targets.length > 0 && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                     {targets.map((targetName) => {
-                        const target = muscleGroups.find((g) => g.name === targetName)
+                        const target = muscleGroups.find(
+                            (g) => g.name === targetName
+                        )
                         if (!target) return null
-                        const isTargetSelected = selectedIds.has(Number(target.id))
+                        const isTargetSelected = selectedIds.has(
+                            Number(target.id)
+                        )
                         return (
                             <Chip
                                 key={targetName}
@@ -949,9 +1515,9 @@ type FormExerciseEntry = {
     exerciseName: string
     isBodyweight: boolean
     sets: number
-    reps: string       // string for input flexibility
-    weightLbs: string  // string for input flexibility — lives on exercise, not per-set
-    expandedSets: { reps: string }[] | null  // null = collapsed (uniform)
+    reps: string // string for input flexibility
+    weightLbs: string // string for input flexibility — lives on exercise, not per-set
+    expandedSets: { reps: string }[] | null // null = collapsed (uniform)
 }
 
 function defaultEntry(exercise: Exercise): FormExerciseEntry {
@@ -1021,7 +1587,9 @@ function WorkoutFormDrawer({
     onExerciseCreated,
     presets,
     onPresetSaved,
+    onReorderPresets,
 }: WorkoutFormDrawerProps) {
+    const dndSensors = useDndSensors()
     const isEdit = editingWorkout !== null && editingWorkout.id !== -1
     const isDuplicate = editingWorkout !== null && editingWorkout.id === -1
 
@@ -1034,10 +1602,14 @@ function WorkoutFormDrawer({
     const [saving, setSaving] = useState(false)
 
     // Exercise entries in the workout
-    const [exerciseEntries, setExerciseEntries] = useState<FormExerciseEntry[]>([])
+    const [exerciseEntries, setExerciseEntries] = useState<FormExerciseEntry[]>(
+        []
+    )
     const [exerciseSearch, setExerciseSearch] = useState('')
     const [exerciseSectionOpen, setExerciseSectionOpen] = useState(true)
-    const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
+    const [expandedEntries, setExpandedEntries] = useState<Set<number>>(
+        new Set()
+    )
 
     const [quickAddSaving, setQuickAddSaving] = useState(false)
 
@@ -1051,14 +1623,20 @@ function WorkoutFormDrawer({
         if (open) {
             if (editingWorkout) {
                 setDate(editingWorkout.date)
-                setSelectedIds(new Set(editingWorkout.muscleGroups.map((mg) => Number(mg.id))))
+                setSelectedIds(
+                    new Set(
+                        editingWorkout.muscleGroups.map((mg) => Number(mg.id))
+                    )
+                )
                 setNotes(editingWorkout.notes || '')
                 setExerciseEntries(
                     editingWorkout.exercises.map(entryFromWorkoutExercise)
                 )
             } else {
                 const now = new Date()
-                setDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`)
+                setDate(
+                    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+                )
                 setSelectedIds(new Set())
                 setNotes('')
                 setExerciseEntries([])
@@ -1079,7 +1657,9 @@ function WorkoutFormDrawer({
                     if (!isTarget(name)) {
                         const targets = GROUP_TARGETS[name] || []
                         for (const t of targets) {
-                            const tid = muscleGroups.find((g) => g.name === t)?.id
+                            const tid = muscleGroups.find(
+                                (g) => g.name === t
+                            )?.id
                             if (tid) next.delete(Number(tid))
                         }
                     }
@@ -1088,7 +1668,9 @@ function WorkoutFormDrawer({
                     if (isTarget(name)) {
                         const parents = getParents(name)
                         for (const p of parents) {
-                            const pid = muscleGroups.find((g) => g.name === p)?.id
+                            const pid = muscleGroups.find(
+                                (g) => g.name === p
+                            )?.id
                             if (pid) next.add(Number(pid))
                         }
                     }
@@ -1100,13 +1682,10 @@ function WorkoutFormDrawer({
     )
 
     // Apply a preset to prefill the form
-    const applyPresetToForm = useCallback(
-        (preset: WorkoutPreset) => {
-            setSelectedIds(new Set(preset.muscleGroups.map((mg) => mg.id)))
-            setExerciseEntries(preset.exercises.map((ex) => defaultEntry(ex)))
-        },
-        []
-    )
+    const applyPresetToForm = useCallback((preset: WorkoutPreset) => {
+        setSelectedIds(new Set(preset.muscleGroups.map((mg) => mg.id)))
+        setExerciseEntries(preset.exercises.map((ex) => defaultEntry(ex)))
+    }, [])
 
     // Save current form state as a new preset
     const saveAsPreset = useCallback(async () => {
@@ -1139,7 +1718,8 @@ function WorkoutFormDrawer({
     const addExercise = useCallback(
         (exercise: Exercise) => {
             // Don't add duplicates
-            if (exerciseEntries.some((e) => e.exerciseId === exercise.id)) return
+            if (exerciseEntries.some((e) => e.exerciseId === exercise.id))
+                return
 
             setExerciseEntries((prev) => [...prev, defaultEntry(exercise)])
 
@@ -1152,7 +1732,9 @@ function WorkoutFormDrawer({
                     if (isTarget(mg.name)) {
                         const parents = getParents(mg.name)
                         for (const p of parents) {
-                            const pid = muscleGroups.find((g) => g.name === p)?.id
+                            const pid = muscleGroups.find(
+                                (g) => g.name === p
+                            )?.id
                             if (pid) next.add(Number(pid))
                         }
                     }
@@ -1177,12 +1759,14 @@ function WorkoutFormDrawer({
         })
     }, [])
 
-    const updateEntry = useCallback((index: number, updates: Partial<FormExerciseEntry>) => {
-        setExerciseEntries((prev) =>
-            prev.map((e, i) => (i === index ? { ...e, ...updates } : e))
-        )
-    }, [])
-
+    const updateEntry = useCallback(
+        (index: number, updates: Partial<FormExerciseEntry>) => {
+            setExerciseEntries((prev) =>
+                prev.map((e, i) => (i === index ? { ...e, ...updates } : e))
+            )
+        },
+        []
+    )
 
     // Toggle expanded sets view
     const toggleExpandedSets = useCallback((index: number) => {
@@ -1255,7 +1839,9 @@ function WorkoutFormDrawer({
         const matching: typeof available = []
         const nonMatching: typeof available = []
         for (const ex of available) {
-            const hasMatch = ex.muscleGroups.some((mg) => selectedIds.has(mg.id))
+            const hasMatch = ex.muscleGroups.some((mg) =>
+                selectedIds.has(mg.id)
+            )
             if (hasMatch) matching.push(ex)
             else nonMatching.push(ex)
         }
@@ -1274,8 +1860,10 @@ function WorkoutFormDrawer({
 
             if (exerciseEntries.length > 0) {
                 data.exercises = exerciseEntries.map((entry, index) => {
-                    const parseWeight = (v: string) => v !== '' ? parseFloat(v) : undefined
-                    const parseReps = (v: string) => v !== '' ? parseInt(v, 10) : undefined
+                    const parseWeight = (v: string) =>
+                        v !== '' ? parseFloat(v) : undefined
+                    const parseReps = (v: string) =>
+                        v !== '' ? parseInt(v, 10) : undefined
 
                     const sets: { reps?: number }[] = []
 
@@ -1322,7 +1910,11 @@ function WorkoutFormDrawer({
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
-                        {isEdit ? 'Edit Workout' : isDuplicate ? 'Duplicate Workout' : 'Log Workout'}
+                        {isEdit
+                            ? 'Edit Workout'
+                            : isDuplicate
+                              ? 'Duplicate Workout'
+                              : 'Log Workout'}
                     </Typography>
                 </Box>
 
@@ -1341,8 +1933,14 @@ function WorkoutFormDrawer({
                     {!isEdit && (
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                             <Typography sx={labelSx}>Routines</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
-                                {/* New routine button */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 1,
+                                    alignItems: 'center',
+                                }}>
+                                {/* Lightning routine icon */}
                                 <Box
                                     onClick={() => {
                                         setShowSavePreset((v) => !v)
@@ -1352,63 +1950,112 @@ function WorkoutFormDrawer({
                                         'display': 'flex',
                                         'alignItems': 'center',
                                         'justifyContent': 'center',
-                                        'width': 28,
-                                        'height': 28,
+                                        'width': 30,
+                                        'height': 30,
                                         'borderRadius': '50%',
                                         'border': `1.5px solid ${colors.primaryBlack}`,
                                         'boxShadow': showSavePreset
                                             ? `1px 1px 0px ${colors.primaryBlack}`
-                                            : `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                        'backgroundColor': showSavePreset ? colors.primaryYellow : colors.primaryWhite,
+                                            : `2px 2px 0px ${colors.primaryBlack}`,
+                                        'backgroundColor': colors.primaryYellow,
                                         'cursor': 'pointer',
                                         'transition': 'all 0.15s',
-                                        'transform': showSavePreset ? 'translate(0.5px, 0.5px)' : 'none',
+                                        'transform': showSavePreset
+                                            ? 'translate(0.5px, 0.5px)'
+                                            : 'none',
                                         '&:active': {
                                             boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
                                             transform: 'translate(1px, 1px)',
                                         },
                                     }}>
-                                    <IconPlus size={14} stroke={2.5} color={colors.primaryBlack} />
+                                    <IconBolt
+                                        size={14}
+                                        stroke={2.5}
+                                        fill={colors.primaryWhite}
+                                        color={colors.primaryBlack}
+                                    />
                                 </Box>
                                 {/* Preset chips */}
-                                {presets.map((preset) => (
-                                    <Chip
-                                        key={preset.id}
-                                        label={preset.name}
-                                        onClick={() => applyPresetToForm(preset)}
-                                        size="small"
-                                        sx={{
-                                            'height': 28,
-                                            'fontSize': 12,
-                                            'fontWeight': 600,
-                                            'backgroundColor': colors.primaryWhite,
-                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                            'borderRadius': '4px',
-                                            'cursor': 'pointer',
-                                            '& .MuiChip-label': { px: 0.75 },
-                                            '&:active': {
-                                                boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                transform: 'translate(1px, 1px)',
-                                            },
-                                        }}
-                                    />
-                                ))}
+                                <DndContext
+                                    sensors={dndSensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(e) =>
+                                        handleDragEnd(
+                                            e,
+                                            presets,
+                                            onReorderPresets
+                                        )
+                                    }>
+                                    <SortableContext
+                                        items={presets.map((p) => p.id)}
+                                        strategy={
+                                            horizontalListSortingStrategy
+                                        }>
+                                        {presets.map((preset) => (
+                                            <SortablePresetChip
+                                                key={preset.id}
+                                                preset={preset}>
+                                                <Chip
+                                                    label={preset.name}
+                                                    onClick={() =>
+                                                        applyPresetToForm(
+                                                            preset
+                                                        )
+                                                    }
+                                                    size="small"
+                                                    sx={{
+                                                        'height': 28,
+                                                        'fontSize': 12,
+                                                        'fontWeight': 600,
+                                                        'backgroundColor':
+                                                            colors.primaryWhite,
+                                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                        'borderRadius': '4px',
+                                                        'cursor': 'pointer',
+                                                        '& .MuiChip-label': {
+                                                            px: 0.75,
+                                                        },
+                                                        '&:active': {
+                                                            boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                            transform:
+                                                                'translate(1px, 1px)',
+                                                        },
+                                                    }}
+                                                />
+                                            </SortablePresetChip>
+                                        ))}
+                                    </SortableContext>
+                                </DndContext>
                             </Box>
                             {/* New routine name input — revealed when + is active */}
                             {showSavePreset && (
                                 <Box sx={{ mt: 1 }}>
-                                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: colors.primaryBrown, mb: 0.5 }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: colors.primaryBrown,
+                                            mb: 0.5,
+                                        }}>
                                         New routine name
                                     </Typography>
                                     <TextField
                                         value={presetName}
-                                        onChange={(e) => setPresetName(e.target.value)}
+                                        onChange={(e) =>
+                                            setPresetName(e.target.value)
+                                        }
                                         size="small"
                                         fullWidth
                                         autoFocus
                                         placeholder="Push Day, Pull Day..."
-                                        sx={{ ...fieldSx, '& .MuiInputBase-input': { fontSize: 13, py: 0.75 } }}
+                                        sx={{
+                                            ...fieldSx,
+                                            '& .MuiInputBase-input': {
+                                                fontSize: 13,
+                                                py: 0.75,
+                                            },
+                                        }}
                                     />
                                 </Box>
                             )}
@@ -1418,49 +2065,116 @@ function WorkoutFormDrawer({
                     {/* Muscle group grid */}
                     <Box>
                         <Typography sx={labelSx}>Muscle Groups</Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {GRID_ROWS.map((row, rowIdx) => {
-                            if (row.type === 'pull') {
-                                return (
-                                    <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                        <MuscleGroupCard groupName="Upper Back" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ gridColumn: 'span 2' }} />
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                            <MuscleGroupCard groupName="Biceps" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ flex: 1 }} />
-                                            <MuscleGroupCard groupName="Forearms" muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ flex: 1 }} />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 1,
+                            }}>
+                            {GRID_ROWS.map((row, rowIdx) => {
+                                if (row.type === 'pull') {
+                                    return (
+                                        <Box
+                                            key={rowIdx}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns:
+                                                    'repeat(3, 1fr)',
+                                                gap: 1,
+                                            }}>
+                                            <MuscleGroupCard
+                                                groupName="Upper Back"
+                                                muscleGroups={muscleGroups}
+                                                selectedIds={selectedIds}
+                                                onToggle={toggleMuscle}
+                                                sx={{ gridColumn: 'span 2' }}
+                                            />
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: 1,
+                                                }}>
+                                                <MuscleGroupCard
+                                                    groupName="Biceps"
+                                                    muscleGroups={muscleGroups}
+                                                    selectedIds={selectedIds}
+                                                    onToggle={toggleMuscle}
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <MuscleGroupCard
+                                                    groupName="Forearms"
+                                                    muscleGroups={muscleGroups}
+                                                    selectedIds={selectedIds}
+                                                    onToggle={toggleMuscle}
+                                                    sx={{ flex: 1 }}
+                                                />
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                )
-                            }
-                            if (row.type === 'span2') {
+                                    )
+                                }
+                                if (row.type === 'span2') {
+                                    return (
+                                        <Box
+                                            key={rowIdx}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns:
+                                                    'repeat(3, 1fr)',
+                                                gap: 1,
+                                            }}>
+                                            <MuscleGroupCard
+                                                groupName={row.groups[0]}
+                                                muscleGroups={muscleGroups}
+                                                selectedIds={selectedIds}
+                                                onToggle={toggleMuscle}
+                                                sx={{ gridColumn: 'span 2' }}
+                                            />
+                                            <MuscleGroupCard
+                                                groupName={row.groups[1]}
+                                                muscleGroups={muscleGroups}
+                                                selectedIds={selectedIds}
+                                                onToggle={toggleMuscle}
+                                            />
+                                        </Box>
+                                    )
+                                }
                                 return (
-                                    <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                        <MuscleGroupCard groupName={row.groups[0]} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} sx={{ gridColumn: 'span 2' }} />
-                                        <MuscleGroupCard groupName={row.groups[1]} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} />
+                                    <Box
+                                        key={rowIdx}
+                                        sx={{
+                                            display: 'grid',
+                                            gridTemplateColumns:
+                                                'repeat(3, 1fr)',
+                                            gap: 1,
+                                        }}>
+                                        {row.groups.map((groupName: string) => (
+                                            <MuscleGroupCard
+                                                key={groupName}
+                                                groupName={groupName}
+                                                muscleGroups={muscleGroups}
+                                                selectedIds={selectedIds}
+                                                onToggle={toggleMuscle}
+                                            />
+                                        ))}
                                     </Box>
                                 )
-                            }
-                            return (
-                                <Box key={rowIdx} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-                                    {row.groups.map((groupName: string) => (
-                                        <MuscleGroupCard key={groupName} groupName={groupName} muscleGroups={muscleGroups} selectedIds={selectedIds} onToggle={toggleMuscle} />
-                                    ))}
-                                </Box>
-                            )
-                        })}
+                            })}
                         </Box>
                     </Box>
 
                     {/* Exercises section */}
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                        border: `1.5px solid ${colors.primaryBlack}`,
-                        borderRadius: '6px',
-                        backgroundColor: colors.primaryWhite,
-                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                        padding: '10px 12px',
-                    }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                            border: `1.5px solid ${colors.primaryBlack}`,
+                            borderRadius: '6px',
+                            backgroundColor: colors.primaryWhite,
+                            boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                            padding: '10px 12px',
+                        }}>
                         <Box
                             onClick={() => setExerciseSectionOpen((v) => !v)}
                             sx={{
@@ -1472,25 +2186,60 @@ function WorkoutFormDrawer({
                                 '&:active': { opacity: 0.6 },
                             }}>
                             <Typography sx={{ ...labelSx, mb: 0 }}>
-                                Exercises{exerciseEntries.length > 0 ? ` (${exerciseEntries.length})` : ' (optional)'}
+                                Exercises
+                                {exerciseEntries.length > 0 &&
+                                    ` (${exerciseEntries.length})`}
                             </Typography>
-                            {exerciseSectionOpen
-                                ? <IconChevronUp size={16} stroke={2} color={colors.primaryBrown} />
-                                : <IconChevronDown size={16} stroke={2} color={colors.primaryBrown} />}
+                            {exerciseSectionOpen ? (
+                                <IconChevronUp
+                                    size={16}
+                                    stroke={2}
+                                    color={colors.primaryBrown}
+                                />
+                            ) : (
+                                <IconChevronDown
+                                    size={16}
+                                    stroke={2}
+                                    color={colors.primaryBrown}
+                                />
+                            )}
                         </Box>
 
                         {exerciseSectionOpen && (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 0.75,
+                                }}>
                                 {/* Combined search + create field */}
-                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        gap: 0.5,
+                                        alignItems: 'center',
+                                    }}>
                                     <TextField
                                         value={exerciseSearch}
-                                        onChange={(e) => setExerciseSearch(e.target.value)}
+                                        onChange={(e) =>
+                                            setExerciseSearch(e.target.value)
+                                        }
                                         size="small"
                                         placeholder="Search or create exercise..."
-                                        sx={{ ...fieldSx, flex: 1, '& .MuiInputBase-input': { py: 0.75, fontSize: 13 } }}
+                                        sx={{
+                                            ...fieldSx,
+                                            'flex': 1,
+                                            '& .MuiInputBase-input': {
+                                                py: 0.75,
+                                                fontSize: 13,
+                                            },
+                                        }}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && exerciseSearch.trim()) handleQuickAdd()
+                                            if (
+                                                e.key === 'Enter' &&
+                                                exerciseSearch.trim()
+                                            )
+                                                handleQuickAdd()
                                         }}
                                     />
                                     {exerciseSearch.trim() && (
@@ -1510,257 +2259,527 @@ function WorkoutFormDrawer({
                                         </Button>
                                     )}
                                 </Box>
-                                    {/* Selected exercises */}
-                                    {exerciseEntries.map((entry, index) => {
-                                        const isExpanded = expandedEntries.has(index)
-                                        const ex = exercises.find((e) => e.id === entry.exerciseId)
-                                        const entryMuscleGroups = ex?.muscleGroups ?? []
-                                        const toggleExpand = () => setExpandedEntries((prev) => {
+                                {/* Selected exercises */}
+                                {exerciseEntries.map((entry, index) => {
+                                    const isExpanded =
+                                        expandedEntries.has(index)
+                                    const ex = exercises.find(
+                                        (e) => e.id === entry.exerciseId
+                                    )
+                                    const entryMuscleGroups =
+                                        ex?.muscleGroups ?? []
+                                    const toggleExpand = () =>
+                                        setExpandedEntries((prev) => {
                                             const next = new Set(prev)
-                                            if (next.has(index)) next.delete(index)
+                                            if (next.has(index))
+                                                next.delete(index)
                                             else next.add(index)
                                             return next
                                         })
-                                        return (
-                                            <SwipeableRow
-                                                key={`selected-${entry.exerciseId}`}
-                                                canEdit={false}
-                                                canDelete={true}
-                                                onEdit={() => {}}
-                                                onDelete={() => removeExercise(index)}
-                                                backgroundColor={colors.secondaryYellow}
-                                                borderRadius="4px"
-                                                boxShadow={`2px 2px 0px ${colors.primaryYellow}`}>
+                                    return (
+                                        <SwipeableRow
+                                            key={`selected-${entry.exerciseId}`}
+                                            canEdit={false}
+                                            canDelete={true}
+                                            onEdit={() => {}}
+                                            onDelete={() =>
+                                                removeExercise(index)
+                                            }
+                                            backgroundColor={
+                                                colors.secondaryYellow
+                                            }
+                                            borderRadius="4px"
+                                            boxShadow={`2px 2px 0px ${colors.primaryYellow}`}>
+                                            <Box
+                                                onClick={toggleExpand}
+                                                sx={{
+                                                    'display': 'flex',
+                                                    'flexDirection': 'column',
+                                                    'gap': 0.25,
+                                                    'padding': '6px 10px',
+                                                    'cursor': 'pointer',
+                                                    'border': `1.5px solid ${colors.primaryYellow}`,
+                                                    'backgroundColor':
+                                                        colors.secondaryYellow,
+                                                    'borderRadius': '4px',
+                                                    '&:active': {
+                                                        opacity: 0.7,
+                                                    },
+                                                }}>
                                                 <Box
-                                                    onClick={toggleExpand}
                                                     sx={{
-                                                        'display': 'flex',
-                                                        'flexDirection': 'column',
-                                                        'gap': 0.25,
-                                                        'padding': '6px 10px',
-                                                        'cursor': 'pointer',
-                                                        'border': `1.5px solid ${colors.primaryYellow}`,
-                                                        'backgroundColor': colors.secondaryYellow,
-                                                        'borderRadius': '4px',
-                                                        '&:active': { opacity: 0.7 },
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent:
+                                                            'space-between',
                                                     }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-                                                                {entry.exerciseName}
-                                                            </Typography>
-                                                            {entry.isBodyweight && (
-                                                                <Chip
-                                                                    label="BW"
-                                                                    size="small"
-                                                                    sx={{
-                                                                        'height': 16,
-                                                                        'fontSize': 9,
-                                                                        'fontWeight': 700,
-                                                                        'backgroundColor': '#e3f2fd',
-                                                                        'border': '1px solid #1565c0',
-                                                                        'borderRadius': '2px',
-                                                                        '& .MuiChip-label': { px: 0.5 },
-                                                                    }}
-                                                                />
-                                                            )}
-                                                        </Box>
-                                                        {isExpanded
-                                                            ? <IconChevronUp size={12} stroke={2} color={colors.primaryBrown} />
-                                                            : <IconChevronDown size={12} stroke={2} color={colors.primaryBrown} />}
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            gap: 0.75,
+                                                        }}>
+                                                        <Typography
+                                                            sx={{
+                                                                fontSize: 13,
+                                                                fontWeight: 600,
+                                                            }}>
+                                                            {entry.exerciseName}
+                                                        </Typography>
+                                                        {entry.isBodyweight && (
+                                                            <Chip
+                                                                label="BW"
+                                                                size="small"
+                                                                sx={{
+                                                                    'height': 16,
+                                                                    'fontSize': 9,
+                                                                    'fontWeight': 700,
+                                                                    'backgroundColor':
+                                                                        '#e3f2fd',
+                                                                    'border':
+                                                                        '1px solid #1565c0',
+                                                                    'borderRadius':
+                                                                        '2px',
+                                                                    '& .MuiChip-label':
+                                                                        {
+                                                                            px: 0.5,
+                                                                        },
+                                                                }}
+                                                            />
+                                                        )}
                                                     </Box>
-                                                    {entryMuscleGroups.length > 0 && (
-                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-                                                            {entryMuscleGroups.map((mg) => (
+                                                    {isExpanded ? (
+                                                        <IconChevronUp
+                                                            size={12}
+                                                            stroke={2}
+                                                            color={
+                                                                colors.primaryBrown
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <IconChevronDown
+                                                            size={12}
+                                                            stroke={2}
+                                                            color={
+                                                                colors.primaryBrown
+                                                            }
+                                                        />
+                                                    )}
+                                                </Box>
+                                                {entryMuscleGroups.length >
+                                                    0 && (
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            flexWrap: 'wrap',
+                                                            gap: 0.25,
+                                                        }}>
+                                                        {entryMuscleGroups.map(
+                                                            (mg) => (
                                                                 <Typography
                                                                     key={mg.id}
                                                                     sx={{
                                                                         fontSize: 9,
                                                                         fontWeight: 600,
-                                                                        color: selectedIds.has(mg.id) ? exerciseBorder : colors.primaryBrown,
-                                                                        backgroundColor: selectedIds.has(mg.id) ? `${exerciseBorder}15` : `${colors.primaryBrown}10`,
+                                                                        color: selectedIds.has(
+                                                                            mg.id
+                                                                        )
+                                                                            ? exerciseBorder
+                                                                            : colors.primaryBrown,
+                                                                        backgroundColor:
+                                                                            selectedIds.has(
+                                                                                mg.id
+                                                                            )
+                                                                                ? `${exerciseBorder}15`
+                                                                                : `${colors.primaryBrown}10`,
                                                                         border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
-                                                                        borderRadius: '2px',
+                                                                        borderRadius:
+                                                                            '2px',
                                                                         px: 0.5,
                                                                         py: 0.125,
                                                                         lineHeight: 1.3,
                                                                     }}>
                                                                     {mg.name}
                                                                 </Typography>
-                                                            ))}
-                                                        </Box>
-                                                    )}
-                                                    {/* Expanded: weight/sets/reps inputs */}
-                                                    {isExpanded && (
-                                                        <Box onClick={(e) => e.stopPropagation()}>
-                                                            {!entry.expandedSets ? (
-                                                                <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                                                                    <CompactField
-                                                                        label="lbs"
-                                                                        type="number"
-                                                                        value={entry.weightLbs}
-                                                                        onChange={(v) => updateEntry(index, { weightLbs: v })}
-                                                                        width={64}
-                                                                        placeholder="–"
-                                                                        htmlInputProps={{ min: 0, step: 'any' }}
-                                                                    />
-                                                                    <CompactField
-                                                                        label="sets"
-                                                                        type="number"
-                                                                        value={entry.sets || ''}
-                                                                        onChange={(v) => {
-                                                                            const val = parseInt(v, 10)
-                                                                            updateEntry(index, { sets: isNaN(val) ? 0 : Math.max(0, val) })
-                                                                        }}
-                                                                        width={48}
-                                                                        placeholder="–"
-                                                                        htmlInputProps={{ min: 0 }}
-                                                                    />
-                                                                    <CompactField
-                                                                        label="reps"
-                                                                        type="number"
-                                                                        value={entry.reps}
-                                                                        onChange={(v) => updateEntry(index, { reps: v })}
-                                                                        width={56}
-                                                                        placeholder="–"
-                                                                        htmlInputProps={{ min: 0 }}
-                                                                    />
-                                                                    {entry.sets > 1 && (
+                                                            )
+                                                        )}
+                                                    </Box>
+                                                )}
+                                                {/* Expanded: weight/sets/reps inputs */}
+                                                {isExpanded && (
+                                                    <Box
+                                                        onClick={(e) =>
+                                                            e.stopPropagation()
+                                                        }>
+                                                        {!entry.expandedSets ? (
+                                                            <Box
+                                                                sx={{
+                                                                    display:
+                                                                        'flex',
+                                                                    gap: 0.75,
+                                                                    alignItems:
+                                                                        'center',
+                                                                }}>
+                                                                <CompactField
+                                                                    label="lbs"
+                                                                    type="number"
+                                                                    value={
+                                                                        entry.weightLbs
+                                                                    }
+                                                                    onChange={(
+                                                                        v
+                                                                    ) =>
+                                                                        updateEntry(
+                                                                            index,
+                                                                            {
+                                                                                weightLbs:
+                                                                                    v,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    width={64}
+                                                                    placeholder="–"
+                                                                    htmlInputProps={{
+                                                                        min: 0,
+                                                                        step: 'any',
+                                                                    }}
+                                                                />
+                                                                <CompactField
+                                                                    label="sets"
+                                                                    type="number"
+                                                                    value={
+                                                                        entry.sets ||
+                                                                        ''
+                                                                    }
+                                                                    onChange={(
+                                                                        v
+                                                                    ) => {
+                                                                        const val =
+                                                                            parseInt(
+                                                                                v,
+                                                                                10
+                                                                            )
+                                                                        updateEntry(
+                                                                            index,
+                                                                            {
+                                                                                sets: isNaN(
+                                                                                    val
+                                                                                )
+                                                                                    ? 0
+                                                                                    : Math.max(
+                                                                                          0,
+                                                                                          val
+                                                                                      ),
+                                                                            }
+                                                                        )
+                                                                    }}
+                                                                    width={48}
+                                                                    placeholder="–"
+                                                                    htmlInputProps={{
+                                                                        min: 0,
+                                                                    }}
+                                                                />
+                                                                <CompactField
+                                                                    label="reps"
+                                                                    type="number"
+                                                                    value={
+                                                                        entry.reps
+                                                                    }
+                                                                    onChange={(
+                                                                        v
+                                                                    ) =>
+                                                                        updateEntry(
+                                                                            index,
+                                                                            {
+                                                                                reps: v,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    width={56}
+                                                                    placeholder="–"
+                                                                    htmlInputProps={{
+                                                                        min: 0,
+                                                                    }}
+                                                                />
+                                                                {entry.sets >
+                                                                    1 && (
+                                                                    <Box
+                                                                        onClick={() =>
+                                                                            toggleExpandedSets(
+                                                                                index
+                                                                            )
+                                                                        }
+                                                                        sx={{
+                                                                            'cursor':
+                                                                                'pointer',
+                                                                            'fontSize': 11,
+                                                                            'color':
+                                                                                exerciseBorder,
+                                                                            'fontWeight': 600,
+                                                                            'whiteSpace':
+                                                                                'nowrap',
+                                                                            '&:active':
+                                                                                {
+                                                                                    opacity: 0.5,
+                                                                                },
+                                                                        }}>
+                                                                        per set
+                                                                    </Box>
+                                                                )}
+                                                            </Box>
+                                                        ) : (
+                                                            <Box
+                                                                sx={{
+                                                                    display:
+                                                                        'flex',
+                                                                    flexDirection:
+                                                                        'column',
+                                                                    gap: 0.5,
+                                                                }}>
+                                                                {entry.expandedSets.map(
+                                                                    (
+                                                                        set,
+                                                                        si
+                                                                    ) => (
                                                                         <Box
-                                                                            onClick={() => toggleExpandedSets(index)}
+                                                                            key={
+                                                                                si
+                                                                            }
                                                                             sx={{
-                                                                                'cursor': 'pointer',
-                                                                                'fontSize': 11,
-                                                                                'color': exerciseBorder,
-                                                                                'fontWeight': 600,
-                                                                                'whiteSpace': 'nowrap',
-                                                                                '&:active': { opacity: 0.5 },
+                                                                                display:
+                                                                                    'flex',
+                                                                                gap: 0.75,
+                                                                                alignItems:
+                                                                                    'flex-start',
                                                                             }}>
-                                                                            per set
-                                                                        </Box>
-                                                                    )}
-                                                                </Box>
-                                                            ) : (
-                                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                                                    {entry.expandedSets.map((set, si) => (
-                                                                        <Box key={si} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                                                                            <Typography sx={{ fontSize: 11, color: colors.primaryBrown, width: 32, flexShrink: 0, pt: 0.5 }}>
-                                                                                Set {si + 1}
+                                                                            <Typography
+                                                                                sx={{
+                                                                                    fontSize: 11,
+                                                                                    color: colors.primaryBrown,
+                                                                                    width: 32,
+                                                                                    flexShrink: 0,
+                                                                                    pt: 0.5,
+                                                                                }}>
+                                                                                Set{' '}
+                                                                                {si +
+                                                                                    1}
                                                                             </Typography>
                                                                             <CompactField
                                                                                 label="reps"
                                                                                 type="number"
-                                                                                value={set.reps}
-                                                                                onChange={(v) => updateExpandedSet(index, si, v)}
-                                                                                width={56}
+                                                                                value={
+                                                                                    set.reps
+                                                                                }
+                                                                                onChange={(
+                                                                                    v
+                                                                                ) =>
+                                                                                    updateExpandedSet(
+                                                                                        index,
+                                                                                        si,
+                                                                                        v
+                                                                                    )
+                                                                                }
+                                                                                width={
+                                                                                    56
+                                                                                }
                                                                                 placeholder="–"
-                                                                                htmlInputProps={{ min: 0 }}
+                                                                                htmlInputProps={{
+                                                                                    min: 0,
+                                                                                }}
                                                                             />
                                                                         </Box>
-                                                                    ))}
-                                                                    <Box
-                                                                        onClick={() => toggleExpandedSets(index)}
-                                                                        sx={{
-                                                                            'cursor': 'pointer',
-                                                                            'fontSize': 11,
-                                                                            'color': exerciseBorder,
-                                                                            'fontWeight': 600,
-                                                                            'mt': 0.25,
-                                                                            '&:active': { opacity: 0.5 },
-                                                                        }}>
-                                                                        collapse
-                                                                    </Box>
-                                                                </Box>
-                                                            )}
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </SwipeableRow>
-                                        )
-                                    })}
-
-                                    {/* Unselected exercises */}
-                                    {(() => {
-                                        const list = exerciseSearch.trim()
-                                            ? sortedExercisesForBrowse.filter((e) =>
-                                                e.name.toLowerCase().includes(exerciseSearch.toLowerCase()))
-                                            : sortedExercisesForBrowse
-
-                                        if (list.length === 0 && exerciseEntries.length === 0 && !exerciseSearch.trim()) {
-                                            return (
-                                                <Typography sx={{ fontSize: 12, color: colors.primaryBrown, py: 1, textAlign: 'center' }}>
-                                                    No exercises yet. Type above to create one.
-                                                </Typography>
-                                            )
-                                        }
-
-                                        return list.map((ex) => {
-                                            const matches = selectedIds.size > 0 && ex.muscleGroups.some((mg) => selectedIds.has(mg.id))
-                                            return (
-                                                <Box
-                                                    key={ex.id}
-                                                    onClick={() => addExercise(ex)}
-                                                    sx={{
-                                                        'display': 'flex',
-                                                        'alignItems': 'center',
-                                                        'justifyContent': 'space-between',
-                                                        'padding': '6px 10px',
-                                                        'borderRadius': '4px',
-                                                        'cursor': 'pointer',
-                                                        'border': `1.5px solid ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
-                                                        'backgroundColor': matches ? exerciseBg : colors.primaryWhite,
-                                                        'boxShadow': `2px 2px 0px ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
-                                                        '&:active': { opacity: 0.6 },
-                                                    }}>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                            <Typography sx={{ fontSize: 13, fontWeight: matches ? 600 : 500 }}>
-                                                                {ex.name}
-                                                            </Typography>
-                                                            {ex.isBodyweight && (
-                                                                <Chip
-                                                                    label="BW"
-                                                                    size="small"
+                                                                    )
+                                                                )}
+                                                                <Box
+                                                                    onClick={() =>
+                                                                        toggleExpandedSets(
+                                                                            index
+                                                                        )
+                                                                    }
                                                                     sx={{
-                                                                        'height': 16,
-                                                                        'fontSize': 9,
-                                                                        'fontWeight': 700,
-                                                                        'backgroundColor': '#e3f2fd',
-                                                                        'border': '1px solid #1565c0',
-                                                                        'borderRadius': '2px',
-                                                                        '& .MuiChip-label': { px: 0.5 },
-                                                                    }}
-                                                                />
-                                                            )}
-                                                        </Box>
-                                                        {ex.muscleGroups.length > 0 && (
-                                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-                                                                {ex.muscleGroups.map((mg) => (
+                                                                        'cursor':
+                                                                            'pointer',
+                                                                        'fontSize': 11,
+                                                                        'color':
+                                                                            exerciseBorder,
+                                                                        'fontWeight': 600,
+                                                                        'mt': 0.25,
+                                                                        '&:active':
+                                                                            {
+                                                                                opacity: 0.5,
+                                                                            },
+                                                                    }}>
+                                                                    collapse
+                                                                </Box>
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </SwipeableRow>
+                                    )
+                                })}
+
+                                {/* Unselected exercises */}
+                                {(() => {
+                                    const list = exerciseSearch.trim()
+                                        ? sortedExercisesForBrowse.filter((e) =>
+                                              e.name
+                                                  .toLowerCase()
+                                                  .includes(
+                                                      exerciseSearch.toLowerCase()
+                                                  )
+                                          )
+                                        : sortedExercisesForBrowse
+
+                                    if (
+                                        list.length === 0 &&
+                                        exerciseEntries.length === 0 &&
+                                        !exerciseSearch.trim()
+                                    ) {
+                                        return (
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 12,
+                                                    color: colors.primaryBrown,
+                                                    py: 1,
+                                                    textAlign: 'center',
+                                                }}>
+                                                No exercises yet. Type above to
+                                                create one.
+                                            </Typography>
+                                        )
+                                    }
+
+                                    return list.map((ex) => {
+                                        const matches =
+                                            selectedIds.size > 0 &&
+                                            ex.muscleGroups.some((mg) =>
+                                                selectedIds.has(mg.id)
+                                            )
+                                        return (
+                                            <Box
+                                                key={ex.id}
+                                                onClick={() => addExercise(ex)}
+                                                sx={{
+                                                    'display': 'flex',
+                                                    'alignItems': 'center',
+                                                    'justifyContent':
+                                                        'space-between',
+                                                    'padding': '6px 10px',
+                                                    'borderRadius': '4px',
+                                                    'cursor': 'pointer',
+                                                    'border': `1.5px solid ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
+                                                    'backgroundColor': matches
+                                                        ? exerciseBg
+                                                        : colors.primaryWhite,
+                                                    'boxShadow': `2px 2px 0px ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
+                                                    '&:active': {
+                                                        opacity: 0.6,
+                                                    },
+                                                }}>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: 0.25,
+                                                    }}>
+                                                    <Box
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems:
+                                                                'center',
+                                                            gap: 0.75,
+                                                        }}>
+                                                        <Typography
+                                                            sx={{
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    matches
+                                                                        ? 600
+                                                                        : 500,
+                                                            }}>
+                                                            {ex.name}
+                                                        </Typography>
+                                                        {ex.isBodyweight && (
+                                                            <Chip
+                                                                label="BW"
+                                                                size="small"
+                                                                sx={{
+                                                                    'height': 16,
+                                                                    'fontSize': 9,
+                                                                    'fontWeight': 700,
+                                                                    'backgroundColor':
+                                                                        '#e3f2fd',
+                                                                    'border':
+                                                                        '1px solid #1565c0',
+                                                                    'borderRadius':
+                                                                        '2px',
+                                                                    '& .MuiChip-label':
+                                                                        {
+                                                                            px: 0.5,
+                                                                        },
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                    {ex.muscleGroups.length >
+                                                        0 && (
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                flexWrap:
+                                                                    'wrap',
+                                                                gap: 0.25,
+                                                            }}>
+                                                            {ex.muscleGroups.map(
+                                                                (mg) => (
                                                                     <Typography
-                                                                        key={mg.id}
+                                                                        key={
+                                                                            mg.id
+                                                                        }
                                                                         sx={{
                                                                             fontSize: 9,
                                                                             fontWeight: 600,
-                                                                            color: selectedIds.has(mg.id) ? exerciseBorder : colors.primaryBrown,
-                                                                            backgroundColor: selectedIds.has(mg.id) ? `${exerciseBorder}15` : `${colors.primaryBrown}10`,
+                                                                            color: selectedIds.has(
+                                                                                mg.id
+                                                                            )
+                                                                                ? exerciseBorder
+                                                                                : colors.primaryBrown,
+                                                                            backgroundColor:
+                                                                                selectedIds.has(
+                                                                                    mg.id
+                                                                                )
+                                                                                    ? `${exerciseBorder}15`
+                                                                                    : `${colors.primaryBrown}10`,
                                                                             border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
-                                                                            borderRadius: '2px',
+                                                                            borderRadius:
+                                                                                '2px',
                                                                             px: 0.5,
                                                                             py: 0.125,
                                                                             lineHeight: 1.3,
                                                                         }}>
-                                                                        {mg.name}
+                                                                        {
+                                                                            mg.name
+                                                                        }
                                                                     </Typography>
-                                                                ))}
-                                                            </Box>
-                                                        )}
-                                                    </Box>
-                                                    <IconPlus size={14} stroke={2} color={colors.primaryBrown} style={{ flexShrink: 0 }} />
+                                                                )
+                                                            )}
+                                                        </Box>
+                                                    )}
                                                 </Box>
-                                            )
-                                        })
-                                    })()}
-                                </Box>
+                                                <IconPlus
+                                                    size={14}
+                                                    stroke={2}
+                                                    color={colors.primaryBrown}
+                                                    style={{ flexShrink: 0 }}
+                                                />
+                                            </Box>
+                                        )
+                                    })
+                                })()}
+                            </Box>
                         )}
                     </Box>
 
@@ -1778,7 +2797,7 @@ function WorkoutFormDrawer({
 
                     {/* Notes */}
                     <Box>
-                        <Typography sx={labelSx}>Notes (optional)</Typography>
+                        <Typography sx={labelSx}>Notes</Typography>
                         <TextField
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
@@ -1790,7 +2809,6 @@ function WorkoutFormDrawer({
                             sx={fieldSx}
                         />
                     </Box>
-
                 </Box>
 
                 {/* Footer */}
@@ -1812,12 +2830,22 @@ function WorkoutFormDrawer({
                     </Button>
                     <Button
                         onClick={showSavePreset ? saveAsPreset : handleSubmit}
-                        disabled={showSavePreset ? (!presetName.trim() || savingPreset) : (selectedIds.size === 0 || saving)}
+                        disabled={
+                            showSavePreset
+                                ? !presetName.trim() || savingPreset
+                                : selectedIds.size === 0 || saving
+                        }
                         size="large"
                         sx={primaryButtonSx}>
                         {showSavePreset
-                            ? (savingPreset ? 'Saving...' : 'Save Routine')
-                            : (saving ? 'Saving...' : isEdit ? 'Save' : 'Log')}
+                            ? savingPreset
+                                ? 'Saving...'
+                                : 'Save Routine'
+                            : saving
+                              ? 'Saving...'
+                              : isEdit
+                                ? 'Save'
+                                : 'Log'}
                     </Button>
                 </Box>
             </Box>
@@ -1845,7 +2873,13 @@ function CompactField({
     htmlInputProps?: Record<string, unknown>
 }) {
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width }}>
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width,
+            }}>
             <TextField
                 type={type}
                 value={value}
@@ -1860,7 +2894,13 @@ function CompactField({
                 }}
                 sx={{ ...compactFieldSx, width }}
             />
-            <Typography sx={{ fontSize: 9, color: colors.primaryBrown, mt: 0.25, lineHeight: 1 }}>
+            <Typography
+                sx={{
+                    fontSize: 9,
+                    color: colors.primaryBrown,
+                    mt: 0.25,
+                    lineHeight: 1,
+                }}>
                 {label}
             </Typography>
         </Box>
@@ -1888,8 +2928,9 @@ const compactFieldSx = {
     '& input[type=number]': {
         MozAppearance: 'textfield',
     },
-    '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-        WebkitAppearance: 'none',
-        margin: 0,
-    },
+    '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button':
+        {
+            WebkitAppearance: 'none',
+            margin: 0,
+        },
 }

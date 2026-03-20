@@ -1,13 +1,17 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import type { Supplement, SupplementLog, SupplementPreset } from '@/lib/health-types'
 import {
     fieldSx,
     labelSx,
     primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
+import type {
+    Supplement,
+    SupplementLog,
+    SupplementPreset,
+} from '@/lib/health-types'
 import {
     Box,
     Button,
@@ -17,10 +21,10 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconBolt, IconDots, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
-import { useCallback, useEffect, useState } from 'react'
+import { IconBolt, IconDots, IconPencil, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import { useRegisterFab } from 'providers/fab-provider'
+import { useCallback, useEffect, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -29,7 +33,11 @@ function getLocalDate(): string {
 
 function formatDate(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    return d.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+    })
 }
 
 // Group logs by date
@@ -56,11 +64,15 @@ export default function SupplementsPage() {
     const [presets, setPresets] = useState<SupplementPreset[]>([])
     const [loading, setLoading] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
-    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(null)
+    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(
+        null
+    )
     const [menuOpenDate, setMenuOpenDate] = useState<string | null>(null)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(null)
+    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(
+        null
+    )
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -98,7 +110,9 @@ export default function SupplementsPage() {
             try {
                 await Promise.all(
                     logsForDate.map((l) =>
-                        fetch(`/api/health/supplement-logs/${l.id}`, { method: 'DELETE' })
+                        fetch(`/api/health/supplement-logs/${l.id}`, {
+                            method: 'DELETE',
+                        })
                     )
                 )
                 setMenuOpenDate(null)
@@ -114,11 +128,14 @@ export default function SupplementsPage() {
         async (presetId: number) => {
             setApplyingPreset(presetId)
             try {
-                const res = await fetch(`/api/health/presets/${presetId}/apply`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: getLocalDate() }),
-                })
+                const res = await fetch(
+                    `/api/health/presets/${presetId}/apply`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: getLocalDate() }),
+                    }
+                )
                 if (res.ok) fetchData()
             } catch (err) {
                 console.error('Failed to apply preset:', err)
@@ -137,7 +154,10 @@ export default function SupplementsPage() {
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
+                <CircularProgress
+                    size={24}
+                    sx={{ color: colors.primaryYellow }}
+                />
             </Box>
         )
     }
@@ -164,10 +184,19 @@ export default function SupplementsPage() {
             </Typography>
 
             {/* Preset quick-actions */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 0.75,
+                    alignItems: 'center',
+                }}>
                 {/* Lightning circle icon — opens preset drawer */}
                 <Box
-                    onClick={() => { setEditingPreset(null); setPresetDrawerOpen(true) }}
+                    onClick={() => {
+                        setEditingPreset(null)
+                        setPresetDrawerOpen(true)
+                    }}
                     sx={{
                         'width': 30,
                         'height': 30,
@@ -181,28 +210,49 @@ export default function SupplementsPage() {
                         'flexShrink': 0,
                         'mr': 0.5,
                         'cursor': 'pointer',
-                        '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
+                        '&:active': {
+                            boxShadow: 'none',
+                            transform: 'translate(2px, 2px)',
+                        },
                     }}>
-                    <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
+                    <IconBolt
+                        size={14}
+                        stroke={2.5}
+                        fill={colors.primaryWhite}
+                        color={colors.primaryBlack}
+                    />
                 </Box>
                 {presets.map((preset) => (
                     <Box
                         key={preset.id}
-                        onClick={() => applyingPreset === null && applyPreset(preset.id)}
+                        onClick={() =>
+                            applyingPreset === null && applyPreset(preset.id)
+                        }
                         sx={{
                             'px': 1.25,
                             'py': 0.5,
-                            'backgroundColor': applyingPreset === preset.id ? colors.primaryYellow : colors.primaryWhite,
+                            'backgroundColor':
+                                applyingPreset === preset.id
+                                    ? colors.primaryYellow
+                                    : colors.primaryWhite,
                             'border': `1.5px solid ${colors.primaryBlack}`,
                             'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
                             'borderRadius': '4px',
-                            'cursor': applyingPreset !== null ? 'default' : 'pointer',
-                            'opacity': applyingPreset !== null && applyingPreset !== preset.id ? 0.5 : 1,
+                            'cursor':
+                                applyingPreset !== null ? 'default' : 'pointer',
+                            'opacity':
+                                applyingPreset !== null &&
+                                applyingPreset !== preset.id
+                                    ? 0.5
+                                    : 1,
                             'transition': 'all 0.15s',
-                            '&:active': applyingPreset === null ? {
-                                boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                transform: 'translate(1px, 1px)',
-                            } : {},
+                            '&:active':
+                                applyingPreset === null
+                                    ? {
+                                          boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                          transform: 'translate(1px, 1px)',
+                                      }
+                                    : {},
                         }}>
                         <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
                             {preset.name}
@@ -215,17 +265,21 @@ export default function SupplementsPage() {
             {activeSupplements.length > 0 && (
                 <Box
                     sx={{
-                        display: 'flex',
-                        gap: 0.75,
-                        overflowX: 'auto',
-                        pb: 0.5,
+                        'display': 'flex',
+                        'gap': 0.75,
+                        'overflowX': 'auto',
+                        'pb': 0.5,
                         '&::-webkit-scrollbar': { display: 'none' },
-                        scrollbarWidth: 'none',
+                        'scrollbarWidth': 'none',
                     }}>
                     {activeSupplements.map((supp) => (
                         <Chip
                             key={supp.id}
-                            label={supp.dosage ? `${supp.name} · ${supp.dosage}` : supp.name}
+                            label={
+                                supp.dosage
+                                    ? `${supp.name} · ${supp.dosage}`
+                                    : supp.name
+                            }
                             size="small"
                             sx={{
                                 'height': 28,
@@ -245,7 +299,13 @@ export default function SupplementsPage() {
 
             {/* Log history */}
             {dayGroups.length === 0 ? (
-                <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
+                <Typography
+                    sx={{
+                        fontSize: 14,
+                        color: colors.primaryBrown,
+                        textAlign: 'center',
+                        py: 4,
+                    }}>
                     No supplements logged yet.
                 </Typography>
             ) : (
@@ -257,27 +317,52 @@ export default function SupplementsPage() {
                                 padding: '12px 14px',
                                 ...cardSx,
                             }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                }}>
                                 <Box sx={{ flex: 1 }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            mb: 0.75,
+                                        }}>
                                         {formatDate(group.date)}
                                     </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                        }}>
                                         {group.logs.map((log) => (
                                             <Chip
                                                 key={log.id}
-                                                label={log.quantity > 1 ? `${log.supplementName} ×${log.quantity}` : log.supplementName}
+                                                label={
+                                                    log.quantity > 1
+                                                        ? `${log.supplementName} ×${log.quantity}`
+                                                        : log.supplementName
+                                                }
                                                 size="small"
                                                 sx={{
                                                     'height': 24,
                                                     'fontSize': 12,
                                                     'fontWeight': 500,
-                                                    'backgroundColor': '#f1f8e9',
-                                                    'border': '1px solid #4caf50',
-                                                    'boxShadow': '1px 1px 0px #4caf50',
+                                                    'backgroundColor':
+                                                        '#f1f8e9',
+                                                    'border':
+                                                        '1px solid #4caf50',
+                                                    'boxShadow':
+                                                        '1px 1px 0px #4caf50',
                                                     'borderRadius': '3px',
-                                                    'color': colors.primaryBlack,
-                                                    '& .MuiChip-label': { px: 1 },
+                                                    'color':
+                                                        colors.primaryBlack,
+                                                    '& .MuiChip-label': {
+                                                        px: 1,
+                                                    },
                                                 }}
                                             />
                                         ))}
@@ -288,21 +373,37 @@ export default function SupplementsPage() {
                                 <Box sx={{ position: 'relative' }}>
                                     <Box
                                         onClick={() =>
-                                            setMenuOpenDate(menuOpenDate === group.date ? null : group.date)
+                                            setMenuOpenDate(
+                                                menuOpenDate === group.date
+                                                    ? null
+                                                    : group.date
+                                            )
                                         }
                                         sx={{
                                             'cursor': 'pointer',
                                             'p': 0.5,
                                             'borderRadius': '4px',
-                                            '&:active': { backgroundColor: `${colors.primaryYellow}40` },
+                                            '&:active': {
+                                                backgroundColor: `${colors.primaryYellow}40`,
+                                            },
                                         }}>
-                                        <IconDots size={18} stroke={2} color={colors.primaryBrown} />
+                                        <IconDots
+                                            size={18}
+                                            stroke={2}
+                                            color={colors.primaryBrown}
+                                        />
                                     </Box>
                                     {menuOpenDate === group.date && (
                                         <>
                                             <Box
-                                                onClick={() => setMenuOpenDate(null)}
-                                                sx={{ position: 'fixed', inset: 0, zIndex: 10 }}
+                                                onClick={() =>
+                                                    setMenuOpenDate(null)
+                                                }
+                                                sx={{
+                                                    position: 'fixed',
+                                                    inset: 0,
+                                                    zIndex: 10,
+                                                }}
                                             />
                                             <Box
                                                 sx={{
@@ -311,12 +412,15 @@ export default function SupplementsPage() {
                                                     right: 0,
                                                     zIndex: 11,
                                                     ...cardSx,
-                                                    backgroundColor: colors.primaryWhite,
+                                                    backgroundColor:
+                                                        colors.primaryWhite,
                                                     minWidth: 140,
                                                     py: 0.5,
                                                 }}>
                                                 <Box
-                                                    onClick={() => openEditDate(group.date)}
+                                                    onClick={() =>
+                                                        openEditDate(group.date)
+                                                    }
                                                     sx={{
                                                         'display': 'flex',
                                                         'alignItems': 'center',
@@ -325,12 +429,19 @@ export default function SupplementsPage() {
                                                         'py': 0.75,
                                                         'fontSize': 13,
                                                         'cursor': 'pointer',
-                                                        '&:hover': { backgroundColor: `${colors.primaryYellow}30` },
+                                                        '&:hover': {
+                                                            backgroundColor: `${colors.primaryYellow}30`,
+                                                        },
                                                     }}>
-                                                    <IconPencil size={14} /> Edit
+                                                    <IconPencil size={14} />{' '}
+                                                    Edit
                                                 </Box>
                                                 <Box
-                                                    onClick={() => handleDeleteDate(group.date)}
+                                                    onClick={() =>
+                                                        handleDeleteDate(
+                                                            group.date
+                                                        )
+                                                    }
                                                     sx={{
                                                         'display': 'flex',
                                                         'alignItems': 'center',
@@ -339,10 +450,14 @@ export default function SupplementsPage() {
                                                         'py': 0.75,
                                                         'fontSize': 13,
                                                         'cursor': 'pointer',
-                                                        'color': colors.primaryRed,
-                                                        '&:hover': { backgroundColor: `${colors.primaryRed}15` },
+                                                        'color':
+                                                            colors.primaryRed,
+                                                        '&:hover': {
+                                                            backgroundColor: `${colors.primaryRed}15`,
+                                                        },
                                                     }}>
-                                                    <IconTrash size={14} /> Delete
+                                                    <IconTrash size={14} />{' '}
+                                                    Delete
                                                 </Box>
                                             </Box>
                                         </>
@@ -370,14 +485,26 @@ export default function SupplementsPage() {
             {/* Supplement preset drawer */}
             <SupplementPresetDrawer
                 open={presetDrawerOpen}
-                onClose={() => { setPresetDrawerOpen(false); setEditingPreset(null) }}
+                onClose={() => {
+                    setPresetDrawerOpen(false)
+                    setEditingPreset(null)
+                }}
                 supplements={supplements}
                 editingPreset={editingPreset}
                 existingPresets={presets}
-                onSaved={() => { fetchData(); setPresetDrawerOpen(false); setEditingPreset(null) }}
-                onEdit={(p) => { setEditingPreset(p); setPresetDrawerOpen(true) }}
+                onSaved={() => {
+                    fetchData()
+                    setPresetDrawerOpen(false)
+                    setEditingPreset(null)
+                }}
+                onEdit={(p) => {
+                    setEditingPreset(p)
+                    setPresetDrawerOpen(true)
+                }}
                 onDelete={async (id) => {
-                    await fetch(`/api/health/presets/${id}`, { method: 'DELETE' })
+                    await fetch(`/api/health/presets/${id}`, {
+                        method: 'DELETE',
+                    })
                     fetchData()
                 }}
             />
@@ -434,17 +561,16 @@ function SupplementDrawer({
             setIsActive(true)
             // Pre-fill selected supplements from existing logs for this date
             const logsForDate = allLogs.filter((l) => l.date === d)
-            setSelectedIds(new Set(logsForDate.map((l) => Number(l.supplementId))))
+            setSelectedIds(
+                new Set(logsForDate.map((l) => Number(l.supplementId)))
+            )
         }
     }, [open, initialDate, allLogs])
 
     // Change date but keep current selections
-    const handleDateChange = useCallback(
-        (newDate: string) => {
-            setDate(newDate)
-        },
-        []
-    )
+    const handleDateChange = useCallback((newDate: string) => {
+        setDate(newDate)
+    }, [])
 
     const toggleSupplementSelection = useCallback((suppId: number) => {
         setSelectedIds((prev) => {
@@ -462,9 +588,15 @@ function SupplementDrawer({
         setSaving(true)
         try {
             // Determine what changed vs what's already logged
-            const alreadyLogged = new Set(dateLogs.map((l) => Number(l.supplementId)))
-            const toAdd = Array.from(selectedIds).filter((id) => !alreadyLogged.has(id))
-            const toRemove = dateLogs.filter((l) => !selectedIds.has(Number(l.supplementId)))
+            const alreadyLogged = new Set(
+                dateLogs.map((l) => Number(l.supplementId))
+            )
+            const toAdd = Array.from(selectedIds).filter(
+                (id) => !alreadyLogged.has(id)
+            )
+            const toRemove = dateLogs.filter(
+                (l) => !selectedIds.has(Number(l.supplementId))
+            )
 
             await Promise.all([
                 ...toAdd.map((suppId) =>
@@ -475,7 +607,9 @@ function SupplementDrawer({
                     })
                 ),
                 ...toRemove.map((log) =>
-                    fetch(`/api/health/supplement-logs/${log.id}`, { method: 'DELETE' })
+                    fetch(`/api/health/supplement-logs/${log.id}`, {
+                        method: 'DELETE',
+                    })
                 ),
             ])
             onDataChanged()
@@ -558,7 +692,9 @@ function SupplementDrawer({
             'borderRadius': '4px',
             'textTransform': 'none',
             '&:hover': {
-                backgroundColor: active ? colors.primaryYellow : `${colors.primaryYellow}30`,
+                backgroundColor: active
+                    ? colors.primaryYellow
+                    : `${colors.primaryYellow}30`,
             },
         }) as const
 
@@ -578,14 +714,20 @@ function SupplementDrawer({
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>Supplements</Typography>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
+                        Supplements
+                    </Typography>
 
                     {/* Mode toggle */}
                     <Box sx={{ display: 'flex', gap: 0.75 }}>
-                        <Button onClick={() => setMode('log')} sx={toggleSx(mode === 'log')}>
+                        <Button
+                            onClick={() => setMode('log')}
+                            sx={toggleSx(mode === 'log')}>
                             Log
                         </Button>
-                        <Button onClick={() => setMode('manage')} sx={toggleSx(mode === 'manage')}>
+                        <Button
+                            onClick={() => setMode('manage')}
+                            sx={toggleSx(mode === 'manage')}>
                             Manage
                         </Button>
                     </Box>
@@ -610,7 +752,9 @@ function SupplementDrawer({
                                 <TextField
                                     type="date"
                                     value={date}
-                                    onChange={(e) => handleDateChange(e.target.value)}
+                                    onChange={(e) =>
+                                        handleDateChange(e.target.value)
+                                    }
                                     size="small"
                                     sx={{ ...fieldSx, maxWidth: 180 }}
                                 />
@@ -620,7 +764,11 @@ function SupplementDrawer({
                             {activeSupplements.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 3 }}>
                                     <Typography
-                                        sx={{ fontSize: 14, color: colors.primaryBrown, mb: 1 }}>
+                                        sx={{
+                                            fontSize: 14,
+                                            color: colors.primaryBrown,
+                                            mb: 1,
+                                        }}>
                                         No supplements added yet.
                                     </Typography>
                                     <Button
@@ -638,11 +786,17 @@ function SupplementDrawer({
                                         gap: 0.75,
                                     }}>
                                     {activeSupplements.map((supp) => {
-                                        const isSelected = selectedIds.has(supp.id)
+                                        const isSelected = selectedIds.has(
+                                            supp.id
+                                        )
                                         return (
                                             <Box
                                                 key={supp.id}
-                                                onClick={() => toggleSupplementSelection(supp.id)}
+                                                onClick={() =>
+                                                    toggleSupplementSelection(
+                                                        supp.id
+                                                    )
+                                                }
                                                 sx={{
                                                     'display': 'flex',
                                                     'alignItems': 'center',
@@ -650,9 +804,10 @@ function SupplementDrawer({
                                                     'padding': '8px 12px',
                                                     ...cardSx,
                                                     'cursor': 'pointer',
-                                                    'backgroundColor': isSelected
-                                                        ? '#f1f8e9'
-                                                        : colors.primaryWhite,
+                                                    'backgroundColor':
+                                                        isSelected
+                                                            ? '#f1f8e9'
+                                                            : colors.primaryWhite,
                                                     'borderColor': isSelected
                                                         ? '#4caf50'
                                                         : colors.primaryBlack,
@@ -719,13 +874,17 @@ function SupplementDrawer({
                                         fontWeight: 700,
                                         color: colors.primaryBrown,
                                     }}>
-                                    {editingSupp ? 'Edit Supplement' : 'New Supplement'}
+                                    {editingSupp
+                                        ? 'Edit Supplement'
+                                        : 'New Supplement'}
                                 </Typography>
                                 <Box>
                                     <Typography sx={labelSx}>Name</Typography>
                                     <TextField
                                         value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                        onChange={(e) =>
+                                            setName(e.target.value)
+                                        }
                                         size="small"
                                         fullWidth
                                         placeholder="Creatine, Vitamin D..."
@@ -733,12 +892,12 @@ function SupplementDrawer({
                                     />
                                 </Box>
                                 <Box>
-                                    <Typography sx={labelSx}>
-                                        Dosage (optional)
-                                    </Typography>
+                                    <Typography sx={labelSx}>Dosage</Typography>
                                     <TextField
                                         value={dosage}
-                                        onChange={(e) => setDosage(e.target.value)}
+                                        onChange={(e) =>
+                                            setDosage(e.target.value)
+                                        }
                                         size="small"
                                         fullWidth
                                         placeholder="5g, 400mg, 2 capsules..."
@@ -808,7 +967,9 @@ function SupplementDrawer({
                                                 justifyContent: 'space-between',
                                                 padding: '8px 12px',
                                                 ...cardSx,
-                                                opacity: supp.isActive ? 1 : 0.5,
+                                                opacity: supp.isActive
+                                                    ? 1
+                                                    : 0.5,
                                                 backgroundColor:
                                                     editingSupp?.id === supp.id
                                                         ? colors.secondaryYellow
@@ -976,7 +1137,9 @@ function SupplementPresetDrawer({
         if (open) {
             if (editingPreset) {
                 setName(editingPreset.name)
-                setSelectedSupIds(new Set(editingPreset.supplements.map((s) => s.id)))
+                setSelectedSupIds(
+                    new Set(editingPreset.supplements.map((s) => s.id))
+                )
             } else {
                 setName('')
                 setSelectedSupIds(new Set())
@@ -1029,40 +1192,97 @@ function SupplementPresetDrawer({
 
     return (
         <FormDrawer open={open} onClose={onClose}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    overflow: 'hidden',
+                }}>
                 {/* Header */}
-                <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${colors.primaryBlack}20` }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                <Box
+                    sx={{
+                        px: 2.5,
+                        py: 2,
+                        borderBottom: `1px solid ${colors.primaryBlack}20`,
+                    }}>
+                    <Typography
+                        sx={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-serif)',
+                        }}>
                         {editingPreset ? 'Edit Group' : 'Supplement Groups'}
                     </Typography>
                 </Box>
 
                 {/* Body */}
-                <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        px: 2.5,
+                        py: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                    }}>
                     {/* Existing presets list */}
                     {!editingPreset && existingPresets.length > 0 && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 1,
+                            }}>
                             {existingPresets.map((p) => (
                                 <Box key={p.id} sx={{ ...cardSx, p: 1.5 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'flex-start',
+                                        }}>
                                         <Box sx={{ flex: 1 }}>
-                                            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 14,
+                                                    fontWeight: 600,
+                                                    mb: 0.5,
+                                                }}>
                                                 {p.name}
                                             </Typography>
-                                            <Typography sx={{ fontSize: 12, color: colors.primaryBrown }}>
-                                                {p.supplements.map((s) => s.name).join(', ')}
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 12,
+                                                    color: colors.primaryBrown,
+                                                }}>
+                                                {p.supplements
+                                                    .map((s) => s.name)
+                                                    .join(', ')}
                                             </Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                gap: 0.5,
+                                                flexShrink: 0,
+                                            }}>
                                             <Box
                                                 onClick={() => onEdit(p)}
                                                 sx={{
                                                     'cursor': 'pointer',
                                                     'p': 0.5,
                                                     'borderRadius': '4px',
-                                                    '&:active': { backgroundColor: `${colors.primaryYellow}40` },
+                                                    '&:active': {
+                                                        backgroundColor: `${colors.primaryYellow}40`,
+                                                    },
                                                 }}>
-                                                <IconPencil size={16} stroke={2} color={colors.primaryBrown} />
+                                                <IconPencil
+                                                    size={16}
+                                                    stroke={2}
+                                                    color={colors.primaryBrown}
+                                                />
                                             </Box>
                                             <Box
                                                 onClick={() => onDelete(p.id)}
@@ -1070,9 +1290,15 @@ function SupplementPresetDrawer({
                                                     'cursor': 'pointer',
                                                     'p': 0.5,
                                                     'borderRadius': '4px',
-                                                    '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                                    '&:active': {
+                                                        backgroundColor: `${colors.primaryRed}20`,
+                                                    },
                                                 }}>
-                                                <IconTrash size={16} stroke={2} color={colors.primaryRed} />
+                                                <IconTrash
+                                                    size={16}
+                                                    stroke={2}
+                                                    color={colors.primaryRed}
+                                                />
                                             </Box>
                                         </Box>
                                     </Box>
@@ -1082,11 +1308,23 @@ function SupplementPresetDrawer({
                     )}
 
                     {!editingPreset && existingPresets.length > 0 && (
-                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}15`, my: 0.5 }} />
+                        <Box
+                            sx={{
+                                borderBottom: `1px solid ${colors.primaryBlack}15`,
+                                my: 0.5,
+                            }}
+                        />
                     )}
 
                     {/* Form */}
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <Typography
+                        sx={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: colors.primaryBrown,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                        }}>
                         {editingPreset ? 'Edit' : 'New Group'}
                     </Typography>
 
@@ -1106,17 +1344,30 @@ function SupplementPresetDrawer({
                     <Box>
                         <Typography sx={labelSx}>Supplements</Typography>
                         {activeSupplements.length === 0 ? (
-                            <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>
+                            <Typography
+                                sx={{
+                                    fontSize: 13,
+                                    color: colors.primaryBrown,
+                                }}>
                                 No active supplements. Add some first.
                             </Typography>
                         ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 0.75,
+                                }}>
                                 {activeSupplements.map((supp) => {
-                                    const isSelected = selectedSupIds.has(supp.id)
+                                    const isSelected = selectedSupIds.has(
+                                        supp.id
+                                    )
                                     return (
                                         <Box
                                             key={supp.id}
-                                            onClick={() => toggleSupplement(supp.id)}
+                                            onClick={() =>
+                                                toggleSupplement(supp.id)
+                                            }
                                             sx={{
                                                 'display': 'flex',
                                                 'alignItems': 'center',
@@ -1124,13 +1375,18 @@ function SupplementPresetDrawer({
                                                 'padding': '8px 12px',
                                                 ...cardSx,
                                                 'cursor': 'pointer',
-                                                'backgroundColor': isSelected ? '#f1f8e9' : colors.primaryWhite,
-                                                'borderColor': isSelected ? '#4caf50' : colors.primaryBlack,
+                                                'backgroundColor': isSelected
+                                                    ? '#f1f8e9'
+                                                    : colors.primaryWhite,
+                                                'borderColor': isSelected
+                                                    ? '#4caf50'
+                                                    : colors.primaryBlack,
                                                 'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
                                                 'transition': 'all 0.15s',
                                                 '&:active': {
                                                     boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                    transform: 'translate(1px, 1px)',
+                                                    transform:
+                                                        'translate(1px, 1px)',
                                                 },
                                             }}>
                                             <Checkbox
@@ -1138,17 +1394,28 @@ function SupplementPresetDrawer({
                                                 size="small"
                                                 sx={{
                                                     'padding': 0,
-                                                    'color': colors.primaryBlack,
-                                                    '&.Mui-checked': { color: '#4caf50' },
+                                                    'color':
+                                                        colors.primaryBlack,
+                                                    '&.Mui-checked': {
+                                                        color: '#4caf50',
+                                                    },
                                                 }}
                                                 tabIndex={-1}
                                             />
                                             <Box>
-                                                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 14,
+                                                        fontWeight: 600,
+                                                    }}>
                                                     {supp.name}
                                                 </Typography>
                                                 {supp.dosage && (
-                                                    <Typography sx={{ fontSize: 12, color: colors.primaryBrown }}>
+                                                    <Typography
+                                                        sx={{
+                                                            fontSize: 12,
+                                                            color: colors.primaryBrown,
+                                                        }}>
                                                         {supp.dosage}
                                                     </Typography>
                                                 )}
@@ -1161,30 +1428,42 @@ function SupplementPresetDrawer({
                     </Box>
 
                     {error && (
-                        <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                        <Typography
+                            sx={{ fontSize: 13, color: colors.primaryRed }}>
                             {error}
                         </Typography>
                     )}
                 </Box>
 
                 {/* Footer */}
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    px: 2.5,
-                    py: 2,
-                    borderTop: `1px solid ${colors.primaryBlack}20`,
-                    paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                }}>
-                    <Button onClick={onClose} disabled={saving} size="large" sx={secondaryButtonSx}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    <Button
+                        onClick={onClose}
+                        disabled={saving}
+                        size="large"
+                        sx={secondaryButtonSx}>
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!name.trim() || selectedSupIds.size === 0 || saving}
+                        disabled={
+                            !name.trim() || selectedSupIds.size === 0 || saving
+                        }
                         size="large"
                         sx={primaryButtonSx}>
-                        {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                        {saving
+                            ? 'Saving...'
+                            : editingPreset
+                              ? 'Save'
+                              : 'Create'}
                     </Button>
                 </Box>
             </Box>

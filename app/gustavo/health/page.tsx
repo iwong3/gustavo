@@ -22,6 +22,13 @@ function getDaysSinceBg(days: number | null): string {
     return '#f4433612'                     // red tint
 }
 
+function getDaysSinceBorder(days: number | null): string {
+    if (days === null) return '#9e9e9ecc'
+    if (days <= 3) return '#4caf50cc'
+    if (days <= 6) return '#ff9800cc'
+    return '#f44336cc'
+}
+
 function formatDaysSince(days: number | null): string {
     if (days === null) return 'Never'
     if (days === 0) return 'Today'
@@ -179,8 +186,8 @@ export default function HealthPage() {
                                                     width: daysSinceCardWidth,
                                                     padding: '6px 8px',
                                                     borderRadius: '4px',
-                                                    border: `1.5px solid ${colors.primaryBlack}`,
-                                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                    border: `1.5px solid ${getDaysSinceBorder(item?.daysSince ?? null)}`,
+                                                    boxShadow: `1.5px 1.5px 0px ${getDaysSinceBorder(item?.daysSince ?? null)}`,
                                                     backgroundColor: getDaysSinceBg(item?.daysSince ?? null),
                                                 }}>
                                                 <Box

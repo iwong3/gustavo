@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { rows } = await pool.query(
         `SELECT id, name FROM presets
          WHERE user_id = $1 AND type = $2 AND deleted_at IS NULL
-         ORDER BY name`,
+         ORDER BY sort_order, id`,
         [authUser.userId, type]
     )
 
@@ -105,7 +105,11 @@ export async function POST(request: NextRequest) {
     try {
         const preset = await withAuditUser(authUser.userId, async (client) => {
             const res = await client.query(
-                `INSERT INTO presets (user_id, name, type) VALUES ($1, $2, $3)
+                `INSERT INTO presets (user_id, name, type, sort_order)
+                 VALUES ($1, $2, $3, COALESCE(
+                     (SELECT MAX(sort_order) + 1 FROM presets WHERE user_id = $1 AND type = $3 AND deleted_at IS NULL),
+                     0
+                 ))
                  RETURNING id, name, type`,
                 [authUser.userId, name.trim(), type]
             )
