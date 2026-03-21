@@ -36,7 +36,7 @@ import {
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -52,7 +52,7 @@ function formatDate(dateStr: string): string {
     })
 }
 
-// ── Diet Day Card (workout-style layout) ────────────────────────────────────
+// ── Chip styles ──────────────────────────────────────────────────────────────
 
 const foodChipSx = {
     'height': 24,
@@ -78,6 +78,8 @@ const mealChipSx = {
     '& .MuiChip-label': { px: 1 },
 } as const
 
+// ── Date helpers ─────────────────────────────────────────────────────────────
+
 function formatWeekday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
     return d.toLocaleDateString('en-US', { weekday: 'short' })
@@ -88,15 +90,132 @@ function formatMonthDay(dateStr: string): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// ── Stacked chip row (shows chips that fit, stacked indicator for overflow) ──
+
+const STACK_OFFSET = 8
+const STACK_LAYERS = 2
+const STACK_TOTAL = STACK_OFFSET * STACK_LAYERS
+const CHIP_GAP = 4 // 0.5 spacing = 4px
+
+function StackedChipRow({ labels }: { labels: string[] }) {
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [visibleCount, setVisibleCount] = useState(labels.length)
+
+    useLayoutEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const chips = Array.from(el.children) as HTMLElement[]
+        if (chips.length === 0) return
+
+        const containerWidth = el.getBoundingClientRect().width
+        const containerLeft = el.getBoundingClientRect().left
+
+        // Measure cumulative width of each chip
+        let lastFittingFull = chips.length
+        for (let i = 0; i < chips.length; i++) {
+            const chipRight = chips[i].getBoundingClientRect().right - containerLeft
+            // Does this chip + stack reserve + gap for one more truncated chip fit?
+            if (chipRight > containerWidth) {
+                lastFittingFull = i
+                break
+            }
+        }
+
+        if (lastFittingFull >= chips.length) {
+            // All fit at natural width, no overflow
+            setVisibleCount(chips.length)
+        } else {
+            // Find how many natural chips fit while leaving room for a truncated last chip + stack
+            // Min truncated chip width ~40px + stack + gap
+            const minLastChip = 40 + STACK_TOTAL + CHIP_GAP
+            let naturalFit = lastFittingFull
+            for (let i = lastFittingFull; i >= 1; i--) {
+                const usedRight = chips[i - 1].getBoundingClientRect().right - containerLeft
+                const remaining = containerWidth - usedRight - CHIP_GAP
+                if (remaining >= minLastChip) {
+                    naturalFit = i
+                    break
+                }
+                naturalFit = i - 1
+            }
+            // Show naturalFit chips at full size + 1 truncated chip with stack
+            setVisibleCount(Math.max(1, naturalFit + 1))
+        }
+    }, [labels])
+
+    const hasOverflow = visibleCount < labels.length
+
+    return (
+        <Box ref={containerRef} sx={{ display: 'flex', gap: 0.5, overflow: 'hidden', flex: 1, minWidth: 0, alignItems: 'center' }}>
+            {labels.map((label, i) => {
+                if (i >= visibleCount) return null
+                const isLast = hasOverflow && i === visibleCount - 1
+                return (
+                    <Box key={i} sx={{
+                        position: 'relative',
+                        flexShrink: isLast ? 1 : 0,
+                        minWidth: isLast ? 40 : undefined,
+                        mr: isLast ? `${STACK_TOTAL}px` : 0,
+                    }}>
+                        {isLast && (
+                            <>
+                                <Box sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    backgroundColor: colors.secondaryYellow,
+                                    border: `1px solid ${colors.primaryBlack}`,
+                                    borderRadius: '3px',
+                                    transform: `translateX(${STACK_OFFSET * 2}px)`,
+                                }} />
+                                <Box sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    backgroundColor: colors.secondaryYellow,
+                                    border: `1px solid ${colors.primaryBlack}`,
+                                    borderRadius: '3px',
+                                    transform: `translateX(${STACK_OFFSET}px)`,
+                                }} />
+                            </>
+                        )}
+                        <Chip
+                            label={label}
+                            size="small"
+                            sx={{
+                                ...foodChipSx,
+                                'position': 'relative',
+                                'maxWidth': '100%',
+                                '& .MuiChip-label': { px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                            }}
+                        />
+                    </Box>
+                )
+            })}
+        </Box>
+    )
+}
+
+// ── Edit target type ─────────────────────────────────────────────────────────
+
+type EditTarget = {
+    date: string
+    mealGroupId: number | null
+    label: string
+    foods: FoodLogEntry[]
+}
+
+// ── Diet Day Card (expandable with per-meal rows) ────────────────────────────
+
 function DietDayCard({
     day,
-    onEdit,
-    onDelete,
+    onEditMeal,
+    onDeleteMeal,
 }: {
     day: DietDay
-    onEdit: () => void
-    onDelete: () => void
+    onEditMeal: (target: EditTarget) => void
+    onDeleteMeal: (logIds: number[]) => void
 }) {
+    const [expanded, setExpanded] = useState(false)
+
     return (
         <Box>
             {/* Date label */}
@@ -136,51 +255,174 @@ function DietDayCard({
                     {formatMonthDay(day.date)}
                 </Typography>
             </Box>
-            {/* Card */}
-            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                <SwipeableRow
-                    canEdit
-                    canDelete
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    backgroundColor={colors.primaryWhite}>
+
+            {/* Day card — outer container always visible */}
+            <Box
+                sx={{
+                    ...cardSx,
+                    overflow: 'hidden',
+                }}>
+                {!expanded ? (
+                    /* Collapsed: card per meal with stacked chip overflow */
                     <Box
-                        onClick={onEdit}
+                        onClick={() => setExpanded(true)}
                         sx={{
-                            'p': 1.5,
+                            'p': 1.25,
                             'cursor': 'pointer',
-                            'backgroundColor': colors.primaryWhite,
-                            '&:active': {
-                                backgroundColor: colors.secondaryYellow,
-                            },
+                            'display': 'flex',
+                            'flexDirection': 'column',
+                            'gap': 0.75,
+                            '&:active': { backgroundColor: colors.secondaryYellow },
                             'transition': 'background-color 150ms ease',
                         }}>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                            {/* Standalone foods */}
-                            {day.standaloneFoods.map((entry) => (
-                                <Chip
-                                    key={entry.id}
-                                    label={
-                                        entry.quantity > 1
-                                            ? `${entry.food.name} \u00d7${entry.quantity}`
-                                            : entry.food.name
-                                    }
-                                    size="small"
-                                    sx={foodChipSx}
+                        {day.mealGroups.map((group, i) => {
+                            const isLast = i === day.mealGroups.length - 1 && day.standaloneFoods.length === 0
+                            return (
+                                <Box key={`meal-${group.id}`}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                            overflow: 'hidden',
+                                        }}>
+                                        <Chip
+                                            label={group.label}
+                                            size="small"
+                                            sx={mealChipSx}
+                                        />
+                                        <StackedChipRow
+                                            labels={group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name)}
+                                        />
+                                    </Box>
+                                    {!isLast && (
+                                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}12`, mt: 0.75 }} />
+                                    )}
+                                </Box>
+                            )
+                        })}
+                        {day.standaloneFoods.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    overflow: 'hidden',
+                                }}>
+                                <StackedChipRow
+                                    labels={day.standaloneFoods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name)}
                                 />
-                            ))}
-                            {/* Meal groups */}
-                            {day.mealGroups.map((group) => (
-                                <Chip
-                                    key={`meal-${group.id}`}
-                                    label={`${group.label} (${group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')})`}
-                                    size="small"
-                                    sx={mealChipSx}
-                                />
-                            ))}
-                        </Box>
+                            </Box>
+                        )}
                     </Box>
-                </SwipeableRow>
+                ) : (
+                    /* Expanded: neo-brutalist card per meal inside the day card */
+                    <Box
+                        sx={{
+                            p: 1.5,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                        }}>
+                        {/* Tap to collapse */}
+                        <Box
+                            onClick={() => setExpanded(false)}
+                            sx={{
+                                'cursor': 'pointer',
+                                '&:active': { opacity: 0.6 },
+                            }}>
+                            <Typography sx={{ fontSize: 11, fontWeight: 600, color: colors.primaryBrown }}>
+                                {day.mealGroups.length + (day.standaloneFoods.length > 0 ? 1 : 0)} meal{(day.mealGroups.length + (day.standaloneFoods.length > 0 ? 1 : 0)) !== 1 ? 's' : ''} — tap to collapse
+                            </Typography>
+                        </Box>
+
+                        {/* Meal group cards */}
+                        {day.mealGroups.map((group) => (
+                            <Box key={`meal-${group.id}`} sx={{ ...cardSx, overflow: 'hidden' }}>
+                                <SwipeableRow
+                                    canEdit
+                                    canDelete
+                                    onEdit={() => onEditMeal({
+                                        date: day.date,
+                                        mealGroupId: group.id,
+                                        label: group.label,
+                                        foods: group.foods,
+                                    })}
+                                    onDelete={() => onDeleteMeal(group.foods.map((f) => f.id))}
+                                    backgroundColor={colors.primaryWhite}>
+                                    <Box
+                                        onClick={() => onEditMeal({
+                                            date: day.date,
+                                            mealGroupId: group.id,
+                                            label: group.label,
+                                            foods: group.foods,
+                                        })}
+                                        sx={{
+                                            'p': 1.25,
+                                            'cursor': 'pointer',
+                                            '&:active': { backgroundColor: colors.secondaryYellow },
+                                            'transition': 'background-color 150ms ease',
+                                        }}>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: colors.primaryBlue, mb: 0.5 }}>
+                                            {group.label}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {group.foods.map((entry) => (
+                                                <Chip
+                                                    key={entry.id}
+                                                    label={entry.quantity > 1 ? `${entry.food.name} \u00d7${entry.quantity}` : entry.food.name}
+                                                    size="small"
+                                                    sx={foodChipSx}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                </SwipeableRow>
+                            </Box>
+                        ))}
+
+                        {/* Standalone foods card */}
+                        {day.standaloneFoods.length > 0 && (
+                            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                <SwipeableRow
+                                    canEdit
+                                    canDelete
+                                    onEdit={() => onEditMeal({
+                                        date: day.date,
+                                        mealGroupId: null,
+                                        label: '',
+                                        foods: day.standaloneFoods,
+                                    })}
+                                    onDelete={() => onDeleteMeal(day.standaloneFoods.map((f) => f.id))}
+                                    backgroundColor={colors.primaryWhite}>
+                                    <Box
+                                        onClick={() => onEditMeal({
+                                            date: day.date,
+                                            mealGroupId: null,
+                                            label: '',
+                                            foods: day.standaloneFoods,
+                                        })}
+                                        sx={{
+                                            'p': 1.25,
+                                            'cursor': 'pointer',
+                                            '&:active': { backgroundColor: colors.secondaryYellow },
+                                            'transition': 'background-color 150ms ease',
+                                        }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {day.standaloneFoods.map((entry) => (
+                                                <Chip
+                                                    key={entry.id}
+                                                    label={entry.quantity > 1 ? `${entry.food.name} \u00d7${entry.quantity}` : entry.food.name}
+                                                    size="small"
+                                                    sx={foodChipSx}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                </SwipeableRow>
+                            </Box>
+                        )}
+                    </Box>
+                )}
             </Box>
         </Box>
     )
@@ -192,14 +434,10 @@ export default function DietPage() {
     const [presets, setPresets] = useState<DietPreset[]>([])
     const [loading, setLoading] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
-    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(
-        null
-    )
+    const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<DietPreset | null>(
-        null
-    )
+    const [editingPreset, setEditingPreset] = useState<DietPreset | null>(null)
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -221,29 +459,21 @@ export default function DietPage() {
     }, [fetchData])
 
     const openAdd = useCallback(() => {
-        setDrawerInitialDate(null)
+        setEditTarget(null)
         setDrawerOpen(true)
     }, [])
 
-    const openEditDate = useCallback((date: string) => {
-        setDrawerInitialDate(date)
+    const openEditMeal = useCallback((target: EditTarget) => {
+        setEditTarget(target)
         setDrawerOpen(true)
     }, [])
 
-    const handleDeleteDate = useCallback(
-        async (date: string) => {
-            const day = dietDays.find((d) => d.date === date)
-            if (!day) return
-            const allLogIds = [
-                ...day.standaloneFoods.map((f) => f.id),
-                ...day.mealGroups.flatMap((g) => g.foods.map((f) => f.id)),
-            ]
+    const handleDeleteMealLogs = useCallback(
+        async (logIds: number[]) => {
             try {
                 await Promise.all(
-                    allLogIds.map((id) =>
-                        fetch(`/api/health/food-logs/${id}`, {
-                            method: 'DELETE',
-                        })
+                    logIds.map((id) =>
+                        fetch(`/api/health/food-logs/${id}`, { method: 'DELETE' })
                     )
                 )
                 fetchData()
@@ -251,7 +481,7 @@ export default function DietPage() {
                 console.error('Failed to delete logs:', err)
             }
         },
-        [dietDays, fetchData]
+        [fetchData]
     )
 
     const applyPreset = useCallback(
@@ -421,23 +651,22 @@ export default function DietPage() {
                         <DietDayCard
                             key={day.date}
                             day={day}
-                            onEdit={() => openEditDate(day.date)}
-                            onDelete={() => handleDeleteDate(day.date)}
+                            onEditMeal={openEditMeal}
+                            onDeleteMeal={handleDeleteMealLogs}
                         />
                     ))}
                 </Box>
             )}
 
-            {/* Unified drawer — Log mode / Manage mode */}
+            {/* Diet drawer — per-meal editing */}
             <DietDrawer
                 open={drawerOpen}
                 onClose={() => {
                     setDrawerOpen(false)
-                    setDrawerInitialDate(null)
+                    setEditTarget(null)
                 }}
                 foods={foods}
-                dietDays={dietDays}
-                initialDate={drawerInitialDate}
+                editTarget={editTarget}
                 onDataChanged={fetchData}
             />
 
@@ -472,18 +701,7 @@ export default function DietPage() {
     )
 }
 
-// ── Helper: collect all log entries for a given date from DietDay[] ─────────
-
-function getLogsForDate(dietDays: DietDay[], date: string): FoodLogEntry[] {
-    const day = dietDays.find((d) => d.date === date)
-    if (!day) return []
-    return [
-        ...day.standaloneFoods,
-        ...day.mealGroups.flatMap((g) => g.foods),
-    ]
-}
-
-// ── Unified Diet Drawer ─────────────────────────────────────────────────────
+// ── Unified Diet Drawer (per-meal) ───────────────────────────────────────────
 
 type DrawerMode = 'log' | 'manage'
 
@@ -491,8 +709,7 @@ type DietDrawerProps = {
     open: boolean
     onClose: () => void
     foods: Food[]
-    dietDays: DietDay[]
-    initialDate: string | null
+    editTarget: EditTarget | null
     onDataChanged: () => void
 }
 
@@ -500,8 +717,7 @@ function DietDrawer({
     open,
     onClose,
     foods,
-    dietDays,
-    initialDate,
+    editTarget,
     onDataChanged,
 }: DietDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
@@ -518,45 +734,34 @@ function DietDrawer({
     const activeFoods = foods.filter((f) => f.isActive)
     const prevOpenRef = useRef(false)
 
-    // Logs for selected date (from DB)
-    const dateLogs = getLogsForDate(dietDays, date)
-
-    // Reset only on fresh open (not on data refetch while drawer is open)
+    // Reset on fresh open
     useEffect(() => {
         const justOpened = open && !prevOpenRef.current
         prevOpenRef.current = open
 
         if (justOpened) {
-            const d = initialDate || getLocalDate()
             setMode('log')
-            setDate(d)
-            setMealLabel('')
             setEditingFood(null)
             setName('')
             setIsActive(true)
-            // Pre-fill quantities from existing standalone logs for this date
-            const logsForDate = getLogsForDate(dietDays, d)
-            const qMap = new Map<number, number>()
-            for (const l of logsForDate) {
-                const existing = qMap.get(l.food.id) ?? 0
-                qMap.set(l.food.id, existing + l.quantity)
-            }
-            setQuantities(qMap)
-        }
-    }, [open, initialDate, dietDays])
 
-    // Change date and re-sync selections from existing logs
-    const handleDateChange = useCallback((newDate: string) => {
-        setDate(newDate)
-        const logsForDate = getLogsForDate(dietDays, newDate)
-        const qMap = new Map<number, number>()
-        for (const l of logsForDate) {
-            const existing = qMap.get(l.food.id) ?? 0
-            qMap.set(l.food.id, existing + l.quantity)
+            if (editTarget) {
+                // Editing an existing meal
+                setDate(editTarget.date)
+                setMealLabel(editTarget.label)
+                const qMap = new Map<number, number>()
+                for (const l of editTarget.foods) {
+                    qMap.set(l.food.id, l.quantity)
+                }
+                setQuantities(qMap)
+            } else {
+                // New meal
+                setDate(getLocalDate())
+                setMealLabel('')
+                setQuantities(new Map())
+            }
         }
-        setQuantities(qMap)
-        setMealLabel('')
-    }, [dietDays])
+    }, [open, editTarget])
 
     const toggleFoodSelection = useCallback((foodId: number) => {
         setQuantities((prev) => {
@@ -585,26 +790,33 @@ function DietDrawer({
     const handleLogSubmit = useCallback(async () => {
         setSaving(true)
         try {
+            const trimmedLabel = mealLabel.trim() || null
+
+            // Build map of existing logs for THIS meal only
+            const existingLogs = editTarget?.foods ?? []
             const logMap = new Map<number, FoodLogEntry>()
-            for (const l of dateLogs) logMap.set(l.food.id, l)
+            for (const l of existingLogs) logMap.set(l.food.id, l)
 
             const ops: Promise<Response>[] = []
-            const trimmedLabel = mealLabel.trim() || null
 
             // Add new or update quantity for selected foods
             for (const [foodId, qty] of Array.from(quantities.entries())) {
                 const existing = logMap.get(foodId)
                 if (existing) {
-                    // Update quantity if changed
-                    if (existing.quantity !== qty) {
+                    // Update if quantity changed or meal label changed
+                    const needsUpdate = existing.quantity !== qty || trimmedLabel !== (editTarget?.label || null)
+                    if (needsUpdate) {
                         ops.push(fetch(`/api/health/food-logs/${existing.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ quantity: qty }),
+                            body: JSON.stringify({
+                                quantity: qty,
+                                ...(trimmedLabel ? { mealLabel: trimmedLabel, date } : {}),
+                            }),
                         }))
                     }
                 } else {
-                    // New log
+                    // New food log
                     ops.push(
                         fetch('/api/health/food-logs', {
                             method: 'POST',
@@ -619,7 +831,8 @@ function DietDrawer({
                     )
                 }
             }
-            // Remove deselected foods
+
+            // Remove deselected foods (only from this meal's logs)
             for (const [foodId, log] of Array.from(logMap.entries())) {
                 if (!quantities.has(foodId)) {
                     ops.push(fetch(`/api/health/food-logs/${log.id}`, { method: 'DELETE' }))
@@ -634,7 +847,7 @@ function DietDrawer({
         } finally {
             setSaving(false)
         }
-    }, [date, mealLabel, quantities, dateLogs, onDataChanged, onClose])
+    }, [date, mealLabel, quantities, editTarget, onDataChanged, onClose])
 
     const startEdit = useCallback((food: Food) => {
         setEditingFood(food)
@@ -690,6 +903,8 @@ function DietDrawer({
         [onDataChanged]
     )
 
+    const isEditing = editTarget !== null
+
     return (
         <FormDrawer open={open} onClose={onClose}>
             <Box
@@ -707,14 +922,14 @@ function DietDrawer({
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
-                        Diet
+                        {isEditing ? 'Edit Meal' : 'Log Meal'}
                     </Typography>
 
                     {/* Mode toggle */}
                     <SlidingToggle
                         value={mode}
                         options={[
-                            { value: 'log', label: 'Log diet' },
+                            { value: 'log', label: isEditing ? 'Edit' : 'Log' },
                             { value: 'manage', label: 'Manage foods' },
                         ]}
                         onChange={(v) => setMode(v as DrawerMode)}
@@ -754,9 +969,7 @@ function DietDrawer({
                                     <TextField
                                         type="date"
                                         value={date}
-                                        onChange={(e) =>
-                                            handleDateChange(e.target.value)
-                                        }
+                                        onChange={(e) => setDate(e.target.value)}
                                         size="small"
                                         fullWidth
                                         sx={fieldSx}
@@ -1091,7 +1304,7 @@ function DietDrawer({
                             disabled={quantities.size === 0 || saving}
                             size="large"
                             sx={primaryButtonSx}>
-                            {saving ? 'Saving...' : 'Log'}
+                            {saving ? 'Saving...' : isEditing ? 'Save' : 'Log'}
                         </Button>
                     ) : (
                         <Button
