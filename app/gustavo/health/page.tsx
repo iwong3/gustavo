@@ -291,7 +291,7 @@ export default function HealthPage() {
                                         boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                         flexShrink: 0,
                                     }}>
-                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} />
+                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} fill={colors.primaryWhite} />
                                 </Box>
                                 <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
                                     {tool.name}
