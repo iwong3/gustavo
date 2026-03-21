@@ -27,13 +27,16 @@ import { IconBolt, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/ic
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
+    SortableDragHandle,
     SortablePresetChip,
     SortablePresetRow,
     HorizontalSortableList,
     VerticalSortableList,
 } from 'components/health/sortable-preset'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -49,9 +52,41 @@ function formatDate(dateStr: string): string {
     })
 }
 
-// ── Swipeable Diet Day Card ─────────────────────────────────────────────────
+// ── Diet Day Card (workout-style layout) ────────────────────────────────────
 
-const DELETE_WIDTH = 64
+const foodChipSx = {
+    'height': 24,
+    'fontSize': 12,
+    'fontWeight': 500,
+    'backgroundColor': colors.secondaryYellow,
+    'border': `1px solid ${colors.primaryBlack}`,
+    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+    'borderRadius': '3px',
+    'color': colors.primaryBlack,
+    '& .MuiChip-label': { px: 1 },
+} as const
+
+const mealChipSx = {
+    'height': 24,
+    'fontSize': 12,
+    'fontWeight': 500,
+    'backgroundColor': '#e3f2fd',
+    'border': `1px solid ${colors.primaryBlue}`,
+    'boxShadow': `1px 1px 0px ${colors.primaryBlue}`,
+    'borderRadius': '3px',
+    'color': colors.primaryBlack,
+    '& .MuiChip-label': { px: 1 },
+} as const
+
+function formatWeekday(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { weekday: 'short' })
+}
+
+function formatMonthDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 function DietDayCard({
     day,
@@ -62,128 +97,90 @@ function DietDayCard({
     onEdit: () => void
     onDelete: () => void
 }) {
-    const [offsetX, setOffsetX] = useState(0)
-    const [startX, setStartX] = useState<number | null>(null)
-    const [swiping, setSwiping] = useState(false)
-
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        setStartX(e.touches[0].clientX)
-    }, [])
-
-    const handleTouchMove = useCallback(
-        (e: React.TouchEvent) => {
-            if (startX === null) return
-            const dx = e.touches[0].clientX - startX
-            // Only allow left swipe
-            if (dx < -5) setSwiping(true)
-            if (swiping) {
-                setOffsetX(Math.max(-DELETE_WIDTH, Math.min(0, dx)))
-            }
-        },
-        [startX, swiping]
-    )
-
-    const handleTouchEnd = useCallback(() => {
-        if (offsetX < -DELETE_WIDTH / 2) {
-            setOffsetX(-DELETE_WIDTH)
-        } else {
-            setOffsetX(0)
-        }
-        setStartX(null)
-        setSwiping(false)
-    }, [offsetX])
-
-    const handleClick = useCallback(() => {
-        if (offsetX < 0) {
-            // Close swipe
-            setOffsetX(0)
-        } else {
-            onEdit()
-        }
-    }, [offsetX, onEdit])
-
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: '4px', border: `1px solid ${colors.primaryBlack}`, boxShadow: `2px 2px 0px ${colors.primaryBlack}` }}>
-            {/* Delete button — part of the card surface */}
+        <Box>
+            {/* Date label */}
             <Box
-                onClick={onDelete}
                 sx={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: DELETE_WIDTH,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.primaryRed,
-                    cursor: 'pointer',
-                    borderRadius: '0 3px 3px 0',
+                    gap: 0.75,
+                    mb: 1,
                 }}>
-                <IconTrash size={18} stroke={2} color={colors.primaryWhite} />
-            </Box>
-            {/* Card content — slides left */}
-            <Box
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onClick={handleClick}
-                sx={{
-                    position: 'relative',
-                    transform: `translateX(${offsetX}px)`,
-                    transition: startX !== null ? 'none' : 'transform 0.2s ease',
-                    padding: '12px 14px',
-                    cursor: 'pointer',
-                    backgroundColor: colors.primaryWhite,
-                    '&:active': offsetX === 0 ? { backgroundColor: colors.secondaryYellow } : {},
-                }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
-                    {formatDate(day.date)}
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {/* Standalone foods */}
-                    {day.standaloneFoods.map((entry) => (
-                        <Chip
-                            key={entry.id}
-                            label={
-                                entry.quantity > 1
-                                    ? `${entry.food.name} \u00d7${entry.quantity}`
-                                    : entry.food.name
-                            }
-                            size="small"
-                            sx={{
-                                'height': 24,
-                                'fontSize': 12,
-                                'fontWeight': 500,
-                                'backgroundColor': '#f1f8e9',
-                                'border': '1px solid #4caf50',
-                                'boxShadow': '1px 1px 0px #4caf50',
-                                'borderRadius': '3px',
-                                'color': colors.primaryBlack,
-                                '& .MuiChip-label': { px: 1 },
-                            }}
-                        />
-                    ))}
-                    {/* Meal groups */}
-                    {day.mealGroups.map((group) => (
-                        <Chip
-                            key={`meal-${group.id}`}
-                            label={`${group.label} (${group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')})`}
-                            size="small"
-                            sx={{
-                                'height': 24,
-                                'fontSize': 12,
-                                'fontWeight': 500,
-                                'backgroundColor': '#e3f2fd',
-                                'border': `1px solid ${colors.primaryBlue}`,
-                                'boxShadow': `1px 1px 0px ${colors.primaryBlue}`,
-                                'borderRadius': '3px',
-                                'color': colors.primaryBlack,
-                                '& .MuiChip-label': { px: 1 },
-                            }}
-                        />
-                    ))}
+                <Box
+                    sx={{
+                        px: 0.75,
+                        py: 0.25,
+                        backgroundColor: colors.primaryYellow,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                        borderRadius: '3px',
+                    }}>
+                    <Typography
+                        sx={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.3,
+                            lineHeight: 1.2,
+                        }}>
+                        {formatWeekday(day.date)}
+                    </Typography>
                 </Box>
+                <Typography
+                    sx={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: colors.primaryBrown,
+                    }}>
+                    {formatMonthDay(day.date)}
+                </Typography>
+            </Box>
+            {/* Card */}
+            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                <SwipeableRow
+                    canEdit
+                    canDelete
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    backgroundColor={colors.primaryWhite}>
+                    <Box
+                        onClick={onEdit}
+                        sx={{
+                            'p': 1.5,
+                            'cursor': 'pointer',
+                            'backgroundColor': colors.primaryWhite,
+                            '&:active': {
+                                backgroundColor: colors.secondaryYellow,
+                            },
+                            'transition': 'background-color 150ms ease',
+                        }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            {/* Standalone foods */}
+                            {day.standaloneFoods.map((entry) => (
+                                <Chip
+                                    key={entry.id}
+                                    label={
+                                        entry.quantity > 1
+                                            ? `${entry.food.name} \u00d7${entry.quantity}`
+                                            : entry.food.name
+                                    }
+                                    size="small"
+                                    sx={foodChipSx}
+                                />
+                            ))}
+                            {/* Meal groups */}
+                            {day.mealGroups.map((group) => (
+                                <Chip
+                                    key={`meal-${group.id}`}
+                                    label={`${group.label} (${group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')})`}
+                                    size="small"
+                                    sx={mealChipSx}
+                                />
+                            ))}
+                        </Box>
+                    </Box>
+                </SwipeableRow>
             </Box>
         </Box>
     )
@@ -293,7 +290,6 @@ export default function DietPage() {
 
     useRegisterFab(openAdd)
 
-    const activeFoods = foods.filter((f) => f.isActive)
     const sortedDays = [...dietDays].sort((a, b) => b.date.localeCompare(a.date))
 
     if (loading) {
@@ -408,38 +404,6 @@ export default function DietPage() {
                 </HorizontalSortableList>
             </Box>
 
-            {/* Horizontal food chips */}
-            {activeFoods.length > 0 && (
-                <Box
-                    sx={{
-                        'display': 'flex',
-                        'gap': 0.75,
-                        'overflowX': 'auto',
-                        'pb': 0.5,
-                        '&::-webkit-scrollbar': { display: 'none' },
-                        'scrollbarWidth': 'none',
-                    }}>
-                    {activeFoods.map((food) => (
-                        <Chip
-                            key={food.id}
-                            label={food.name}
-                            size="small"
-                            sx={{
-                                'height': 28,
-                                'fontSize': 12,
-                                'fontWeight': 600,
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'flexShrink': 0,
-                                '& .MuiChip-label': { px: 1.25 },
-                            }}
-                        />
-                    ))}
-                </Box>
-            )}
-
             {/* Log history */}
             {sortedDays.length === 0 ? (
                 <Typography
@@ -552,13 +516,17 @@ function DietDrawer({
     const [isActive, setIsActive] = useState(true)
 
     const activeFoods = foods.filter((f) => f.isActive)
+    const prevOpenRef = useRef(false)
 
     // Logs for selected date (from DB)
     const dateLogs = getLogsForDate(dietDays, date)
 
-    // Reset when opened
+    // Reset only on fresh open (not on data refetch while drawer is open)
     useEffect(() => {
-        if (open) {
+        const justOpened = open && !prevOpenRef.current
+        prevOpenRef.current = open
+
+        if (justOpened) {
             const d = initialDate || getLocalDate()
             setMode('log')
             setDate(d)
@@ -570,7 +538,6 @@ function DietDrawer({
             const logsForDate = getLogsForDate(dietDays, d)
             const qMap = new Map<number, number>()
             for (const l of logsForDate) {
-                // Aggregate quantity per food (a food might appear in multiple meal groups)
                 const existing = qMap.get(l.food.id) ?? 0
                 qMap.set(l.food.id, existing + l.quantity)
             }
@@ -578,10 +545,18 @@ function DietDrawer({
         }
     }, [open, initialDate, dietDays])
 
-    // Change date but keep current selections
+    // Change date and re-sync selections from existing logs
     const handleDateChange = useCallback((newDate: string) => {
         setDate(newDate)
-    }, [])
+        const logsForDate = getLogsForDate(dietDays, newDate)
+        const qMap = new Map<number, number>()
+        for (const l of logsForDate) {
+            const existing = qMap.get(l.food.id) ?? 0
+            qMap.set(l.food.id, existing + l.quantity)
+        }
+        setQuantities(qMap)
+        setMealLabel('')
+    }, [dietDays])
 
     const toggleFoodSelection = useCallback((foodId: number) => {
         setQuantities((prev) => {
@@ -715,25 +690,6 @@ function DietDrawer({
         [onDataChanged]
     )
 
-    const toggleSx = (active: boolean) =>
-        ({
-            'flex': 1,
-            'py': 0.75,
-            'fontSize': 13,
-            'fontWeight': active ? 700 : 500,
-            'color': colors.primaryBlack,
-            'backgroundColor': active ? colors.primaryYellow : 'transparent',
-            'border': `1.5px solid ${colors.primaryBlack}`,
-            'boxShadow': active ? `2px 2px 0px ${colors.primaryBlack}` : 'none',
-            'borderRadius': '4px',
-            'textTransform': 'none',
-            '&:hover': {
-                backgroundColor: active
-                    ? colors.primaryYellow
-                    : `${colors.primaryYellow}30`,
-            },
-        }) as const
-
     return (
         <FormDrawer open={open} onClose={onClose}>
             <Box
@@ -755,18 +711,16 @@ function DietDrawer({
                     </Typography>
 
                     {/* Mode toggle */}
-                    <Box sx={{ display: 'flex', gap: 0.75 }}>
-                        <Button
-                            onClick={() => setMode('log')}
-                            sx={toggleSx(mode === 'log')}>
-                            Log
-                        </Button>
-                        <Button
-                            onClick={() => setMode('manage')}
-                            sx={toggleSx(mode === 'manage')}>
-                            Manage
-                        </Button>
-                    </Box>
+                    <SlidingToggle
+                        value={mode}
+                        options={[
+                            { value: 'log', label: 'Log diet' },
+                            { value: 'manage', label: 'Manage foods' },
+                        ]}
+                        onChange={(v) => setMode(v as DrawerMode)}
+                        fontSize={13}
+                        borderWidth={1}
+                    />
                 </Box>
 
                 {/* Body */}
@@ -782,31 +736,32 @@ function DietDrawer({
                     }}>
                     {mode === 'log' ? (
                         <>
-                            {/* Date picker */}
-                            <Box>
-                                <Typography sx={labelSx}>Date</Typography>
-                                <TextField
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) =>
-                                        handleDateChange(e.target.value)
-                                    }
-                                    size="small"
-                                    sx={{ ...fieldSx, maxWidth: 180 }}
-                                />
-                            </Box>
-
-                            {/* Meal label */}
-                            <Box>
-                                <Typography sx={labelSx}>Meal Label</Typography>
-                                <TextField
-                                    value={mealLabel}
-                                    onChange={(e) => setMealLabel(e.target.value)}
-                                    size="small"
-                                    fullWidth
-                                    placeholder="Meal label (optional)"
-                                    sx={fieldSx}
-                                />
+                            {/* Meal label + Date row */}
+                            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography sx={labelSx}>Meal Label</Typography>
+                                    <TextField
+                                        value={mealLabel}
+                                        onChange={(e) => setMealLabel(e.target.value)}
+                                        size="small"
+                                        fullWidth
+                                        placeholder="Optional"
+                                        sx={fieldSx}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography sx={labelSx}>Date</Typography>
+                                    <TextField
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) =>
+                                            handleDateChange(e.target.value)
+                                        }
+                                        size="small"
+                                        fullWidth
+                                        sx={fieldSx}
+                                    />
+                                </Box>
                             </Box>
 
                             {/* Food checklist */}
@@ -834,7 +789,11 @@ function DietDrawer({
                                         flexDirection: 'column',
                                         gap: 0.75,
                                     }}>
-                                    {activeFoods.map((food) => {
+                                    {[...activeFoods].sort((a, b) => {
+                                        const aSelected = quantities.has(a.id) ? 0 : 1
+                                        const bSelected = quantities.has(b.id) ? 0 : 1
+                                        return aSelected - bSelected
+                                    }).map((food) => {
                                         const qty = quantities.get(food.id) ?? 0
                                         const isSelected = qty > 0
                                         return (
@@ -876,59 +835,58 @@ function DietDrawer({
                                                         {food.name}
                                                     </Typography>
                                                 </Box>
-                                                {/* Quantity controls — only when selected */}
-                                                {isSelected && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                                                        <Box
-                                                            onClick={() => setFoodQuantity(food.id, qty - 1)}
-                                                            sx={{
-                                                                'width': 24,
-                                                                'height': 24,
-                                                                'borderRadius': '50%',
-                                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'justifyContent': 'center',
-                                                                'cursor': 'pointer',
-                                                                'backgroundColor': colors.primaryWhite,
-                                                                '&:active': {
-                                                                    boxShadow: 'none',
-                                                                    transform: 'translate(1px, 1px)',
-                                                                },
-                                                            }}>
-                                                            <IconMinus size={12} stroke={2.5} />
-                                                        </Box>
-                                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                            {qty}
-                                                        </Typography>
-                                                        <Box
-                                                            onClick={() => setFoodQuantity(food.id, qty + 1)}
-                                                            sx={{
-                                                                'width': 24,
-                                                                'height': 24,
-                                                                'borderRadius': '50%',
-                                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'justifyContent': 'center',
-                                                                'cursor': 'pointer',
-                                                                'backgroundColor': colors.primaryWhite,
-                                                                '&:active': {
-                                                                    boxShadow: 'none',
-                                                                    transform: 'translate(1px, 1px)',
-                                                                },
-                                                            }}>
-                                                            <IconPlus size={12} stroke={2.5} />
-                                                        </Box>
+                                                {/* Quantity controls — always rendered, hidden when not selected */}
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
+                                                    <Box
+                                                        onClick={() => setFoodQuantity(food.id, qty - 1)}
+                                                        sx={{
+                                                            'width': 24,
+                                                            'height': 24,
+                                                            'borderRadius': '50%',
+                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'justifyContent': 'center',
+                                                            'cursor': 'pointer',
+                                                            'backgroundColor': colors.primaryWhite,
+                                                            '&:active': {
+                                                                boxShadow: 'none',
+                                                                transform: 'translate(1px, 1px)',
+                                                            },
+                                                        }}>
+                                                        <IconMinus size={12} stroke={2.5} />
                                                     </Box>
-                                                )}
+                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                        {qty || 1}
+                                                    </Typography>
+                                                    <Box
+                                                        onClick={() => setFoodQuantity(food.id, qty + 1)}
+                                                        sx={{
+                                                            'width': 24,
+                                                            'height': 24,
+                                                            'borderRadius': '50%',
+                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'justifyContent': 'center',
+                                                            'cursor': 'pointer',
+                                                            'backgroundColor': colors.primaryWhite,
+                                                            '&:active': {
+                                                                boxShadow: 'none',
+                                                                transform: 'translate(1px, 1px)',
+                                                            },
+                                                        }}>
+                                                        <IconPlus size={12} stroke={2.5} />
+                                                    </Box>
+                                                </Box>
                                             </Box>
                                         )
                                     })}
                                 </Box>
                             )}
+
                         </>
                     ) : (
                         <>
@@ -1291,7 +1249,7 @@ function DietPresetDrawer({
                             fontWeight: 700,
                             fontFamily: 'var(--font-serif)',
                         }}>
-                        {editingPreset ? 'Edit Group' : 'Diet Groups'}
+                        {editingPreset ? 'Edit Meal' : 'Meals'}
                     </Typography>
                 </Box>
 
@@ -1317,14 +1275,16 @@ function DietPresetDrawer({
                                 }}>
                                 {existingPresets.map((p) => (
                                     <SortablePresetRow key={p.id} id={p.id}>
-                                        <Box sx={{ ...cardSx, p: 1.5 }}>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'flex-start',
-                                                }}>
-                                                <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                            <SwipeableRow
+                                                canEdit
+                                                canDelete
+                                                onEdit={() => onEdit(p)}
+                                                onDelete={() => onDelete(p.id)}
+                                                backgroundColor={colors.primaryWhite}>
+                                                <Box sx={{ p: 1.5, display: 'flex', gap: 1.5 }}>
+                                                    <SortableDragHandle id={p.id} />
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
                                                     <Typography
                                                         sx={{
                                                             fontSize: 14,
@@ -1357,47 +1317,9 @@ function DietPresetDrawer({
                                                             )
                                                             .join(', ')}
                                                     </Typography>
-                                                </Box>
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        gap: 0.5,
-                                                        flexShrink: 0,
-                                                    }}>
-                                                    <Box
-                                                        onClick={() => onEdit(p)}
-                                                        sx={{
-                                                            'cursor': 'pointer',
-                                                            'p': 0.5,
-                                                            'borderRadius': '4px',
-                                                            '&:active': {
-                                                                backgroundColor: `${colors.primaryYellow}40`,
-                                                            },
-                                                        }}>
-                                                        <IconPencil
-                                                            size={16}
-                                                            stroke={2}
-                                                            color={colors.primaryBrown}
-                                                        />
-                                                    </Box>
-                                                    <Box
-                                                        onClick={() => onDelete(p.id)}
-                                                        sx={{
-                                                            'cursor': 'pointer',
-                                                            'p': 0.5,
-                                                            'borderRadius': '4px',
-                                                            '&:active': {
-                                                                backgroundColor: `${colors.primaryRed}20`,
-                                                            },
-                                                        }}>
-                                                        <IconTrash
-                                                            size={16}
-                                                            stroke={2}
-                                                            color={colors.primaryRed}
-                                                        />
                                                     </Box>
                                                 </Box>
-                                            </Box>
+                                            </SwipeableRow>
                                         </Box>
                                     </SortablePresetRow>
                                 ))}
@@ -1422,8 +1344,9 @@ function DietPresetDrawer({
                             color: colors.primaryBrown,
                             textTransform: 'uppercase',
                             letterSpacing: 0.5,
+                            mb: -1,
                         }}>
-                        {editingPreset ? 'Edit' : 'New Group'}
+                        {editingPreset ? 'Edit' : 'New Meal'}
                     </Typography>
 
                     <Box>
@@ -1520,54 +1443,52 @@ function DietPresetDrawer({
                                                     {food.name}
                                                 </Typography>
                                             </Box>
-                                            {/* Quantity controls — only when selected */}
-                                            {isSelected && (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                                                    <Box
-                                                        onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty - 1) }}
-                                                        sx={{
-                                                            'width': 24,
-                                                            'height': 24,
-                                                            'borderRadius': '50%',
-                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'justifyContent': 'center',
-                                                            'cursor': 'pointer',
-                                                            'backgroundColor': colors.primaryWhite,
-                                                            '&:active': {
-                                                                boxShadow: 'none',
-                                                                transform: 'translate(1px, 1px)',
-                                                            },
-                                                        }}>
-                                                        <IconMinus size={12} stroke={2.5} />
-                                                    </Box>
-                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                        {qty}
-                                                    </Typography>
-                                                    <Box
-                                                        onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty + 1) }}
-                                                        sx={{
-                                                            'width': 24,
-                                                            'height': 24,
-                                                            'borderRadius': '50%',
-                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'justifyContent': 'center',
-                                                            'cursor': 'pointer',
-                                                            'backgroundColor': colors.primaryWhite,
-                                                            '&:active': {
-                                                                boxShadow: 'none',
-                                                                transform: 'translate(1px, 1px)',
-                                                            },
-                                                        }}>
-                                                        <IconPlus size={12} stroke={2.5} />
-                                                    </Box>
+                                            {/* Quantity controls — always rendered, hidden when not selected */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
+                                                <Box
+                                                    onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty - 1) }}
+                                                    sx={{
+                                                        'width': 24,
+                                                        'height': 24,
+                                                        'borderRadius': '50%',
+                                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'justifyContent': 'center',
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor': colors.primaryWhite,
+                                                        '&:active': {
+                                                            boxShadow: 'none',
+                                                            transform: 'translate(1px, 1px)',
+                                                        },
+                                                    }}>
+                                                    <IconMinus size={12} stroke={2.5} />
                                                 </Box>
-                                            )}
+                                                <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                    {qty || 1}
+                                                </Typography>
+                                                <Box
+                                                    onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty + 1) }}
+                                                    sx={{
+                                                        'width': 24,
+                                                        'height': 24,
+                                                        'borderRadius': '50%',
+                                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'justifyContent': 'center',
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor': colors.primaryWhite,
+                                                        '&:active': {
+                                                            boxShadow: 'none',
+                                                            transform: 'translate(1px, 1px)',
+                                                        },
+                                                    }}>
+                                                    <IconPlus size={12} stroke={2.5} />
+                                                </Box>
+                                            </Box>
                                         </Box>
                                     )
                                 })}

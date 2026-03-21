@@ -33,6 +33,7 @@ import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
     HorizontalSortableList,
+    SortableDragHandle,
     SortablePresetChip,
     SortablePresetRow,
     VerticalSortableList,
@@ -934,12 +935,16 @@ function PresetFormDrawer({
                                                     onClick={() => onEdit(p)}
                                                     sx={{
                                                         'p': 1.5,
+                                                        'display': 'flex',
+                                                        'gap': 1.5,
                                                         'cursor': 'pointer',
                                                         '&:active': {
                                                             backgroundColor:
                                                                 colors.secondaryYellow,
                                                         },
                                                     }}>
+                                                    <SortableDragHandle id={p.id} />
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
                                                     <Typography
                                                         sx={{
                                                             fontSize: 14,
@@ -1000,6 +1005,7 @@ function PresetFormDrawer({
                                                                 .join(', ')}
                                                         </Typography>
                                                     )}
+                                                    </Box>
                                                 </Box>
                                             </SwipeableRow>
                                         </Box>

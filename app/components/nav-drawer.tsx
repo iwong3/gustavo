@@ -10,7 +10,7 @@ import {
     IconHeartbeat,
     IconHome,
     IconList,
-    IconMoodSick,
+    IconFirstAidKit,
     IconPill,
     IconPlaneDeparture,
     IconSalad,
@@ -428,7 +428,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     href="/gustavo/health/symptoms"
                     onClick={onClose}
                     sx={tripItemSx(isWithin('/gustavo/health/symptoms'))}>
-                    <IconMoodSick size={14} stroke={2} color={colors.primaryBrown} />
+                    <IconFirstAidKit size={14} stroke={2} color={colors.primaryBrown} />
                     Symptoms
                 </Box>
 

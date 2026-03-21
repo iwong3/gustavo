@@ -560,10 +560,16 @@ function SupplementDrawer({
         }
     }, [open, initialDate, allLogs])
 
-    // Change date but keep current selections
+    // Change date and re-sync selections from existing logs
     const handleDateChange = useCallback((newDate: string) => {
         setDate(newDate)
-    }, [])
+        const logsForDate = allLogs.filter((l) => l.date === newDate)
+        const qMap = new Map<number, number>()
+        for (const l of logsForDate) {
+            qMap.set(Number(l.supplementId), l.quantity)
+        }
+        setQuantities(qMap)
+    }, [allLogs])
 
     const toggleSupplementSelection = useCallback((suppId: number) => {
         setQuantities((prev) => {

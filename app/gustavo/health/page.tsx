@@ -4,7 +4,7 @@ import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
 import { useMemo } from 'react'
-import { IconBarbell, IconMoodSick, IconPill, IconSalad, IconStretching } from '@tabler/icons-react'
+import { IconBarbell, IconFirstAidKit, IconPill, IconSalad, IconStretching } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -41,13 +41,13 @@ const tools = [
         name: 'Workouts',
         path: '/gustavo/health/exercise',
         icon: IconBarbell,
-        bg: '#dae6a3',
+        bg: '#ffe0b2',
     },
     {
         name: 'Exercises',
         path: '/gustavo/health/exercises',
         icon: IconStretching,
-        bg: '#d4e8f0',
+        bg: '#fff9c4',
     },
     {
         name: 'Supplements',
@@ -59,13 +59,13 @@ const tools = [
         name: 'Diet',
         path: '/gustavo/health/diet',
         icon: IconSalad,
-        bg: '#f0e4d4',
+        bg: '#c8e6c9',
     },
     {
         name: 'Symptoms',
         path: '/gustavo/health/symptoms',
-        icon: IconMoodSick,
-        bg: '#fce4cc',
+        icon: IconFirstAidKit,
+        bg: '#ffcdd2',
     },
 ]
 
@@ -291,7 +291,7 @@ export default function HealthPage() {
                                         boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                         flexShrink: 0,
                                     }}>
-                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} />
                                 </Box>
                                 <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
                                     {tool.name}

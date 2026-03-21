@@ -70,6 +70,7 @@ export function SortablePresetChip({ id, children }: { id: number; children: Rea
 }
 
 // Sortable row for vertical preset list in drawer
+// Drag handle is rendered inside the card via renderHandle prop
 export function SortablePresetRow({ id, children }: { id: number; children: React.ReactNode }) {
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id })
     return (
@@ -80,25 +81,38 @@ export function SortablePresetRow({ id, children }: { id: number; children: Reac
                 transition,
                 opacity: isDragging ? 0.5 : 1,
                 zIndex: isDragging ? 10 : 'auto',
-                display: 'flex',
-                alignItems: 'stretch',
             }}>
+            {children}
+            {/* Hidden activator ref — actual handle rendered via SortableDragHandle */}
             <Box
                 ref={setActivatorNodeRef}
                 {...attributes}
                 {...listeners}
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    px: 0.5,
-                    cursor: 'grab',
-                    touchAction: 'none',
-                    color: colors.primaryBrown,
-                    '&:active': { cursor: 'grabbing' },
-                }}>
-                <IconGripVertical size={16} stroke={1.5} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
+                sx={{ display: 'none' }}
+            />
+        </Box>
+    )
+}
+
+/** Drag handle to place inside a SortablePresetRow's card content */
+export function SortableDragHandle({ id }: { id: number }) {
+    const { attributes, listeners, setActivatorNodeRef } = useSortable({ id })
+    return (
+        <Box
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            sx={{
+                'display': 'flex',
+                'alignItems': 'center',
+                'cursor': 'grab',
+                'touchAction': 'none',
+                'color': colors.primaryBrown,
+                'flexShrink': 0,
+                'py': 0.5,
+                '&:active': { cursor: 'grabbing' },
+            }}>
+            <IconGripVertical size={16} stroke={1.5} />
         </Box>
     )
 }

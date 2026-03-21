@@ -20,21 +20,24 @@ import {
 import { IconPencil, IconSearch, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import ForensicView from 'components/health/forensic-view'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-function formatDate(dateStr: string): string {
+function formatWeekday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-    })
+    return d.toLocaleDateString('en-US', { weekday: 'short' })
+}
+
+function formatMonthDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 // Group logs by date
@@ -55,139 +58,172 @@ function groupLogsByDate(logs: SymptomLog[]): DayGroup[] {
         .map(([date, dateLogs]) => ({ date, logs: dateLogs }))
 }
 
+/** Compute days since the previous occurrence of a symptom relative to a given date */
+function daysSincePrevOccurrence(
+    symptomId: number,
+    date: string,
+    allLogs: SymptomLog[]
+): number | null {
+    const dateMs = new Date(date + 'T00:00:00').getTime()
+    let closest: number | null = null
+    for (const log of allLogs) {
+        if (log.symptomId !== symptomId) continue
+        const logMs = new Date(log.date + 'T00:00:00').getTime()
+        if (logMs < dateMs) {
+            const diff = Math.round((dateMs - logMs) / 86400000)
+            if (closest === null || diff < closest) closest = diff
+        }
+    }
+    return closest
+}
+
 // Orange accent colors for symptom chips
 const ACCENT_BG = '#fff3e0'
 const ACCENT_BORDER = '#ff9800'
 
-// ── Swipeable Log Card ──────────────────────────────────────────────────────
+// ── Symptom Day Card (workout-style layout) ─────────────────────────────────
 
-const DELETE_WIDTH = 64
-
-function SymptomLogCard({
+function SymptomDayCard({
     group,
+    allLogs,
     onEdit,
     onDelete,
 }: {
     group: DayGroup
+    allLogs: SymptomLog[]
     onEdit: () => void
     onDelete: () => void
 }) {
-    const [offsetX, setOffsetX] = useState(0)
-    const [startX, setStartX] = useState<number | null>(null)
-    const [swiping, setSwiping] = useState(false)
-
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        setStartX(e.touches[0].clientX)
-    }, [])
-
-    const handleTouchMove = useCallback(
-        (e: React.TouchEvent) => {
-            if (startX === null) return
-            const dx = e.touches[0].clientX - startX
-            // Only allow left swipe
-            if (dx < -5) setSwiping(true)
-            if (swiping) {
-                setOffsetX(Math.max(-DELETE_WIDTH, Math.min(0, dx)))
-            }
-        },
-        [startX, swiping]
-    )
-
-    const handleTouchEnd = useCallback(() => {
-        if (offsetX < -DELETE_WIDTH / 2) {
-            setOffsetX(-DELETE_WIDTH)
-        } else {
-            setOffsetX(0)
-        }
-        setStartX(null)
-        setSwiping(false)
-    }, [offsetX])
-
-    const handleClick = useCallback(() => {
-        if (offsetX < 0) {
-            // Close swipe
-            setOffsetX(0)
-        } else {
-            onEdit()
-        }
-    }, [offsetX, onEdit])
-
     // Check if any log has notes
     const logsWithNotes = group.logs.filter((l) => l.notes)
 
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: '4px', border: `1px solid ${colors.primaryBlack}`, boxShadow: `2px 2px 0px ${colors.primaryBlack}` }}>
-            {/* Delete button — part of the card surface */}
+        <Box>
+            {/* Date label */}
             <Box
-                onClick={onDelete}
                 sx={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: DELETE_WIDTH,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.primaryRed,
-                    cursor: 'pointer',
-                    borderRadius: '0 3px 3px 0',
+                    gap: 0.75,
+                    mb: 1,
                 }}>
-                <IconTrash size={18} stroke={2} color={colors.primaryWhite} />
-            </Box>
-            {/* Card content — slides left */}
-            <Box
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onClick={handleClick}
-                sx={{
-                    position: 'relative',
-                    transform: `translateX(${offsetX}px)`,
-                    transition: startX !== null ? 'none' : 'transform 0.2s ease',
-                    padding: '12px 14px',
-                    cursor: 'pointer',
-                    backgroundColor: colors.primaryWhite,
-                    '&:active': offsetX === 0 ? { backgroundColor: colors.secondaryYellow } : {},
-                }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
-                    {formatDate(group.date)}
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {group.logs.map((log) => (
-                        <Chip
-                            key={log.id}
-                            label={log.symptomName}
-                            size="small"
-                            sx={{
-                                'height': 24,
-                                'fontSize': 12,
-                                'fontWeight': 500,
-                                'backgroundColor': ACCENT_BG,
-                                'border': `1px solid ${ACCENT_BORDER}`,
-                                'boxShadow': `1px 1px 0px ${ACCENT_BORDER}`,
-                                'borderRadius': '3px',
-                                'color': colors.primaryBlack,
-                                '& .MuiChip-label': { px: 1 },
-                            }}
-                        />
-                    ))}
-                </Box>
-                {/* Truncated notes preview */}
-                {logsWithNotes.length > 0 && (
+                <Box
+                    sx={{
+                        px: 0.75,
+                        py: 0.25,
+                        backgroundColor: colors.primaryYellow,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                        borderRadius: '3px',
+                    }}>
                     <Typography
                         sx={{
-                            fontSize: 12,
-                            color: colors.primaryBrown,
-                            mt: 0.5,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '100%',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.3,
+                            lineHeight: 1.2,
                         }}>
-                        {logsWithNotes.map((l) => `${l.symptomName}: ${l.notes}`).join(' · ')}
+                        {formatWeekday(group.date)}
                     </Typography>
-                )}
+                </Box>
+                <Typography
+                    sx={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: colors.primaryBrown,
+                    }}>
+                    {formatMonthDay(group.date)}
+                </Typography>
+            </Box>
+            {/* Card */}
+            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                <SwipeableRow
+                    canEdit
+                    canDelete
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    backgroundColor={colors.primaryWhite}>
+                    <Box
+                        onClick={onEdit}
+                        sx={{
+                            'p': 1.5,
+                            'cursor': 'pointer',
+                            'backgroundColor': colors.primaryWhite,
+                            '&:active': {
+                                backgroundColor: colors.secondaryYellow,
+                            },
+                            'transition': 'background-color 150ms ease',
+                        }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            {group.logs.map((log) => {
+                                const days = daysSincePrevOccurrence(log.symptomId, group.date, allLogs)
+                                return (
+                                    <Box key={log.id} sx={{ position: 'relative' }}>
+                                        <Chip
+                                            label={log.symptomName}
+                                            size="small"
+                                            sx={{
+                                                'height': 24,
+                                                'fontSize': 12,
+                                                'fontWeight': 500,
+                                                'backgroundColor': ACCENT_BG,
+                                                'border': `1px solid ${ACCENT_BORDER}`,
+                                                'boxShadow': `1px 1px 0px ${ACCENT_BORDER}`,
+                                                'borderRadius': '3px',
+                                                'color': colors.primaryBlack,
+                                                '& .MuiChip-label': { px: 1 },
+                                            }}
+                                        />
+                                        {days !== null && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: -6,
+                                                    right: -4,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    minWidth: 16,
+                                                    height: 14,
+                                                    px: 0.25,
+                                                    borderRadius: '7px',
+                                                    backgroundColor: colors.primaryWhite,
+                                                    border: `1px solid ${colors.primaryBlack}`,
+                                                    zIndex: 1,
+                                                }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 8,
+                                                        fontWeight: 800,
+                                                        lineHeight: 1,
+                                                        color: colors.primaryBlack,
+                                                    }}>
+                                                    {days}
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                )
+                            })}
+                        </Box>
+                        {/* Truncated notes preview */}
+                        {logsWithNotes.length > 0 && (
+                            <Typography
+                                sx={{
+                                    fontSize: 12,
+                                    color: colors.primaryBrown,
+                                    mt: 0.75,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '100%',
+                                }}>
+                                {logsWithNotes.map((l) => l.notes).join(' · ')}
+                            </Typography>
+                        )}
+                    </Box>
+                </SwipeableRow>
             </Box>
         </Box>
     )
@@ -252,7 +288,6 @@ export default function SymptomsPage() {
 
     useRegisterFab(openAdd)
 
-    const activeSymptoms = symptoms.filter((s) => s.isActive)
     const dayGroups = groupLogsByDate(allLogs)
 
     if (loading) {
@@ -287,38 +322,6 @@ export default function SymptomsPage() {
                 Symptoms
             </Typography>
 
-            {/* Active symptom chips — horizontal scroll */}
-            {activeSymptoms.length > 0 && (
-                <Box
-                    sx={{
-                        'display': 'flex',
-                        'gap': 0.75,
-                        'overflowX': 'auto',
-                        'pb': 0.5,
-                        '&::-webkit-scrollbar': { display: 'none' },
-                        'scrollbarWidth': 'none',
-                    }}>
-                    {activeSymptoms.map((sym) => (
-                        <Chip
-                            key={sym.id}
-                            label={sym.name}
-                            size="small"
-                            sx={{
-                                'height': 28,
-                                'fontSize': 12,
-                                'fontWeight': 600,
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'flexShrink': 0,
-                                '& .MuiChip-label': { px: 1.25 },
-                            }}
-                        />
-                    ))}
-                </Box>
-            )}
-
             {/* Log history */}
             {dayGroups.length === 0 ? (
                 <Typography
@@ -331,15 +334,76 @@ export default function SymptomsPage() {
                     No symptoms logged yet.
                 </Typography>
             ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {dayGroups.map((group) => (
-                        <SymptomLogCard
-                            key={group.date}
-                            group={group}
-                            onEdit={() => openEditDate(group.date)}
-                            onDelete={() => handleDeleteDate(group.date)}
-                        />
-                    ))}
+                <Box sx={{ position: 'relative' }}>
+                    {/* Vertical timeline line */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            left: 15, // center of 32px gutter
+                            top: 6,
+                            bottom: 6,
+                            width: 2,
+                            backgroundColor: `${colors.primaryBlack}25`,
+                        }}
+                    />
+
+                    {dayGroups.map((group, i) => {
+                        const symptomCount = group.logs.length
+                        return (
+                            <Box key={group.date}>
+                                {/* Row: timeline node + card */}
+                                <Box sx={{ display: 'flex' }}>
+                                    {/* Timeline gutter */}
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            flexShrink: 0,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            pt: '1px',
+                                        }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                minWidth: 18,
+                                                height: 18,
+                                                borderRadius: '50%',
+                                                backgroundColor: colors.primaryYellow,
+                                                border: `1.5px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                zIndex: 1,
+                                                mt: '5px',
+                                            }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 9,
+                                                    fontWeight: 800,
+                                                    lineHeight: 1,
+                                                    color: colors.primaryBlack,
+                                                }}>
+                                                {symptomCount}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    {/* Card */}
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <SymptomDayCard
+                                            group={group}
+                                            allLogs={allLogs}
+                                            onEdit={() => openEditDate(group.date)}
+                                            onDelete={() => handleDeleteDate(group.date)}
+                                        />
+                                    </Box>
+                                </Box>
+                                {/* Gap between entries */}
+                                {i < dayGroups.length - 1 && (
+                                    <Box sx={{ height: 12 }} />
+                                )}
+                            </Box>
+                        )
+                    })}
                 </Box>
             )}
 
@@ -400,7 +464,7 @@ function SymptomDrawer({
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
     const [selected, setSelected] = useState<Set<number>>(new Set())
-    const [notes, setNotes] = useState<Map<number, string>>(new Map())
+    const [notes, setNotes] = useState('')
     const [saving, setSaving] = useState(false)
 
     // Manage mode state
@@ -409,13 +473,17 @@ function SymptomDrawer({
     const [isActive, setIsActive] = useState(true)
 
     const activeSymptoms = symptoms.filter((s) => s.isActive)
+    const prevOpenRef = useRef(false)
 
     // Logs for selected date (from DB)
     const dateLogs = allLogs.filter((l) => l.date === date)
 
-    // Reset when opened
+    // Reset only on fresh open
     useEffect(() => {
-        if (open) {
+        const justOpened = open && !prevOpenRef.current
+        prevOpenRef.current = open
+
+        if (justOpened) {
             const d = initialDate || getLocalDate()
             setMode('log')
             setDate(d)
@@ -425,20 +493,29 @@ function SymptomDrawer({
             // Pre-fill from existing logs for this date
             const logsForDate = allLogs.filter((l) => l.date === d)
             const sel = new Set<number>()
-            const notesMap = new Map<number, string>()
+            const allNotes: string[] = []
             for (const l of logsForDate) {
                 sel.add(Number(l.symptomId))
-                if (l.notes) notesMap.set(Number(l.symptomId), l.notes)
+                if (l.notes) allNotes.push(l.notes)
             }
             setSelected(sel)
-            setNotes(notesMap)
+            setNotes(allNotes.join('\n'))
         }
     }, [open, initialDate, allLogs])
 
-    // Change date but keep current selections
+    // Change date and re-sync selections from existing logs
     const handleDateChange = useCallback((newDate: string) => {
         setDate(newDate)
-    }, [])
+        const logsForDate = allLogs.filter((l) => l.date === newDate)
+        const sel = new Set<number>()
+        const allNotes: string[] = []
+        for (const l of logsForDate) {
+            sel.add(Number(l.symptomId))
+            if (l.notes) allNotes.push(l.notes)
+        }
+        setSelected(sel)
+        setNotes(allNotes.join('\n'))
+    }, [allLogs])
 
     const toggleSymptomSelection = useCallback((symId: number) => {
         setSelected((prev) => {
@@ -452,18 +529,6 @@ function SymptomDrawer({
         })
     }, [])
 
-    const setSymptomNotes = useCallback((symId: number, value: string) => {
-        setNotes((prev) => {
-            const next = new Map(prev)
-            if (value) {
-                next.set(symId, value)
-            } else {
-                next.delete(symId)
-            }
-            return next
-        })
-    }, [])
-
     const handleLogSubmit = useCallback(async () => {
         setSaving(true)
         try {
@@ -471,10 +536,12 @@ function SymptomDrawer({
             for (const l of dateLogs) logMap.set(Number(l.symptomId), l)
 
             const ops: Promise<Response>[] = []
+            const noteVal = notes.trim() || null
+
             // Add new or update notes for selected symptoms
+            // All selected symptoms share the same notes
             for (const symId of Array.from(selected)) {
                 const existing = logMap.get(symId)
-                const noteVal = notes.get(symId) || null
                 if (existing) {
                     // Update notes if changed
                     if ((existing.notes || null) !== noteVal) {
@@ -566,25 +633,6 @@ function SymptomDrawer({
         [onDataChanged]
     )
 
-    const toggleSx = (active: boolean) =>
-        ({
-            'flex': 1,
-            'py': 0.75,
-            'fontSize': 13,
-            'fontWeight': active ? 700 : 500,
-            'color': colors.primaryBlack,
-            'backgroundColor': active ? colors.primaryYellow : 'transparent',
-            'border': `1.5px solid ${colors.primaryBlack}`,
-            'boxShadow': active ? `2px 2px 0px ${colors.primaryBlack}` : 'none',
-            'borderRadius': '4px',
-            'textTransform': 'none',
-            '&:hover': {
-                backgroundColor: active
-                    ? colors.primaryYellow
-                    : `${colors.primaryYellow}30`,
-            },
-        }) as const
-
     return (
         <FormDrawer open={open} onClose={onClose}>
             <Box
@@ -606,18 +654,16 @@ function SymptomDrawer({
                     </Typography>
 
                     {/* Mode toggle */}
-                    <Box sx={{ display: 'flex', gap: 0.75 }}>
-                        <Button
-                            onClick={() => setMode('log')}
-                            sx={toggleSx(mode === 'log')}>
-                            Log
-                        </Button>
-                        <Button
-                            onClick={() => setMode('manage')}
-                            sx={toggleSx(mode === 'manage')}>
-                            Manage
-                        </Button>
-                    </Box>
+                    <SlidingToggle
+                        value={mode}
+                        options={[
+                            { value: 'log', label: 'Log symptoms' },
+                            { value: 'manage', label: 'Manage symptoms' },
+                        ]}
+                        onChange={(v) => setMode(v as DrawerMode)}
+                        fontSize={13}
+                        borderWidth={1}
+                    />
                 </Box>
 
                 {/* Body */}
@@ -633,20 +679,6 @@ function SymptomDrawer({
                     }}>
                     {mode === 'log' ? (
                         <>
-                            {/* Date picker */}
-                            <Box>
-                                <Typography sx={labelSx}>Date</Typography>
-                                <TextField
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) =>
-                                        handleDateChange(e.target.value)
-                                    }
-                                    size="small"
-                                    sx={{ ...fieldSx, maxWidth: 180 }}
-                                />
-                            </Box>
-
                             {/* Symptom checklist */}
                             {activeSymptoms.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 3 }}>
@@ -675,95 +707,109 @@ function SymptomDrawer({
                                     {activeSymptoms.map((sym) => {
                                         const isSelected = selected.has(sym.id)
                                         return (
-                                            <Box key={sym.id}>
-                                                <Box
+                                            <Box
+                                                key={sym.id}
+                                                sx={{
+                                                    'display': 'flex',
+                                                    'alignItems': 'center',
+                                                    'gap': 1,
+                                                    'padding': '8px 12px',
+                                                    ...cardSx,
+                                                    'backgroundColor':
+                                                        isSelected
+                                                            ? ACCENT_BG
+                                                            : colors.primaryWhite,
+                                                    'borderColor': isSelected
+                                                        ? ACCENT_BORDER
+                                                        : colors.primaryBlack,
+                                                    'boxShadow': `2px 2px 0px ${isSelected ? ACCENT_BORDER : colors.primaryBlack}`,
+                                                    'transition':
+                                                        'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+                                                }}>
+                                                {/* Checkbox toggles selection */}
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    onClick={() => toggleSymptomSelection(sym.id)}
+                                                    size="small"
                                                     sx={{
+                                                        'padding': 0,
+                                                        'color': colors.primaryBlack,
+                                                        '&.Mui-checked': { color: ACCENT_BORDER },
+                                                    }}
+                                                />
+                                                {/* Name */}
+                                                <Box
+                                                    sx={{ flex: 1, cursor: 'pointer' }}
+                                                    onClick={() => toggleSymptomSelection(sym.id)}>
+                                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                        {sym.name}
+                                                    </Typography>
+                                                </Box>
+                                                {/* Investigate button — always rendered, hidden when not selected */}
+                                                <Box
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        const existingLog = dateLogs.find((l) => Number(l.symptomId) === sym.id)
+                                                        if (existingLog) {
+                                                            onOpenForensic(existingLog.id)
+                                                        }
+                                                    }}
+                                                    sx={{
+                                                        'flexShrink': 0,
+                                                        'width': 28,
+                                                        'height': 28,
+                                                        'borderRadius': '50%',
+                                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
                                                         'display': 'flex',
                                                         'alignItems': 'center',
-                                                        'gap': 1,
-                                                        'padding': '8px 12px',
-                                                        ...cardSx,
-                                                        'backgroundColor':
-                                                            isSelected
-                                                                ? ACCENT_BG
-                                                                : colors.primaryWhite,
-                                                        'borderColor': isSelected
-                                                            ? ACCENT_BORDER
-                                                            : colors.primaryBlack,
-                                                        'boxShadow': `2px 2px 0px ${isSelected ? ACCENT_BORDER : colors.primaryBlack}`,
-                                                        'transition':
-                                                            'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+                                                        'justifyContent': 'center',
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor': colors.primaryWhite,
+                                                        'visibility': isSelected ? 'visible' : 'hidden',
+                                                        '&:active': {
+                                                            boxShadow: 'none',
+                                                            transform: 'translate(1px, 1px)',
+                                                        },
                                                     }}>
-                                                    {/* Checkbox toggles selection */}
-                                                    <Checkbox
-                                                        checked={isSelected}
-                                                        onClick={() => toggleSymptomSelection(sym.id)}
-                                                        size="small"
-                                                        sx={{
-                                                            'padding': 0,
-                                                            'color': colors.primaryBlack,
-                                                            '&.Mui-checked': { color: ACCENT_BORDER },
-                                                        }}
-                                                    />
-                                                    {/* Name */}
-                                                    <Box
-                                                        sx={{ flex: 1, cursor: 'pointer' }}
-                                                        onClick={() => toggleSymptomSelection(sym.id)}>
-                                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                                            {sym.name}
-                                                        </Typography>
-                                                    </Box>
-                                                    {/* Investigate button */}
-                                                    {isSelected && (
-                                                        <Box
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                const existingLog = dateLogs.find((l) => Number(l.symptomId) === sym.id)
-                                                                if (existingLog) {
-                                                                    onOpenForensic(existingLog.id)
-                                                                }
-                                                            }}
-                                                            sx={{
-                                                                'flexShrink': 0,
-                                                                'width': 28,
-                                                                'height': 28,
-                                                                'borderRadius': '50%',
-                                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'justifyContent': 'center',
-                                                                'cursor': 'pointer',
-                                                                'backgroundColor': colors.primaryWhite,
-                                                                '&:active': {
-                                                                    boxShadow: 'none',
-                                                                    transform: 'translate(1px, 1px)',
-                                                                },
-                                                            }}>
-                                                            <IconSearch size={14} stroke={2} />
-                                                        </Box>
-                                                    )}
+                                                    <IconSearch size={14} stroke={2} />
                                                 </Box>
-                                                {/* Notes field — only when selected */}
-                                                {isSelected && (
-                                                    <Box sx={{ mt: 0.5, pl: 4.5 }}>
-                                                        <TextField
-                                                            value={notes.get(sym.id) || ''}
-                                                            onChange={(e) =>
-                                                                setSymptomNotes(sym.id, e.target.value)
-                                                            }
-                                                            size="small"
-                                                            fullWidth
-                                                            placeholder="Notes (optional)"
-                                                            sx={{ ...fieldSx, '& .MuiOutlinedInput-input': { fontSize: 13, py: 0.75 } }}
-                                                        />
-                                                    </Box>
-                                                )}
                                             </Box>
                                         )
                                     })}
                                 </Box>
                             )}
+
+                            {/* Single notes field */}
+                            {selected.size > 0 && (
+                                <Box>
+                                    <Typography sx={labelSx}>Notes</Typography>
+                                    <TextField
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                        size="small"
+                                        fullWidth
+                                        multiline
+                                        minRows={2}
+                                        placeholder="Optional notes..."
+                                        sx={fieldSx}
+                                    />
+                                </Box>
+                            )}
+
+                            {/* Date picker */}
+                            <Box>
+                                <Typography sx={labelSx}>Date</Typography>
+                                <TextField
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) =>
+                                        handleDateChange(e.target.value)
+                                    }
+                                    size="small"
+                                    sx={{ ...fieldSx, maxWidth: 180 }}
+                                />
+                            </Box>
                         </>
                     ) : (
                         <>
