@@ -16,7 +16,7 @@ export async function PUT(
     const presetId = parseInt(id, 10)
     if (isNaN(presetId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
-    const { name, muscleGroupIds, exerciseIds, supplementIds, mealLabel, foodItems } = await request.json()
+    const { name, muscleGroupIds, exerciseIds, supplementIds, foodItems } = await request.json()
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
@@ -35,8 +35,8 @@ export async function PUT(
     try {
         await withAuditUser(authUser.userId, async (client) => {
             await client.query(
-                `UPDATE presets SET name = $1, meal_label = $2 WHERE id = $3`,
-                [name.trim(), type === 'diet' ? (mealLabel?.trim() || null) : null, presetId]
+                `UPDATE presets SET name = $1 WHERE id = $2`,
+                [name.trim(), presetId]
             )
 
             if (type === 'diet') {

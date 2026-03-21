@@ -84,6 +84,7 @@ export type Food = {
 export type MealGroup = {
     id: number
     label: string
+    quantity: number
     foods: FoodLogEntry[]
 }
 
@@ -103,7 +104,6 @@ export type DietDay = {
 export type DietPreset = {
     id: number
     name: string
-    mealLabel: string | null // NULL = standalone, non-NULL = creates meal group
     items: DietPresetItem[]
 }
 

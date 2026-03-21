@@ -80,7 +80,7 @@ async function getDaySnapshots(userId: number, endDate: string, daysBefore: numb
     const foodRes = await pool.query(
         `SELECT fl.id, fl.food_id, f.name AS food_name, f.is_active,
                 fl.date, fl.quantity, fl.meal_group_id,
-                mg.label AS meal_label
+                mg.label AS meal_label, mg.quantity AS meal_quantity
          FROM food_logs fl
          JOIN foods f ON f.id = fl.food_id
          LEFT JOIN meal_groups mg ON mg.id = fl.meal_group_id
@@ -135,7 +135,7 @@ async function getDaySnapshots(userId: number, endDate: string, daysBefore: numb
             if (r.meal_group_id) {
                 const mgId = Number(r.meal_group_id)
                 if (!mealMap.has(mgId)) {
-                    mealMap.set(mgId, { id: mgId, label: r.meal_label, foods: [] })
+                    mealMap.set(mgId, { id: mgId, label: r.meal_label, quantity: r.meal_quantity ?? 1, foods: [] })
                 }
                 mealMap.get(mgId)!.foods.push(entry)
             } else {

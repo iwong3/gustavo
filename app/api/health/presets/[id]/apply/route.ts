@@ -16,17 +16,16 @@ export async function POST(
     const presetId = parseInt(id, 10)
     if (isNaN(presetId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
-    // Verify ownership and get type + meal_label
+    // Verify ownership and get type + name
     const check = await pool.query(
-        'SELECT id, type, meal_label FROM presets WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+        'SELECT id, name, type FROM presets WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
         [presetId, authUser.userId]
     )
     if (check.rows.length === 0) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const type = check.rows[0].type
-    const mealLabel = check.rows[0].meal_label
+    const { name, type } = check.rows[0]
     const body = await request.json().catch(() => ({}))
     const date = body.date || new Date().toISOString().split('T')[0]
 
@@ -35,7 +34,7 @@ export async function POST(
             const result = await applyWorkoutPreset(authUser.userId, presetId, date)
             return NextResponse.json(result, { status: 201 })
         } else if (type === 'diet') {
-            const result = await applyDietPreset(authUser.userId, presetId, date, mealLabel)
+            const result = await applyDietPreset(authUser.userId, presetId, date, name)
             return NextResponse.json(result, { status: 201 })
         } else {
             const result = await applySupplementPreset(authUser.userId, presetId, date)
@@ -111,41 +110,62 @@ async function applyDietPreset(userId: number, presetId: number, date: string, m
         )
 
         let mealGroupId: number | null = null
+        let isExistingMeal = false
 
         // If preset has a meal label, find or create meal group for this date
         if (mealLabel) {
-            const mgRes = await client.query(
-                `INSERT INTO meal_groups (user_id, date, label)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (user_id, date, lower(label)) DO UPDATE SET updated_at = now()
-                 RETURNING id`,
+            // Check if meal group already exists
+            const existingMg = await client.query(
+                `SELECT id FROM meal_groups WHERE user_id = $1 AND date = $2 AND lower(label) = lower($3)`,
                 [userId, date, mealLabel]
             )
-            mealGroupId = Number(mgRes.rows[0].id)
-        }
 
-        const logged: number[] = []
-        for (const food of foodRes.rows) {
-            if (mealGroupId) {
+            if (existingMg.rows.length > 0) {
+                // Meal already exists — increment its quantity
+                mealGroupId = Number(existingMg.rows[0].id)
+                isExistingMeal = true
                 await client.query(
-                    `INSERT INTO food_logs (user_id, food_id, date, quantity, meal_group_id)
-                     VALUES ($1, $2, $3, $4, $5)
-                     ON CONFLICT (user_id, food_id, date, meal_group_id)
-                         WHERE meal_group_id IS NOT NULL
-                     DO UPDATE SET quantity = food_logs.quantity + $4, updated_at = now()`,
-                    [userId, food.food_id, date, food.quantity, mealGroupId]
+                    `UPDATE meal_groups SET quantity = quantity + 1, updated_at = now() WHERE id = $1`,
+                    [mealGroupId]
                 )
             } else {
-                await client.query(
-                    `INSERT INTO food_logs (user_id, food_id, date, quantity)
-                     VALUES ($1, $2, $3, $4)
-                     ON CONFLICT (user_id, food_id, date)
-                         WHERE meal_group_id IS NULL
-                     DO UPDATE SET quantity = food_logs.quantity + $4, updated_at = now()`,
-                    [userId, food.food_id, date, food.quantity]
+                // Create new meal group
+                const mgRes = await client.query(
+                    `INSERT INTO meal_groups (user_id, date, label, quantity)
+                     VALUES ($1, $2, $3, 1)
+                     RETURNING id`,
+                    [userId, date, mealLabel]
                 )
+                mealGroupId = Number(mgRes.rows[0].id)
             }
-            logged.push(Number(food.food_id))
+        }
+
+        // Only insert/update food logs if this is a new meal group (or standalone foods)
+        // For existing meal groups, the quantity column tracks repetitions
+        const logged: number[] = []
+        if (!isExistingMeal) {
+            for (const food of foodRes.rows) {
+                if (mealGroupId) {
+                    await client.query(
+                        `INSERT INTO food_logs (user_id, food_id, date, quantity, meal_group_id)
+                         VALUES ($1, $2, $3, $4, $5)
+                         ON CONFLICT (user_id, food_id, date, meal_group_id)
+                             WHERE meal_group_id IS NOT NULL
+                         DO UPDATE SET quantity = $4, updated_at = now()`,
+                        [userId, food.food_id, date, food.quantity, mealGroupId]
+                    )
+                } else {
+                    await client.query(
+                        `INSERT INTO food_logs (user_id, food_id, date, quantity)
+                         VALUES ($1, $2, $3, $4)
+                         ON CONFLICT (user_id, food_id, date)
+                             WHERE meal_group_id IS NULL
+                         DO UPDATE SET quantity = food_logs.quantity + $4, updated_at = now()`,
+                        [userId, food.food_id, date, food.quantity]
+                    )
+                }
+                logged.push(Number(food.food_id))
+            }
         }
 
         return { logged, date, mealGroupId }

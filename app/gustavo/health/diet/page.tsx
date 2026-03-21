@@ -2,6 +2,7 @@
 
 import { cardSx, colors } from '@/lib/colors'
 import {
+    errorFieldSx,
     fieldSx,
     labelSx,
     primaryButtonSx,
@@ -23,7 +24,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconBolt, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconBolt, IconChevronDown, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -36,7 +37,7 @@ import {
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -52,6 +53,34 @@ function formatDate(dateStr: string): string {
     })
 }
 
+// ── Quantity badge ───────────────────────────────────────────────────────────
+
+function QtyBadge({ n, alwaysShow }: { n: number; alwaysShow?: boolean }) {
+    if (!alwaysShow && n <= 1) return null
+    return (
+        <Box
+            component="span"
+            sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                backgroundColor: colors.primaryWhite,
+                border: `1px solid ${colors.primaryBlack}`,
+                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                color: colors.primaryBlack,
+                fontSize: 10,
+                fontWeight: 700,
+                lineHeight: 1,
+                flexShrink: 0,
+            }}>
+            {n}
+        </Box>
+    )
+}
+
 // ── Chip styles ──────────────────────────────────────────────────────────────
 
 const foodChipSx = {
@@ -63,7 +92,7 @@ const foodChipSx = {
     'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
     'borderRadius': '3px',
     'color': colors.primaryBlack,
-    '& .MuiChip-label': { px: 1 },
+    '& .MuiChip-label': { px: 0.75, display: 'flex', alignItems: 'center', gap: '6px' },
 } as const
 
 const mealChipSx = {
@@ -75,7 +104,7 @@ const mealChipSx = {
     'boxShadow': `1px 1px 0px ${colors.primaryBlue}`,
     'borderRadius': '3px',
     'color': colors.primaryBlack,
-    '& .MuiChip-label': { px: 1 },
+    '& .MuiChip-label': { px: 0.75, display: 'flex', alignItems: 'center', gap: '6px' },
 } as const
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -90,116 +119,13 @@ function formatMonthDay(dateStr: string): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ── Stacked chip row (shows chips that fit, stacked indicator for overflow) ──
-
-const STACK_OFFSET = 8
-const STACK_LAYERS = 2
-const STACK_TOTAL = STACK_OFFSET * STACK_LAYERS
-const CHIP_GAP = 4 // 0.5 spacing = 4px
-
-function StackedChipRow({ labels }: { labels: string[] }) {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const [visibleCount, setVisibleCount] = useState(labels.length)
-
-    useLayoutEffect(() => {
-        const el = containerRef.current
-        if (!el) return
-        const chips = Array.from(el.children) as HTMLElement[]
-        if (chips.length === 0) return
-
-        const containerWidth = el.getBoundingClientRect().width
-        const containerLeft = el.getBoundingClientRect().left
-
-        // Measure cumulative width of each chip
-        let lastFittingFull = chips.length
-        for (let i = 0; i < chips.length; i++) {
-            const chipRight = chips[i].getBoundingClientRect().right - containerLeft
-            // Does this chip + stack reserve + gap for one more truncated chip fit?
-            if (chipRight > containerWidth) {
-                lastFittingFull = i
-                break
-            }
-        }
-
-        if (lastFittingFull >= chips.length) {
-            // All fit at natural width, no overflow
-            setVisibleCount(chips.length)
-        } else {
-            // Find how many natural chips fit while leaving room for a truncated last chip + stack
-            // Min truncated chip width ~40px + stack + gap
-            const minLastChip = 40 + STACK_TOTAL + CHIP_GAP
-            let naturalFit = lastFittingFull
-            for (let i = lastFittingFull; i >= 1; i--) {
-                const usedRight = chips[i - 1].getBoundingClientRect().right - containerLeft
-                const remaining = containerWidth - usedRight - CHIP_GAP
-                if (remaining >= minLastChip) {
-                    naturalFit = i
-                    break
-                }
-                naturalFit = i - 1
-            }
-            // Show naturalFit chips at full size + 1 truncated chip with stack
-            setVisibleCount(Math.max(1, naturalFit + 1))
-        }
-    }, [labels])
-
-    const hasOverflow = visibleCount < labels.length
-
-    return (
-        <Box ref={containerRef} sx={{ display: 'flex', gap: 0.5, overflow: 'hidden', flex: 1, minWidth: 0, alignItems: 'center' }}>
-            {labels.map((label, i) => {
-                if (i >= visibleCount) return null
-                const isLast = hasOverflow && i === visibleCount - 1
-                return (
-                    <Box key={i} sx={{
-                        position: 'relative',
-                        flexShrink: isLast ? 1 : 0,
-                        minWidth: isLast ? 40 : undefined,
-                        mr: isLast ? `${STACK_TOTAL}px` : 0,
-                    }}>
-                        {isLast && (
-                            <>
-                                <Box sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    backgroundColor: colors.secondaryYellow,
-                                    border: `1px solid ${colors.primaryBlack}`,
-                                    borderRadius: '3px',
-                                    transform: `translateX(${STACK_OFFSET * 2}px)`,
-                                }} />
-                                <Box sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    backgroundColor: colors.secondaryYellow,
-                                    border: `1px solid ${colors.primaryBlack}`,
-                                    borderRadius: '3px',
-                                    transform: `translateX(${STACK_OFFSET}px)`,
-                                }} />
-                            </>
-                        )}
-                        <Chip
-                            label={label}
-                            size="small"
-                            sx={{
-                                ...foodChipSx,
-                                'position': 'relative',
-                                'maxWidth': '100%',
-                                '& .MuiChip-label': { px: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-                            }}
-                        />
-                    </Box>
-                )
-            })}
-        </Box>
-    )
-}
-
 // ── Edit target type ─────────────────────────────────────────────────────────
 
 type EditTarget = {
     date: string
     mealGroupId: number | null
     label: string
+    quantity: number
     foods: FoodLogEntry[]
 }
 
@@ -263,163 +189,189 @@ function DietDayCard({
                     overflow: 'hidden',
                 }}>
                 {!expanded ? (
-                    /* Collapsed: card per meal with stacked chip overflow */
+                    /* Collapsed: meal + food chips wrapping */
                     <Box
                         onClick={() => setExpanded(true)}
                         sx={{
                             'p': 1.25,
                             'cursor': 'pointer',
                             'display': 'flex',
-                            'flexDirection': 'column',
-                            'gap': 0.75,
+                            'flexWrap': 'wrap',
+                            'gap': 0.5,
                             '&:active': { backgroundColor: colors.secondaryYellow },
                             'transition': 'background-color 150ms ease',
                         }}>
-                        {day.mealGroups.map((group, i) => {
-                            const isLast = i === day.mealGroups.length - 1 && day.standaloneFoods.length === 0
+                        {day.mealGroups.map((group) => {
                             return (
-                                <Box key={`meal-${group.id}`}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 0.5,
-                                            overflow: 'hidden',
-                                        }}>
-                                        <Chip
-                                            label={group.label}
-                                            size="small"
-                                            sx={mealChipSx}
-                                        />
-                                        <StackedChipRow
-                                            labels={group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name)}
-                                        />
-                                    </Box>
-                                    {!isLast && (
-                                        <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}12`, mt: 0.75 }} />
-                                    )}
-                                </Box>
+                                <Chip
+                                    key={`meal-${group.id}`}
+                                    label={<>{group.quantity > 1 && <QtyBadge n={group.quantity} />}{group.label}</>}
+                                    size="small"
+                                    sx={mealChipSx}
+                                />
                             )
                         })}
-                        {day.standaloneFoods.length > 0 && (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    overflow: 'hidden',
-                                }}>
-                                <StackedChipRow
-                                    labels={day.standaloneFoods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name)}
-                                />
-                            </Box>
-                        )}
+                        {day.standaloneFoods.map((entry) => (
+                            <Chip
+                                key={`food-${entry.id}`}
+                                label={<>{entry.quantity > 1 && <QtyBadge n={entry.quantity} />}{entry.food.name}</>}
+                                size="small"
+                                sx={foodChipSx}
+                            />
+                        ))}
                     </Box>
                 ) : (
-                    /* Expanded: neo-brutalist card per meal inside the day card */
-                    <Box
-                        sx={{
-                            p: 1.5,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                        }}>
-                        {/* Tap to collapse */}
+                    /* Expanded: trips-style rows with dividers inside the day card */
+                    <Box>
+                        {/* Collapse header — styled like DateGroupHeader */}
                         <Box
                             onClick={() => setExpanded(false)}
                             sx={{
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'gap': 1,
+                                'px': 1.5,
+                                'py': 1,
                                 'cursor': 'pointer',
-                                '&:active': { opacity: 0.6 },
+                                'borderBottom': `1px solid ${colors.primaryBlack}`,
+                                'backgroundColor': '#d4ddb6',
+                                'userSelect': 'none',
+                                '&:active': { backgroundColor: '#e2e8c8' },
+                                'transition': 'background-color 150ms ease',
                             }}>
-                            <Typography sx={{ fontSize: 11, fontWeight: 600, color: colors.primaryBrown }}>
-                                {day.mealGroups.length + (day.standaloneFoods.length > 0 ? 1 : 0)} meal{(day.mealGroups.length + (day.standaloneFoods.length > 0 ? 1 : 0)) !== 1 ? 's' : ''} — tap to collapse
-                            </Typography>
+                            <IconChevronDown size={16} color={colors.primaryBlack} />
                         </Box>
 
-                        {/* Meal group cards */}
-                        {day.mealGroups.map((group) => (
-                            <Box key={`meal-${group.id}`} sx={{ ...cardSx, overflow: 'hidden' }}>
+                        {/* Meal group rows */}
+                        {day.mealGroups.map((group, i) => {
+                            const isLast = i === day.mealGroups.length - 1 && day.standaloneFoods.length === 0
+                            return (
                                 <SwipeableRow
+                                    key={`meal-${group.id}`}
                                     canEdit
                                     canDelete
                                     onEdit={() => onEditMeal({
                                         date: day.date,
                                         mealGroupId: group.id,
                                         label: group.label,
+                                        quantity: group.quantity,
                                         foods: group.foods,
                                     })}
                                     onDelete={() => onDeleteMeal(group.foods.map((f) => f.id))}
-                                    backgroundColor={colors.primaryWhite}>
+                                    backgroundColor={colors.primaryWhite}
+                                    showBottomBorder={!isLast}>
                                     <Box
                                         onClick={() => onEditMeal({
                                             date: day.date,
                                             mealGroupId: group.id,
                                             label: group.label,
+                                            quantity: group.quantity,
                                             foods: group.foods,
                                         })}
                                         sx={{
-                                            'p': 1.25,
+                                            'display': 'flex',
+                                            'alignItems': 'center',
+                                            'gap': 1.5,
+                                            'px': 1.5,
+                                            'py': 1.25,
                                             'cursor': 'pointer',
                                             '&:active': { backgroundColor: colors.secondaryYellow },
                                             'transition': 'background-color 150ms ease',
                                         }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: colors.primaryBlue, mb: 0.5 }}>
-                                            {group.label}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {group.foods.map((entry) => (
-                                                <Chip
-                                                    key={entry.id}
-                                                    label={entry.quantity > 1 ? `${entry.food.name} \u00d7${entry.quantity}` : entry.food.name}
-                                                    size="small"
-                                                    sx={foodChipSx}
-                                                />
-                                            ))}
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: 28,
+                                                height: 28,
+                                                borderRadius: '50%',
+                                                backgroundColor: colors.primaryWhite,
+                                                border: `1.5px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                color: colors.primaryBlack,
+                                                fontSize: 13,
+                                                fontWeight: 700,
+                                                lineHeight: 1,
+                                                flexShrink: 0,
+                                            }}>
+                                            {group.quantity}
+                                        </Box>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography sx={{
+                                                fontSize: 14,
+                                                fontWeight: 700,
+                                                lineHeight: 1.3,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {group.label}
+                                            </Typography>
+                                            <Typography sx={{
+                                                fontSize: 12,
+                                                color: colors.primaryBrown,
+                                                lineHeight: 1.3,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                mt: 0.25,
+                                            }}>
+                                                {group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
+                                            </Typography>
                                         </Box>
                                     </Box>
                                 </SwipeableRow>
-                            </Box>
-                        ))}
+                            )
+                        })}
 
-                        {/* Standalone foods card */}
+                        {/* Standalone foods row */}
                         {day.standaloneFoods.length > 0 && (
-                            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                <SwipeableRow
-                                    canEdit
-                                    canDelete
-                                    onEdit={() => onEditMeal({
+                            <SwipeableRow
+                                canEdit
+                                canDelete
+                                onEdit={() => onEditMeal({
+                                    date: day.date,
+                                    mealGroupId: null,
+                                    label: '',
+                                    quantity: 1,
+                                    foods: day.standaloneFoods,
+                                })}
+                                onDelete={() => onDeleteMeal(day.standaloneFoods.map((f) => f.id))}
+                                backgroundColor={colors.primaryWhite}>
+                                <Box
+                                    onClick={() => onEditMeal({
                                         date: day.date,
                                         mealGroupId: null,
                                         label: '',
+                                        quantity: 1,
                                         foods: day.standaloneFoods,
                                     })}
-                                    onDelete={() => onDeleteMeal(day.standaloneFoods.map((f) => f.id))}
-                                    backgroundColor={colors.primaryWhite}>
-                                    <Box
-                                        onClick={() => onEditMeal({
-                                            date: day.date,
-                                            mealGroupId: null,
-                                            label: '',
-                                            foods: day.standaloneFoods,
-                                        })}
-                                        sx={{
-                                            'p': 1.25,
-                                            'cursor': 'pointer',
-                                            '&:active': { backgroundColor: colors.secondaryYellow },
-                                            'transition': 'background-color 150ms ease',
+                                    sx={{
+                                        'display': 'flex',
+                                        'alignItems': 'center',
+                                        'gap': 1.5,
+                                        'px': 1.5,
+                                        'py': 1.25,
+                                        'cursor': 'pointer',
+                                        '&:active': { backgroundColor: colors.secondaryYellow },
+                                        'transition': 'background-color 150ms ease',
+                                    }}>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography sx={{
+                                            fontSize: 12,
+                                            color: colors.primaryBrown,
+                                            lineHeight: 1.3,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
                                         }}>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {day.standaloneFoods.map((entry) => (
-                                                <Chip
-                                                    key={entry.id}
-                                                    label={entry.quantity > 1 ? `${entry.food.name} \u00d7${entry.quantity}` : entry.food.name}
-                                                    size="small"
-                                                    sx={foodChipSx}
-                                                />
-                                            ))}
-                                        </Box>
+                                            {day.standaloneFoods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
+                                        </Typography>
                                     </Box>
-                                </SwipeableRow>
-                            </Box>
+                                </Box>
+                            </SwipeableRow>
                         )}
                     </Box>
                 )}
@@ -667,6 +619,7 @@ export default function DietPage() {
                 }}
                 foods={foods}
                 editTarget={editTarget}
+                dietDays={dietDays}
                 onDataChanged={fetchData}
             />
 
@@ -687,7 +640,6 @@ export default function DietPage() {
                 }}
                 onEdit={(p) => {
                     setEditingPreset(p)
-                    setPresetDrawerOpen(true)
                 }}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
@@ -696,6 +648,14 @@ export default function DietPage() {
                     fetchData()
                 }}
                 onReorder={reorderPresets}
+                onApplyPreset={async (presetId) => {
+                    const res = await fetch(`/api/health/presets/${presetId}/apply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: getLocalDate() }),
+                    })
+                    if (res.ok) fetchData()
+                }}
             />
         </Box>
     )
@@ -710,6 +670,7 @@ type DietDrawerProps = {
     onClose: () => void
     foods: Food[]
     editTarget: EditTarget | null
+    dietDays: DietDay[]
     onDataChanged: () => void
 }
 
@@ -718,11 +679,13 @@ function DietDrawer({
     onClose,
     foods,
     editTarget,
+    dietDays,
     onDataChanged,
 }: DietDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
     const [mealLabel, setMealLabel] = useState('')
+    const [mealQuantity, setMealQuantity] = useState(1)
     const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
     const [saving, setSaving] = useState(false)
 
@@ -749,15 +712,17 @@ function DietDrawer({
                 // Editing an existing meal
                 setDate(editTarget.date)
                 setMealLabel(editTarget.label)
+                setMealQuantity(editTarget.quantity ?? 1)
                 const qMap = new Map<number, number>()
                 for (const l of editTarget.foods) {
                     qMap.set(l.food.id, l.quantity)
                 }
                 setQuantities(qMap)
             } else {
-                // New meal
+                // New meal defaults
                 setDate(getLocalDate())
                 setMealLabel('')
+                setMealQuantity(1)
                 setQuantities(new Map())
             }
         }
@@ -839,6 +804,15 @@ function DietDrawer({
                 }
             }
 
+            // Update meal group quantity if changed
+            if (editTarget?.mealGroupId && mealQuantity !== editTarget.quantity) {
+                ops.push(fetch(`/api/health/meal-groups/${editTarget.mealGroupId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity: mealQuantity }),
+                }))
+            }
+
             await Promise.all(ops)
             onDataChanged()
             onClose()
@@ -847,7 +821,7 @@ function DietDrawer({
         } finally {
             setSaving(false)
         }
-    }, [date, mealLabel, quantities, editTarget, onDataChanged, onClose])
+    }, [date, mealLabel, mealQuantity, quantities, editTarget, onDataChanged, onClose])
 
     const startEdit = useCallback((food: Food) => {
         setEditingFood(food)
@@ -905,6 +879,18 @@ function DietDrawer({
 
     const isEditing = editTarget !== null
 
+    // Label conflict check: does a meal with this label already exist on the selected date?
+    const trimmedLabel = mealLabel.trim()
+    const labelConflict = (() => {
+        if (!trimmedLabel) return false
+        const dayData = dietDays.find((d) => d.date === date)
+        if (!dayData) return false
+        return dayData.mealGroups.some(
+            (g) => g.label.toLowerCase() === trimmedLabel.toLowerCase()
+                && g.id !== editTarget?.mealGroupId
+        )
+    })()
+
     return (
         <FormDrawer open={open} onClose={onClose}>
             <Box
@@ -951,33 +937,80 @@ function DietDrawer({
                     }}>
                     {mode === 'log' ? (
                         <>
-                            {/* Meal label + Date row */}
-                            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
+                            {/* Date row */}
+                            <Box sx={{ maxWidth: 160 }}>
+                                <Typography sx={labelSx}>Date</Typography>
+                                <TextField
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    sx={fieldSx}
+                                />
+                            </Box>
+
+                            {/* Name + Quantity row */}
+                            <Box sx={{ display: 'flex', gap: 2 }}>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography sx={labelSx}>Meal Label</Typography>
+                                    <Typography sx={labelSx}>Name</Typography>
                                     <TextField
                                         value={mealLabel}
                                         onChange={(e) => setMealLabel(e.target.value)}
                                         size="small"
                                         fullWidth
                                         placeholder="Optional"
-                                        sx={fieldSx}
+                                        error={labelConflict}
+                                        helperText={labelConflict ? 'Already exists for this date' : undefined}
+                                        sx={labelConflict ? errorFieldSx : fieldSx}
                                     />
                                 </Box>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography sx={labelSx}>Date</Typography>
-                                    <TextField
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        size="small"
-                                        fullWidth
-                                        sx={fieldSx}
-                                    />
-                                </Box>
+                                {trimmedLabel && <Box sx={{ flexShrink: 0, pr: 1.5 }}>
+                                    <Typography sx={labelSx}>Quantity</Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: 40 }}>
+                                        <Box
+                                            onClick={() => setMealQuantity((q) => Math.max(1, q - 1))}
+                                            sx={{
+                                                'width': 24,
+                                                'height': 24,
+                                                'borderRadius': '50%',
+                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                'display': 'flex',
+                                                'alignItems': 'center',
+                                                'justifyContent': 'center',
+                                                'cursor': 'pointer',
+                                                'backgroundColor': colors.primaryWhite,
+                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                            }}>
+                                            <IconMinus size={12} stroke={2.5} />
+                                        </Box>
+                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                            {mealQuantity}
+                                        </Typography>
+                                        <Box
+                                            onClick={() => setMealQuantity((q) => q + 1)}
+                                            sx={{
+                                                'width': 24,
+                                                'height': 24,
+                                                'borderRadius': '50%',
+                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                'display': 'flex',
+                                                'alignItems': 'center',
+                                                'justifyContent': 'center',
+                                                'cursor': 'pointer',
+                                                'backgroundColor': colors.primaryWhite,
+                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                            }}>
+                                            <IconPlus size={12} stroke={2.5} />
+                                        </Box>
+                                    </Box>
+                                </Box>}
                             </Box>
 
                             {/* Food checklist */}
+                            <Typography sx={{ ...labelSx, mb: -1 }}>Foods</Typography>
                             {activeFoods.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 3 }}>
                                     <Typography
@@ -1101,7 +1134,7 @@ function DietDrawer({
                             )}
 
                         </>
-                    ) : (
+                    ) : mode === 'manage' ? (
                         <>
                             {/* Add / Edit form */}
                             <Box
@@ -1278,7 +1311,7 @@ function DietDrawer({
                                 )}
                             </Box>
                         </>
-                    )}
+                    ) : null}
                 </Box>
 
                 {/* Footer */}
@@ -1301,7 +1334,7 @@ function DietDrawer({
                     {mode === 'log' ? (
                         <Button
                             onClick={handleLogSubmit}
-                            disabled={quantities.size === 0 || saving}
+                            disabled={quantities.size === 0 || saving || labelConflict}
                             size="large"
                             sx={primaryButtonSx}>
                             {saving ? 'Saving...' : isEditing ? 'Save' : 'Log'}
@@ -1327,6 +1360,8 @@ function DietDrawer({
 
 // ── Diet Preset Drawer ──────────────────────────────────────────────────────
 
+type PresetDrawerMode = 'meals' | 'new'
+
 type DietPresetDrawerProps = {
     open: boolean
     onClose: () => void
@@ -1337,6 +1372,7 @@ type DietPresetDrawerProps = {
     onEdit: (preset: DietPreset) => void
     onDelete: (id: number) => Promise<void>
     onReorder: (from: number, to: number) => void
+    onApplyPreset: (presetId: number) => Promise<void>
 }
 
 function DietPresetDrawer({
@@ -1349,30 +1385,40 @@ function DietPresetDrawer({
     onEdit,
     onDelete,
     onReorder,
+    onApplyPreset,
 }: DietPresetDrawerProps) {
+    const [mode, setMode] = useState<PresetDrawerMode>('meals')
     const [name, setName] = useState('')
-    const [presetMealLabel, setPresetMealLabel] = useState('')
     const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
 
     const activeFoods = foods.filter((f) => f.isActive)
+    const prevOpenRef = useRef(false)
+
+    const prevEditingRef = useRef<DietPreset | null>(null)
 
     useEffect(() => {
-        if (open) {
-            if (editingPreset) {
-                setName(editingPreset.name)
-                setPresetMealLabel(editingPreset.mealLabel || '')
-                const qMap = new Map<number, number>()
-                for (const item of editingPreset.items) {
-                    qMap.set(item.foodId, item.quantity)
-                }
-                setQuantities(qMap)
-            } else {
-                setName('')
-                setPresetMealLabel('')
-                setQuantities(new Map())
+        const justOpened = open && !prevOpenRef.current
+        const editChanged = open && editingPreset !== prevEditingRef.current && editingPreset !== null
+        prevOpenRef.current = open
+        prevEditingRef.current = editingPreset
+
+        if (justOpened && !editingPreset) {
+            setMode('meals')
+            setName('')
+            setQuantities(new Map())
+            setError('')
+        }
+
+        if (justOpened && editingPreset || editChanged) {
+            setMode('new')
+            setName(editingPreset!.name)
+            const qMap = new Map<number, number>()
+            for (const item of editingPreset!.items) {
+                qMap.set(item.foodId, item.quantity)
             }
+            setQuantities(qMap)
             setError('')
         }
     }, [open, editingPreset])
@@ -1423,7 +1469,6 @@ function DietPresetDrawer({
                 body: JSON.stringify({
                     name: name.trim(),
                     type: 'diet',
-                    mealLabel: presetMealLabel.trim() || null,
                     foodItems,
                 }),
             })
@@ -1438,7 +1483,10 @@ function DietPresetDrawer({
         } finally {
             setSaving(false)
         }
-    }, [name, presetMealLabel, quantities, editingPreset, onSaved])
+    }, [name, quantities, editingPreset, onSaved])
+
+    const isEditing = editingPreset !== null
+    const showForm = mode === 'new' || isEditing
 
     return (
         <FormDrawer open={open} onClose={onClose}>
@@ -1456,14 +1504,22 @@ function DietPresetDrawer({
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
-                    <Typography
-                        sx={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            fontFamily: 'var(--font-serif)',
-                        }}>
-                        {editingPreset ? 'Edit Meal' : 'Meals'}
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
+                        {isEditing ? 'Edit Meal' : 'Meals'}
                     </Typography>
+
+                    {!isEditing && (
+                        <SlidingToggle
+                            value={mode}
+                            options={[
+                                { value: 'meals', label: 'Meals' },
+                                { value: 'new', label: 'New' },
+                            ]}
+                            onChange={(v) => setMode(v as PresetDrawerMode)}
+                            fontSize={13}
+                            borderWidth={1}
+                        />
+                    )}
                 </Box>
 
                 {/* Body */}
@@ -1477,277 +1533,264 @@ function DietPresetDrawer({
                         flexDirection: 'column',
                         gap: 2,
                     }}>
-                    {/* Existing presets list */}
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <VerticalSortableList items={existingPresets} onReorder={onReorder}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1,
-                                }}>
-                                {existingPresets.map((p) => (
-                                    <SortablePresetRow key={p.id} id={p.id}>
-                                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                            <SwipeableRow
-                                                canEdit
-                                                canDelete
-                                                onEdit={() => onEdit(p)}
-                                                onDelete={() => onDelete(p.id)}
-                                                backgroundColor={colors.primaryWhite}>
-                                                <Box sx={{ p: 1.5, display: 'flex', gap: 1.5 }}>
-                                                    <SortableDragHandle id={p.id} />
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                    <Typography
+                    {!showForm ? (
+                        /* Meals list — click to apply, swipe for edit/delete */
+                        existingPresets.length === 0 ? (
+                            <Box sx={{ textAlign: 'center', py: 3 }}>
+                                <Typography sx={{ fontSize: 14, color: colors.primaryBrown, mb: 1 }}>
+                                    No meals yet.
+                                </Typography>
+                                <Button
+                                    onClick={() => setMode('new')}
+                                    size="small"
+                                    sx={primaryButtonSx}>
+                                    Create Meal
+                                </Button>
+                            </Box>
+                        ) : (
+                            <VerticalSortableList items={existingPresets} onReorder={onReorder}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                    {existingPresets.map((p) => (
+                                        <SortablePresetRow key={p.id} id={p.id}>
+                                            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                                <SwipeableRow
+                                                    canEdit
+                                                    canDelete
+                                                    onEdit={() => onEdit(p)}
+                                                    onDelete={() => onDelete(p.id)}
+                                                    backgroundColor={colors.primaryWhite}>
+                                                    <Box
+                                                        onClick={async () => {
+                                                            await onApplyPreset(p.id)
+                                                            onClose()
+                                                        }}
                                                         sx={{
-                                                            fontSize: 14,
-                                                            fontWeight: 600,
-                                                            mb: 0.5,
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'gap': 1.5,
+                                                            'px': 1.5,
+                                                            'py': 1.25,
+                                                            'cursor': 'pointer',
+                                                            '&:active': { backgroundColor: colors.secondaryYellow },
+                                                            'transition': 'background-color 150ms ease',
                                                         }}>
-                                                        {p.name}
-                                                    </Typography>
-                                                    {p.mealLabel && (
+                                                        <SortableDragHandle id={p.id} />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography sx={{
+                                                                fontSize: 14,
+                                                                fontWeight: 700,
+                                                                lineHeight: 1.3,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}>
+                                                                {p.name}
+                                                            </Typography>
+                                                            <Typography sx={{
+                                                                fontSize: 12,
+                                                                color: colors.primaryBrown,
+                                                                lineHeight: 1.3,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                mt: 0.25,
+                                                            }}>
+                                                                {p.items.map((it) => it.quantity > 1 ? `${it.foodName} \u00d7${it.quantity}` : it.foodName).join(', ')}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </SwipeableRow>
+                                            </Box>
+                                        </SortablePresetRow>
+                                    ))}
+                                </Box>
+                            </VerticalSortableList>
+                        )
+                    ) : (
+                        /* New / Edit form */
+                        <>
+                            <Box>
+                                <Typography sx={labelSx}>Name</Typography>
+                                <TextField
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Breakfast, Lunch, Snack..."
+                                    sx={fieldSx}
+                                />
+                            </Box>
+
+                            {/* Food selection with quantity */}
+                            <Box>
+                                <Typography sx={labelSx}>Foods</Typography>
+                                {activeFoods.length === 0 ? (
+                                    <Typography
+                                        sx={{
+                                            fontSize: 13,
+                                            color: colors.primaryBrown,
+                                        }}>
+                                        No active foods. Add some first.
+                                    </Typography>
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 0.75,
+                                        }}>
+                                        {[...activeFoods].sort((a, b) => {
+                                            const aSelected = quantities.has(a.id) ? 0 : 1
+                                            const bSelected = quantities.has(b.id) ? 0 : 1
+                                            return aSelected - bSelected
+                                        }).map((food) => {
+                                            const qty = quantities.get(food.id) ?? 0
+                                            const isSelected = qty > 0
+                                            return (
+                                                <Box
+                                                    key={food.id}
+                                                    sx={{
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'gap': 1,
+                                                        'padding': '8px 12px',
+                                                        ...cardSx,
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor': isSelected
+                                                            ? '#f1f8e9'
+                                                            : colors.primaryWhite,
+                                                        'borderColor': isSelected
+                                                            ? '#4caf50'
+                                                            : colors.primaryBlack,
+                                                        'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                        'transition': 'all 0.15s',
+                                                        '&:active': {
+                                                            boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                            transform:
+                                                                'translate(1px, 1px)',
+                                                        },
+                                                    }}>
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        onClick={() => toggleFood(food.id)}
+                                                        size="small"
+                                                        sx={{
+                                                            'padding': 0,
+                                                            'color':
+                                                                colors.primaryBlack,
+                                                            '&.Mui-checked': {
+                                                                color: '#4caf50',
+                                                            },
+                                                        }}
+                                                        tabIndex={-1}
+                                                    />
+                                                    <Box
+                                                        sx={{ flex: 1 }}
+                                                        onClick={() => toggleFood(food.id)}>
                                                         <Typography
                                                             sx={{
-                                                                fontSize: 11,
-                                                                color: colors.primaryBlue,
+                                                                fontSize: 14,
                                                                 fontWeight: 600,
-                                                                mb: 0.25,
                                                             }}>
-                                                            Meal: {p.mealLabel}
+                                                            {food.name}
                                                         </Typography>
-                                                    )}
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 12,
-                                                            color: colors.primaryBrown,
-                                                        }}>
-                                                        {p.items
-                                                            .map((item) =>
-                                                                item.quantity > 1
-                                                                    ? `${item.foodName} \u00d7${item.quantity}`
-                                                                    : item.foodName
-                                                            )
-                                                            .join(', ')}
-                                                    </Typography>
+                                                    </Box>
+                                                    {/* Quantity controls */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
+                                                        <Box
+                                                            onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty - 1) }}
+                                                            sx={{
+                                                                'width': 24,
+                                                                'height': 24,
+                                                                'borderRadius': '50%',
+                                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'cursor': 'pointer',
+                                                                'backgroundColor': colors.primaryWhite,
+                                                                '&:active': {
+                                                                    boxShadow: 'none',
+                                                                    transform: 'translate(1px, 1px)',
+                                                                },
+                                                            }}>
+                                                            <IconMinus size={12} stroke={2.5} />
+                                                        </Box>
+                                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                            {qty || 1}
+                                                        </Typography>
+                                                        <Box
+                                                            onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty + 1) }}
+                                                            sx={{
+                                                                'width': 24,
+                                                                'height': 24,
+                                                                'borderRadius': '50%',
+                                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'cursor': 'pointer',
+                                                                'backgroundColor': colors.primaryWhite,
+                                                                '&:active': {
+                                                                    boxShadow: 'none',
+                                                                    transform: 'translate(1px, 1px)',
+                                                                },
+                                                            }}>
+                                                            <IconPlus size={12} stroke={2.5} />
+                                                        </Box>
                                                     </Box>
                                                 </Box>
-                                            </SwipeableRow>
-                                        </Box>
-                                    </SortablePresetRow>
-                                ))}
+                                            )
+                                        })}
+                                    </Box>
+                                )}
                             </Box>
-                        </VerticalSortableList>
-                    )}
 
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <Box
-                            sx={{
-                                borderBottom: `1px solid ${colors.primaryBlack}15`,
-                                my: 0.5,
-                            }}
-                        />
+                            {error && (
+                                <Typography
+                                    sx={{ fontSize: 13, color: colors.primaryRed }}>
+                                    {error}
+                                </Typography>
+                            )}
+                        </>
                     )}
+                </Box>
 
-                    {/* Form */}
-                    <Typography
+                {/* Footer — only show for form mode */}
+                {showForm && (
+                    <Box
                         sx={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: colors.primaryBrown,
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                            mb: -1,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            px: 2.5,
+                            py: 2,
+                            borderTop: `1px solid ${colors.primaryBlack}20`,
+                            paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
                         }}>
-                        {editingPreset ? 'Edit' : 'New Meal'}
-                    </Typography>
-
-                    <Box>
-                        <Typography sx={labelSx}>Name</Typography>
-                        <TextField
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            size="small"
-                            fullWidth
-                            placeholder="Breakfast, Lunch, Snack..."
-                            sx={fieldSx}
-                        />
+                        <Button
+                            onClick={isEditing ? onClose : () => setMode('meals')}
+                            disabled={saving}
+                            size="large"
+                            sx={secondaryButtonSx}>
+                            {isEditing ? 'Cancel' : 'Back'}
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={
+                                !name.trim() || quantities.size === 0 || saving
+                            }
+                            size="large"
+                            sx={primaryButtonSx}>
+                            {saving
+                                ? 'Saving...'
+                                : isEditing
+                                  ? 'Save'
+                                  : 'Create'}
+                        </Button>
                     </Box>
-
-                    <Box>
-                        <Typography sx={labelSx}>Meal Label</Typography>
-                        <TextField
-                            value={presetMealLabel}
-                            onChange={(e) => setPresetMealLabel(e.target.value)}
-                            size="small"
-                            fullWidth
-                            placeholder="Creates a meal group when applied"
-                            sx={fieldSx}
-                        />
-                    </Box>
-
-                    {/* Food selection with quantity */}
-                    <Box>
-                        <Typography sx={labelSx}>Foods</Typography>
-                        {activeFoods.length === 0 ? (
-                            <Typography
-                                sx={{
-                                    fontSize: 13,
-                                    color: colors.primaryBrown,
-                                }}>
-                                No active foods. Add some first.
-                            </Typography>
-                        ) : (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
-                                }}>
-                                {activeFoods.map((food) => {
-                                    const qty = quantities.get(food.id) ?? 0
-                                    const isSelected = qty > 0
-                                    return (
-                                        <Box
-                                            key={food.id}
-                                            sx={{
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'gap': 1,
-                                                'padding': '8px 12px',
-                                                ...cardSx,
-                                                'cursor': 'pointer',
-                                                'backgroundColor': isSelected
-                                                    ? '#f1f8e9'
-                                                    : colors.primaryWhite,
-                                                'borderColor': isSelected
-                                                    ? '#4caf50'
-                                                    : colors.primaryBlack,
-                                                'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                'transition': 'all 0.15s',
-                                                '&:active': {
-                                                    boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                    transform:
-                                                        'translate(1px, 1px)',
-                                                },
-                                            }}>
-                                            <Checkbox
-                                                checked={isSelected}
-                                                onClick={() => toggleFood(food.id)}
-                                                size="small"
-                                                sx={{
-                                                    'padding': 0,
-                                                    'color':
-                                                        colors.primaryBlack,
-                                                    '&.Mui-checked': {
-                                                        color: '#4caf50',
-                                                    },
-                                                }}
-                                                tabIndex={-1}
-                                            />
-                                            <Box
-                                                sx={{ flex: 1 }}
-                                                onClick={() => toggleFood(food.id)}>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                    }}>
-                                                    {food.name}
-                                                </Typography>
-                                            </Box>
-                                            {/* Quantity controls — always rendered, hidden when not selected */}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
-                                                <Box
-                                                    onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty - 1) }}
-                                                    sx={{
-                                                        'width': 24,
-                                                        'height': 24,
-                                                        'borderRadius': '50%',
-                                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                        'display': 'flex',
-                                                        'alignItems': 'center',
-                                                        'justifyContent': 'center',
-                                                        'cursor': 'pointer',
-                                                        'backgroundColor': colors.primaryWhite,
-                                                        '&:active': {
-                                                            boxShadow: 'none',
-                                                            transform: 'translate(1px, 1px)',
-                                                        },
-                                                    }}>
-                                                    <IconMinus size={12} stroke={2.5} />
-                                                </Box>
-                                                <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                    {qty || 1}
-                                                </Typography>
-                                                <Box
-                                                    onClick={(e) => { e.stopPropagation(); setFoodQty(food.id, qty + 1) }}
-                                                    sx={{
-                                                        'width': 24,
-                                                        'height': 24,
-                                                        'borderRadius': '50%',
-                                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                        'display': 'flex',
-                                                        'alignItems': 'center',
-                                                        'justifyContent': 'center',
-                                                        'cursor': 'pointer',
-                                                        'backgroundColor': colors.primaryWhite,
-                                                        '&:active': {
-                                                            boxShadow: 'none',
-                                                            transform: 'translate(1px, 1px)',
-                                                        },
-                                                    }}>
-                                                    <IconPlus size={12} stroke={2.5} />
-                                                </Box>
-                                            </Box>
-                                        </Box>
-                                    )
-                                })}
-                            </Box>
-                        )}
-                    </Box>
-
-                    {error && (
-                        <Typography
-                            sx={{ fontSize: 13, color: colors.primaryRed }}>
-                            {error}
-                        </Typography>
-                    )}
-                </Box>
-
-                {/* Footer */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        px: 2.5,
-                        py: 2,
-                        borderTop: `1px solid ${colors.primaryBlack}20`,
-                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                    }}>
-                    <Button
-                        onClick={onClose}
-                        disabled={saving}
-                        size="large"
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={
-                            !name.trim() || quantities.size === 0 || saving
-                        }
-                        size="large"
-                        sx={primaryButtonSx}>
-                        {saving
-                            ? 'Saving...'
-                            : editingPreset
-                              ? 'Save'
-                              : 'Create'}
-                    </Button>
-                </Box>
+                )}
             </Box>
         </FormDrawer>
     )

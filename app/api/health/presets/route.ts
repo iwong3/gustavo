@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { rows } = await pool.query(
-        `SELECT id, name, meal_label FROM presets
+        `SELECT id, name FROM presets
          WHERE user_id = $1 AND type = $2 AND deleted_at IS NULL
          ORDER BY sort_order, id`,
         [authUser.userId, type]
@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
                 return {
                     id: Number(r.id),
                     name: r.name,
-                    mealLabel: r.meal_label || null,
                     items: foodRes.rows.map((f) => ({
                         foodId: Number(f.id),
                         foodName: f.name,
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { name, type, muscleGroupIds, exerciseIds, supplementIds, mealLabel, foodItems } = await request.json()
+    const { name, type, muscleGroupIds, exerciseIds, supplementIds, foodItems } = await request.json()
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
@@ -130,13 +129,13 @@ export async function POST(request: NextRequest) {
     try {
         const preset = await withAuditUser(authUser.userId, async (client) => {
             const res = await client.query(
-                `INSERT INTO presets (user_id, name, type, meal_label, sort_order)
-                 VALUES ($1, $2, $3, $4, COALESCE(
+                `INSERT INTO presets (user_id, name, type, sort_order)
+                 VALUES ($1, $2, $3, COALESCE(
                      (SELECT MAX(sort_order) + 1 FROM presets WHERE user_id = $1 AND type = $3 AND deleted_at IS NULL),
                      0
                  ))
-                 RETURNING id, name, type, meal_label`,
-                [authUser.userId, name.trim(), type, type === 'diet' && mealLabel ? mealLabel.trim() : null]
+                 RETURNING id, name, type`,
+                [authUser.userId, name.trim(), type]
             )
             const presetId = res.rows[0].id
 
@@ -184,7 +183,7 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            return { id: Number(presetId), name: res.rows[0].name, type: res.rows[0].type, mealLabel: res.rows[0].meal_label || null }
+            return { id: Number(presetId), name: res.rows[0].name, type: res.rows[0].type }
         })
 
         return NextResponse.json(preset, { status: 201 })
