@@ -10,8 +10,10 @@ import {
     IconHeartbeat,
     IconHome,
     IconList,
+    IconMoodSick,
     IconPill,
     IconPlaneDeparture,
+    IconSalad,
     IconSettings,
 } from '@tabler/icons-react'
 import Link from 'next/link'
@@ -412,6 +414,22 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     sx={tripItemSx(isWithin('/gustavo/health/supplements'))}>
                     <IconPill size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
                     Supplements
+                </Box>
+                <Box
+                    component={Link}
+                    href="/gustavo/health/diet"
+                    onClick={onClose}
+                    sx={tripItemSx(isWithin('/gustavo/health/diet'))}>
+                    <IconSalad size={14} stroke={2} color={colors.primaryBrown} />
+                    Diet
+                </Box>
+                <Box
+                    component={Link}
+                    href="/gustavo/health/symptoms"
+                    onClick={onClose}
+                    sx={tripItemSx(isWithin('/gustavo/health/symptoms'))}>
+                    <IconMoodSick size={14} stroke={2} color={colors.primaryBrown} />
+                    Symptoms
                 </Box>
 
                 {/* Settings */}

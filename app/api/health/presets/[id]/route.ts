@@ -16,7 +16,7 @@ export async function PUT(
     const presetId = parseInt(id, 10)
     if (isNaN(presetId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
-    const { name, muscleGroupIds, exerciseIds, supplementIds } = await request.json()
+    const { name, muscleGroupIds, exerciseIds, supplementIds, mealLabel, foodItems } = await request.json()
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
@@ -35,11 +35,22 @@ export async function PUT(
     try {
         await withAuditUser(authUser.userId, async (client) => {
             await client.query(
-                `UPDATE presets SET name = $1 WHERE id = $2`,
-                [name.trim(), presetId]
+                `UPDATE presets SET name = $1, meal_label = $2 WHERE id = $3`,
+                [name.trim(), type === 'diet' ? (mealLabel?.trim() || null) : null, presetId]
             )
 
-            if (type === 'workout') {
+            if (type === 'diet') {
+                // Replace food items
+                await client.query(`DELETE FROM preset_foods WHERE preset_id = $1`, [presetId])
+                if (foodItems?.length) {
+                    for (const item of foodItems as { foodId: number; quantity?: number }[]) {
+                        await client.query(
+                            `INSERT INTO preset_foods (preset_id, food_id, quantity) VALUES ($1, $2, $3)`,
+                            [presetId, item.foodId, item.quantity || 1]
+                        )
+                    }
+                }
+            } else if (type === 'workout') {
                 // Replace muscle groups
                 await client.query(`DELETE FROM preset_muscle_groups WHERE preset_id = $1`, [presetId])
                 if (muscleGroupIds?.length) {

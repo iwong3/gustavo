@@ -4,7 +4,7 @@ import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
 import { useMemo } from 'react'
-import { IconBarbell, IconPill, IconStretching } from '@tabler/icons-react'
+import { IconBarbell, IconMoodSick, IconPill, IconSalad, IconStretching } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -54,6 +54,18 @@ const tools = [
         path: '/gustavo/health/supplements',
         icon: IconPill,
         bg: '#cdbfdb',
+    },
+    {
+        name: 'Diet',
+        path: '/gustavo/health/diet',
+        icon: IconSalad,
+        bg: '#f0e4d4',
+    },
+    {
+        name: 'Symptoms',
+        path: '/gustavo/health/symptoms',
+        icon: IconMoodSick,
+        bg: '#fce4cc',
     },
 ]
 

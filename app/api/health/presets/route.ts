@@ -2,23 +2,48 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import type { WorkoutPreset, SupplementPreset } from '@/lib/health-types'
+import type { WorkoutPreset, SupplementPreset, DietPreset } from '@/lib/health-types'
 
 export async function GET(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const type = request.nextUrl.searchParams.get('type')
-    if (!type || !['workout', 'supplement'].includes(type)) {
-        return NextResponse.json({ error: 'type query param required (workout | supplement)' }, { status: 400 })
+    if (!type || !['workout', 'supplement', 'diet'].includes(type)) {
+        return NextResponse.json({ error: 'type query param required (workout | supplement | diet)' }, { status: 400 })
     }
 
     const { rows } = await pool.query(
-        `SELECT id, name FROM presets
+        `SELECT id, name, meal_label FROM presets
          WHERE user_id = $1 AND type = $2 AND deleted_at IS NULL
          ORDER BY sort_order, id`,
         [authUser.userId, type]
     )
+
+    if (type === 'diet') {
+        const presets: DietPreset[] = await Promise.all(
+            rows.map(async (r) => {
+                const foodRes = await pool.query(
+                    `SELECT f.id, f.name, pf.quantity FROM foods f
+                     JOIN preset_foods pf ON pf.food_id = f.id
+                     WHERE pf.preset_id = $1 AND f.deleted_at IS NULL
+                     ORDER BY f.name`,
+                    [r.id]
+                )
+                return {
+                    id: Number(r.id),
+                    name: r.name,
+                    mealLabel: r.meal_label || null,
+                    items: foodRes.rows.map((f) => ({
+                        foodId: Number(f.id),
+                        foodName: f.name,
+                        quantity: f.quantity,
+                    })),
+                }
+            })
+        )
+        return NextResponse.json(presets)
+    }
 
     if (type === 'workout') {
         const presets: WorkoutPreset[] = await Promise.all(
@@ -93,29 +118,39 @@ export async function POST(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { name, type, muscleGroupIds, exerciseIds, supplementIds } = await request.json()
+    const { name, type, muscleGroupIds, exerciseIds, supplementIds, mealLabel, foodItems } = await request.json()
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
-    if (!type || !['workout', 'supplement'].includes(type)) {
-        return NextResponse.json({ error: 'type must be workout or supplement' }, { status: 400 })
+    if (!type || !['workout', 'supplement', 'diet'].includes(type)) {
+        return NextResponse.json({ error: 'type must be workout, supplement, or diet' }, { status: 400 })
     }
 
     try {
         const preset = await withAuditUser(authUser.userId, async (client) => {
             const res = await client.query(
-                `INSERT INTO presets (user_id, name, type, sort_order)
-                 VALUES ($1, $2, $3, COALESCE(
+                `INSERT INTO presets (user_id, name, type, meal_label, sort_order)
+                 VALUES ($1, $2, $3, $4, COALESCE(
                      (SELECT MAX(sort_order) + 1 FROM presets WHERE user_id = $1 AND type = $3 AND deleted_at IS NULL),
                      0
                  ))
-                 RETURNING id, name, type`,
-                [authUser.userId, name.trim(), type]
+                 RETURNING id, name, type, meal_label`,
+                [authUser.userId, name.trim(), type, type === 'diet' && mealLabel ? mealLabel.trim() : null]
             )
             const presetId = res.rows[0].id
 
-            if (type === 'workout') {
+            if (type === 'diet') {
+                // Insert food items
+                if (foodItems?.length) {
+                    for (const item of foodItems as { foodId: number; quantity?: number }[]) {
+                        await client.query(
+                            `INSERT INTO preset_foods (preset_id, food_id, quantity) VALUES ($1, $2, $3)`,
+                            [presetId, item.foodId, item.quantity || 1]
+                        )
+                    }
+                }
+            } else if (type === 'workout') {
                 // Insert muscle groups
                 if (muscleGroupIds?.length) {
                     const mgValues = muscleGroupIds
@@ -149,7 +184,7 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            return { id: Number(presetId), name: res.rows[0].name, type: res.rows[0].type }
+            return { id: Number(presetId), name: res.rows[0].name, type: res.rows[0].type, mealLabel: res.rows[0].meal_label || null }
         })
 
         return NextResponse.json(preset, { status: 201 })

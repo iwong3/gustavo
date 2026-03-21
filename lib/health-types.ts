@@ -72,3 +72,87 @@ export type SupplementPreset = {
     name: string
     supplements: Supplement[]
 }
+
+// --- Diet ---
+
+export type Food = {
+    id: number
+    name: string
+    isActive: boolean
+}
+
+export type MealGroup = {
+    id: number
+    label: string
+    foods: FoodLogEntry[]
+}
+
+export type FoodLogEntry = {
+    id: number // food_logs.id
+    food: Food
+    quantity: number
+    mealGroupId: number | null
+}
+
+export type DietDay = {
+    date: string
+    standaloneFoods: FoodLogEntry[] // meal_group_id IS NULL
+    mealGroups: MealGroup[] // grouped by meal_group
+}
+
+export type DietPreset = {
+    id: number
+    name: string
+    mealLabel: string | null // NULL = standalone, non-NULL = creates meal group
+    items: DietPresetItem[]
+}
+
+export type DietPresetItem = {
+    foodId: number
+    foodName: string
+    quantity: number
+}
+
+// --- Symptoms ---
+
+export type Symptom = {
+    id: number
+    name: string
+    isActive: boolean
+}
+
+export type SymptomLog = {
+    id: number
+    symptomId: number
+    symptomName: string
+    date: string
+    notes: string | null
+    createdAt: string
+}
+
+// --- Forensic View ---
+
+export type DaySnapshot = {
+    date: string
+    foods: FoodLogEntry[]
+    mealGroups: MealGroup[]
+    supplements: { name: string; quantity: number }[]
+    workout: { muscleGroups: string[]; notes: string | null } | null
+}
+
+export type SymptomForensicView = {
+    symptomName: string
+    currentDate: string
+    lookback: DaySnapshot[] // current day + 3 prior days
+    pastOccurrences: {
+        date: string
+        notes: string | null
+        lookback: DaySnapshot[] // that day + 3 prior days
+    }[]
+    commonFoods: {
+        // foods appearing in 2+ occurrence windows
+        foodName: string
+        occurrenceCount: number // how many symptom windows included this food
+        totalOccurrences: number // total symptom occurrences (denominator)
+    }[]
+}
