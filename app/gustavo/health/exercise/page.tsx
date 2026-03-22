@@ -18,12 +18,14 @@ import { getParents, GROUP_TARGETS, isTarget } from '@/lib/health/muscle-groups'
 import {
     Box,
     Button,
+    Checkbox,
     Chip,
     CircularProgress,
     TextField,
     Typography,
 } from '@mui/material'
 import {
+    IconArrowLeft,
     IconBolt,
     IconChevronDown,
     IconChevronUp,
@@ -69,9 +71,6 @@ export default function ExercisePage() {
     const [detailOpen, setDetailOpen] = useState(false)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<WorkoutPreset | null>(
-        null
-    )
 
     const fetchWorkouts = useCallback(() => {
         fetch('/api/health/workouts')
@@ -707,23 +706,11 @@ export default function ExercisePage() {
             {/* Preset form drawer */}
             <PresetFormDrawer
                 open={presetDrawerOpen}
-                onClose={() => {
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
+                onClose={() => setPresetDrawerOpen(false)}
                 muscleGroups={muscleGroups}
                 exercises={exercises}
-                editingPreset={editingPreset}
                 existingPresets={presets}
-                onSaved={() => {
-                    fetchPresets()
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
-                onEdit={(p) => {
-                    setEditingPreset(p)
-                    setPresetDrawerOpen(true)
-                }}
+                onSaved={fetchPresets}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
                         method: 'DELETE',
@@ -743,48 +730,67 @@ type PresetFormDrawerProps = {
     onClose: () => void
     muscleGroups: MuscleGroupWithParents[]
     exercises: Exercise[]
-    editingPreset: WorkoutPreset | null
     existingPresets: WorkoutPreset[]
     onSaved: () => void
-    onEdit: (preset: WorkoutPreset) => void
     onDelete: (id: number) => Promise<void>
     onReorder: (from: number, to: number) => void
 }
+
+type PresetView = 'list' | 'form'
 
 function PresetFormDrawer({
     open,
     onClose,
     muscleGroups,
     exercises,
-    editingPreset,
     existingPresets,
     onSaved,
-    onEdit,
     onDelete,
     onReorder,
 }: PresetFormDrawerProps) {
+    const [view, setView] = useState<PresetView>('list')
+    const [editingPreset, setEditingPreset] = useState<WorkoutPreset | null>(null)
     const [name, setName] = useState('')
     const [selectedMgIds, setSelectedMgIds] = useState<Set<number>>(new Set())
     const [selectedExIds, setSelectedExIds] = useState<number[]>([])
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
+    const [presetExSearch, setPresetExSearch] = useState('')
 
+    // Reset to list view when drawer opens
     useEffect(() => {
         if (open) {
-            if (editingPreset) {
-                setName(editingPreset.name)
-                setSelectedMgIds(
-                    new Set(editingPreset.muscleGroups.map((mg) => mg.id))
-                )
-                setSelectedExIds(editingPreset.exercises.map((ex) => ex.id))
-            } else {
-                setName('')
-                setSelectedMgIds(new Set())
-                setSelectedExIds([])
-            }
-            setError('')
+            setView('list')
+            setEditingPreset(null)
+            resetForm()
         }
-    }, [open, editingPreset])
+    }, [open])
+
+    const resetForm = useCallback(() => {
+        setName('')
+        setSelectedMgIds(new Set())
+        setSelectedExIds([])
+        setError('')
+        setPresetExSearch('')
+    }, [])
+
+    const openForm = useCallback((preset: WorkoutPreset | null) => {
+        setEditingPreset(preset)
+        if (preset) {
+            setName(preset.name)
+            setSelectedMgIds(new Set(preset.muscleGroups.map((mg) => mg.id)))
+            setSelectedExIds(preset.exercises.map((ex) => ex.id))
+        } else {
+            resetForm()
+        }
+        setView('form')
+    }, [resetForm])
+
+    const goBack = useCallback(() => {
+        setView('list')
+        setEditingPreset(null)
+        resetForm()
+    }, [resetForm])
 
     const toggleMuscle = useCallback(
         (mgName: string, mgId: number) => {
@@ -850,6 +856,7 @@ function PresetFormDrawer({
             })
             if (res.ok) {
                 onSaved()
+                goBack()
             } else {
                 const data = await res.json()
                 setError(data.error || 'Failed to save')
@@ -867,9 +874,8 @@ function PresetFormDrawer({
         onToggle: toggleMuscle,
     }
 
-    // Show list view when not editing
     return (
-        <FormDrawer open={open} onClose={onClose}>
+        <FormDrawer open={open} onClose={view === 'form' ? goBack : onClose}>
             <Box
                 sx={{
                     display: 'flex',
@@ -880,17 +886,40 @@ function PresetFormDrawer({
                 {/* Header */}
                 <Box
                     sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
                         px: 2.5,
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
+                    {view === 'form' && (
+                        <Box
+                            onClick={goBack}
+                            sx={{
+                                'cursor': 'pointer',
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                '&:active': { opacity: 0.5 },
+                            }}>
+                            <IconArrowLeft
+                                size={20}
+                                stroke={2}
+                                color={colors.primaryBlack}
+                            />
+                        </Box>
+                    )}
                     <Typography
                         sx={{
                             fontSize: 16,
                             fontWeight: 700,
                             fontFamily: 'var(--font-serif)',
                         }}>
-                        {editingPreset ? 'Edit Routine' : 'Routines'}
+                        {view === 'list'
+                            ? 'Routines'
+                            : editingPreset
+                              ? 'Edit Routine'
+                              : 'New Routine'}
                     </Typography>
                 </Box>
 
@@ -905,137 +934,165 @@ function PresetFormDrawer({
                         flexDirection: 'column',
                         gap: 2,
                     }}>
-                    {/* Existing presets list */}
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <VerticalSortableList
-                            items={existingPresets}
-                            onReorder={onReorder}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1,
-                                }}>
-                                {existingPresets.map((p) => (
-                                    <SortablePresetRow key={p.id} id={p.id}>
-                                        <Box
-                                            sx={{
-                                                ...cardSx,
-                                                overflow: 'hidden',
-                                            }}>
-                                            <SwipeableRow
-                                                canEdit
-                                                canDelete
-                                                onEdit={() => onEdit(p)}
-                                                onDelete={() => onDelete(p.id)}
-                                                backgroundColor={
-                                                    colors.primaryWhite
-                                                }>
+                    {view === 'list' ? (
+                        <>
+                            {/* Existing presets list */}
+                            {existingPresets.length > 0 && (
+                                <VerticalSortableList
+                                    items={existingPresets}
+                                    onReorder={onReorder}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 1,
+                                        }}>
+                                        {existingPresets.map((p) => (
+                                            <SortablePresetRow
+                                                key={p.id}
+                                                id={p.id}>
                                                 <Box
-                                                    onClick={() => onEdit(p)}
                                                     sx={{
-                                                        'p': 1.5,
-                                                        'display': 'flex',
-                                                        'gap': 1.5,
-                                                        'cursor': 'pointer',
-                                                        '&:active': {
-                                                            backgroundColor:
-                                                                colors.secondaryYellow,
-                                                        },
+                                                        ...cardSx,
+                                                        overflow: 'hidden',
                                                     }}>
-                                                    <SortableDragHandle id={p.id} />
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 14,
-                                                            fontWeight: 600,
-                                                            mb: 0.5,
-                                                        }}>
-                                                        {p.name}
-                                                    </Typography>
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            flexWrap: 'wrap',
-                                                            gap: 0.5,
-                                                        }}>
-                                                        {p.muscleGroups
-                                                            .filter(
-                                                                (mg) =>
-                                                                    !isTarget(
-                                                                        mg.name
-                                                                    )
-                                                            )
-                                                            .map((mg) => (
-                                                                <Chip
-                                                                    key={mg.id}
-                                                                    label={
-                                                                        mg.name
-                                                                    }
-                                                                    size="small"
-                                                                    sx={{
-                                                                        'height': 20,
-                                                                        'fontSize': 10,
-                                                                        'fontWeight': 600,
-                                                                        'backgroundColor':
-                                                                            selectedBg,
-                                                                        'border': `1px solid ${selectedBorder}`,
-                                                                        'borderRadius':
-                                                                            '3px',
-                                                                        '& .MuiChip-label':
-                                                                            {
-                                                                                px: 0.75,
-                                                                            },
-                                                                    }}
-                                                                />
-                                                            ))}
-                                                    </Box>
-                                                    {p.exercises.length > 0 && (
-                                                        <Typography
+                                                    <SwipeableRow
+                                                        canEdit
+                                                        canDelete
+                                                        onEdit={() =>
+                                                            openForm(p)
+                                                        }
+                                                        onDelete={() =>
+                                                            onDelete(p.id)
+                                                        }
+                                                        backgroundColor={
+                                                            colors.primaryWhite
+                                                        }>
+                                                        <Box
+                                                            onClick={() =>
+                                                                openForm(p)
+                                                            }
                                                             sx={{
-                                                                fontSize: 11,
-                                                                color: colors.primaryBrown,
-                                                                mt: 0.5,
+                                                                'p': 1.5,
+                                                                'display':
+                                                                    'flex',
+                                                                'gap': 1.5,
+                                                                'cursor':
+                                                                    'pointer',
+                                                                '&:active': {
+                                                                    backgroundColor:
+                                                                        colors.secondaryYellow,
+                                                                },
                                                             }}>
-                                                            {p.exercises
-                                                                .map(
-                                                                    (e) =>
-                                                                        e.name
-                                                                )
-                                                                .join(', ')}
-                                                        </Typography>
-                                                    )}
-                                                    </Box>
+                                                            <SortableDragHandle
+                                                                id={p.id}
+                                                            />
+                                                            <Box
+                                                                sx={{
+                                                                    flex: 1,
+                                                                    minWidth: 0,
+                                                                }}>
+                                                                <Typography
+                                                                    sx={{
+                                                                        fontSize: 14,
+                                                                        fontWeight: 600,
+                                                                        mb: 0.5,
+                                                                    }}>
+                                                                    {p.name}
+                                                                </Typography>
+                                                                <Box
+                                                                    sx={{
+                                                                        display:
+                                                                            'flex',
+                                                                        flexWrap:
+                                                                            'wrap',
+                                                                        gap: 0.5,
+                                                                    }}>
+                                                                    {p.muscleGroups
+                                                                        .filter(
+                                                                            (
+                                                                                mg
+                                                                            ) =>
+                                                                                !isTarget(
+                                                                                    mg.name
+                                                                                )
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                mg
+                                                                            ) => (
+                                                                                <Chip
+                                                                                    key={
+                                                                                        mg.id
+                                                                                    }
+                                                                                    label={
+                                                                                        mg.name
+                                                                                    }
+                                                                                    size="small"
+                                                                                    sx={{
+                                                                                        'height': 20,
+                                                                                        'fontSize': 10,
+                                                                                        'fontWeight': 600,
+                                                                                        'backgroundColor':
+                                                                                            selectedBg,
+                                                                                        'border': `1px solid ${selectedBorder}`,
+                                                                                        'borderRadius':
+                                                                                            '3px',
+                                                                                        '& .MuiChip-label':
+                                                                                            {
+                                                                                                px: 0.75,
+                                                                                            },
+                                                                                    }}
+                                                                                />
+                                                                            )
+                                                                        )}
+                                                                </Box>
+                                                                {p.exercises
+                                                                    .length >
+                                                                    0 && (
+                                                                    <Typography
+                                                                        sx={{
+                                                                            fontSize: 11,
+                                                                            color: colors.primaryBrown,
+                                                                            mt: 0.5,
+                                                                        }}>
+                                                                        {p.exercises
+                                                                            .map(
+                                                                                (
+                                                                                    e
+                                                                                ) =>
+                                                                                    e.name
+                                                                            )
+                                                                            .join(
+                                                                                ', '
+                                                                            )}
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                        </Box>
+                                                    </SwipeableRow>
                                                 </Box>
-                                            </SwipeableRow>
-                                        </Box>
-                                    </SortablePresetRow>
-                                ))}
-                            </Box>
-                        </VerticalSortableList>
-                    )}
+                                            </SortablePresetRow>
+                                        ))}
+                                    </Box>
+                                </VerticalSortableList>
+                            )}
 
-                    {/* Divider between list and form */}
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <Box
-                            sx={{
-                                borderBottom: `1px solid ${colors.primaryBlack}15`,
-                                my: 0.5,
-                            }}
-                        />
-                    )}
-
-                    {/* Form */}
-                    <Typography
-                        sx={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: colors.primaryBrown,
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                        }}>
-                        {editingPreset ? 'Edit' : 'New Routine'}
-                    </Typography>
+                            {existingPresets.length === 0 && (
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        color: colors.primaryBrown,
+                                        textAlign: 'center',
+                                        py: 2,
+                                    }}>
+                                    No routines yet. Create one to get started.
+                                </Typography>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            {/* Form view */}
 
                     <Box>
                         <Typography sx={labelSx}>Name</Typography>
@@ -1144,45 +1201,227 @@ function PresetFormDrawer({
                     {/* Exercise selection */}
                     {exercises.length > 0 && (
                         <Box>
-                            <Typography sx={labelSx}>Exercises</Typography>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: 0.75,
-                                }}>
-                                {exercises.map((ex) => {
-                                    const isSelected = selectedExIds.includes(
-                                        ex.id
+                            <Typography sx={labelSx}>
+                                Exercises
+                                {selectedExIds.length > 0 &&
+                                    ` (${selectedExIds.length})`}
+                            </Typography>
+                            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                {/* Search header */}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        px: 1.5,
+                                        py: 1,
+                                        borderBottom: `1px solid ${colors.primaryBlack}`,
+                                    }}>
+                                    <TextField
+                                        value={presetExSearch}
+                                        onChange={(e) =>
+                                            setPresetExSearch(e.target.value)
+                                        }
+                                        size="small"
+                                        placeholder="Search exercises..."
+                                        sx={{
+                                            'flex': 1,
+                                            '& .MuiOutlinedInput-notchedOutline':
+                                                { border: 'none' },
+                                            '& .MuiOutlinedInput-root': {
+                                                boxShadow: 'none',
+                                                padding: 0,
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                py: 0.5,
+                                                fontSize: 13,
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                                {/* Exercise rows */}
+                                {(() => {
+                                    const searchTerm = presetExSearch
+                                        .trim()
+                                        .toLowerCase()
+                                    // Selected first, then unselected
+                                    const selected = exercises.filter((ex) =>
+                                        selectedExIds.includes(ex.id)
                                     )
-                                    return (
-                                        <Chip
-                                            key={ex.id}
-                                            label={ex.name}
-                                            onClick={() =>
-                                                toggleExercise(ex.id)
-                                            }
-                                            size="small"
-                                            sx={{
-                                                'height': 28,
-                                                'fontSize': 12,
-                                                'fontWeight': isSelected
-                                                    ? 700
-                                                    : 400,
-                                                'backgroundColor': isSelected
-                                                    ? exerciseBg
-                                                    : colors.primaryWhite,
-                                                'border': `1px solid ${isSelected ? exerciseBorder : `${colors.primaryBlack}25`}`,
-                                                'boxShadow': isSelected
-                                                    ? `1.5px 1.5px 0px ${exerciseBorder}`
-                                                    : 'none',
-                                                'borderRadius': '4px',
-                                                'cursor': 'pointer',
-                                                '& .MuiChip-label': { px: 1 },
-                                            }}
-                                        />
+                                    const unselected = exercises.filter(
+                                        (ex) => !selectedExIds.includes(ex.id)
                                     )
-                                })}
+                                    const filteredSelected = searchTerm
+                                        ? selected.filter((ex) =>
+                                              ex.name
+                                                  .toLowerCase()
+                                                  .includes(searchTerm)
+                                          )
+                                        : selected
+                                    const filteredUnselected = searchTerm
+                                        ? unselected.filter((ex) =>
+                                              ex.name
+                                                  .toLowerCase()
+                                                  .includes(searchTerm)
+                                          )
+                                        : unselected
+                                    const allItems = [
+                                        ...filteredSelected.map((ex) => ({
+                                            ex,
+                                            checked: true,
+                                        })),
+                                        ...filteredUnselected.map((ex) => ({
+                                            ex,
+                                            checked: false,
+                                        })),
+                                    ]
+
+                                    return allItems.map(
+                                        ({ ex, checked }, i) => {
+                                            const isLast =
+                                                i === allItems.length - 1
+                                            const mgList = ex.muscleGroups
+                                            return (
+                                                <Box
+                                                    key={ex.id}
+                                                    onClick={() =>
+                                                        toggleExercise(ex.id)
+                                                    }
+                                                    sx={{
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'gap': 1,
+                                                        'padding': 1,
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor':
+                                                            checked
+                                                                ? selectedBg
+                                                                : colors.primaryWhite,
+                                                        ...(!isLast && {
+                                                            borderBottom:
+                                                                '1px solid',
+                                                            borderColor:
+                                                                'divider',
+                                                        }),
+                                                        '&:active': {
+                                                            opacity: 0.7,
+                                                        },
+                                                    }}>
+                                                    <Checkbox
+                                                        checked={checked}
+                                                        size="small"
+                                                        sx={{
+                                                            'width': '32px',
+                                                            'height': '32px',
+                                                            'color': `${colors.primaryBrown}60`,
+                                                            '&.Mui-checked': {
+                                                                color: selectedBorder,
+                                                            },
+                                                        }}
+                                                        onClick={(e) =>
+                                                            e.stopPropagation()
+                                                        }
+                                                        onChange={() =>
+                                                            toggleExercise(
+                                                                ex.id
+                                                            )
+                                                        }
+                                                    />
+                                                    <Box
+                                                        sx={{
+                                                            flex: 1,
+                                                            minWidth: 0,
+                                                        }}>
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems:
+                                                                    'center',
+                                                                gap: 0.75,
+                                                            }}>
+                                                            <Typography
+                                                                sx={{
+                                                                    fontSize: 13,
+                                                                    fontWeight:
+                                                                        checked
+                                                                            ? 600
+                                                                            : 500,
+                                                                }}>
+                                                                {ex.name}
+                                                            </Typography>
+                                                            {ex.isBodyweight && (
+                                                                <Chip
+                                                                    label="BW"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        'height': 16,
+                                                                        'fontSize': 9,
+                                                                        'fontWeight': 700,
+                                                                        'backgroundColor':
+                                                                            '#e3f2fd',
+                                                                        'border':
+                                                                            '1px solid #1565c0',
+                                                                        'borderRadius':
+                                                                            '2px',
+                                                                        '& .MuiChip-label':
+                                                                            {
+                                                                                px: 0.5,
+                                                                            },
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                        {mgList.length > 0 && (
+                                                            <Box
+                                                                sx={{
+                                                                    display:
+                                                                        'flex',
+                                                                    flexWrap:
+                                                                        'wrap',
+                                                                    gap: 0.5,
+                                                                    mt: 0.25,
+                                                                }}>
+                                                                {mgList.map(
+                                                                    (mg) => (
+                                                                        <Typography
+                                                                            key={
+                                                                                mg.id
+                                                                            }
+                                                                            sx={{
+                                                                                fontSize: 9,
+                                                                                fontWeight: 600,
+                                                                                color: selectedMgIds.has(
+                                                                                    mg.id
+                                                                                )
+                                                                                    ? exerciseBorder
+                                                                                    : colors.primaryBrown,
+                                                                                backgroundColor:
+                                                                                    selectedMgIds.has(
+                                                                                        mg.id
+                                                                                    )
+                                                                                        ? `${exerciseBorder}15`
+                                                                                        : `${colors.primaryBrown}10`,
+                                                                                border: `1px solid ${selectedMgIds.has(mg.id) ? exerciseBorder : `${colors.primaryBrown}40`}`,
+                                                                                boxShadow: `1px 1px 0px ${selectedMgIds.has(mg.id) ? exerciseBorder : `${colors.primaryBrown}30`}`,
+                                                                                borderRadius:
+                                                                                    '2px',
+                                                                                px: 0.5,
+                                                                                py: 0.125,
+                                                                                lineHeight: 1.3,
+                                                                            }}>
+                                                                            {
+                                                                                mg.name
+                                                                            }
+                                                                        </Typography>
+                                                                    )
+                                                                )}
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            )
+                                        }
+                                    )
+                                })()}
                             </Box>
                         </Box>
                     )}
@@ -1192,6 +1431,8 @@ function PresetFormDrawer({
                             sx={{ fontSize: 13, color: colors.primaryRed }}>
                             {error}
                         </Typography>
+                    )}
+                        </>
                     )}
                 </Box>
 
@@ -1205,24 +1446,49 @@ function PresetFormDrawer({
                         borderTop: `1px solid ${colors.primaryBlack}20`,
                         paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
                     }}>
-                    <Button
-                        onClick={onClose}
-                        disabled={saving}
-                        size="large"
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={!name.trim() || saving}
-                        size="large"
-                        sx={primaryButtonSx}>
-                        {saving
-                            ? 'Saving...'
-                            : editingPreset
-                              ? 'Save'
-                              : 'Create'}
-                    </Button>
+                    {view === 'form' ? (
+                        <>
+                            <Button
+                                onClick={goBack}
+                                disabled={saving}
+                                size="large"
+                                sx={secondaryButtonSx}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={!name.trim() || saving}
+                                size="large"
+                                sx={primaryButtonSx}>
+                                {saving
+                                    ? 'Saving...'
+                                    : editingPreset
+                                      ? 'Save'
+                                      : 'Create'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button
+                                onClick={onClose}
+                                size="large"
+                                sx={secondaryButtonSx}>
+                                Close
+                            </Button>
+                            <Button
+                                onClick={() => openForm(null)}
+                                size="large"
+                                sx={{
+                                    ...primaryButtonSx,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                }}>
+                                <IconPlus size={16} stroke={2} />
+                                New
+                            </Button>
+                        </>
+                    )}
                 </Box>
             </Box>
         </FormDrawer>
@@ -2006,526 +2272,215 @@ function WorkoutFormDrawer({
                     </Box>
 
                     {/* Exercises section */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                            border: `1.5px solid ${colors.primaryBlack}`,
-                            borderRadius: '6px',
-                            backgroundColor: colors.primaryWhite,
-                            boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                            padding: '10px 12px',
-                        }}>
-                        <Box
-                            onClick={() => setExerciseSectionOpen((v) => !v)}
-                            sx={{
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'justifyContent': 'space-between',
-                                'cursor': 'pointer',
-                                'userSelect': 'none',
-                                '&:active': { opacity: 0.6 },
-                            }}>
-                            <Typography sx={{ ...labelSx, mb: 0 }}>
-                                Exercises
-                                {exerciseEntries.length > 0 &&
-                                    ` (${exerciseEntries.length})`}
-                            </Typography>
-                            {exerciseSectionOpen ? (
-                                <IconChevronUp
-                                    size={16}
-                                    stroke={2}
-                                    color={colors.primaryBrown}
-                                />
-                            ) : (
-                                <IconChevronDown
-                                    size={16}
-                                    stroke={2}
-                                    color={colors.primaryBrown}
-                                />
-                            )}
-                        </Box>
-
-                        {exerciseSectionOpen && (
+                    <Box>
+                        <Typography sx={labelSx}>
+                            Exercises
+                            {exerciseEntries.length > 0 &&
+                                ` (${exerciseEntries.length})`}
+                        </Typography>
+                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                            {/* Search header */}
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
+                                    gap: 0.5,
+                                    alignItems: 'center',
+                                    px: 1.5,
+                                    py: 1,
+                                    borderBottom: `1px solid ${colors.primaryBlack}`,
                                 }}>
-                                {/* Combined search + create field */}
-                                <Box
+                                <TextField
+                                    value={exerciseSearch}
+                                    onChange={(e) =>
+                                        setExerciseSearch(e.target.value)
+                                    }
+                                    size="small"
+                                    placeholder="Search or create exercise..."
                                     sx={{
-                                        display: 'flex',
-                                        gap: 0.5,
-                                        alignItems: 'center',
-                                    }}>
-                                    <TextField
-                                        value={exerciseSearch}
-                                        onChange={(e) =>
-                                            setExerciseSearch(e.target.value)
-                                        }
+                                        'flex': 1,
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            border: 'none',
+                                        },
+                                        '& .MuiOutlinedInput-root': {
+                                            boxShadow: 'none',
+                                            padding: 0,
+                                        },
+                                        '& .MuiInputBase-input': {
+                                            py: 0.5,
+                                            fontSize: 13,
+                                        },
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (
+                                            e.key === 'Enter' &&
+                                            exerciseSearch.trim()
+                                        )
+                                            handleQuickAdd()
+                                    }}
+                                />
+                                {exerciseSearch.trim() && (
+                                    <Button
+                                        onClick={handleQuickAdd}
+                                        disabled={quickAddSaving}
                                         size="small"
-                                        placeholder="Search or create exercise..."
                                         sx={{
-                                            ...fieldSx,
-                                            'flex': 1,
-                                            '& .MuiInputBase-input': {
-                                                py: 0.75,
-                                                fontSize: 13,
-                                            },
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (
-                                                e.key === 'Enter' &&
-                                                exerciseSearch.trim()
-                                            )
-                                                handleQuickAdd()
-                                        }}
-                                    />
-                                    {exerciseSearch.trim() && (
-                                        <Button
-                                            onClick={handleQuickAdd}
-                                            disabled={quickAddSaving}
-                                            size="small"
-                                            sx={{
-                                                ...primaryButtonSx,
-                                                minWidth: 'unset',
-                                                px: 1.5,
-                                                py: 0.5,
-                                                fontSize: 11,
-                                                whiteSpace: 'nowrap',
-                                            }}>
-                                            {quickAddSaving ? '...' : 'Create'}
-                                        </Button>
-                                    )}
-                                </Box>
-                                {/* Selected exercises */}
-                                {exerciseEntries.map((entry, index) => {
-                                    const isExpanded =
-                                        expandedEntries.has(index)
-                                    const ex = exercises.find(
-                                        (e) => e.id === entry.exerciseId
-                                    )
-                                    const entryMuscleGroups =
-                                        ex?.muscleGroups ?? []
-                                    const toggleExpand = () =>
-                                        setExpandedEntries((prev) => {
-                                            const next = new Set(prev)
-                                            if (next.has(index))
-                                                next.delete(index)
-                                            else next.add(index)
-                                            return next
-                                        })
+                                            ...primaryButtonSx,
+                                            minWidth: 'unset',
+                                            px: 1.5,
+                                            py: 0.5,
+                                            fontSize: 11,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        {quickAddSaving ? '...' : 'Create'}
+                                    </Button>
+                                )}
+                            </Box>
+                            {/* Exercise list — unified with checkboxes */}
+                            {(() => {
+                                const searchTerm = exerciseSearch
+                                    .trim()
+                                    .toLowerCase()
+                                const unselectedList = searchTerm
+                                    ? sortedExercisesForBrowse.filter((e) =>
+                                          e.name
+                                              .toLowerCase()
+                                              .includes(searchTerm)
+                                      )
+                                    : sortedExercisesForBrowse
+
+                                // Build combined list: selected first, then unselected
+                                const selectedItems = exerciseEntries.map(
+                                    (entry, index) => {
+                                        const ex = exercises.find(
+                                            (e) => e.id === entry.exerciseId
+                                        )
+                                        return {
+                                            type: 'selected' as const,
+                                            entry,
+                                            index,
+                                            exercise: ex,
+                                            muscleGroups:
+                                                ex?.muscleGroups ?? [],
+                                        }
+                                    }
+                                )
+                                // Filter selected by search too
+                                const filteredSelected = searchTerm
+                                    ? selectedItems.filter((item) =>
+                                          item.entry.exerciseName
+                                              .toLowerCase()
+                                              .includes(searchTerm)
+                                      )
+                                    : selectedItems
+                                const allItems = [
+                                    ...filteredSelected,
+                                    ...unselectedList.map((ex) => ({
+                                        type: 'unselected' as const,
+                                        exercise: ex,
+                                    })),
+                                ]
+
+                                if (allItems.length === 0 && !searchTerm) {
                                     return (
-                                        <SwipeableRow
-                                            key={`selected-${entry.exerciseId}`}
-                                            canEdit={false}
-                                            canDelete={true}
-                                            onEdit={() => {}}
-                                            onDelete={() =>
-                                                removeExercise(index)
+                                        <Typography
+                                            sx={{
+                                                fontSize: 12,
+                                                color: colors.primaryBrown,
+                                                py: 1,
+                                                textAlign: 'center',
+                                            }}>
+                                            No exercises yet. Type above to
+                                            create one.
+                                        </Typography>
+                                    )
+                                }
+
+                                return allItems.map((item, i) => {
+                                    const isLast = i === allItems.length - 1
+                                    const isSelected = item.type === 'selected'
+                                    const ex = item.exercise
+                                    const mgList = isSelected
+                                        ? item.muscleGroups
+                                        : (ex?.muscleGroups ?? [])
+                                    const name = isSelected
+                                        ? item.entry.exerciseName
+                                        : ex!.name
+                                    const isBodyweight = isSelected
+                                        ? item.entry.isBodyweight
+                                        : ex!.isBodyweight
+                                    const isExpanded =
+                                        isSelected &&
+                                        expandedEntries.has(item.index)
+                                    const toggleExpand = isSelected
+                                        ? () =>
+                                              setExpandedEntries((prev) => {
+                                                  const next = new Set(prev)
+                                                  if (next.has(item.index))
+                                                      next.delete(item.index)
+                                                  else next.add(item.index)
+                                                  return next
+                                              })
+                                        : undefined
+                                    const handleToggle = () => {
+                                        if (isSelected) {
+                                            removeExercise(item.index)
+                                        } else {
+                                            addExercise(ex!)
+                                        }
+                                    }
+
+                                    return (
+                                        <Box
+                                            key={
+                                                isSelected
+                                                    ? `selected-${item.entry.exerciseId}`
+                                                    : `browse-${ex!.id}`
                                             }
-                                            backgroundColor={
-                                                colors.secondaryYellow
-                                            }
-                                            borderRadius="4px"
-                                            boxShadow={`2px 2px 0px ${colors.primaryYellow}`}>
+                                            sx={{
+                                                backgroundColor: isSelected
+                                                    ? selectedBg
+                                                    : colors.primaryWhite,
+                                                ...(!isLast && {
+                                                    borderBottom: '1px solid',
+                                                    borderColor: 'divider',
+                                                }),
+                                            }}>
                                             <Box
-                                                onClick={toggleExpand}
+                                                onClick={
+                                                    isSelected
+                                                        ? toggleExpand
+                                                        : handleToggle
+                                                }
                                                 sx={{
                                                     'display': 'flex',
-                                                    'flexDirection': 'column',
-                                                    'gap': 0.25,
-                                                    'padding': '6px 10px',
+                                                    'alignItems': 'center',
+                                                    'gap': 1,
+                                                    'padding': 1,
                                                     'cursor': 'pointer',
-                                                    'border': `1.5px solid ${colors.primaryYellow}`,
-                                                    'backgroundColor':
-                                                        colors.secondaryYellow,
-                                                    'borderRadius': '4px',
                                                     '&:active': {
                                                         opacity: 0.7,
                                                     },
                                                 }}>
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    onChange={handleToggle}
+                                                    onClick={(e) =>
+                                                        e.stopPropagation()
+                                                    }
+                                                    size="small"
+                                                    sx={{
+                                                        'width': '32px',
+                                                        'height': '32px',
+                                                        'color': `${colors.primaryBrown}60`,
+                                                        '&.Mui-checked': {
+                                                            color: selectedBorder,
+                                                        },
+                                                    }}
+                                                />
                                                 <Box
                                                     sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent:
-                                                            'space-between',
-                                                    }}>
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            alignItems:
-                                                                'center',
-                                                            gap: 0.75,
-                                                        }}>
-                                                        <Typography
-                                                            sx={{
-                                                                fontSize: 13,
-                                                                fontWeight: 600,
-                                                            }}>
-                                                            {entry.exerciseName}
-                                                        </Typography>
-                                                        {entry.isBodyweight && (
-                                                            <Chip
-                                                                label="BW"
-                                                                size="small"
-                                                                sx={{
-                                                                    'height': 16,
-                                                                    'fontSize': 9,
-                                                                    'fontWeight': 700,
-                                                                    'backgroundColor':
-                                                                        '#e3f2fd',
-                                                                    'border':
-                                                                        '1px solid #1565c0',
-                                                                    'borderRadius':
-                                                                        '2px',
-                                                                    '& .MuiChip-label':
-                                                                        {
-                                                                            px: 0.5,
-                                                                        },
-                                                                }}
-                                                            />
-                                                        )}
-                                                    </Box>
-                                                    {isExpanded ? (
-                                                        <IconChevronUp
-                                                            size={12}
-                                                            stroke={2}
-                                                            color={
-                                                                colors.primaryBrown
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <IconChevronDown
-                                                            size={12}
-                                                            stroke={2}
-                                                            color={
-                                                                colors.primaryBrown
-                                                            }
-                                                        />
-                                                    )}
-                                                </Box>
-                                                {entryMuscleGroups.length >
-                                                    0 && (
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            flexWrap: 'wrap',
-                                                            gap: 0.25,
-                                                        }}>
-                                                        {entryMuscleGroups.map(
-                                                            (mg) => (
-                                                                <Typography
-                                                                    key={mg.id}
-                                                                    sx={{
-                                                                        fontSize: 9,
-                                                                        fontWeight: 600,
-                                                                        color: selectedIds.has(
-                                                                            mg.id
-                                                                        )
-                                                                            ? exerciseBorder
-                                                                            : colors.primaryBrown,
-                                                                        backgroundColor:
-                                                                            selectedIds.has(
-                                                                                mg.id
-                                                                            )
-                                                                                ? `${exerciseBorder}15`
-                                                                                : `${colors.primaryBrown}10`,
-                                                                        border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
-                                                                        borderRadius:
-                                                                            '2px',
-                                                                        px: 0.5,
-                                                                        py: 0.125,
-                                                                        lineHeight: 1.3,
-                                                                    }}>
-                                                                    {mg.name}
-                                                                </Typography>
-                                                            )
-                                                        )}
-                                                    </Box>
-                                                )}
-                                                {/* Expanded: weight/sets/reps inputs */}
-                                                {isExpanded && (
-                                                    <Box
-                                                        onClick={(e) =>
-                                                            e.stopPropagation()
-                                                        }>
-                                                        {!entry.expandedSets ? (
-                                                            <Box
-                                                                sx={{
-                                                                    display:
-                                                                        'flex',
-                                                                    gap: 0.75,
-                                                                    alignItems:
-                                                                        'center',
-                                                                }}>
-                                                                <CompactField
-                                                                    label="lbs"
-                                                                    type="number"
-                                                                    value={
-                                                                        entry.weightLbs
-                                                                    }
-                                                                    onChange={(
-                                                                        v
-                                                                    ) =>
-                                                                        updateEntry(
-                                                                            index,
-                                                                            {
-                                                                                weightLbs:
-                                                                                    v,
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                    width={64}
-                                                                    placeholder="–"
-                                                                    htmlInputProps={{
-                                                                        min: 0,
-                                                                        step: 'any',
-                                                                    }}
-                                                                />
-                                                                <CompactField
-                                                                    label="sets"
-                                                                    type="number"
-                                                                    value={
-                                                                        entry.sets ||
-                                                                        ''
-                                                                    }
-                                                                    onChange={(
-                                                                        v
-                                                                    ) => {
-                                                                        const val =
-                                                                            parseInt(
-                                                                                v,
-                                                                                10
-                                                                            )
-                                                                        updateEntry(
-                                                                            index,
-                                                                            {
-                                                                                sets: isNaN(
-                                                                                    val
-                                                                                )
-                                                                                    ? 0
-                                                                                    : Math.max(
-                                                                                          0,
-                                                                                          val
-                                                                                      ),
-                                                                            }
-                                                                        )
-                                                                    }}
-                                                                    width={48}
-                                                                    placeholder="–"
-                                                                    htmlInputProps={{
-                                                                        min: 0,
-                                                                    }}
-                                                                />
-                                                                <CompactField
-                                                                    label="reps"
-                                                                    type="number"
-                                                                    value={
-                                                                        entry.reps
-                                                                    }
-                                                                    onChange={(
-                                                                        v
-                                                                    ) =>
-                                                                        updateEntry(
-                                                                            index,
-                                                                            {
-                                                                                reps: v,
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                    width={56}
-                                                                    placeholder="–"
-                                                                    htmlInputProps={{
-                                                                        min: 0,
-                                                                    }}
-                                                                />
-                                                                {entry.sets >
-                                                                    1 && (
-                                                                    <Box
-                                                                        onClick={() =>
-                                                                            toggleExpandedSets(
-                                                                                index
-                                                                            )
-                                                                        }
-                                                                        sx={{
-                                                                            'cursor':
-                                                                                'pointer',
-                                                                            'fontSize': 11,
-                                                                            'color':
-                                                                                exerciseBorder,
-                                                                            'fontWeight': 600,
-                                                                            'whiteSpace':
-                                                                                'nowrap',
-                                                                            '&:active':
-                                                                                {
-                                                                                    opacity: 0.5,
-                                                                                },
-                                                                        }}>
-                                                                        per set
-                                                                    </Box>
-                                                                )}
-                                                            </Box>
-                                                        ) : (
-                                                            <Box
-                                                                sx={{
-                                                                    display:
-                                                                        'flex',
-                                                                    flexDirection:
-                                                                        'column',
-                                                                    gap: 0.5,
-                                                                }}>
-                                                                {entry.expandedSets.map(
-                                                                    (
-                                                                        set,
-                                                                        si
-                                                                    ) => (
-                                                                        <Box
-                                                                            key={
-                                                                                si
-                                                                            }
-                                                                            sx={{
-                                                                                display:
-                                                                                    'flex',
-                                                                                gap: 0.75,
-                                                                                alignItems:
-                                                                                    'flex-start',
-                                                                            }}>
-                                                                            <Typography
-                                                                                sx={{
-                                                                                    fontSize: 11,
-                                                                                    color: colors.primaryBrown,
-                                                                                    width: 32,
-                                                                                    flexShrink: 0,
-                                                                                    pt: 0.5,
-                                                                                }}>
-                                                                                Set{' '}
-                                                                                {si +
-                                                                                    1}
-                                                                            </Typography>
-                                                                            <CompactField
-                                                                                label="reps"
-                                                                                type="number"
-                                                                                value={
-                                                                                    set.reps
-                                                                                }
-                                                                                onChange={(
-                                                                                    v
-                                                                                ) =>
-                                                                                    updateExpandedSet(
-                                                                                        index,
-                                                                                        si,
-                                                                                        v
-                                                                                    )
-                                                                                }
-                                                                                width={
-                                                                                    56
-                                                                                }
-                                                                                placeholder="–"
-                                                                                htmlInputProps={{
-                                                                                    min: 0,
-                                                                                }}
-                                                                            />
-                                                                        </Box>
-                                                                    )
-                                                                )}
-                                                                <Box
-                                                                    onClick={() =>
-                                                                        toggleExpandedSets(
-                                                                            index
-                                                                        )
-                                                                    }
-                                                                    sx={{
-                                                                        'cursor':
-                                                                            'pointer',
-                                                                        'fontSize': 11,
-                                                                        'color':
-                                                                            exerciseBorder,
-                                                                        'fontWeight': 600,
-                                                                        'mt': 0.25,
-                                                                        '&:active':
-                                                                            {
-                                                                                opacity: 0.5,
-                                                                            },
-                                                                    }}>
-                                                                    collapse
-                                                                </Box>
-                                                            </Box>
-                                                        )}
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </SwipeableRow>
-                                    )
-                                })}
-
-                                {/* Unselected exercises */}
-                                {(() => {
-                                    const list = exerciseSearch.trim()
-                                        ? sortedExercisesForBrowse.filter((e) =>
-                                              e.name
-                                                  .toLowerCase()
-                                                  .includes(
-                                                      exerciseSearch.toLowerCase()
-                                                  )
-                                          )
-                                        : sortedExercisesForBrowse
-
-                                    if (
-                                        list.length === 0 &&
-                                        exerciseEntries.length === 0 &&
-                                        !exerciseSearch.trim()
-                                    ) {
-                                        return (
-                                            <Typography
-                                                sx={{
-                                                    fontSize: 12,
-                                                    color: colors.primaryBrown,
-                                                    py: 1,
-                                                    textAlign: 'center',
-                                                }}>
-                                                No exercises yet. Type above to
-                                                create one.
-                                            </Typography>
-                                        )
-                                    }
-
-                                    return list.map((ex) => {
-                                        const matches =
-                                            selectedIds.size > 0 &&
-                                            ex.muscleGroups.some((mg) =>
-                                                selectedIds.has(mg.id)
-                                            )
-                                        return (
-                                            <Box
-                                                key={ex.id}
-                                                onClick={() => addExercise(ex)}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'justifyContent':
-                                                        'space-between',
-                                                    'padding': '6px 10px',
-                                                    'borderRadius': '4px',
-                                                    'cursor': 'pointer',
-                                                    'border': `1.5px solid ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
-                                                    'backgroundColor': matches
-                                                        ? exerciseBg
-                                                        : colors.primaryWhite,
-                                                    'boxShadow': `2px 2px 0px ${matches ? exerciseBorder : `${colors.primaryBlack}40`}`,
-                                                    '&:active': {
-                                                        opacity: 0.6,
-                                                    },
-                                                }}>
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: 0.25,
+                                                        flex: 1,
+                                                        minWidth: 0,
                                                     }}>
                                                     <Box
                                                         sx={{
@@ -2538,13 +2493,13 @@ function WorkoutFormDrawer({
                                                             sx={{
                                                                 fontSize: 13,
                                                                 fontWeight:
-                                                                    matches
+                                                                    isSelected
                                                                         ? 600
                                                                         : 500,
                                                             }}>
-                                                            {ex.name}
+                                                            {name}
                                                         </Typography>
-                                                        {ex.isBodyweight && (
+                                                        {isBodyweight && (
                                                             <Chip
                                                                 label="BW"
                                                                 size="small"
@@ -2566,16 +2521,16 @@ function WorkoutFormDrawer({
                                                             />
                                                         )}
                                                     </Box>
-                                                    {ex.muscleGroups.length >
-                                                        0 && (
+                                                    {mgList.length > 0 && (
                                                         <Box
                                                             sx={{
                                                                 display: 'flex',
                                                                 flexWrap:
                                                                     'wrap',
-                                                                gap: 0.25,
+                                                                gap: 0.5,
+                                                                mt: 0.25,
                                                             }}>
-                                                            {ex.muscleGroups.map(
+                                                            {mgList.map(
                                                                 (mg) => (
                                                                     <Typography
                                                                         key={
@@ -2595,7 +2550,8 @@ function WorkoutFormDrawer({
                                                                                 )
                                                                                     ? `${exerciseBorder}15`
                                                                                     : `${colors.primaryBrown}10`,
-                                                                            border: `1px solid ${selectedIds.has(mg.id) ? `${exerciseBorder}40` : `${colors.primaryBrown}20`}`,
+                                                                            border: `1px solid ${selectedIds.has(mg.id) ? exerciseBorder : `${colors.primaryBrown}40`}`,
+                                                                            boxShadow: `1px 1px 0px ${selectedIds.has(mg.id) ? exerciseBorder : `${colors.primaryBrown}30`}`,
                                                                             borderRadius:
                                                                                 '2px',
                                                                             px: 0.5,
@@ -2611,18 +2567,244 @@ function WorkoutFormDrawer({
                                                         </Box>
                                                     )}
                                                 </Box>
-                                                <IconPlus
-                                                    size={14}
-                                                    stroke={2}
-                                                    color={colors.primaryBrown}
-                                                    style={{ flexShrink: 0 }}
-                                                />
+                                                {isSelected &&
+                                                    (isExpanded ? (
+                                                        <IconChevronUp
+                                                            size={12}
+                                                            stroke={2}
+                                                            color={
+                                                                colors.primaryBrown
+                                                            }
+                                                            style={{
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <IconChevronDown
+                                                            size={12}
+                                                            stroke={2}
+                                                            color={
+                                                                colors.primaryBrown
+                                                            }
+                                                            style={{
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                    ))}
                                             </Box>
-                                        )
-                                    })
-                                })()}
-                            </Box>
-                        )}
+                                            {/* Expanded: weight/sets/reps inputs */}
+                                            {isSelected && isExpanded && (
+                                                <Box
+                                                    onClick={(e) =>
+                                                        e.stopPropagation()
+                                                    }
+                                                    sx={{
+                                                        pl: '48px',
+                                                        pr: 1.5,
+                                                        pb: 1,
+                                                    }}>
+                                                    {!item.entry
+                                                        .expandedSets ? (
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                gap: 1,
+                                                                alignItems:
+                                                                    'center',
+                                                            }}>
+                                                            <CompactField
+                                                                label="lbs"
+                                                                type="number"
+                                                                value={
+                                                                    item.entry
+                                                                        .weightLbs
+                                                                }
+                                                                onChange={(v) =>
+                                                                    updateEntry(
+                                                                        item.index,
+                                                                        {
+                                                                            weightLbs:
+                                                                                v,
+                                                                        }
+                                                                    )
+                                                                }
+                                                                width={64}
+                                                                placeholder="–"
+                                                                htmlInputProps={{
+                                                                    min: 0,
+                                                                    step: 'any',
+                                                                }}
+                                                            />
+                                                            <CompactField
+                                                                label="sets"
+                                                                type="number"
+                                                                value={
+                                                                    item.entry
+                                                                        .sets ||
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    v
+                                                                ) => {
+                                                                    const val =
+                                                                        parseInt(
+                                                                            v,
+                                                                            10
+                                                                        )
+                                                                    updateEntry(
+                                                                        item.index,
+                                                                        {
+                                                                            sets: isNaN(
+                                                                                val
+                                                                            )
+                                                                                ? 0
+                                                                                : Math.max(
+                                                                                      0,
+                                                                                      val
+                                                                                  ),
+                                                                        }
+                                                                    )
+                                                                }}
+                                                                width={48}
+                                                                placeholder="–"
+                                                                htmlInputProps={{
+                                                                    min: 0,
+                                                                }}
+                                                            />
+                                                            <CompactField
+                                                                label="reps"
+                                                                type="number"
+                                                                value={
+                                                                    item.entry
+                                                                        .reps
+                                                                }
+                                                                onChange={(v) =>
+                                                                    updateEntry(
+                                                                        item.index,
+                                                                        {
+                                                                            reps: v,
+                                                                        }
+                                                                    )
+                                                                }
+                                                                width={56}
+                                                                placeholder="–"
+                                                                htmlInputProps={{
+                                                                    min: 0,
+                                                                }}
+                                                            />
+                                                            {item.entry.sets >
+                                                                1 && (
+                                                                <Box
+                                                                    onClick={() =>
+                                                                        toggleExpandedSets(
+                                                                            item.index
+                                                                        )
+                                                                    }
+                                                                    sx={{
+                                                                        'cursor':
+                                                                            'pointer',
+                                                                        'fontSize': 11,
+                                                                        'color':
+                                                                            exerciseBorder,
+                                                                        'fontWeight': 600,
+                                                                        'whiteSpace':
+                                                                            'nowrap',
+                                                                        '&:active':
+                                                                            {
+                                                                                opacity: 0.5,
+                                                                            },
+                                                                    }}>
+                                                                    per set
+                                                                </Box>
+                                                            )}
+                                                        </Box>
+                                                    ) : (
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                flexDirection:
+                                                                    'column',
+                                                                gap: 0.5,
+                                                            }}>
+                                                            {item.entry.expandedSets.map(
+                                                                (set, si) => (
+                                                                    <Box
+                                                                        key={si}
+                                                                        sx={{
+                                                                            display:
+                                                                                'flex',
+                                                                            gap: 0.75,
+                                                                            alignItems:
+                                                                                'flex-start',
+                                                                        }}>
+                                                                        <Typography
+                                                                            sx={{
+                                                                                fontSize: 11,
+                                                                                color: colors.primaryBrown,
+                                                                                width: 32,
+                                                                                flexShrink: 0,
+                                                                                pt: 0.5,
+                                                                            }}>
+                                                                            Set{' '}
+                                                                            {si +
+                                                                                1}
+                                                                        </Typography>
+                                                                        <CompactField
+                                                                            label="reps"
+                                                                            type="number"
+                                                                            value={
+                                                                                set.reps
+                                                                            }
+                                                                            onChange={(
+                                                                                v
+                                                                            ) =>
+                                                                                updateExpandedSet(
+                                                                                    item.index,
+                                                                                    si,
+                                                                                    v
+                                                                                )
+                                                                            }
+                                                                            width={
+                                                                                56
+                                                                            }
+                                                                            placeholder="–"
+                                                                            htmlInputProps={{
+                                                                                min: 0,
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                )
+                                                            )}
+                                                            <Box
+                                                                onClick={() =>
+                                                                    toggleExpandedSets(
+                                                                        item.index
+                                                                    )
+                                                                }
+                                                                sx={{
+                                                                    'cursor':
+                                                                        'pointer',
+                                                                    'fontSize': 11,
+                                                                    'color':
+                                                                        exerciseBorder,
+                                                                    'fontWeight': 600,
+                                                                    'mt': 0.25,
+                                                                    '&:active':
+                                                                        {
+                                                                            opacity: 0.5,
+                                                                        },
+                                                                }}>
+                                                                collapse
+                                                            </Box>
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    )
+                                })
+                            })()}
+                        </Box>
                     </Box>
 
                     {/* Date */}
@@ -2715,13 +2897,17 @@ function CompactField({
     htmlInputProps?: Record<string, unknown>
 }) {
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                width,
-            }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
+            <Typography
+                sx={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: colors.primaryBrown,
+                    mb: 0.25,
+                    lineHeight: 1,
+                }}>
+                {label}
+            </Typography>
             <TextField
                 type={type}
                 value={value}
@@ -2736,15 +2922,6 @@ function CompactField({
                 }}
                 sx={{ ...compactFieldSx, width }}
             />
-            <Typography
-                sx={{
-                    fontSize: 9,
-                    color: colors.primaryBrown,
-                    mt: 0.25,
-                    lineHeight: 1,
-                }}>
-                {label}
-            </Typography>
         </Box>
     )
 }
@@ -2755,16 +2932,20 @@ const compactFieldSx = {
         'backgroundColor': colors.primaryWhite,
         'borderRadius': '3px',
         'fontSize': 13,
+        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
         '& fieldset': {
-            borderColor: `${colors.primaryBlack}30`,
+            borderColor: colors.primaryBlack,
             borderWidth: 1,
         },
         '&:hover fieldset': {
             borderColor: colors.primaryBlack,
         },
-        '&.Mui-focused fieldset': {
-            borderColor: exerciseBorder,
-            borderWidth: 1.5,
+        '&.Mui-focused': {
+            'boxShadow': `2px 2px 0px ${selectedBorder}`,
+            '& fieldset': {
+                borderColor: selectedBorder,
+                borderWidth: 1.5,
+            },
         },
     },
     '& input[type=number]': {

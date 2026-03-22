@@ -3,23 +3,28 @@
 import { cardSx, colors } from '@/lib/colors'
 import type { DaysSince } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
-import { useMemo } from 'react'
-import { IconBarbell, IconFirstAidKit, IconPill, IconSalad, IconStretching } from '@tabler/icons-react'
+import {
+    IconBarbell,
+    IconFirstAidKit,
+    IconPill,
+    IconSalad,
+    IconStretching,
+} from '@tabler/icons-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 function getDaysSinceColor(days: number | null): string {
-    if (days === null) return '#9e9e9e'   // grey — never
-    if (days <= 3) return '#4caf50'        // green
-    if (days <= 6) return '#ff9800'        // orange
-    return '#f44336'                       // red
+    if (days === null) return '#9e9e9e' // grey — never
+    if (days <= 3) return '#4caf50' // green
+    if (days <= 6) return '#ff9800' // orange
+    return '#f44336' // red
 }
 
 function getDaysSinceBg(days: number | null): string {
-    if (days === null) return '#9e9e9e12'  // grey tint
-    if (days <= 3) return '#4caf5012'      // green tint
-    if (days <= 6) return '#ff980012'      // orange tint
-    return '#f4433612'                     // red tint
+    if (days === null) return '#9e9e9e12' // grey tint
+    if (days <= 3) return '#4caf5012' // green tint
+    if (days <= 6) return '#ff980012' // orange tint
+    return '#f4433612' // red tint
 }
 
 function getDaysSinceBorder(days: number | null): string {
@@ -109,7 +114,7 @@ export default function HealthPage() {
                 maxWidth: 600,
                 paddingX: 2,
                 paddingBottom: 2,
-                gap: 3,
+                gap: 2,
             }}>
             {/* Days Since Last Workout */}
             <Box>
@@ -126,7 +131,12 @@ export default function HealthPage() {
                 </Typography>
 
                 {loading ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                        }}>
                         {DAYS_SINCE_ROWS.map((row) => (
                             <Box key={row.label}>
                                 <Box
@@ -160,10 +170,20 @@ export default function HealthPage() {
                                                 }}
                                             />
                                             <Box>
-                                                <Typography sx={{ fontSize: 12, lineHeight: 1.2, color: 'transparent' }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 12,
+                                                        lineHeight: 1.2,
+                                                        color: 'transparent',
+                                                    }}>
                                                     &nbsp;
                                                 </Typography>
-                                                <Typography sx={{ fontSize: 11, lineHeight: 1.2, color: 'transparent' }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 11,
+                                                        lineHeight: 1.2,
+                                                        color: 'transparent',
+                                                    }}>
                                                     &nbsp;
                                                 </Typography>
                                             </Box>
@@ -174,11 +194,17 @@ export default function HealthPage() {
                         ))}
                     </Box>
                 ) : daysSince.length === 0 ? (
-                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>
+                    <Typography
+                        sx={{ fontSize: 13, color: colors.primaryBrown }}>
                         No workouts logged yet. Start tracking!
                     </Typography>
                 ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                        }}>
                         {DAYS_SINCE_ROWS.map((row) => (
                             <Box key={row.label}>
                                 <Box
@@ -202,14 +228,22 @@ export default function HealthPage() {
                                                     borderRadius: '4px',
                                                     border: `1.5px solid ${getDaysSinceBorder(item?.daysSince ?? null)}`,
                                                     boxShadow: `1.5px 1.5px 0px ${getDaysSinceBorder(item?.daysSince ?? null)}`,
-                                                    backgroundColor: getDaysSinceBg(item?.daysSince ?? null),
+                                                    backgroundColor:
+                                                        getDaysSinceBg(
+                                                            item?.daysSince ??
+                                                                null
+                                                        ),
                                                 }}>
                                                 <Box
                                                     sx={{
                                                         width: 8,
                                                         height: 8,
                                                         borderRadius: '50%',
-                                                        backgroundColor: getDaysSinceColor(item?.daysSince ?? null),
+                                                        backgroundColor:
+                                                            getDaysSinceColor(
+                                                                item?.daysSince ??
+                                                                    null
+                                                            ),
                                                         border: `1px solid ${colors.primaryBlack}`,
                                                         flexShrink: 0,
                                                     }}
@@ -220,9 +254,11 @@ export default function HealthPage() {
                                                             fontSize: 12,
                                                             fontWeight: 600,
                                                             lineHeight: 1.2,
-                                                            whiteSpace: 'nowrap',
+                                                            whiteSpace:
+                                                                'nowrap',
                                                             overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
+                                                            textOverflow:
+                                                                'ellipsis',
                                                         }}>
                                                         {groupName}
                                                     </Typography>
@@ -232,7 +268,10 @@ export default function HealthPage() {
                                                             color: colors.primaryBrown,
                                                             lineHeight: 1.2,
                                                         }}>
-                                                        {formatDaysSince(item?.daysSince ?? null)}
+                                                        {formatDaysSince(
+                                                            item?.daysSince ??
+                                                                null
+                                                        )}
                                                     </Typography>
                                                 </Box>
                                             </Box>
@@ -278,7 +317,8 @@ export default function HealthPage() {
                                         boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
                                         transform: 'translate(1px, 1px)',
                                     },
-                                    'transition': 'box-shadow 0.1s, transform 0.1s',
+                                    'transition':
+                                        'box-shadow 0.1s, transform 0.1s',
                                 }}>
                                 <Box
                                     sx={{
@@ -293,9 +333,15 @@ export default function HealthPage() {
                                         boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                         flexShrink: 0,
                                     }}>
-                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                                    <Icon
+                                        size={22}
+                                        stroke={1.8}
+                                        color={colors.primaryBlack}
+                                        fill={colors.primaryWhite}
+                                    />
                                 </Box>
-                                <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
+                                <Typography
+                                    sx={{ fontSize: 16, fontWeight: 600 }}>
                                     {tool.name}
                                 </Typography>
                             </Box>

@@ -21,7 +21,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconBolt, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconBolt, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -196,9 +196,6 @@ export default function SupplementsPage() {
     )
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(
-        null
-    )
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -329,10 +326,7 @@ export default function SupplementsPage() {
                 }}>
                 {/* Lightning circle icon — opens preset drawer */}
                 <Box
-                    onClick={() => {
-                        setEditingPreset(null)
-                        setPresetDrawerOpen(true)
-                    }}
+                    onClick={() => setPresetDrawerOpen(true)}
                     sx={{
                         'width': 30,
                         'height': 30,
@@ -475,22 +469,10 @@ export default function SupplementsPage() {
             {/* Supplement preset drawer */}
             <SupplementPresetDrawer
                 open={presetDrawerOpen}
-                onClose={() => {
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
+                onClose={() => setPresetDrawerOpen(false)}
                 supplements={supplements}
-                editingPreset={editingPreset}
                 existingPresets={presets}
-                onSaved={() => {
-                    fetchData()
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
-                onEdit={(p) => {
-                    setEditingPreset(p)
-                    setPresetDrawerOpen(true)
-                }}
+                onSaved={fetchData}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
                         method: 'DELETE',
@@ -1169,25 +1151,25 @@ type SupplementPresetDrawerProps = {
     open: boolean
     onClose: () => void
     supplements: Supplement[]
-    editingPreset: SupplementPreset | null
     existingPresets: SupplementPreset[]
     onSaved: () => void
-    onEdit: (preset: SupplementPreset) => void
     onDelete: (id: number) => Promise<void>
     onReorder: (from: number, to: number) => void
 }
+
+type SupPresetView = 'list' | 'form'
 
 function SupplementPresetDrawer({
     open,
     onClose,
     supplements,
-    editingPreset,
     existingPresets,
     onSaved,
-    onEdit,
     onDelete,
     onReorder,
 }: SupplementPresetDrawerProps) {
+    const [view, setView] = useState<SupPresetView>('list')
+    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(null)
     const [name, setName] = useState('')
     const [selectedSupIds, setSelectedSupIds] = useState<Set<number>>(new Set())
     const [saving, setSaving] = useState(false)
@@ -1195,20 +1177,36 @@ function SupplementPresetDrawer({
 
     const activeSupplements = supplements.filter((s) => s.isActive)
 
+    const resetForm = useCallback(() => {
+        setName('')
+        setSelectedSupIds(new Set())
+        setError('')
+    }, [])
+
+    const openForm = useCallback((preset: SupplementPreset | null) => {
+        setEditingPreset(preset)
+        if (preset) {
+            setName(preset.name)
+            setSelectedSupIds(new Set(preset.supplements.map((s) => s.id)))
+        } else {
+            resetForm()
+        }
+        setView('form')
+    }, [resetForm])
+
+    const goBack = useCallback(() => {
+        setView('list')
+        setEditingPreset(null)
+        resetForm()
+    }, [resetForm])
+
     useEffect(() => {
         if (open) {
-            if (editingPreset) {
-                setName(editingPreset.name)
-                setSelectedSupIds(
-                    new Set(editingPreset.supplements.map((s) => s.id))
-                )
-            } else {
-                setName('')
-                setSelectedSupIds(new Set())
-            }
-            setError('')
+            setView('list')
+            setEditingPreset(null)
+            resetForm()
         }
-    }, [open, editingPreset])
+    }, [open, resetForm])
 
     const toggleSupplement = useCallback((id: number) => {
         setSelectedSupIds((prev) => {
@@ -1241,6 +1239,7 @@ function SupplementPresetDrawer({
             })
             if (res.ok) {
                 onSaved()
+                goBack()
             } else {
                 const data = await res.json()
                 setError(data.error || 'Failed to save')
@@ -1250,10 +1249,10 @@ function SupplementPresetDrawer({
         } finally {
             setSaving(false)
         }
-    }, [name, selectedSupIds, editingPreset, onSaved])
+    }, [name, selectedSupIds, editingPreset, onSaved, goBack])
 
     return (
-        <FormDrawer open={open} onClose={onClose}>
+        <FormDrawer open={open} onClose={view === 'form' ? goBack : onClose}>
             <Box
                 sx={{
                     display: 'flex',
@@ -1264,17 +1263,36 @@ function SupplementPresetDrawer({
                 {/* Header */}
                 <Box
                     sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
                         px: 2.5,
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
+                    {view === 'form' && (
+                        <Box
+                            onClick={goBack}
+                            sx={{
+                                'cursor': 'pointer',
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                '&:active': { opacity: 0.5 },
+                            }}>
+                            <IconArrowLeft size={20} stroke={2} color={colors.primaryBlack} />
+                        </Box>
+                    )}
                     <Typography
                         sx={{
                             fontSize: 16,
                             fontWeight: 700,
                             fontFamily: 'var(--font-serif)',
                         }}>
-                        {editingPreset ? 'Edit Group' : 'Supplement Groups'}
+                        {view === 'list'
+                            ? 'Supplement Groups'
+                            : editingPreset
+                              ? 'Edit Group'
+                              : 'New Group'}
                     </Typography>
                 </Box>
 
@@ -1289,215 +1307,195 @@ function SupplementPresetDrawer({
                         flexDirection: 'column',
                         gap: 2,
                     }}>
-                    {/* Existing presets list */}
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <VerticalSortableList items={existingPresets} onReorder={onReorder}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1,
-                                }}>
-                                {existingPresets.map((p) => (
-                                    <SortablePresetRow key={p.id} id={p.id}>
-                                        <Box sx={{ ...cardSx, p: 1.5 }}>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'flex-start',
-                                                }}>
-                                                <Box sx={{ flex: 1 }}>
-                                                    <Typography
+                    {view === 'list' ? (
+                        <>
+                            {existingPresets.length > 0 ? (
+                                <VerticalSortableList items={existingPresets} onReorder={onReorder}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 1,
+                                        }}>
+                                        {existingPresets.map((p) => (
+                                            <SortablePresetRow key={p.id} id={p.id}>
+                                                <Box sx={{ ...cardSx, p: 1.5 }}>
+                                                    <Box
                                                         sx={{
-                                                            fontSize: 14,
-                                                            fontWeight: 600,
-                                                            mb: 0.5,
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'flex-start',
                                                         }}>
-                                                        {p.name}
-                                                    </Typography>
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 12,
-                                                            color: colors.primaryBrown,
-                                                        }}>
-                                                        {p.supplements
-                                                            .map((s) => s.name)
-                                                            .join(', ')}
-                                                    </Typography>
+                                                        <Box
+                                                            sx={{ flex: 1, cursor: 'pointer' }}
+                                                            onClick={() => openForm(p)}>
+                                                            <Typography
+                                                                sx={{
+                                                                    fontSize: 14,
+                                                                    fontWeight: 600,
+                                                                    mb: 0.5,
+                                                                }}>
+                                                                {p.name}
+                                                            </Typography>
+                                                            <Typography
+                                                                sx={{
+                                                                    fontSize: 12,
+                                                                    color: colors.primaryBrown,
+                                                                }}>
+                                                                {p.supplements
+                                                                    .map((s) => s.name)
+                                                                    .join(', ')}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                gap: 0.5,
+                                                                flexShrink: 0,
+                                                            }}>
+                                                            <Box
+                                                                onClick={() => openForm(p)}
+                                                                sx={{
+                                                                    'cursor': 'pointer',
+                                                                    'p': 0.5,
+                                                                    'borderRadius': '4px',
+                                                                    '&:active': {
+                                                                        backgroundColor: `${colors.primaryYellow}40`,
+                                                                    },
+                                                                }}>
+                                                                <IconPencil
+                                                                    size={16}
+                                                                    stroke={2}
+                                                                    color={colors.primaryBrown}
+                                                                />
+                                                            </Box>
+                                                            <Box
+                                                                onClick={() => onDelete(p.id)}
+                                                                sx={{
+                                                                    'cursor': 'pointer',
+                                                                    'p': 0.5,
+                                                                    'borderRadius': '4px',
+                                                                    '&:active': {
+                                                                        backgroundColor: `${colors.primaryRed}20`,
+                                                                    },
+                                                                }}>
+                                                                <IconTrash
+                                                                    size={16}
+                                                                    stroke={2}
+                                                                    color={colors.primaryRed}
+                                                                />
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
                                                 </Box>
+                                            </SortablePresetRow>
+                                        ))}
+                                    </Box>
+                                </VerticalSortableList>
+                            ) : (
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        color: colors.primaryBrown,
+                                        textAlign: 'center',
+                                        py: 2,
+                                    }}>
+                                    No groups yet. Create one to get started.
+                                </Typography>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <Box>
+                                <Typography sx={labelSx}>Name</Typography>
+                                <TextField
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Daily, Workout, Evening..."
+                                    sx={fieldSx}
+                                />
+                            </Box>
+
+                            {/* Supplement selection */}
+                            <Box>
+                                <Typography sx={labelSx}>Supplements</Typography>
+                                {activeSupplements.length === 0 ? (
+                                    <Typography
+                                        sx={{
+                                            fontSize: 13,
+                                            color: colors.primaryBrown,
+                                        }}>
+                                        No active supplements. Add some first.
+                                    </Typography>
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 0.75,
+                                        }}>
+                                        {activeSupplements.map((supp) => {
+                                            const isSelected = selectedSupIds.has(supp.id)
+                                            return (
                                                 <Box
+                                                    key={supp.id}
+                                                    onClick={() => toggleSupplement(supp.id)}
                                                     sx={{
-                                                        display: 'flex',
-                                                        gap: 0.5,
-                                                        flexShrink: 0,
+                                                        'display': 'flex',
+                                                        'alignItems': 'center',
+                                                        'gap': 1,
+                                                        'padding': '8px 12px',
+                                                        ...cardSx,
+                                                        'cursor': 'pointer',
+                                                        'backgroundColor': isSelected
+                                                            ? '#f1f8e9'
+                                                            : colors.primaryWhite,
+                                                        'borderColor': isSelected
+                                                            ? '#4caf50'
+                                                            : colors.primaryBlack,
+                                                        'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                        'transition': 'all 0.15s',
+                                                        '&:active': {
+                                                            boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                            transform: 'translate(1px, 1px)',
+                                                        },
                                                     }}>
-                                                    <Box
-                                                        onClick={() => onEdit(p)}
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        size="small"
                                                         sx={{
-                                                            'cursor': 'pointer',
-                                                            'p': 0.5,
-                                                            'borderRadius': '4px',
-                                                            '&:active': {
-                                                                backgroundColor: `${colors.primaryYellow}40`,
-                                                            },
-                                                        }}>
-                                                        <IconPencil
-                                                            size={16}
-                                                            stroke={2}
-                                                            color={colors.primaryBrown}
-                                                        />
-                                                    </Box>
-                                                    <Box
-                                                        onClick={() => onDelete(p.id)}
-                                                        sx={{
-                                                            'cursor': 'pointer',
-                                                            'p': 0.5,
-                                                            'borderRadius': '4px',
-                                                            '&:active': {
-                                                                backgroundColor: `${colors.primaryRed}20`,
-                                                            },
-                                                        }}>
-                                                        <IconTrash
-                                                            size={16}
-                                                            stroke={2}
-                                                            color={colors.primaryRed}
-                                                        />
+                                                            'padding': 0,
+                                                            'color': colors.primaryBlack,
+                                                            '&.Mui-checked': { color: '#4caf50' },
+                                                        }}
+                                                        tabIndex={-1}
+                                                    />
+                                                    <Box>
+                                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                            {supp.name}
+                                                        </Typography>
+                                                        {supp.dosage && (
+                                                            <Typography
+                                                                sx={{ fontSize: 12, color: colors.primaryBrown }}>
+                                                                {supp.dosage}
+                                                            </Typography>
+                                                        )}
                                                     </Box>
                                                 </Box>
-                                            </Box>
-                                        </Box>
-                                    </SortablePresetRow>
-                                ))}
+                                            )
+                                        })}
+                                    </Box>
+                                )}
                             </Box>
-                        </VerticalSortableList>
-                    )}
 
-                    {!editingPreset && existingPresets.length > 0 && (
-                        <Box
-                            sx={{
-                                borderBottom: `1px solid ${colors.primaryBlack}15`,
-                                my: 0.5,
-                            }}
-                        />
-                    )}
-
-                    {/* Form */}
-                    <Typography
-                        sx={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: colors.primaryBrown,
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                        }}>
-                        {editingPreset ? 'Edit' : 'New Group'}
-                    </Typography>
-
-                    <Box>
-                        <Typography sx={labelSx}>Name</Typography>
-                        <TextField
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            size="small"
-                            fullWidth
-                            placeholder="Daily, Workout, Evening..."
-                            sx={fieldSx}
-                        />
-                    </Box>
-
-                    {/* Supplement selection */}
-                    <Box>
-                        <Typography sx={labelSx}>Supplements</Typography>
-                        {activeSupplements.length === 0 ? (
-                            <Typography
-                                sx={{
-                                    fontSize: 13,
-                                    color: colors.primaryBrown,
-                                }}>
-                                No active supplements. Add some first.
-                            </Typography>
-                        ) : (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
-                                }}>
-                                {activeSupplements.map((supp) => {
-                                    const isSelected = selectedSupIds.has(
-                                        supp.id
-                                    )
-                                    return (
-                                        <Box
-                                            key={supp.id}
-                                            onClick={() =>
-                                                toggleSupplement(supp.id)
-                                            }
-                                            sx={{
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'gap': 1,
-                                                'padding': '8px 12px',
-                                                ...cardSx,
-                                                'cursor': 'pointer',
-                                                'backgroundColor': isSelected
-                                                    ? '#f1f8e9'
-                                                    : colors.primaryWhite,
-                                                'borderColor': isSelected
-                                                    ? '#4caf50'
-                                                    : colors.primaryBlack,
-                                                'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                'transition': 'all 0.15s',
-                                                '&:active': {
-                                                    boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                    transform:
-                                                        'translate(1px, 1px)',
-                                                },
-                                            }}>
-                                            <Checkbox
-                                                checked={isSelected}
-                                                size="small"
-                                                sx={{
-                                                    'padding': 0,
-                                                    'color':
-                                                        colors.primaryBlack,
-                                                    '&.Mui-checked': {
-                                                        color: '#4caf50',
-                                                    },
-                                                }}
-                                                tabIndex={-1}
-                                            />
-                                            <Box>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                    }}>
-                                                    {supp.name}
-                                                </Typography>
-                                                {supp.dosage && (
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 12,
-                                                            color: colors.primaryBrown,
-                                                        }}>
-                                                        {supp.dosage}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    )
-                                })}
-                            </Box>
-                        )}
-                    </Box>
-
-                    {error && (
-                        <Typography
-                            sx={{ fontSize: 13, color: colors.primaryRed }}>
-                            {error}
-                        </Typography>
+                            {error && (
+                                <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
+                                    {error}
+                                </Typography>
+                            )}
+                        </>
                     )}
                 </Box>
 
@@ -1511,26 +1509,37 @@ function SupplementPresetDrawer({
                         borderTop: `1px solid ${colors.primaryBlack}20`,
                         paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
                     }}>
-                    <Button
-                        onClick={onClose}
-                        disabled={saving}
-                        size="large"
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={
-                            !name.trim() || selectedSupIds.size === 0 || saving
-                        }
-                        size="large"
-                        sx={primaryButtonSx}>
-                        {saving
-                            ? 'Saving...'
-                            : editingPreset
-                              ? 'Save'
-                              : 'Create'}
-                    </Button>
+                    {view === 'form' ? (
+                        <>
+                            <Button
+                                onClick={goBack}
+                                disabled={saving}
+                                size="large"
+                                sx={secondaryButtonSx}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={!name.trim() || selectedSupIds.size === 0 || saving}
+                                size="large"
+                                sx={primaryButtonSx}>
+                                {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button onClick={onClose} size="large" sx={secondaryButtonSx}>
+                                Close
+                            </Button>
+                            <Button
+                                onClick={() => openForm(null)}
+                                size="large"
+                                sx={{ ...primaryButtonSx, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <IconPlus size={16} stroke={2} />
+                                New
+                            </Button>
+                        </>
+                    )}
                 </Box>
             </Box>
         </FormDrawer>

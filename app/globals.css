@@ -40,9 +40,10 @@ a,
     touch-action: manipulation;
 }
 
-/* Prevent iOS from auto-zooming into inputs smaller than 16px on focus */
+/* Prevent iOS from auto-zooming into inputs smaller than 16px on focus.
+   !important needed to override MUI inline fontSize styles (e.g. fontSize: 13 in sx props). */
 input,
 textarea,
 select {
-    font-size: max(16px, 1em);
+    font-size: max(16px, 1em) !important;
 }

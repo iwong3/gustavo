@@ -24,7 +24,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconBolt, IconChevronDown, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconBolt, IconChevronDown, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -389,7 +389,6 @@ export default function DietPage() {
     const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [editingPreset, setEditingPreset] = useState<DietPreset | null>(null)
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -522,10 +521,7 @@ export default function DietPage() {
                 }}>
                 {/* Lightning circle icon — opens preset drawer */}
                 <Box
-                    onClick={() => {
-                        setEditingPreset(null)
-                        setPresetDrawerOpen(true)
-                    }}
+                    onClick={() => setPresetDrawerOpen(true)}
                     sx={{
                         'width': 30,
                         'height': 30,
@@ -632,21 +628,10 @@ export default function DietPage() {
             {/* Diet preset drawer */}
             <DietPresetDrawer
                 open={presetDrawerOpen}
-                onClose={() => {
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
+                onClose={() => setPresetDrawerOpen(false)}
                 foods={foods}
-                editingPreset={editingPreset}
                 existingPresets={presets}
-                onSaved={() => {
-                    fetchData()
-                    setPresetDrawerOpen(false)
-                    setEditingPreset(null)
-                }}
-                onEdit={(p) => {
-                    setEditingPreset(p)
-                }}
+                onSaved={fetchData}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
                         method: 'DELETE',
@@ -1381,68 +1366,72 @@ function DietDrawer({
 
 // ── Diet Preset Drawer ──────────────────────────────────────────────────────
 
-type PresetDrawerMode = 'meals' | 'new'
-
 type DietPresetDrawerProps = {
     open: boolean
     onClose: () => void
     foods: Food[]
-    editingPreset: DietPreset | null
     existingPresets: DietPreset[]
     onSaved: () => void
-    onEdit: (preset: DietPreset) => void
     onDelete: (id: number) => Promise<void>
     onReorder: (from: number, to: number) => void
     onApplyPreset: (presetId: number) => Promise<void>
 }
 
+type DietPresetView = 'list' | 'form'
+
 function DietPresetDrawer({
     open,
     onClose,
     foods,
-    editingPreset,
     existingPresets,
     onSaved,
-    onEdit,
     onDelete,
     onReorder,
     onApplyPreset,
 }: DietPresetDrawerProps) {
-    const [mode, setMode] = useState<PresetDrawerMode>('meals')
+    const [view, setView] = useState<DietPresetView>('list')
+    const [editingPreset, setEditingPreset] = useState<DietPreset | null>(null)
     const [name, setName] = useState('')
     const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
 
     const activeFoods = foods.filter((f) => f.isActive)
-    const prevOpenRef = useRef(false)
 
-    const prevEditingRef = useRef<DietPreset | null>(null)
+    const resetForm = useCallback(() => {
+        setName('')
+        setQuantities(new Map())
+        setError('')
+    }, [])
 
-    useEffect(() => {
-        const justOpened = open && !prevOpenRef.current
-        const editChanged = open && editingPreset !== prevEditingRef.current && editingPreset !== null
-        prevOpenRef.current = open
-        prevEditingRef.current = editingPreset
-
-        if (justOpened && !editingPreset) {
-            setMode('meals')
-            setName('')
-            setQuantities(new Map())
-            setError('')
-        }
-
-        if (justOpened && editingPreset || editChanged) {
-            setMode('new')
-            setName(editingPreset!.name)
+    const openForm = useCallback((preset: DietPreset | null) => {
+        setEditingPreset(preset)
+        if (preset) {
+            setName(preset.name)
             const qMap = new Map<number, number>()
-            for (const item of editingPreset!.items) {
+            for (const item of preset.items) {
                 qMap.set(item.foodId, item.quantity)
             }
             setQuantities(qMap)
-            setError('')
+        } else {
+            resetForm()
         }
-    }, [open, editingPreset])
+        setView('form')
+    }, [resetForm])
+
+    const goBack = useCallback(() => {
+        setView('list')
+        setEditingPreset(null)
+        resetForm()
+    }, [resetForm])
+
+    useEffect(() => {
+        if (open) {
+            setView('list')
+            setEditingPreset(null)
+            resetForm()
+        }
+    }, [open, resetForm])
 
     const toggleFood = useCallback((foodId: number) => {
         setQuantities((prev) => {
@@ -1495,6 +1484,7 @@ function DietPresetDrawer({
             })
             if (res.ok) {
                 onSaved()
+                goBack()
             } else {
                 const data = await res.json()
                 setError(data.error || 'Failed to save')
@@ -1504,13 +1494,10 @@ function DietPresetDrawer({
         } finally {
             setSaving(false)
         }
-    }, [name, quantities, editingPreset, onSaved])
-
-    const isEditing = editingPreset !== null
-    const showForm = mode === 'new' || isEditing
+    }, [name, quantities, editingPreset, onSaved, goBack])
 
     return (
-        <FormDrawer open={open} onClose={onClose}>
+        <FormDrawer open={open} onClose={view === 'form' ? goBack : onClose}>
             <Box
                 sx={{
                     display: 'flex',
@@ -1521,26 +1508,37 @@ function DietPresetDrawer({
                 {/* Header */}
                 <Box
                     sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
                         px: 2.5,
                         py: 2,
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
-                        {isEditing ? 'Edit Meal' : 'Meals'}
-                    </Typography>
-
-                    {!isEditing && (
-                        <SlidingToggle
-                            value={mode}
-                            options={[
-                                { value: 'meals', label: 'Meals' },
-                                { value: 'new', label: 'New' },
-                            ]}
-                            onChange={(v) => setMode(v as PresetDrawerMode)}
-                            fontSize={13}
-                            borderWidth={1}
-                        />
+                    {view === 'form' && (
+                        <Box
+                            onClick={goBack}
+                            sx={{
+                                'cursor': 'pointer',
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                '&:active': { opacity: 0.5 },
+                            }}>
+                            <IconArrowLeft size={20} stroke={2} color={colors.primaryBlack} />
+                        </Box>
                     )}
+                    <Typography
+                        sx={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-serif)',
+                        }}>
+                        {view === 'list'
+                            ? 'Meals'
+                            : editingPreset
+                              ? 'Edit Meal'
+                              : 'New Meal'}
+                    </Typography>
                 </Box>
 
                 {/* Body */}
@@ -1554,79 +1552,78 @@ function DietPresetDrawer({
                         flexDirection: 'column',
                         gap: 2,
                     }}>
-                    {!showForm ? (
-                        /* Meals list — click to apply, swipe for edit/delete */
-                        existingPresets.length === 0 ? (
-                            <Box sx={{ textAlign: 'center', py: 3 }}>
-                                <Typography sx={{ fontSize: 14, color: colors.primaryBrown, mb: 1 }}>
-                                    No meals yet.
-                                </Typography>
-                                <Button
-                                    onClick={() => setMode('new')}
-                                    size="small"
-                                    sx={primaryButtonSx}>
-                                    Create Meal
-                                </Button>
-                            </Box>
-                        ) : (
-                            <VerticalSortableList items={existingPresets} onReorder={onReorder}>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                                    {existingPresets.map((p) => (
-                                        <SortablePresetRow key={p.id} id={p.id}>
-                                            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                                <SwipeableRow
-                                                    canEdit
-                                                    canDelete
-                                                    onEdit={() => onEdit(p)}
-                                                    onDelete={() => onDelete(p.id)}
-                                                    backgroundColor={colors.primaryWhite}>
-                                                    <Box
-                                                        onClick={async () => {
-                                                            await onApplyPreset(p.id)
-                                                            onClose()
-                                                        }}
-                                                        sx={{
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'gap': 1.5,
-                                                            'px': 1.5,
-                                                            'py': 1.25,
-                                                            'cursor': 'pointer',
-                                                            '&:active': { backgroundColor: colors.secondaryYellow },
-                                                            'transition': 'background-color 150ms ease',
-                                                        }}>
-                                                        <SortableDragHandle id={p.id} />
-                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                            <Typography sx={{
-                                                                fontSize: 14,
-                                                                fontWeight: 700,
-                                                                lineHeight: 1.3,
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                whiteSpace: 'nowrap',
+                    {view === 'list' ? (
+                        <>
+                            {existingPresets.length > 0 ? (
+                                <VerticalSortableList items={existingPresets} onReorder={onReorder}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                        {existingPresets.map((p) => (
+                                            <SortablePresetRow key={p.id} id={p.id}>
+                                                <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                                    <SwipeableRow
+                                                        canEdit
+                                                        canDelete
+                                                        onEdit={() => openForm(p)}
+                                                        onDelete={() => onDelete(p.id)}
+                                                        backgroundColor={colors.primaryWhite}>
+                                                        <Box
+                                                            onClick={async () => {
+                                                                await onApplyPreset(p.id)
+                                                                onClose()
+                                                            }}
+                                                            sx={{
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'gap': 1.5,
+                                                                'px': 1.5,
+                                                                'py': 1.25,
+                                                                'cursor': 'pointer',
+                                                                '&:active': { backgroundColor: colors.secondaryYellow },
+                                                                'transition': 'background-color 150ms ease',
                                                             }}>
-                                                                {p.name}
-                                                            </Typography>
-                                                            <Typography sx={{
-                                                                fontSize: 12,
-                                                                color: colors.primaryBrown,
-                                                                lineHeight: 1.3,
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                whiteSpace: 'nowrap',
-                                                                mt: 0.25,
-                                                            }}>
-                                                                {p.items.map((it) => it.quantity > 1 ? `${it.foodName} \u00d7${it.quantity}` : it.foodName).join(', ')}
-                                                            </Typography>
+                                                            <SortableDragHandle id={p.id} />
+                                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                                <Typography sx={{
+                                                                    fontSize: 14,
+                                                                    fontWeight: 700,
+                                                                    lineHeight: 1.3,
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap',
+                                                                }}>
+                                                                    {p.name}
+                                                                </Typography>
+                                                                <Typography sx={{
+                                                                    fontSize: 12,
+                                                                    color: colors.primaryBrown,
+                                                                    lineHeight: 1.3,
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap',
+                                                                    mt: 0.25,
+                                                                }}>
+                                                                    {p.items.map((it) => it.quantity > 1 ? `${it.foodName} \u00d7${it.quantity}` : it.foodName).join(', ')}
+                                                                </Typography>
+                                                            </Box>
                                                         </Box>
-                                                    </Box>
-                                                </SwipeableRow>
-                                            </Box>
-                                        </SortablePresetRow>
-                                    ))}
-                                </Box>
-                            </VerticalSortableList>
-                        )
+                                                    </SwipeableRow>
+                                                </Box>
+                                            </SortablePresetRow>
+                                        ))}
+                                    </Box>
+                                </VerticalSortableList>
+                            ) : (
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        color: colors.primaryBrown,
+                                        textAlign: 'center',
+                                        py: 2,
+                                    }}>
+                                    No meals yet. Create one to get started.
+                                </Typography>
+                            )}
+                        </>
                     ) : (
                         /* New / Edit form */
                         <>
@@ -1779,39 +1776,48 @@ function DietPresetDrawer({
                     )}
                 </Box>
 
-                {/* Footer — only show for form mode */}
-                {showForm && (
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            px: 2.5,
-                            py: 2,
-                            borderTop: `1px solid ${colors.primaryBlack}20`,
-                            paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                        }}>
-                        <Button
-                            onClick={isEditing ? onClose : () => setMode('meals')}
-                            disabled={saving}
-                            size="large"
-                            sx={secondaryButtonSx}>
-                            {isEditing ? 'Cancel' : 'Back'}
-                        </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={
-                                !name.trim() || quantities.size === 0 || saving
-                            }
-                            size="large"
-                            sx={primaryButtonSx}>
-                            {saving
-                                ? 'Saving...'
-                                : isEditing
-                                  ? 'Save'
-                                  : 'Create'}
-                        </Button>
-                    </Box>
-                )}
+                {/* Footer */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    {view === 'form' ? (
+                        <>
+                            <Button
+                                onClick={goBack}
+                                disabled={saving}
+                                size="large"
+                                sx={secondaryButtonSx}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={!name.trim() || quantities.size === 0 || saving}
+                                size="large"
+                                sx={primaryButtonSx}>
+                                {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button onClick={onClose} size="large" sx={secondaryButtonSx}>
+                                Close
+                            </Button>
+                            <Button
+                                onClick={() => openForm(null)}
+                                size="large"
+                                sx={{ ...primaryButtonSx, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <IconPlus size={16} stroke={2} />
+                                New
+                            </Button>
+                        </>
+                    )}
+                </Box>
             </Box>
         </FormDrawer>
     )
