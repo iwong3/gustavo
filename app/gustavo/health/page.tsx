@@ -85,7 +85,9 @@ export default function HealthPage() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/health/workouts/days-since')
+        const now = new Date()
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        fetch(`/api/health/workouts/days-since?today=${today}`)
             .then((res) => res.json())
             .then(setDaysSince)
             .catch((err) => console.error('Failed to fetch days since:', err))

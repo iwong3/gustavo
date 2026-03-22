@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import type { DaysSince } from '@/lib/health-types'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Use client's local date to avoid UTC timezone mismatch
+    const today = request.nextUrl.searchParams.get('today')
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    const todayParam = today && dateRegex.test(today) ? today : new Date().toISOString().split('T')[0]
 
     // For each group-level muscle (those with no parent entries), find the most
     // recent workout containing that group OR any of its children (targets).
@@ -41,13 +46,13 @@ export async function GET() {
                lpg.last_date,
                CASE
                    WHEN lpg.last_date IS NOT NULL
-                   THEN CURRENT_DATE - lpg.last_date
+                   THEN $2::date - lpg.last_date
                    ELSE NULL
                END AS days_since
         FROM group_muscles gm
         LEFT JOIN latest_per_group lpg ON lpg.group_id = gm.id
         ORDER BY days_since DESC NULLS FIRST, gm.name`,
-        [authUser.userId]
+        [authUser.userId, todayParam]
     )
 
     const daysSince: DaysSince[] = rows.map((r) => ({
