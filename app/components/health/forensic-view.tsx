@@ -1,213 +1,14 @@
 'use client'
 
 import { cardSx, colors } from '@/lib/colors'
-import type { SymptomForensicView, DaySnapshot } from '@/lib/health-types'
+import type { DaySnapshot, SymptomForensicView } from '@/lib/health-types'
 import { Box, Chip, CircularProgress, Typography } from '@mui/material'
 import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
-import FormDrawer from 'components/form-drawer'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
-type ForensicViewProps = {
-    open: boolean
-    onClose: () => void
-    symptomLogId: number | null
-}
+// ── Exported sub-components for inline forensic view ─────────────────────────
 
-export default function ForensicView({ open, onClose, symptomLogId }: ForensicViewProps) {
-    const [data, setData] = useState<SymptomForensicView | null>(null)
-    const [loading, setLoading] = useState(false)
-    const [expandedOccurrences, setExpandedOccurrences] = useState<Set<string>>(new Set())
-
-    useEffect(() => {
-        if (open && symptomLogId) {
-            setLoading(true)
-            setData(null)
-            setExpandedOccurrences(new Set())
-            fetch(`/api/health/symptom-logs/${symptomLogId}/forensic`)
-                .then((r) => r.json())
-                .then(setData)
-                .catch((err) => console.error('Failed to load forensic data:', err))
-                .finally(() => setLoading(false))
-        }
-    }, [open, symptomLogId])
-
-    const toggleOccurrence = useCallback((date: string) => {
-        setExpandedOccurrences((prev) => {
-            const next = new Set(prev)
-            if (next.has(date)) next.delete(date)
-            else next.add(date)
-            return next
-        })
-    }, [])
-
-    return (
-        <FormDrawer open={open} onClose={onClose}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                    overflow: 'hidden',
-                }}>
-                {/* Header */}
-                <Box
-                    sx={{
-                        px: 2.5,
-                        py: 2,
-                        borderBottom: `1px solid ${colors.primaryBlack}20`,
-                    }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
-                        {data ? `${data.symptomName} — ${formatDateShort(data.currentDate)}` : 'Investigating...'}
-                    </Typography>
-                    {data && (
-                        <Typography sx={{ fontSize: 12, color: colors.primaryBrown, mt: 0.5 }}>
-                            Showing diet, supplements & workouts for {data.lookback.length} days
-                        </Typography>
-                    )}
-                </Box>
-
-                {/* Body */}
-                <Box
-                    sx={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        px: 2.5,
-                        py: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2.5,
-                    }}>
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
-                        </Box>
-                    ) : data ? (
-                        <>
-                            {/* Common factors banner */}
-                            {data.commonFoods.length > 0 && (
-                                <Box
-                                    sx={{
-                                        p: 1.5,
-                                        borderRadius: '4px',
-                                        backgroundColor: '#fff3e0',
-                                        border: '1.5px solid #ff9800',
-                                        boxShadow: '2px 2px 0px #ff9800',
-                                    }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.75, color: '#e65100' }}>
-                                        Common Factors
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {data.commonFoods.map((cf) => (
-                                            <Chip
-                                                key={cf.foodName}
-                                                label={`${cf.foodName} (${cf.occurrenceCount}/${cf.totalOccurrences})`}
-                                                size="small"
-                                                sx={{
-                                                    'height': 24,
-                                                    'fontSize': 12,
-                                                    'fontWeight': 600,
-                                                    'backgroundColor': '#ffe0b2',
-                                                    'border': '1px solid #ff9800',
-                                                    'borderRadius': '3px',
-                                                    '& .MuiChip-label': { px: 1 },
-                                                }}
-                                            />
-                                        ))}
-                                    </Box>
-                                </Box>
-                            )}
-
-                            {/* Current lookback */}
-                            <Box>
-                                <SectionHeader>Lookback</SectionHeader>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    {data.lookback.map((snap) => (
-                                        <DaySnapshotCard key={snap.date} snapshot={snap} isSymptomDay={snap.date === data.currentDate} />
-                                    ))}
-                                </Box>
-                            </Box>
-
-                            {/* Past occurrences */}
-                            {data.pastOccurrences.length > 0 && (
-                                <Box>
-                                    <SectionHeader>
-                                        Past Occurrences ({data.pastOccurrences.length})
-                                    </SectionHeader>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                        {data.pastOccurrences.map((occ) => {
-                                            const isExpanded = expandedOccurrences.has(occ.date)
-                                            return (
-                                                <Box key={occ.date}>
-                                                    <Box
-                                                        onClick={() => toggleOccurrence(occ.date)}
-                                                        sx={{
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'gap': 1,
-                                                            'p': 1.5,
-                                                            ...cardSx,
-                                                            'cursor': 'pointer',
-                                                            '&:active': {
-                                                                backgroundColor: colors.secondaryYellow,
-                                                            },
-                                                        }}>
-                                                        {isExpanded ? (
-                                                            <IconChevronDown size={16} stroke={2} />
-                                                        ) : (
-                                                            <IconChevronRight size={16} stroke={2} />
-                                                        )}
-                                                        <Box sx={{ flex: 1 }}>
-                                                            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
-                                                                {formatDateShort(occ.date)}
-                                                            </Typography>
-                                                            {occ.notes && (
-                                                                <Typography
-                                                                    sx={{
-                                                                        fontSize: 12,
-                                                                        color: colors.primaryBrown,
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis',
-                                                                        whiteSpace: 'nowrap',
-                                                                    }}>
-                                                                    {occ.notes}
-                                                                </Typography>
-                                                            )}
-                                                        </Box>
-                                                    </Box>
-                                                    {isExpanded && (
-                                                        <Box sx={{ pl: 2, mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                            {occ.lookback.map((snap) => (
-                                                                <DaySnapshotCard
-                                                                    key={snap.date}
-                                                                    snapshot={snap}
-                                                                    isSymptomDay={snap.date === occ.date}
-                                                                />
-                                                            ))}
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            )
-                                        })}
-                                    </Box>
-                                </Box>
-                            )}
-
-                            {data.pastOccurrences.length === 0 && (
-                                <Typography sx={{ fontSize: 13, color: colors.primaryBrown, textAlign: 'center', py: 2 }}>
-                                    This is the first occurrence of this symptom.
-                                </Typography>
-                            )}
-                        </>
-                    ) : null}
-                </Box>
-            </Box>
-        </FormDrawer>
-    )
-}
-
-// ── Sub-components ──────────────────────────────────────────────────────────
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
+export function SectionHeader({ children }: { children: React.ReactNode }) {
     return (
         <Typography
             sx={{
@@ -223,7 +24,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
     )
 }
 
-function DaySnapshotCard({ snapshot, isSymptomDay }: { snapshot: DaySnapshot; isSymptomDay: boolean }) {
+export function DaySnapshotCard({ snapshot, isSymptomDay }: { snapshot: DaySnapshot; isSymptomDay: boolean }) {
     const hasFoods = snapshot.foods.length > 0 || snapshot.mealGroups.length > 0
     const hasSupplements = snapshot.supplements.length > 0
     const hasWorkout = snapshot.workout !== null
@@ -325,6 +126,139 @@ function DaySnapshotCard({ snapshot, isSymptomDay }: { snapshot: DaySnapshot; is
                         </Box>
                     )}
                 </Box>
+            )}
+        </Box>
+    )
+}
+
+/** Inline forensic content — renders common factors, lookback, and past occurrences */
+export function InlineForensicContent({ data }: { data: SymptomForensicView }) {
+    const [expandedOccurrences, setExpandedOccurrences] = useState<Set<string>>(new Set())
+
+    const toggleOccurrence = useCallback((date: string) => {
+        setExpandedOccurrences((prev) => {
+            const next = new Set(prev)
+            if (next.has(date)) next.delete(date)
+            else next.add(date)
+            return next
+        })
+    }, [])
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Common factors banner */}
+            {data.commonFoods.length > 0 && (
+                <Box
+                    sx={{
+                        p: 1.5,
+                        borderRadius: '4px',
+                        backgroundColor: '#fff3e0',
+                        border: '1.5px solid #ff9800',
+                        boxShadow: '2px 2px 0px #ff9800',
+                    }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.75, color: '#e65100' }}>
+                        Common Factors
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {data.commonFoods.map((cf) => (
+                            <Chip
+                                key={cf.foodName}
+                                label={`${cf.foodName} (${cf.occurrenceCount}/${cf.totalOccurrences})`}
+                                size="small"
+                                sx={{
+                                    'height': 24,
+                                    'fontSize': 12,
+                                    'fontWeight': 600,
+                                    'backgroundColor': '#ffe0b2',
+                                    'border': '1px solid #ff9800',
+                                    'borderRadius': '3px',
+                                    '& .MuiChip-label': { px: 1 },
+                                }}
+                            />
+                        ))}
+                    </Box>
+                </Box>
+            )}
+
+            {/* Current lookback */}
+            <Box>
+                <SectionHeader>Lookback</SectionHeader>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {data.lookback.map((snap) => (
+                        <DaySnapshotCard key={snap.date} snapshot={snap} isSymptomDay={snap.date === data.currentDate} />
+                    ))}
+                </Box>
+            </Box>
+
+            {/* Past occurrences */}
+            {data.pastOccurrences.length > 0 && (
+                <Box>
+                    <SectionHeader>
+                        Past Occurrences ({data.pastOccurrences.length})
+                    </SectionHeader>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {data.pastOccurrences.map((occ) => {
+                            const isExpanded = expandedOccurrences.has(occ.date)
+                            return (
+                                <Box key={occ.date}>
+                                    <Box
+                                        onClick={() => toggleOccurrence(occ.date)}
+                                        sx={{
+                                            'display': 'flex',
+                                            'alignItems': 'center',
+                                            'gap': 1,
+                                            'p': 1.5,
+                                            ...cardSx,
+                                            'cursor': 'pointer',
+                                            '&:active': {
+                                                backgroundColor: colors.secondaryYellow,
+                                            },
+                                        }}>
+                                        {isExpanded ? (
+                                            <IconChevronDown size={16} stroke={2} />
+                                        ) : (
+                                            <IconChevronRight size={16} stroke={2} />
+                                        )}
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                                                {formatDateShort(occ.date)}
+                                            </Typography>
+                                            {occ.notes && (
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 12,
+                                                        color: colors.primaryBrown,
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                    }}>
+                                                    {occ.notes}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                    {isExpanded && (
+                                        <Box sx={{ pl: 2, mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            {occ.lookback.map((snap) => (
+                                                <DaySnapshotCard
+                                                    key={snap.date}
+                                                    snapshot={snap}
+                                                    isSymptomDay={snap.date === occ.date}
+                                                />
+                                            ))}
+                                        </Box>
+                                    )}
+                                </Box>
+                            )
+                        })}
+                    </Box>
+                </Box>
+            )}
+
+            {data.pastOccurrences.length === 0 && (
+                <Typography sx={{ fontSize: 13, color: colors.primaryBrown, textAlign: 'center', py: 2 }}>
+                    This is the first occurrence of this symptom.
+                </Typography>
             )}
         </Box>
     )

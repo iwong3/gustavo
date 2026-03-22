@@ -7,7 +7,7 @@ import {
     primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
-import type { Symptom, SymptomLog } from '@/lib/health-types'
+import type { Symptom, SymptomForensicView, SymptomLog } from '@/lib/health-types'
 import {
     Box,
     Button,
@@ -17,9 +17,9 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPencil, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { InlineForensicContent } from 'components/health/forensic-view'
 import FormDrawer from 'components/form-drawer'
-import ForensicView from 'components/health/forensic-view'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
@@ -86,11 +86,13 @@ const ACCENT_BORDER = '#ff9800'
 function SymptomDayCard({
     group,
     allLogs,
+    onView,
     onEdit,
     onDelete,
 }: {
     group: DayGroup
     allLogs: SymptomLog[]
+    onView: () => void
     onEdit: () => void
     onDelete: () => void
 }) {
@@ -145,7 +147,7 @@ function SymptomDayCard({
                     onDelete={onDelete}
                     backgroundColor={colors.primaryWhite}>
                     <Box
-                        onClick={onEdit}
+                        onClick={onView}
                         sx={{
                             'p': 1.5,
                             'cursor': 'pointer',
@@ -233,12 +235,14 @@ export default function SymptomsPage() {
     const [symptoms, setSymptoms] = useState<Symptom[]>([])
     const [allLogs, setAllLogs] = useState<SymptomLog[]>([])
     const [loading, setLoading] = useState(true)
+
+    // Details drawer (read-only + forensic)
+    const [detailsOpen, setDetailsOpen] = useState(false)
+    const [detailsDate, setDetailsDate] = useState<string | null>(null)
+
+    // Log/manage drawer
     const [drawerOpen, setDrawerOpen] = useState(false)
-    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(
-        null
-    )
-    const [forensicOpen, setForensicOpen] = useState(false)
-    const [forensicLogId, setForensicLogId] = useState<number | null>(null)
+    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(null)
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -257,14 +261,33 @@ export default function SymptomsPage() {
         fetchData()
     }, [fetchData])
 
+    // FAB → new log
     const openAdd = useCallback(() => {
         setDrawerInitialDate(null)
         setDrawerOpen(true)
     }, [])
 
+    // Tap card → view details
+    const openDetails = useCallback((date: string) => {
+        setDetailsDate(date)
+        setDetailsOpen(true)
+    }, [])
+
+    // Swipe edit → edit log
     const openEditDate = useCallback((date: string) => {
         setDrawerInitialDate(date)
         setDrawerOpen(true)
+    }, [])
+
+    // "Edit" from details drawer → close details, open log drawer
+    const switchToEdit = useCallback((date: string) => {
+        setDetailsOpen(false)
+        setDetailsDate(null)
+        // Small delay to let details drawer close visually
+        setTimeout(() => {
+            setDrawerInitialDate(date)
+            setDrawerOpen(true)
+        }, 200)
     }, [])
 
     const handleDeleteDate = useCallback(
@@ -374,7 +397,6 @@ export default function SymptomsPage() {
                                                 border: `1.5px solid ${colors.primaryBlack}`,
                                                 boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
                                                 zIndex: 1,
-                                                mt: '5px',
                                             }}>
                                             <Typography
                                                 sx={{
@@ -392,6 +414,7 @@ export default function SymptomsPage() {
                                         <SymptomDayCard
                                             group={group}
                                             allLogs={allLogs}
+                                            onView={() => openDetails(group.date)}
                                             onEdit={() => openEditDate(group.date)}
                                             onDelete={() => handleDeleteDate(group.date)}
                                         />
@@ -407,7 +430,19 @@ export default function SymptomsPage() {
                 </Box>
             )}
 
-            {/* Unified drawer — Log mode / Manage mode */}
+            {/* Details drawer (read-only + forensic) */}
+            <SymptomDetailsDrawer
+                open={detailsOpen}
+                onClose={() => {
+                    setDetailsOpen(false)
+                    setDetailsDate(null)
+                }}
+                date={detailsDate}
+                allLogs={allLogs}
+                onEdit={switchToEdit}
+            />
+
+            {/* Log / Manage drawer */}
             <SymptomDrawer
                 open={drawerOpen}
                 onClose={() => {
@@ -418,27 +453,174 @@ export default function SymptomsPage() {
                 allLogs={allLogs}
                 initialDate={drawerInitialDate}
                 onDataChanged={fetchData}
-                onOpenForensic={(logId) => {
-                    setDrawerOpen(false)
-                    setForensicLogId(logId)
-                    setForensicOpen(true)
-                }}
-            />
-
-            {/* Forensic view drawer */}
-            <ForensicView
-                open={forensicOpen}
-                onClose={() => {
-                    setForensicOpen(false)
-                    setForensicLogId(null)
-                }}
-                symptomLogId={forensicLogId}
             />
         </Box>
     )
 }
 
-// ── Unified Symptom Drawer ────────────────────────────────────────────────
+// ── Symptom Details Drawer (read-only + forensic) ───────────────────────────
+
+function SymptomDetailsDrawer({
+    open,
+    onClose,
+    date,
+    allLogs,
+    onEdit,
+}: {
+    open: boolean
+    onClose: () => void
+    date: string | null
+    allLogs: SymptomLog[]
+    onEdit: (date: string) => void
+}) {
+    const [forensicData, setForensicData] = useState<SymptomForensicView | null>(null)
+    const [forensicLoading, setForensicLoading] = useState(false)
+    const prevOpenRef = useRef(false)
+
+    const logsForDate = date ? allLogs.filter((l) => l.date === date) : []
+    const notesSet = new Set(logsForDate.map((l) => l.notes).filter(Boolean))
+    const notesText = Array.from(notesSet).join('\n')
+
+    // Load forensic data on open
+    useEffect(() => {
+        const justOpened = open && !prevOpenRef.current
+        prevOpenRef.current = open
+
+        if (justOpened && logsForDate.length > 0) {
+            setForensicData(null)
+            setForensicLoading(true)
+            fetch(`/api/health/symptom-logs/${logsForDate[0].id}/forensic`)
+                .then((r) => r.json())
+                .then(setForensicData)
+                .catch((err) => console.error('Failed to load forensic data:', err))
+                .finally(() => setForensicLoading(false))
+        }
+        if (justOpened && logsForDate.length === 0) {
+            setForensicData(null)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open])
+
+    return (
+        <FormDrawer open={open} onClose={onClose}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    overflow: 'hidden',
+                }}>
+                {/* Header */}
+                <Box
+                    sx={{
+                        px: 2.5,
+                        py: 2,
+                        borderBottom: `1px solid ${colors.primaryBlack}20`,
+                    }}>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+                        {date ? formatMonthDay(date) : 'Symptom Details'}
+                    </Typography>
+                    {date && (
+                        <Typography sx={{ fontSize: 12, color: colors.primaryBrown, mt: 0.25 }}>
+                            {formatWeekday(date)} — {logsForDate.length} symptom{logsForDate.length !== 1 ? 's' : ''}
+                        </Typography>
+                    )}
+                </Box>
+
+                {/* Body */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        px: 2.5,
+                        py: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                    }}>
+                    {/* Symptom chips */}
+                    {logsForDate.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            {logsForDate.map((log) => (
+                                <Chip
+                                    key={log.id}
+                                    label={log.symptomName}
+                                    size="small"
+                                    sx={{
+                                        'height': 26,
+                                        'fontSize': 13,
+                                        'fontWeight': 600,
+                                        'backgroundColor': ACCENT_BG,
+                                        'border': `1.5px solid ${ACCENT_BORDER}`,
+                                        'boxShadow': `1.5px 1.5px 0px ${ACCENT_BORDER}`,
+                                        'borderRadius': '3px',
+                                        'color': colors.primaryBlack,
+                                        '& .MuiChip-label': { px: 1 },
+                                    }}
+                                />
+                            ))}
+                        </Box>
+                    )}
+
+                    {/* Notes */}
+                    {notesText && (
+                        <Box>
+                            <Typography
+                                sx={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.5,
+                                    color: colors.primaryBrown,
+                                    mb: 0.5,
+                                }}>
+                                Notes
+                            </Typography>
+                            <Typography sx={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>
+                                {notesText}
+                            </Typography>
+                        </Box>
+                    )}
+
+                    {/* Forensic / Lookback */}
+                    {forensicLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                            <CircularProgress size={20} sx={{ color: colors.primaryYellow }} />
+                        </Box>
+                    ) : forensicData ? (
+                        <InlineForensicContent data={forensicData} />
+                    ) : null}
+                </Box>
+
+                {/* Footer */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        px: 2.5,
+                        py: 2,
+                        borderTop: `1px solid ${colors.primaryBlack}20`,
+                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+                    }}>
+                    <Button
+                        onClick={onClose}
+                        size="large"
+                        sx={secondaryButtonSx}>
+                        Close
+                    </Button>
+                    <Button
+                        onClick={() => date && onEdit(date)}
+                        size="large"
+                        sx={primaryButtonSx}>
+                        Edit
+                    </Button>
+                </Box>
+            </Box>
+        </FormDrawer>
+    )
+}
+
+// ── Symptom Log / Manage Drawer ─────────────────────────────────────────────
 
 type DrawerMode = 'log' | 'manage'
 
@@ -449,7 +631,6 @@ type SymptomDrawerProps = {
     allLogs: SymptomLog[]
     initialDate: string | null
     onDataChanged: () => void
-    onOpenForensic: (logId: number) => void
 }
 
 function SymptomDrawer({
@@ -459,7 +640,6 @@ function SymptomDrawer({
     allLogs,
     initialDate,
     onDataChanged,
-    onOpenForensic,
 }: SymptomDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
@@ -539,11 +719,9 @@ function SymptomDrawer({
             const noteVal = notes.trim() || null
 
             // Add new or update notes for selected symptoms
-            // All selected symptoms share the same notes
             for (const symId of Array.from(selected)) {
                 const existing = logMap.get(symId)
                 if (existing) {
-                    // Update notes if changed
                     if ((existing.notes || null) !== noteVal) {
                         ops.push(fetch(`/api/health/symptom-logs/${existing.id}`, {
                             method: 'PUT',
@@ -552,7 +730,6 @@ function SymptomDrawer({
                         }))
                     }
                 } else {
-                    // New log
                     ops.push(
                         fetch('/api/health/symptom-logs', {
                             method: 'POST',
@@ -709,12 +886,14 @@ function SymptomDrawer({
                                         return (
                                             <Box
                                                 key={sym.id}
+                                                onClick={() => toggleSymptomSelection(sym.id)}
                                                 sx={{
                                                     'display': 'flex',
                                                     'alignItems': 'center',
                                                     'gap': 1,
                                                     'padding': '8px 12px',
                                                     ...cardSx,
+                                                    'cursor': 'pointer',
                                                     'backgroundColor':
                                                         isSelected
                                                             ? ACCENT_BG
@@ -726,54 +905,19 @@ function SymptomDrawer({
                                                     'transition':
                                                         'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
                                                 }}>
-                                                {/* Checkbox toggles selection */}
                                                 <Checkbox
                                                     checked={isSelected}
-                                                    onClick={() => toggleSymptomSelection(sym.id)}
                                                     size="small"
+                                                    tabIndex={-1}
                                                     sx={{
                                                         'padding': 0,
                                                         'color': colors.primaryBlack,
                                                         '&.Mui-checked': { color: ACCENT_BORDER },
                                                     }}
                                                 />
-                                                {/* Name */}
-                                                <Box
-                                                    sx={{ flex: 1, cursor: 'pointer' }}
-                                                    onClick={() => toggleSymptomSelection(sym.id)}>
-                                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                                        {sym.name}
-                                                    </Typography>
-                                                </Box>
-                                                {/* Investigate button — always rendered, hidden when not selected */}
-                                                <Box
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        const existingLog = dateLogs.find((l) => Number(l.symptomId) === sym.id)
-                                                        if (existingLog) {
-                                                            onOpenForensic(existingLog.id)
-                                                        }
-                                                    }}
-                                                    sx={{
-                                                        'flexShrink': 0,
-                                                        'width': 28,
-                                                        'height': 28,
-                                                        'borderRadius': '50%',
-                                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                                        'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                        'display': 'flex',
-                                                        'alignItems': 'center',
-                                                        'justifyContent': 'center',
-                                                        'cursor': 'pointer',
-                                                        'backgroundColor': colors.primaryWhite,
-                                                        'visibility': isSelected ? 'visible' : 'hidden',
-                                                        '&:active': {
-                                                            boxShadow: 'none',
-                                                            transform: 'translate(1px, 1px)',
-                                                        },
-                                                    }}>
-                                                    <IconSearch size={14} stroke={2} />
-                                                </Box>
+                                                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                    {sym.name}
+                                                </Typography>
                                             </Box>
                                         )
                                     })}

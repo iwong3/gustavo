@@ -50,16 +50,16 @@ const tools = [
         bg: '#fff9c4',
     },
     {
-        name: 'Supplements',
-        path: '/gustavo/health/supplements',
-        icon: IconPill,
-        bg: '#cdbfdb',
-    },
-    {
         name: 'Diet',
         path: '/gustavo/health/diet',
         icon: IconSalad,
         bg: '#c8e6c9',
+    },
+    {
+        name: 'Supplements',
+        path: '/gustavo/health/supplements',
+        icon: IconPill,
+        bg: '#cdbfdb',
     },
     {
         name: 'Symptoms',
