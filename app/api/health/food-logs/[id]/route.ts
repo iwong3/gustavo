@@ -76,7 +76,25 @@ export async function DELETE(
     }
 
     await withAuditUser(authUser.userId, async (client) => {
+        // Get meal_group_id before deleting
+        const logRes = await client.query(
+            'SELECT meal_group_id FROM food_logs WHERE id = $1',
+            [id]
+        )
+        const mealGroupId = logRes.rows[0]?.meal_group_id
+
         await client.query('DELETE FROM food_logs WHERE id = $1', [id])
+
+        // Clean up empty meal groups
+        if (mealGroupId) {
+            const remaining = await client.query(
+                'SELECT COUNT(*) FROM food_logs WHERE meal_group_id = $1',
+                [mealGroupId]
+            )
+            if (parseInt(remaining.rows[0].count, 10) === 0) {
+                await client.query('DELETE FROM meal_groups WHERE id = $1', [mealGroupId])
+            }
+        }
     })
 
     return NextResponse.json({ success: true })

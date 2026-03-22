@@ -121,13 +121,22 @@ async function applyDietPreset(userId: number, presetId: number, date: string, m
             )
 
             if (existingMg.rows.length > 0) {
-                // Meal already exists — increment its quantity
                 mealGroupId = Number(existingMg.rows[0].id)
-                isExistingMeal = true
-                await client.query(
-                    `UPDATE meal_groups SET quantity = quantity + 1, updated_at = now() WHERE id = $1`,
+
+                // Check if meal group still has food logs (they may have been deleted)
+                const logCount = await client.query(
+                    `SELECT COUNT(*) FROM food_logs WHERE meal_group_id = $1`,
                     [mealGroupId]
                 )
+                if (parseInt(logCount.rows[0].count, 10) > 0) {
+                    // Meal has food logs — just increment quantity (ate it again)
+                    isExistingMeal = true
+                    await client.query(
+                        `UPDATE meal_groups SET quantity = quantity + 1, updated_at = now() WHERE id = $1`,
+                        [mealGroupId]
+                    )
+                }
+                // If no food logs, fall through to re-insert them
             } else {
                 // Create new meal group
                 const mgRes = await client.query(
