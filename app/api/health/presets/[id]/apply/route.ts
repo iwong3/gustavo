@@ -109,6 +109,11 @@ async function applyDietPreset(userId: number, presetId: number, date: string, m
             [presetId]
         )
 
+        // Don't create anything if preset has no foods
+        if (foodRes.rows.length === 0) {
+            return { logged: [], date, mealGroupId: null }
+        }
+
         let mealGroupId: number | null = null
         let isExistingMeal = false
 

@@ -138,7 +138,7 @@ function DietDayCard({
 }: {
     day: DietDay
     onEditMeal: (target: EditTarget) => void
-    onDeleteMeal: (logIds: number[]) => void
+    onDeleteMeal: (mealGroupId: number | null, logIds: number[]) => void
 }) {
     const [expanded, setExpanded] = useState(false)
 
@@ -257,7 +257,7 @@ function DietDayCard({
                                         quantity: group.quantity,
                                         foods: group.foods,
                                     })}
-                                    onDelete={() => onDeleteMeal(group.foods.map((f) => f.id))}
+                                    onDelete={() => onDeleteMeal(group.id, group.foods.map((f) => f.id))}
                                     backgroundColor={colors.primaryWhite}
                                     showBottomBorder={!isLast}>
                                     <Box
@@ -338,7 +338,7 @@ function DietDayCard({
                                     quantity: 1,
                                     foods: day.standaloneFoods,
                                 })}
-                                onDelete={() => onDeleteMeal(day.standaloneFoods.map((f) => f.id))}
+                                onDelete={() => onDeleteMeal(null, day.standaloneFoods.map((f) => f.id))}
                                 backgroundColor={colors.primaryWhite}>
                                 <Box
                                     onClick={() => onEditMeal({
@@ -421,13 +421,19 @@ export default function DietPage() {
     }, [])
 
     const handleDeleteMealLogs = useCallback(
-        async (logIds: number[]) => {
+        async (mealGroupId: number | null, logIds: number[]) => {
             try {
-                await Promise.all(
-                    logIds.map((id) =>
-                        fetch(`/api/health/food-logs/${id}`, { method: 'DELETE' })
+                if (mealGroupId) {
+                    // Transactional delete — meal group + all food logs in one call
+                    await fetch(`/api/health/meal-groups/${mealGroupId}`, { method: 'DELETE' })
+                } else {
+                    // Standalone foods — delete individually
+                    await Promise.all(
+                        logIds.map((id) =>
+                            fetch(`/api/health/food-logs/${id}`, { method: 'DELETE' })
+                        )
                     )
-                )
+                }
                 fetchData()
             } catch (err) {
                 console.error('Failed to delete logs:', err)
@@ -756,64 +762,79 @@ function DietDrawer({
         setSaving(true)
         try {
             const trimmedLabel = mealLabel.trim() || null
+            const foodsList = Array.from(quantities.entries()).map(([foodId, qty]) => ({
+                foodId,
+                quantity: qty,
+            }))
 
-            // Build map of existing logs for THIS meal only
-            const existingLogs = editTarget?.foods ?? []
-            const logMap = new Map<number, FoodLogEntry>()
-            for (const l of existingLogs) logMap.set(l.food.id, l)
+            if (editTarget?.mealGroupId) {
+                // Editing an existing meal group — single transactional call
+                await fetch(`/api/health/meal-groups/${editTarget.mealGroupId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date,
+                        label: trimmedLabel,
+                        quantity: mealQuantity,
+                        foods: foodsList,
+                    }),
+                })
+            } else if (editTarget) {
+                // Editing standalone foods — individual operations
+                const existingLogs = editTarget.foods
+                const logMap = new Map<number, FoodLogEntry>()
+                for (const l of existingLogs) logMap.set(l.food.id, l)
 
-            const ops: Promise<Response>[] = []
+                const ops: Promise<Response>[] = []
 
-            // Add new or update quantity for selected foods
-            for (const [foodId, qty] of Array.from(quantities.entries())) {
-                const existing = logMap.get(foodId)
-                if (existing) {
-                    // Update if quantity changed or meal label changed
-                    const needsUpdate = existing.quantity !== qty || trimmedLabel !== (editTarget?.label || null)
-                    if (needsUpdate) {
-                        ops.push(fetch(`/api/health/food-logs/${existing.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                quantity: qty,
-                                ...(trimmedLabel ? { mealLabel: trimmedLabel, date } : {}),
-                            }),
-                        }))
-                    }
-                } else {
-                    // New food log
-                    ops.push(
-                        fetch('/api/health/food-logs', {
+                for (const food of foodsList) {
+                    const existing = logMap.get(food.foodId)
+                    if (existing) {
+                        const needsUpdate = existing.quantity !== food.quantity || date !== editTarget.date
+                        if (needsUpdate) {
+                            ops.push(fetch(`/api/health/food-logs/${existing.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ quantity: food.quantity, date }),
+                            }))
+                        }
+                    } else {
+                        ops.push(fetch('/api/health/food-logs', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 date,
-                                foodId,
-                                quantity: qty,
+                                foodId: food.foodId,
+                                quantity: food.quantity,
                                 mealLabel: trimmedLabel,
                             }),
-                        })
-                    )
+                        }))
+                    }
+                }
+
+                for (const [foodId, log] of Array.from(logMap.entries())) {
+                    if (!quantities.has(foodId)) {
+                        ops.push(fetch(`/api/health/food-logs/${log.id}`, { method: 'DELETE' }))
+                    }
+                }
+
+                await Promise.all(ops)
+            } else {
+                // New meal — create food logs (POST creates meal group automatically)
+                for (const food of foodsList) {
+                    await fetch('/api/health/food-logs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            date,
+                            foodId: food.foodId,
+                            quantity: food.quantity,
+                            mealLabel: trimmedLabel,
+                        }),
+                    })
                 }
             }
 
-            // Remove deselected foods (only from this meal's logs)
-            for (const [foodId, log] of Array.from(logMap.entries())) {
-                if (!quantities.has(foodId)) {
-                    ops.push(fetch(`/api/health/food-logs/${log.id}`, { method: 'DELETE' }))
-                }
-            }
-
-            // Update meal group quantity if changed
-            if (editTarget?.mealGroupId && mealQuantity !== editTarget.quantity) {
-                ops.push(fetch(`/api/health/meal-groups/${editTarget.mealGroupId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quantity: mealQuantity }),
-                }))
-            }
-
-            await Promise.all(ops)
             onDataChanged()
             onClose()
         } catch (err) {

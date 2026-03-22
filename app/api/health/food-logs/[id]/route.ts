@@ -20,38 +20,52 @@ export async function PUT(
     }
 
     const check = await pool.query(
-        'SELECT id, date FROM food_logs WHERE id = $1 AND user_id = $2',
+        'SELECT id, date, meal_group_id FROM food_logs WHERE id = $1 AND user_id = $2',
         [id, authUser.userId]
     )
     if (check.rows.length === 0) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
+    const currentDate = check.rows[0].date.toISOString().split('T')[0]
+    const oldMealGroupId = check.rows[0].meal_group_id ? Number(check.rows[0].meal_group_id) : null
+    const newDate = date || currentDate
+
     await withAuditUser(authUser.userId, async (client) => {
         let mealGroupId: number | null = null
 
         if (mealLabel && typeof mealLabel === 'string' && mealLabel.trim().length > 0) {
-            const logDate = date || check.rows[0].date.toISOString().split('T')[0]
             const mgRes = await client.query(
                 `INSERT INTO meal_groups (user_id, date, label)
                  VALUES ($1, $2, $3)
                  ON CONFLICT (user_id, date, lower(label)) DO UPDATE SET updated_at = now()
                  RETURNING id`,
-                [authUser.userId, logDate, mealLabel.trim()]
+                [authUser.userId, newDate, mealLabel.trim()]
             )
             mealGroupId = Number(mgRes.rows[0].id)
         }
 
         if (mealGroupId !== null) {
             await client.query(
-                'UPDATE food_logs SET quantity = $1, meal_group_id = $2, updated_at = now() WHERE id = $3',
-                [quantity, mealGroupId, id]
+                'UPDATE food_logs SET quantity = $1, date = $2, meal_group_id = $3, updated_at = now() WHERE id = $4',
+                [quantity, newDate, mealGroupId, id]
             )
         } else {
             await client.query(
-                'UPDATE food_logs SET quantity = $1, updated_at = now() WHERE id = $2',
-                [quantity, id]
+                'UPDATE food_logs SET quantity = $1, date = $2, updated_at = now() WHERE id = $3',
+                [quantity, newDate, id]
             )
+        }
+
+        // Clean up old meal group if it's now empty
+        if (oldMealGroupId && oldMealGroupId !== mealGroupId) {
+            const remaining = await client.query(
+                'SELECT COUNT(*) FROM food_logs WHERE meal_group_id = $1',
+                [oldMealGroupId]
+            )
+            if (parseInt(remaining.rows[0].count, 10) === 0) {
+                await client.query('DELETE FROM meal_groups WHERE id = $1', [oldMealGroupId])
+            }
         }
     })
 

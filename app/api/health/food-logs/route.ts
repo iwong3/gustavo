@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
                      VALUES ($1, $2, $3, $4, $5)
                      ON CONFLICT (user_id, food_id, date, meal_group_id)
                          WHERE meal_group_id IS NOT NULL
-                     DO UPDATE SET quantity = food_logs.quantity + COALESCE($4, 1), updated_at = now()
+                     DO UPDATE SET quantity = COALESCE($4, 1), updated_at = now()
                      RETURNING id, food_id, date, quantity, meal_group_id`,
                     [authUser.userId, foodId, date, quantity || 1, mealGroupId]
                 )
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
                      VALUES ($1, $2, $3, $4)
                      ON CONFLICT (user_id, food_id, date)
                          WHERE meal_group_id IS NULL
-                     DO UPDATE SET quantity = food_logs.quantity + COALESCE($4, 1), updated_at = now()
+                     DO UPDATE SET quantity = COALESCE($4, 1), updated_at = now()
                      RETURNING id, food_id, date, quantity, meal_group_id`,
                     [authUser.userId, foodId, date, quantity || 1]
                 )
