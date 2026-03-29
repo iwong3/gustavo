@@ -36,8 +36,9 @@ import {
 } from 'components/health/sortable-preset'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
+import Fuse from 'fuse.js'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -688,6 +689,20 @@ function DietDrawer({
     const addInputRef = useRef<HTMLInputElement>(null)
 
     const activeFoods = foods.filter((f) => f.isActive)
+
+    // Fuse.js for fuzzy food search
+    const foodFuse = useMemo(() => new Fuse(foods, {
+        keys: ['name'],
+        threshold: 0.4,
+        ignoreLocation: true,
+    }), [foods])
+
+    const filteredFoods = useMemo(() => {
+        if (!foodSearch) return null // null = no filter
+        const results = foodFuse.search(foodSearch)
+        return new Set(results.map((r) => r.item.id))
+    }, [foodFuse, foodSearch])
+
     const prevOpenRef = useRef(false)
 
     // Reset on fresh open
@@ -1074,7 +1089,7 @@ function DietDrawer({
                                         gap: 0.75,
                                     }}>
                                     {[...activeFoods]
-                                    .filter((f) => !foodSearch || f.name.toLowerCase().includes(foodSearch.toLowerCase()))
+                                    .filter((f) => !filteredFoods || filteredFoods.has(f.id))
                                     .sort((a, b) => {
                                         const aSelected = quantities.has(a.id) ? 0 : 1
                                         const bSelected = quantities.has(b.id) ? 0 : 1
@@ -1262,7 +1277,7 @@ function DietDrawer({
                                     </Typography>
                                 ) : (
                                     foods
-                                        .filter((f) => !foodSearch || f.name.toLowerCase().includes(foodSearch.toLowerCase()))
+                                        .filter((f) => !filteredFoods || filteredFoods.has(f.id))
                                         .map((food) => (
                                         <Box
                                             key={food.id}
