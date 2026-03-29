@@ -2,7 +2,7 @@
 
 import { colors } from '@/lib/colors'
 import { Box, Typography } from '@mui/material'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface AlphabetIndexProps {
     /** Set of letters that have at least one item */
@@ -16,83 +16,161 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 export function AlphabetIndex({ availableLetters, onSelect }: AlphabetIndexProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const lastLetterRef = useRef<string | null>(null)
+    const [activeLetter, setActiveLetter] = useState<string | null>(null)
+    const [activeIndex, setActiveIndex] = useState<number | null>(null)
+
+    const visibleLetters = ALPHABET.filter((l) => availableLetters.has(l))
 
     const getLetterFromY = useCallback((clientY: number): string | null => {
         const el = containerRef.current
         if (!el) return null
         const rect = el.getBoundingClientRect()
         const y = clientY - rect.top
-        const idx = Math.floor((y / rect.height) * ALPHABET.length)
-        const clamped = Math.max(0, Math.min(ALPHABET.length - 1, idx))
-        return ALPHABET[clamped]
-    }, [])
+        const idx = Math.floor((y / rect.height) * visibleLetters.length)
+        const clamped = Math.max(0, Math.min(visibleLetters.length - 1, idx))
+        return visibleLetters[clamped]
+    }, [visibleLetters])
 
     const handleSelect = useCallback((letter: string) => {
+        setActiveLetter(letter)
+        setActiveIndex(visibleLetters.indexOf(letter))
         if (letter !== lastLetterRef.current && availableLetters.has(letter)) {
             lastLetterRef.current = letter
             onSelect(letter)
         }
-    }, [availableLetters, onSelect])
+    }, [availableLetters, onSelect, visibleLetters])
 
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const handleTouchStart = useCallback((e: TouchEvent) => {
         e.preventDefault()
+        lastLetterRef.current = null
         const letter = getLetterFromY(e.touches[0].clientY)
         if (letter) handleSelect(letter)
     }, [getLetterFromY, handleSelect])
 
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        lastLetterRef.current = null
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        e.preventDefault()
         const letter = getLetterFromY(e.touches[0].clientY)
         if (letter) handleSelect(letter)
     }, [getLetterFromY, handleSelect])
 
     const handleTouchEnd = useCallback(() => {
         lastLetterRef.current = null
+        setActiveLetter(null)
+        setActiveIndex(null)
     }, [])
 
-    // Only show letters that exist in the data
-    const visibleLetters = ALPHABET.filter((l) => availableLetters.has(l))
+    // Attach native touch listeners with { passive: false }
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        el.addEventListener('touchstart', handleTouchStart, { passive: false })
+        el.addEventListener('touchmove', handleTouchMove, { passive: false })
+        el.addEventListener('touchend', handleTouchEnd)
+        return () => {
+            el.removeEventListener('touchstart', handleTouchStart)
+            el.removeEventListener('touchmove', handleTouchMove)
+            el.removeEventListener('touchend', handleTouchEnd)
+        }
+    }, [handleTouchStart, handleTouchMove, handleTouchEnd])
+
     if (visibleLetters.length <= 1) return null
 
+    const LETTER_HEIGHT = 18
+    const STRIP_PY = 4 // py: 0.5 = 4px
+
     return (
-        <Box
-            ref={containerRef}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            sx={{
-                position: 'sticky',
-                top: 0,
-                alignSelf: 'flex-start',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                py: 0.5,
-                px: 0.25,
-                ml: 0.5,
-                flexShrink: 0,
-                touchAction: 'none',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-            }}>
-            {visibleLetters.map((letter) => (
-                <Typography
-                    key={letter}
-                    onClick={() => {
-                        if (availableLetters.has(letter)) onSelect(letter)
-                    }}
-                    sx={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        lineHeight: '18px',
-                        color: colors.primaryBrown,
-                        cursor: 'pointer',
-                        width: 18,
-                        textAlign: 'center',
+        <>
+            {/* Floating bubble */}
+            {activeLetter && (
+                <Box sx={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 64,
+                    height: 64,
+                    borderRadius: '12px',
+                    backgroundColor: colors.primaryYellow,
+                    border: `3px solid ${colors.primaryBlack}`,
+                    boxShadow: `4px 4px 0px ${colors.primaryBlack}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    pointerEvents: 'none',
+                }}>
+                    <Typography sx={{
+                        fontSize: 32,
+                        fontWeight: 800,
+                        color: colors.primaryBlack,
+                        lineHeight: 1,
                     }}>
-                    {letter}
-                </Typography>
-            ))}
-        </Box>
+                        {activeLetter}
+                    </Typography>
+                </Box>
+            )}
+            {/* Strip */}
+            <Box
+                ref={containerRef}
+                sx={{
+                    position: 'sticky',
+                    top: 0,
+                    alignSelf: 'flex-start',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    py: 0.5,
+                    px: 0.25,
+                    ml: 0.5,
+                    flexShrink: 0,
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                }}>
+                {/* Sliding yellow highlight */}
+                {activeIndex !== null && (
+                    <Box sx={{
+                        position: 'absolute',
+                        top: STRIP_PY + activeIndex * LETTER_HEIGHT,
+                        left: 0,
+                        right: 0,
+                        height: LETTER_HEIGHT,
+                        backgroundColor: colors.primaryYellow,
+                        borderRadius: '4px',
+                        transition: 'top 0.12s ease-out',
+                        pointerEvents: 'none',
+                    }} />
+                )}
+                {visibleLetters.map((letter) => (
+                    <Typography
+                        key={letter}
+                        onClick={() => {
+                            if (availableLetters.has(letter)) {
+                                onSelect(letter)
+                                setActiveLetter(letter)
+                                setActiveIndex(visibleLetters.indexOf(letter))
+                                setTimeout(() => {
+                                    setActiveLetter(null)
+                                    setActiveIndex(null)
+                                }, 400)
+                            }
+                        }}
+                        sx={{
+                            position: 'relative',
+                            zIndex: 1,
+                            fontSize: 11,
+                            fontWeight: activeLetter === letter ? 900 : 700,
+                            lineHeight: `${LETTER_HEIGHT}px`,
+                            color: activeLetter === letter ? colors.primaryBlack : colors.primaryBrown,
+                            cursor: 'pointer',
+                            width: 18,
+                            textAlign: 'center',
+                            transition: 'font-weight 0.1s, color 0.1s',
+                        }}>
+                        {letter}
+                    </Typography>
+                ))}
+            </Box>
+        </>
     )
 }

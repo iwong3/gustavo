@@ -1128,12 +1128,15 @@ function DietDrawer({
                                     {quantities.size > 0 && (
                                         <Box sx={{
                                             position: 'sticky',
-                                            top: 0,
+                                            top: -16, // offset parent's py:2 (16px)
                                             zIndex: 2,
                                             backgroundColor: colors.primaryWhite,
                                             borderBottom: `1px solid ${colors.primaryBlack}15`,
+                                            pt: 2, // restore visual padding
                                             pb: 1,
                                             mb: 0.5,
+                                            mx: -2.5, // bleed to edges
+                                            px: 2.5,
                                         }}>
                                             <Typography sx={{ fontSize: 11, fontWeight: 700, color: colors.primaryBrown, mb: 0.5 }}>
                                                 Selected ({quantities.size})
