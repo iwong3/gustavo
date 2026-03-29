@@ -24,7 +24,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconArrowLeft, IconBolt, IconChevronDown, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconBolt, IconCheck, IconChevronDown, IconMinus, IconPencil, IconPlus, IconSearch, IconTrash, IconX } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -681,9 +681,11 @@ function DietDrawer({
     const [saving, setSaving] = useState(false)
 
     // Manage mode state
-    const [editingFood, setEditingFood] = useState<Food | null>(null)
     const [name, setName] = useState('')
-    const [isActive, setIsActive] = useState(true)
+    const [foodSearch, setFoodSearch] = useState('')
+    const [inlineEditId, setInlineEditId] = useState<number | null>(null)
+    const [inlineEditName, setInlineEditName] = useState('')
+    const addInputRef = useRef<HTMLInputElement>(null)
 
     const activeFoods = foods.filter((f) => f.isActive)
     const prevOpenRef = useRef(false)
@@ -695,9 +697,9 @@ function DietDrawer({
 
         if (justOpened) {
             setMode('log')
-            setEditingFood(null)
             setName('')
-            setIsActive(true)
+            setFoodSearch('')
+            setInlineEditId(null)
 
             if (editTarget) {
                 // Editing an existing meal
@@ -829,46 +831,56 @@ function DietDrawer({
         }
     }, [date, mealLabel, mealQuantity, quantities, editTarget, onDataChanged, onClose])
 
-    const startEdit = useCallback((food: Food) => {
-        setEditingFood(food)
-        setName(food.name)
-        setIsActive(food.isActive)
+
+    const startInlineEdit = useCallback((food: Food) => {
+        setInlineEditId(food.id)
+        setInlineEditName(food.name)
     }, [])
 
-    const startAdd = useCallback(() => {
-        setEditingFood(null)
-        setName('')
-        setIsActive(true)
+    const cancelInlineEdit = useCallback(() => {
+        setInlineEditId(null)
+        setInlineEditName('')
     }, [])
 
-    const handleSaveFood = useCallback(async () => {
-        if (!name.trim()) return
+    const handleInlineEditSave = useCallback(async () => {
+        if (!inlineEditName.trim() || !inlineEditId || saving) return
         setSaving(true)
         try {
-            const url = editingFood
-                ? `/api/health/foods/${editingFood.id}`
-                : '/api/health/foods'
-            const method = editingFood ? 'PUT' : 'POST'
-
-            const res = await fetch(url, {
-                method,
+            const res = await fetch(`/api/health/foods/${inlineEditId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    ...(editingFood ? { isActive } : {}),
-                }),
+                body: JSON.stringify({ name: inlineEditName.trim() }),
             })
-
             if (res.ok) {
-                setEditingFood(null)
-                setName('')
-                setIsActive(true)
+                setInlineEditId(null)
+                setInlineEditName('')
                 onDataChanged()
             }
         } finally {
             setSaving(false)
         }
-    }, [name, isActive, editingFood, onDataChanged])
+    }, [inlineEditId, inlineEditName, saving, onDataChanged])
+
+    const handleAddFood = useCallback(async () => {
+        if (!name.trim() || saving) return
+        setSaving(true)
+        try {
+            const res = await fetch('/api/health/foods', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim() }),
+            })
+            if (res.ok) {
+                setName('')
+                onDataChanged()
+                // Re-focus the add input for rapid entry
+                setTimeout(() => addInputRef.current?.focus(), 50)
+            }
+        } finally {
+            setSaving(false)
+        }
+    }, [name, saving, onDataChanged])
+
 
     const handleDeleteFood = useCallback(
         async (id: number) => {
@@ -876,7 +888,7 @@ function DietDrawer({
                 method: 'DELETE',
             })
             if (res.ok) {
-                setEditingFood(null)
+                setInlineEditId(null)
                 onDataChanged()
             }
         },
@@ -924,7 +936,7 @@ function DietDrawer({
                             { value: 'log', label: isEditing ? 'Edit' : 'Log' },
                             { value: 'manage', label: 'Manage foods' },
                         ]}
-                        onChange={(v) => setMode(v as DrawerMode)}
+                        onChange={(v) => { setMode(v as DrawerMode); setFoodSearch('') }}
                         fontSize={13}
                         borderWidth={1}
                     />
@@ -1017,6 +1029,26 @@ function DietDrawer({
 
                             {/* Food checklist */}
                             <Typography sx={{ ...labelSx, mb: -1 }}>Foods</Typography>
+                            {activeFoods.length > 5 && (
+                                <TextField
+                                    value={foodSearch}
+                                    onChange={(e) => setFoodSearch(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Search foods..."
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: <IconSearch size={16} stroke={2} color={colors.primaryBrown} style={{ marginRight: 6 }} />,
+                                            endAdornment: foodSearch ? (
+                                                <Box onClick={() => setFoodSearch('')} sx={{ cursor: 'pointer', display: 'flex' }}>
+                                                    <IconX size={16} stroke={2} color={colors.primaryBrown} />
+                                                </Box>
+                                            ) : null,
+                                        },
+                                    }}
+                                    sx={{ ...fieldSx, mt: 1 }}
+                                />
+                            )}
                             {activeFoods.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 3 }}>
                                     <Typography
@@ -1041,7 +1073,9 @@ function DietDrawer({
                                         flexDirection: 'column',
                                         gap: 0.75,
                                     }}>
-                                    {[...activeFoods].sort((a, b) => {
+                                    {[...activeFoods]
+                                    .filter((f) => !foodSearch || f.name.toLowerCase().includes(foodSearch.toLowerCase()))
+                                    .sort((a, b) => {
                                         const aSelected = quantities.has(a.id) ? 0 : 1
                                         const bSelected = quantities.has(b.id) ? 0 : 1
                                         return aSelected - bSelected
@@ -1142,78 +1176,71 @@ function DietDrawer({
                         </>
                     ) : mode === 'manage' ? (
                         <>
-                            {/* Add / Edit form */}
+                            {/* Search filter */}
+                            {foods.length > 5 && (
+                                <TextField
+                                    value={foodSearch}
+                                    onChange={(e) => setFoodSearch(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Search foods..."
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: <IconSearch size={16} stroke={2} color={colors.primaryBrown} style={{ marginRight: 6 }} />,
+                                            endAdornment: foodSearch ? (
+                                                <Box onClick={() => setFoodSearch('')} sx={{ cursor: 'pointer', display: 'flex' }}>
+                                                    <IconX size={16} stroke={2} color={colors.primaryBrown} />
+                                                </Box>
+                                            ) : null,
+                                        },
+                                    }}
+                                    sx={fieldSx}
+                                />
+                            )}
+
+                            {/* Add new food — compact row */}
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1.5,
-                                    pb: 2,
+                                    gap: 1,
+                                    alignItems: 'center',
+                                    pb: 1.5,
                                     borderBottom: `1px solid ${colors.primaryBlack}15`,
                                 }}>
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: colors.primaryBrown,
-                                    }}>
-                                    {editingFood
-                                        ? 'Edit Food'
-                                        : 'New Food'}
-                                </Typography>
-                                <Box>
-                                    <Typography sx={labelSx}>Name</Typography>
-                                    <TextField
-                                        value={name}
-                                        onChange={(e) =>
-                                            setName(e.target.value)
+                                <TextField
+                                    inputRef={addInputRef}
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleAddFood()
                                         }
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && name.trim() && !saving) {
-                                                e.preventDefault()
-                                                handleSaveFood()
-                                            }
-                                        }}
-                                        size="small"
-                                        fullWidth
-                                        placeholder="Eggs, Rice, Chicken..."
-                                        sx={fieldSx}
-                                    />
+                                    }}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Add new food..."
+                                    sx={fieldSx}
+                                />
+                                <Box
+                                    onClick={handleAddFood}
+                                    sx={{
+                                        'flexShrink': 0,
+                                        'width': 40,
+                                        'height': 40,
+                                        'borderRadius': '8px',
+                                        'border': `2px solid ${colors.primaryBlack}`,
+                                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                        'display': 'flex',
+                                        'alignItems': 'center',
+                                        'justifyContent': 'center',
+                                        'cursor': name.trim() ? 'pointer' : 'default',
+                                        'backgroundColor': name.trim() ? colors.primaryYellow : colors.primaryWhite,
+                                        'opacity': name.trim() ? 1 : 0.4,
+                                        '&:active': name.trim() ? { boxShadow: 'none', transform: 'translate(2px, 2px)' } : {},
+                                    }}>
+                                    <IconPlus size={18} stroke={2.5} />
                                 </Box>
-                                {editingFood && (
-                                    <Box
-                                        onClick={() => setIsActive(!isActive)}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            cursor: 'pointer',
-                                        }}>
-                                        <Checkbox
-                                            checked={isActive}
-                                            size="small"
-                                            sx={{
-                                                'padding': 0,
-                                                'color': colors.primaryBlack,
-                                                '&.Mui-checked': {
-                                                    color: colors.primaryBlack,
-                                                },
-                                            }}
-                                            tabIndex={-1}
-                                        />
-                                        <Typography sx={{ fontSize: 14 }}>
-                                            Active
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {editingFood && (
-                                    <Button
-                                        onClick={() => startAdd()}
-                                        size="small"
-                                        sx={secondaryButtonSx}>
-                                        Cancel Edit
-                                    </Button>
-                                )}
                             </Box>
 
                             {/* Existing foods list */}
@@ -1234,90 +1261,135 @@ function DietDrawer({
                                         No foods yet. Add one above.
                                     </Typography>
                                 ) : (
-                                    foods.map((food) => (
+                                    foods
+                                        .filter((f) => !foodSearch || f.name.toLowerCase().includes(foodSearch.toLowerCase()))
+                                        .map((food) => (
                                         <Box
                                             key={food.id}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'space-between',
+                                                minHeight: 40,
                                                 padding: '8px 12px',
                                                 ...cardSx,
-                                                opacity: food.isActive
-                                                    ? 1
-                                                    : 0.5,
-                                                backgroundColor:
-                                                    editingFood?.id === food.id
-                                                        ? colors.secondaryYellow
-                                                        : colors.primaryWhite,
+                                                opacity: food.isActive ? 1 : 0.5,
+                                                backgroundColor: inlineEditId === food.id
+                                                    ? colors.secondaryYellow
+                                                    : colors.primaryWhite,
                                             }}>
-                                            <Box>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                    }}>
-                                                    {food.name}
-                                                </Typography>
-                                                {!food.isActive && (
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 11,
-                                                            color: colors.primaryBrown,
-                                                            fontStyle: 'italic',
-                                                        }}>
-                                                        Inactive
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    gap: 0.5,
-                                                }}>
-                                                <Box
-                                                    onClick={() =>
-                                                        startEdit(food)
-                                                    }
-                                                    sx={{
-                                                        'cursor': 'pointer',
-                                                        'p': 0.5,
-                                                        'borderRadius': '4px',
-                                                        '&:active': {
-                                                            backgroundColor: `${colors.primaryYellow}40`,
-                                                        },
-                                                    }}>
-                                                    <IconPencil
-                                                        size={16}
-                                                        stroke={2}
-                                                        color={
-                                                            colors.primaryBrown
-                                                        }
-                                                    />
-                                                </Box>
-                                                <Box
-                                                    onClick={() =>
-                                                        handleDeleteFood(
-                                                            food.id
-                                                        )
-                                                    }
-                                                    sx={{
-                                                        'cursor': 'pointer',
-                                                        'p': 0.5,
-                                                        'borderRadius': '4px',
-                                                        '&:active': {
-                                                            backgroundColor: `${colors.primaryRed}20`,
-                                                        },
-                                                    }}>
-                                                    <IconTrash
-                                                        size={16}
-                                                        stroke={2}
-                                                        color={
-                                                            colors.primaryRed
-                                                        }
-                                                    />
-                                                </Box>
-                                            </Box>
+                                            {inlineEditId === food.id ? (
+                                                /* Inline edit — native input keeps exact row height */
+                                                <>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <input
+                                                            // eslint-disable-next-line jsx-a11y/no-autofocus
+                                                            autoFocus
+                                                            value={inlineEditName}
+                                                            onChange={(e) => setInlineEditName(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault()
+                                                                    handleInlineEditSave()
+                                                                } else if (e.key === 'Escape') {
+                                                                    cancelInlineEdit()
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                fontSize: 14,
+                                                                fontWeight: 600,
+                                                                fontFamily: 'inherit',
+                                                                border: 'none',
+                                                                outline: 'none',
+                                                                background: 'transparent',
+                                                                padding: 0,
+                                                                margin: 0,
+                                                                lineHeight: 'inherit',
+                                                                borderBottom: `2px solid ${colors.primaryYellow}`,
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 1 }}>
+                                                        <Box
+                                                            onClick={handleInlineEditSave}
+                                                            sx={{
+                                                                'cursor': 'pointer',
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'width': 28,
+                                                                'height': 28,
+                                                                'borderRadius': '4px',
+                                                                '&:active': { backgroundColor: '#c8e6c9' },
+                                                            }}>
+                                                            <IconCheck size={18} stroke={2.5} color="#4caf50" />
+                                                        </Box>
+                                                        <Box
+                                                            onClick={cancelInlineEdit}
+                                                            sx={{
+                                                                'cursor': 'pointer',
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'width': 28,
+                                                                'height': 28,
+                                                                'borderRadius': '4px',
+                                                                '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                                            }}>
+                                                            <IconX size={18} stroke={2.5} color={colors.primaryBrown} />
+                                                        </Box>
+                                                    </Box>
+                                                </>
+                                            ) : (
+                                                /* Display mode */
+                                                <>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                            {food.name}
+                                                        </Typography>
+                                                        {!food.isActive && (
+                                                            <Typography
+                                                                sx={{
+                                                                    fontSize: 11,
+                                                                    color: colors.primaryBrown,
+                                                                    fontStyle: 'italic',
+                                                                }}>
+                                                                Inactive
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                                                        <Box
+                                                            onClick={() => startInlineEdit(food)}
+                                                            sx={{
+                                                                'cursor': 'pointer',
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'width': 28,
+                                                                'height': 28,
+                                                                'borderRadius': '4px',
+                                                                '&:active': { backgroundColor: `${colors.primaryYellow}40` },
+                                                            }}>
+                                                            <IconPencil size={16} stroke={2} color={colors.primaryBrown} />
+                                                        </Box>
+                                                        <Box
+                                                            onClick={() => handleDeleteFood(food.id)}
+                                                            sx={{
+                                                                'cursor': 'pointer',
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'justifyContent': 'center',
+                                                                'width': 28,
+                                                                'height': 28,
+                                                                'borderRadius': '4px',
+                                                                '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                                            }}>
+                                                            <IconTrash size={16} stroke={2} color={colors.primaryRed} />
+                                                        </Box>
+                                                    </Box>
+                                                </>
+                                            )}
                                         </Box>
                                     ))
                                 )}
@@ -1340,28 +1412,16 @@ function DietDrawer({
                         onClick={onClose}
                         disabled={saving}
                         size="large"
-                        sx={secondaryButtonSx}>
-                        Cancel
+                        sx={mode === 'manage' ? primaryButtonSx : secondaryButtonSx}>
+                        {mode === 'manage' ? 'Done' : 'Cancel'}
                     </Button>
-                    {mode === 'log' ? (
+                    {mode === 'log' && (
                         <Button
                             onClick={handleLogSubmit}
                             disabled={quantities.size === 0 || saving || labelConflict}
                             size="large"
                             sx={primaryButtonSx}>
                             {saving ? 'Saving...' : isEditing ? 'Save' : 'Log'}
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleSaveFood}
-                            disabled={!name.trim() || saving}
-                            size="large"
-                            sx={primaryButtonSx}>
-                            {saving
-                                ? 'Saving...'
-                                : editingFood
-                                  ? 'Save'
-                                  : 'Add'}
                         </Button>
                     )}
                 </Box>
