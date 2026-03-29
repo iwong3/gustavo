@@ -9,11 +9,13 @@ interface AlphabetIndexProps {
     availableLetters: Set<string>
     /** Called when user taps or drags to a letter */
     onSelect: (letter: string) => void
+    /** Offset from top for sticky positioning (e.g. to clear a sticky header) */
+    topOffset?: number
 }
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-export function AlphabetIndex({ availableLetters, onSelect }: AlphabetIndexProps) {
+export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: AlphabetIndexProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const lastLetterRef = useRef<string | null>(null)
     const [activeLetter, setActiveLetter] = useState<string | null>(null)
@@ -114,7 +116,7 @@ export function AlphabetIndex({ availableLetters, onSelect }: AlphabetIndexProps
                 ref={containerRef}
                 sx={{
                     position: 'sticky',
-                    top: 0,
+                    top: topOffset,
                     alignSelf: 'flex-start',
                     display: 'flex',
                     flexDirection: 'column',

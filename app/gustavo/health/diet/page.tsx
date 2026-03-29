@@ -689,6 +689,8 @@ function DietDrawer({
     const [inlineEditName, setInlineEditName] = useState('')
     const addInputRef = useRef<HTMLInputElement>(null)
     const sectionRefs = useRef<Map<string, HTMLElement>>(new Map())
+    const selectedSummaryRef = useRef<HTMLDivElement>(null)
+    const [selectedSummaryHeight, setSelectedSummaryHeight] = useState(0)
 
     const activeFoods = foods.filter((f) => f.isActive)
 
@@ -738,6 +740,16 @@ function DietDrawer({
         () => new Set(logFoodGroups.map(([letter]) => letter)),
         [logFoodGroups],
     )
+
+    // Measure sticky selected summary height for alphabet index offset
+    useEffect(() => {
+        const el = selectedSummaryRef.current
+        if (el) {
+            setSelectedSummaryHeight(el.offsetHeight)
+        } else {
+            setSelectedSummaryHeight(0)
+        }
+    }, [quantities.size])
 
     const scrollToLetter = useCallback((letter: string) => {
         const el = sectionRefs.current.get(letter)
@@ -1126,13 +1138,13 @@ function DietDrawer({
                                 <>
                                     {/* Sticky selected summary */}
                                     {quantities.size > 0 && (
-                                        <Box sx={{
+                                        <Box ref={selectedSummaryRef} sx={{
                                             position: 'sticky',
                                             top: -16, // offset parent's py:2 (16px)
                                             zIndex: 2,
                                             backgroundColor: colors.primaryWhite,
                                             borderBottom: `1px solid ${colors.primaryBlack}15`,
-                                            pt: 2, // restore visual padding
+                                            pt: 1,
                                             pb: 1,
                                             mb: 0.5,
                                             mx: -2.5, // bleed to edges
@@ -1189,6 +1201,7 @@ function DietDrawer({
                                                             px: 0.5,
                                                             pt: gi === 0 ? 0 : 1,
                                                             pb: 0.5,
+                                                            scrollMarginTop: `${selectedSummaryHeight + 8}px`,
                                                         }}>
                                                         {letter}
                                                     </Typography>
@@ -1273,7 +1286,7 @@ function DietDrawer({
                                                 </Box>
                                             ))}
                                         </Box>
-                                        {!foodSearch && <AlphabetIndex availableLetters={logFoodLetters} onSelect={scrollToLetter} />}
+                                        {!foodSearch && <AlphabetIndex availableLetters={logFoodLetters} onSelect={scrollToLetter} topOffset={selectedSummaryHeight} />}
                                     </Box>
                                 </>
                             )}
@@ -1384,6 +1397,7 @@ function DietDrawer({
                                                     px: 0.5,
                                                     pt: gi === 0 ? 0 : 1,
                                                     pb: 0.5,
+                                                    scrollMarginTop: 8,
                                                 }}>
                                                 {letter}
                                             </Typography>
