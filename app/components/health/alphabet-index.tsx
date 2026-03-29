@@ -11,11 +11,18 @@ interface AlphabetIndexProps {
     onSelect: (letter: string) => void
     /** Offset from top for sticky positioning (e.g. to clear a sticky header) */
     topOffset?: number
+    /** Which side of the list to render on */
+    side?: 'left' | 'right'
 }
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
-export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: AlphabetIndexProps) {
+export function AlphabetIndex({
+    availableLetters,
+    onSelect,
+    topOffset = 0,
+    side = 'right',
+}: AlphabetIndexProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const lastLetterRef = useRef<string | null>(null)
     const [activeLetter, setActiveLetter] = useState<string | null>(null)
@@ -23,37 +30,55 @@ export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: Alp
 
     const visibleLetters = ALPHABET.filter((l) => availableLetters.has(l))
 
-    const getLetterFromY = useCallback((clientY: number): string | null => {
-        const el = containerRef.current
-        if (!el) return null
-        const rect = el.getBoundingClientRect()
-        const y = clientY - rect.top
-        const idx = Math.floor((y / rect.height) * visibleLetters.length)
-        const clamped = Math.max(0, Math.min(visibleLetters.length - 1, idx))
-        return visibleLetters[clamped]
-    }, [visibleLetters])
+    const getLetterFromY = useCallback(
+        (clientY: number): string | null => {
+            const el = containerRef.current
+            if (!el) return null
+            const rect = el.getBoundingClientRect()
+            const y = clientY - rect.top
+            const idx = Math.floor((y / rect.height) * visibleLetters.length)
+            const clamped = Math.max(
+                0,
+                Math.min(visibleLetters.length - 1, idx)
+            )
+            return visibleLetters[clamped]
+        },
+        [visibleLetters]
+    )
 
-    const handleSelect = useCallback((letter: string) => {
-        setActiveLetter(letter)
-        setActiveIndex(visibleLetters.indexOf(letter))
-        if (letter !== lastLetterRef.current && availableLetters.has(letter)) {
-            lastLetterRef.current = letter
-            onSelect(letter)
-        }
-    }, [availableLetters, onSelect, visibleLetters])
+    const handleSelect = useCallback(
+        (letter: string) => {
+            setActiveLetter(letter)
+            setActiveIndex(visibleLetters.indexOf(letter))
+            if (
+                letter !== lastLetterRef.current &&
+                availableLetters.has(letter)
+            ) {
+                lastLetterRef.current = letter
+                onSelect(letter)
+            }
+        },
+        [availableLetters, onSelect, visibleLetters]
+    )
 
-    const handleTouchStart = useCallback((e: TouchEvent) => {
-        e.preventDefault()
-        lastLetterRef.current = null
-        const letter = getLetterFromY(e.touches[0].clientY)
-        if (letter) handleSelect(letter)
-    }, [getLetterFromY, handleSelect])
+    const handleTouchStart = useCallback(
+        (e: TouchEvent) => {
+            e.preventDefault()
+            lastLetterRef.current = null
+            const letter = getLetterFromY(e.touches[0].clientY)
+            if (letter) handleSelect(letter)
+        },
+        [getLetterFromY, handleSelect]
+    )
 
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        e.preventDefault()
-        const letter = getLetterFromY(e.touches[0].clientY)
-        if (letter) handleSelect(letter)
-    }, [getLetterFromY, handleSelect])
+    const handleTouchMove = useCallback(
+        (e: TouchEvent) => {
+            e.preventDefault()
+            const letter = getLetterFromY(e.touches[0].clientY)
+            if (letter) handleSelect(letter)
+        },
+        [getLetterFromY, handleSelect]
+    )
 
     const handleTouchEnd = useCallback(() => {
         lastLetterRef.current = null
@@ -84,29 +109,31 @@ export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: Alp
         <>
             {/* Floating bubble */}
             {activeLetter && (
-                <Box sx={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 64,
-                    height: 64,
-                    borderRadius: '12px',
-                    backgroundColor: colors.primaryYellow,
-                    border: `3px solid ${colors.primaryBlack}`,
-                    boxShadow: `4px 4px 0px ${colors.primaryBlack}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    pointerEvents: 'none',
-                }}>
-                    <Typography sx={{
-                        fontSize: 32,
-                        fontWeight: 800,
-                        color: colors.primaryBlack,
-                        lineHeight: 1,
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 64,
+                        height: 64,
+                        borderRadius: '12px',
+                        backgroundColor: colors.primaryYellow,
+                        border: `3px solid ${colors.primaryBlack}`,
+                        boxShadow: `4px 4px 0px ${colors.primaryBlack}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        pointerEvents: 'none',
                     }}>
+                    <Typography
+                        sx={{
+                            fontSize: 32,
+                            fontWeight: 800,
+                            color: colors.primaryBlack,
+                            lineHeight: 1,
+                        }}>
                         {activeLetter}
                     </Typography>
                 </Box>
@@ -122,8 +149,7 @@ export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: Alp
                     flexDirection: 'column',
                     alignItems: 'center',
                     py: 0.5,
-                    px: 0.25,
-                    ml: 0.5,
+                    ...(side === 'right' ? { ml: 2.5 } : { mr: 2.5 }),
                     flexShrink: 0,
                     touchAction: 'none',
                     userSelect: 'none',
@@ -131,17 +157,19 @@ export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: Alp
                 }}>
                 {/* Sliding yellow highlight */}
                 {activeIndex !== null && (
-                    <Box sx={{
-                        position: 'absolute',
-                        top: STRIP_PY + activeIndex * LETTER_HEIGHT,
-                        left: 0,
-                        right: 0,
-                        height: LETTER_HEIGHT,
-                        backgroundColor: colors.primaryYellow,
-                        borderRadius: '4px',
-                        transition: 'top 0.12s ease-out',
-                        pointerEvents: 'none',
-                    }} />
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: STRIP_PY + activeIndex * LETTER_HEIGHT,
+                            left: 0,
+                            right: 0,
+                            height: LETTER_HEIGHT,
+                            backgroundColor: colors.primaryYellow,
+                            borderRadius: '4px',
+                            transition: 'top 0.12s ease-out',
+                            pointerEvents: 'none',
+                        }}
+                    />
                 )}
                 {visibleLetters.map((letter) => (
                     <Typography
@@ -163,7 +191,10 @@ export function AlphabetIndex({ availableLetters, onSelect, topOffset = 0 }: Alp
                             fontSize: 11,
                             fontWeight: activeLetter === letter ? 900 : 700,
                             lineHeight: `${LETTER_HEIGHT}px`,
-                            color: activeLetter === letter ? colors.primaryBlack : colors.primaryBrown,
+                            color:
+                                activeLetter === letter
+                                    ? colors.primaryBlack
+                                    : colors.primaryBrown,
                             cursor: 'pointer',
                             width: 18,
                             textAlign: 'center',

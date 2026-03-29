@@ -391,17 +391,20 @@ export default function DietPage() {
     const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+    const [alphabetIndexSide, setAlphabetIndexSide] = useState<'left' | 'right'>('right')
 
     const fetchData = useCallback(() => {
         Promise.all([
             fetch('/api/health/foods?all=true').then((r) => r.json()),
             fetch('/api/health/food-logs').then((r) => r.json()),
             fetch('/api/health/presets?type=diet').then((r) => r.json()),
+            fetch('/api/users/me/preferences').then((r) => r.json()),
         ])
-            .then(([f, days, p]) => {
+            .then(([f, days, p, prefs]) => {
                 setFoods(f)
                 setDietDays(days)
                 setPresets(p)
+                if (prefs.alphabetIndexSide) setAlphabetIndexSide(prefs.alphabetIndexSide)
             })
             .catch((err) => console.error('Failed to load:', err))
             .finally(() => setLoading(false))
@@ -625,6 +628,7 @@ export default function DietPage() {
                 editTarget={editTarget}
                 dietDays={dietDays}
                 onDataChanged={fetchData}
+                alphabetIndexSide={alphabetIndexSide}
             />
 
             {/* Diet preset drawer */}
@@ -665,6 +669,7 @@ type DietDrawerProps = {
     editTarget: EditTarget | null
     dietDays: DietDay[]
     onDataChanged: () => void
+    alphabetIndexSide: 'left' | 'right'
 }
 
 function DietDrawer({
@@ -674,6 +679,7 @@ function DietDrawer({
     editTarget,
     dietDays,
     onDataChanged,
+    alphabetIndexSide,
 }: DietDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
@@ -1185,7 +1191,7 @@ function DietDrawer({
                                         </Box>
                                     )}
                                     {/* Alphabetical food list + index */}
-                                    <Box sx={{ display: 'flex' }}>
+                                    <Box sx={{ display: 'flex', flexDirection: alphabetIndexSide === 'left' ? 'row-reverse' : 'row' }}>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, flex: 1, minWidth: 0 }}>
                                             {logFoodGroups.map(([letter, groupFoods], gi) => (
                                                 <Box key={letter}>
@@ -1286,7 +1292,7 @@ function DietDrawer({
                                                 </Box>
                                             ))}
                                         </Box>
-                                        {!foodSearch && <AlphabetIndex availableLetters={logFoodLetters} onSelect={scrollToLetter} topOffset={selectedSummaryHeight} />}
+                                        {!foodSearch && <AlphabetIndex availableLetters={logFoodLetters} onSelect={scrollToLetter} topOffset={selectedSummaryHeight} side={alphabetIndexSide} />}
                                     </Box>
                                 </>
                             )}
@@ -1373,7 +1379,7 @@ function DietDrawer({
                                     No foods yet. Add one above.
                                 </Typography>
                             ) : (
-                            <Box sx={{ display: 'flex' }}>
+                            <Box sx={{ display: 'flex', flexDirection: alphabetIndexSide === 'left' ? 'row-reverse' : 'row' }}>
                                 <Box
                                     sx={{
                                         display: 'flex',
@@ -1535,7 +1541,7 @@ function DietDrawer({
                                         </Box>
                                     ))}
                                 </Box>
-                                {!foodSearch && <AlphabetIndex availableLetters={manageFoodLetters} onSelect={scrollToLetter} />}
+                                {!foodSearch && <AlphabetIndex availableLetters={manageFoodLetters} onSelect={scrollToLetter} side={alphabetIndexSide} />}
                             </Box>
                             )}
                         </>

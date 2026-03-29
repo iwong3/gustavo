@@ -143,4 +143,5 @@ export type UserPreferences = {
     initials: string | null
     iconColor: string | null
     isAdmin: boolean
+    alphabetIndexSide: 'left' | 'right'
 }

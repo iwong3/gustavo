@@ -189,6 +189,35 @@ export default function SettingsPage() {
                     </Box>
                 </Link>
 
+                <Typography
+                    sx={{
+                        fontSize: 16,
+                        fontWeight: 500,
+                        color: colors.primaryBlack,
+                        marginTop: 1,
+                    }}>
+                    Health
+                </Typography>
+
+                <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Typography
+                        variant="body2"
+                        sx={{ color: colors.primaryBlack }}>
+                        Alphabet index side
+                    </Typography>
+                    <SlidingToggle
+                        value={prefs?.alphabetIndexSide ?? 'right'}
+                        options={[
+                            { value: 'left', label: 'Left' },
+                            { value: 'right', label: 'Right' },
+                        ]}
+                        onChange={(val) =>
+                            handlePrefChange('alphabetIndexSide', val)
+                        }
+                    />
+                </Box>
+
                 {prefs?.isAdmin && (
                     <>
                         <Typography

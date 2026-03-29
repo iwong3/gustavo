@@ -7,7 +7,7 @@ export async function GET() {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const res = await pool.query(
-        'SELECT default_trip_visibility, default_participant_role, initials, icon_color, is_admin FROM users WHERE id = $1',
+        'SELECT default_trip_visibility, default_participant_role, initials, icon_color, is_admin, alphabet_index_side FROM users WHERE id = $1',
         [authUser.userId]
     )
     if (res.rows.length === 0) {
@@ -20,6 +20,7 @@ export async function GET() {
         initials: res.rows[0].initials,
         iconColor: res.rows[0].icon_color,
         isAdmin: res.rows[0].is_admin ?? false,
+        alphabetIndexSide: res.rows[0].alphabet_index_side ?? 'right',
     })
 }
 
@@ -54,6 +55,14 @@ export async function PUT(request: NextRequest) {
         }
         sets.push(`initials = $${idx++}`)
         values.push(body.initials.toUpperCase())
+    }
+
+    if (body.alphabetIndexSide !== undefined) {
+        if (body.alphabetIndexSide !== 'left' && body.alphabetIndexSide !== 'right') {
+            return NextResponse.json({ error: 'Invalid alphabet index side value' }, { status: 400 })
+        }
+        sets.push(`alphabet_index_side = $${idx++}`)
+        values.push(body.alphabetIndexSide)
     }
 
     if (body.iconColor !== undefined) {
