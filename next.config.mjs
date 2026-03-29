@@ -18,6 +18,8 @@ const commitHash =
         }
     })()
 
+const buildTime = new Date().toISOString()
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: false,
@@ -39,6 +41,7 @@ const nextConfig = {
     },
     env: {
         NEXT_PUBLIC_COMMIT_HASH: commitHash,
+        NEXT_PUBLIC_BUILD_TIME: buildTime,
     },
     eslint: {
         // Lint runs as a separate step (pnpm lint); not during build

@@ -1168,6 +1168,12 @@ function DietDrawer({
                                         onChange={(e) =>
                                             setName(e.target.value)
                                         }
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && name.trim() && !saving) {
+                                                e.preventDefault()
+                                                handleSaveFood()
+                                            }
+                                        }}
                                         size="small"
                                         fullWidth
                                         placeholder="Eggs, Rice, Chicken..."

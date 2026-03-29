@@ -134,10 +134,15 @@ export default function SettingsPage() {
                     <SlidingToggle
                         value={prefs?.defaultTripVisibility ?? ''}
                         options={[
-                            { value: 'participants', label: 'Participants only' },
+                            {
+                                value: 'participants',
+                                label: 'Participants only',
+                            },
                             { value: 'all_users', label: 'All users' },
                         ]}
-                        onChange={(val) => handlePrefChange('defaultTripVisibility', val)}
+                        onChange={(val) =>
+                            handlePrefChange('defaultTripVisibility', val)
+                        }
                     />
                 </Box>
 
@@ -155,7 +160,9 @@ export default function SettingsPage() {
                             { value: 'editor', label: 'Editor' },
                             { value: 'admin', label: 'Admin' },
                         ]}
-                        onChange={(val) => handlePrefChange('defaultParticipantRole', val)}
+                        onChange={(val) =>
+                            handlePrefChange('defaultParticipantRole', val)
+                        }
                     />
                 </Box>
 
@@ -203,10 +210,15 @@ export default function SettingsPage() {
                                     'justifyContent': 'space-between',
                                     'paddingY': 1,
                                     'borderRadius': 1,
-                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0,0,0,0.04)',
+                                    },
                                 }}>
                                 <Typography
-                                    sx={{ fontSize: 14, color: colors.primaryBlack }}>
+                                    sx={{
+                                        fontSize: 14,
+                                        color: colors.primaryBlack,
+                                    }}>
                                     Invite Users
                                 </Typography>
                                 <IconChevronRight
@@ -236,7 +248,18 @@ export default function SettingsPage() {
                     paddingBottom: 2,
                     alignSelf: 'flex-end',
                 }}>
-                Version: {process.env.NEXT_PUBLIC_COMMIT_HASH ?? 'dev'}
+                Built{' '}
+                {process.env.NEXT_PUBLIC_BUILD_TIME
+                    ? new Date(
+                          process.env.NEXT_PUBLIC_BUILD_TIME
+                      ).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                      })
+                    : 'dev'}{' '}
+                · {process.env.NEXT_PUBLIC_COMMIT_HASH ?? '?'}
             </Typography>
 
             {prefs && (
@@ -382,7 +405,12 @@ function IconCustomizeDialog({
 
                 {/* Initials + Color — single row, equal height */}
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Box sx={{ flex: '0 0 90px', display: 'flex', flexDirection: 'column' }}>
+                    <Box
+                        sx={{
+                            flex: '0 0 90px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}>
                         <Typography sx={labelSx}>Initials</Typography>
                         <TextField
                             value={editInitials}
@@ -412,7 +440,12 @@ function IconCustomizeDialog({
                             }}
                         />
                     </Box>
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Box
+                        sx={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}>
                         <Typography sx={labelSx}>Color</Typography>
                         <Box
                             sx={{
