@@ -36,6 +36,7 @@ import {
 } from 'components/health/sortable-preset'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
+import { AlphabetIndex } from 'components/health/alphabet-index'
 import Fuse from 'fuse.js'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -687,6 +688,7 @@ function DietDrawer({
     const [inlineEditId, setInlineEditId] = useState<number | null>(null)
     const [inlineEditName, setInlineEditName] = useState('')
     const addInputRef = useRef<HTMLInputElement>(null)
+    const sectionRefs = useRef<Map<string, HTMLElement>>(new Map())
 
     const activeFoods = foods.filter((f) => f.isActive)
 
@@ -702,6 +704,45 @@ function DietDrawer({
         const results = foodFuse.search(foodSearch)
         return new Set(results.map((r) => r.item.id))
     }, [foodFuse, foodSearch])
+
+    // Group foods by first letter for alphabet index (manage mode)
+    const manageFoodGroups = useMemo(() => {
+        const filtered = foods.filter((f) => !filteredFoods || filteredFoods.has(f.id))
+        const groupMap: Record<string, Food[]> = {}
+        for (const food of filtered) {
+            const letter = food.name[0]?.toUpperCase() || '#'
+            if (!groupMap[letter]) groupMap[letter] = []
+            groupMap[letter].push(food)
+        }
+        return Object.entries(groupMap) as [string, Food[]][]
+    }, [foods, filteredFoods])
+
+    const manageFoodLetters = useMemo(
+        () => new Set(manageFoodGroups.map(([letter]) => letter)),
+        [manageFoodGroups],
+    )
+
+    // Group active foods by first letter for log mode alphabet index
+    const logFoodGroups = useMemo(() => {
+        const filtered = activeFoods.filter((f) => !filteredFoods || filteredFoods.has(f.id))
+        const groupMap: Record<string, Food[]> = {}
+        for (const food of filtered) {
+            const letter = food.name[0]?.toUpperCase() || '#'
+            if (!groupMap[letter]) groupMap[letter] = []
+            groupMap[letter].push(food)
+        }
+        return Object.entries(groupMap) as [string, Food[]][]
+    }, [activeFoods, filteredFoods])
+
+    const logFoodLetters = useMemo(
+        () => new Set(logFoodGroups.map(([letter]) => letter)),
+        [logFoodGroups],
+    )
+
+    const scrollToLetter = useCallback((letter: string) => {
+        const el = sectionRefs.current.get(letter)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, [])
 
     const prevOpenRef = useRef(false)
 
@@ -1082,110 +1123,156 @@ function DietDrawer({
                                     </Button>
                                 </Box>
                             ) : (
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 0.75,
-                                    }}>
-                                    {[...activeFoods]
-                                    .filter((f) => !filteredFoods || filteredFoods.has(f.id))
-                                    .sort((a, b) => {
-                                        const aSelected = quantities.has(a.id) ? 0 : 1
-                                        const bSelected = quantities.has(b.id) ? 0 : 1
-                                        return aSelected - bSelected
-                                    }).map((food) => {
-                                        const qty = quantities.get(food.id) ?? 0
-                                        const isSelected = qty > 0
-                                        return (
-                                            <Box
-                                                key={food.id}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'gap': 1,
-                                                    'padding': '8px 12px',
-                                                    ...cardSx,
-                                                    'backgroundColor':
-                                                        isSelected
-                                                            ? '#f1f8e9'
-                                                            : colors.primaryWhite,
-                                                    'borderColor': isSelected
-                                                        ? '#4caf50'
-                                                        : colors.primaryBlack,
-                                                    'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                    'transition':
-                                                        'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
-                                                }}>
-                                                {/* Checkbox toggles selection */}
-                                                <Checkbox
-                                                    checked={isSelected}
-                                                    onClick={() => toggleFoodSelection(food.id)}
-                                                    size="small"
-                                                    sx={{
-                                                        'padding': 0,
-                                                        'color': colors.primaryBlack,
-                                                        '&.Mui-checked': { color: '#4caf50' },
-                                                    }}
-                                                />
-                                                {/* Name */}
-                                                <Box
-                                                    sx={{ flex: 1, cursor: 'pointer' }}
-                                                    onClick={() => toggleFoodSelection(food.id)}>
-                                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                                        {food.name}
-                                                    </Typography>
-                                                </Box>
-                                                {/* Quantity controls — always rendered, hidden when not selected */}
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
-                                                    <Box
-                                                        onClick={() => setFoodQuantity(food.id, qty - 1)}
-                                                        sx={{
-                                                            'width': 24,
-                                                            'height': 24,
-                                                            'borderRadius': '50%',
-                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'justifyContent': 'center',
-                                                            'cursor': 'pointer',
-                                                            'backgroundColor': colors.primaryWhite,
-                                                            '&:active': {
-                                                                boxShadow: 'none',
-                                                                transform: 'translate(1px, 1px)',
-                                                            },
-                                                        }}>
-                                                        <IconMinus size={12} stroke={2.5} />
-                                                    </Box>
-                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                        {qty || 1}
-                                                    </Typography>
-                                                    <Box
-                                                        onClick={() => setFoodQuantity(food.id, qty + 1)}
-                                                        sx={{
-                                                            'width': 24,
-                                                            'height': 24,
-                                                            'borderRadius': '50%',
-                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                            'display': 'flex',
-                                                            'alignItems': 'center',
-                                                            'justifyContent': 'center',
-                                                            'cursor': 'pointer',
-                                                            'backgroundColor': colors.primaryWhite,
-                                                            '&:active': {
-                                                                boxShadow: 'none',
-                                                                transform: 'translate(1px, 1px)',
-                                                            },
-                                                        }}>
-                                                        <IconPlus size={12} stroke={2.5} />
-                                                    </Box>
-                                                </Box>
+                                <>
+                                    {/* Sticky selected summary */}
+                                    {quantities.size > 0 && (
+                                        <Box sx={{
+                                            position: 'sticky',
+                                            top: 0,
+                                            zIndex: 2,
+                                            backgroundColor: colors.primaryWhite,
+                                            borderBottom: `1px solid ${colors.primaryBlack}15`,
+                                            pb: 1,
+                                            mb: 0.5,
+                                        }}>
+                                            <Typography sx={{ fontSize: 11, fontWeight: 700, color: colors.primaryBrown, mb: 0.5 }}>
+                                                Selected ({quantities.size})
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {activeFoods
+                                                    .filter((f) => quantities.has(f.id))
+                                                    .map((food) => {
+                                                        const qty = quantities.get(food.id) ?? 1
+                                                        return (
+                                                            <Chip
+                                                                key={food.id}
+                                                                label={`${food.name}${qty > 1 ? ` x${qty}` : ''}`}
+                                                                size="small"
+                                                                onDelete={() => toggleFoodSelection(food.id)}
+                                                                sx={{
+                                                                    'height': 24,
+                                                                    'fontSize': 12,
+                                                                    'fontWeight': 600,
+                                                                    'backgroundColor': '#f1f8e9',
+                                                                    'border': `1.5px solid #4caf50`,
+                                                                    'borderRadius': '6px',
+                                                                    '& .MuiChip-label': { px: 1 },
+                                                                    '& .MuiChip-deleteIcon': {
+                                                                        fontSize: 14,
+                                                                        color: '#4caf50',
+                                                                        marginRight: '4px',
+                                                                    },
+                                                                }}
+                                                            />
+                                                        )
+                                                    })}
                                             </Box>
-                                        )
-                                    })}
-                                </Box>
+                                        </Box>
+                                    )}
+                                    {/* Alphabetical food list + index */}
+                                    <Box sx={{ display: 'flex' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, flex: 1, minWidth: 0 }}>
+                                            {logFoodGroups.map(([letter, groupFoods], gi) => (
+                                                <Box key={letter}>
+                                                    <Typography
+                                                        ref={(el) => {
+                                                            if (el) sectionRefs.current.set(letter, el)
+                                                            else sectionRefs.current.delete(letter)
+                                                        }}
+                                                        sx={{
+                                                            fontSize: 12,
+                                                            fontWeight: 800,
+                                                            color: colors.primaryBrown,
+                                                            px: 0.5,
+                                                            pt: gi === 0 ? 0 : 1,
+                                                            pb: 0.5,
+                                                        }}>
+                                                        {letter}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                                        {groupFoods.map((food) => {
+                                                            const qty = quantities.get(food.id) ?? 0
+                                                            const isSelected = qty > 0
+                                                            return (
+                                                                <Box
+                                                                    key={food.id}
+                                                                    sx={{
+                                                                        'display': 'flex',
+                                                                        'alignItems': 'center',
+                                                                        'gap': 1,
+                                                                        'padding': '8px 12px',
+                                                                        ...cardSx,
+                                                                        'backgroundColor': isSelected ? '#f1f8e9' : colors.primaryWhite,
+                                                                        'borderColor': isSelected ? '#4caf50' : colors.primaryBlack,
+                                                                        'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
+                                                                        'transition': 'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+                                                                    }}>
+                                                                    <Checkbox
+                                                                        checked={isSelected}
+                                                                        onClick={() => toggleFoodSelection(food.id)}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            'padding': 0,
+                                                                            'color': colors.primaryBlack,
+                                                                            '&.Mui-checked': { color: '#4caf50' },
+                                                                        }}
+                                                                    />
+                                                                    <Box
+                                                                        sx={{ flex: 1, cursor: 'pointer' }}
+                                                                        onClick={() => toggleFoodSelection(food.id)}>
+                                                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                                                                            {food.name}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, visibility: isSelected ? 'visible' : 'hidden' }}>
+                                                                        <Box
+                                                                            onClick={() => setFoodQuantity(food.id, qty - 1)}
+                                                                            sx={{
+                                                                                'width': 24,
+                                                                                'height': 24,
+                                                                                'borderRadius': '50%',
+                                                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                                'display': 'flex',
+                                                                                'alignItems': 'center',
+                                                                                'justifyContent': 'center',
+                                                                                'cursor': 'pointer',
+                                                                                'backgroundColor': colors.primaryWhite,
+                                                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                                            }}>
+                                                                            <IconMinus size={12} stroke={2.5} />
+                                                                        </Box>
+                                                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                                            {qty || 1}
+                                                                        </Typography>
+                                                                        <Box
+                                                                            onClick={() => setFoodQuantity(food.id, qty + 1)}
+                                                                            sx={{
+                                                                                'width': 24,
+                                                                                'height': 24,
+                                                                                'borderRadius': '50%',
+                                                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                                'display': 'flex',
+                                                                                'alignItems': 'center',
+                                                                                'justifyContent': 'center',
+                                                                                'cursor': 'pointer',
+                                                                                'backgroundColor': colors.primaryWhite,
+                                                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                                            }}>
+                                                                            <IconPlus size={12} stroke={2.5} />
+                                                                        </Box>
+                                                                    </Box>
+                                                                </Box>
+                                                            )
+                                                        })}
+                                                    </Box>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                        {!foodSearch && <AlphabetIndex availableLetters={logFoodLetters} onSelect={scrollToLetter} />}
+                                    </Box>
+                                </>
                             )}
 
                         </>
@@ -1258,27 +1345,47 @@ function DietDrawer({
                                 </Box>
                             </Box>
 
-                            {/* Existing foods list */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
-                                }}>
-                                {foods.length === 0 ? (
-                                    <Typography
-                                        sx={{
-                                            fontSize: 14,
-                                            color: colors.primaryBrown,
-                                            textAlign: 'center',
-                                            py: 2,
-                                        }}>
-                                        No foods yet. Add one above.
-                                    </Typography>
-                                ) : (
-                                    foods
-                                        .filter((f) => !filteredFoods || filteredFoods.has(f.id))
-                                        .map((food) => (
+                            {/* Existing foods list + alphabet index */}
+                            {foods.length === 0 ? (
+                                <Typography
+                                    sx={{
+                                        fontSize: 14,
+                                        color: colors.primaryBrown,
+                                        textAlign: 'center',
+                                        py: 2,
+                                    }}>
+                                    No foods yet. Add one above.
+                                </Typography>
+                            ) : (
+                            <Box sx={{ display: 'flex' }}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 0.75,
+                                        flex: 1,
+                                        minWidth: 0,
+                                    }}>
+                                    {manageFoodGroups.map(([letter, groupFoods], gi) => (
+                                        <Box key={letter}>
+                                            {/* Section header */}
+                                            <Typography
+                                                ref={(el) => {
+                                                    if (el) sectionRefs.current.set(letter, el)
+                                                    else sectionRefs.current.delete(letter)
+                                                }}
+                                                sx={{
+                                                    fontSize: 12,
+                                                    fontWeight: 800,
+                                                    color: colors.primaryBrown,
+                                                    px: 0.5,
+                                                    pt: gi === 0 ? 0 : 1,
+                                                    pb: 0.5,
+                                                }}>
+                                                {letter}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                            {groupFoods.map((food) => (
                                         <Box
                                             key={food.id}
                                             sx={{
@@ -1406,9 +1513,14 @@ function DietDrawer({
                                                 </>
                                             )}
                                         </Box>
-                                    ))
-                                )}
+                                    ))}
+                                            </Box>
+                                        </Box>
+                                    ))}
+                                </Box>
+                                {!foodSearch && <AlphabetIndex availableLetters={manageFoodLetters} onSelect={scrollToLetter} />}
                             </Box>
+                            )}
                         </>
                     ) : null}
                 </Box>
