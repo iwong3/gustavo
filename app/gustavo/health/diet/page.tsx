@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, hardShadow } from '@/lib/colors'
 import {
     errorFieldSx,
     fieldSx,
@@ -24,7 +24,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconArrowLeft, IconBolt, IconCheck, IconChevronDown, IconMinus, IconPencil, IconPlus, IconSearch, IconTrash, IconX } from '@tabler/icons-react'
+import { IconArrowLeft, IconBolt, IconCheck, IconChevronDown, IconMinus, IconPencil, IconPlus, IconSalad, IconSearch, IconTrash, IconX } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -507,14 +507,12 @@ export default function DietPage() {
                 gap: 2,
             }}>
             {/* Header */}
-            <Typography
-                sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-serif)',
-                }}>
-                Diet
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#c8e6c9', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                <IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Diet
+                </Typography>
+            </Box>
 
             {/* Preset quick-actions */}
             <Box
@@ -531,7 +529,7 @@ export default function DietPage() {
                         'width': 30,
                         'height': 30,
                         'borderRadius': '50%',
-                        'backgroundColor': colors.primaryYellow,
+                        'backgroundColor': '#c8e6c9',
                         'border': `1.5px solid ${colors.primaryBlack}`,
                         'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                         'display': 'flex',

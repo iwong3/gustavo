@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, hardShadow } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -26,6 +26,7 @@ import {
 } from '@mui/material'
 import {
     IconArrowLeft,
+    IconBarbell,
     IconBolt,
     IconChevronDown,
     IconChevronUp,
@@ -271,14 +272,12 @@ export default function ExercisePage() {
                 gap: 2,
             }}>
             {/* Header */}
-            <Typography
-                sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-serif)',
-                }}>
-                Workouts
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#ffe0b2', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Workouts
+                </Typography>
+            </Box>
 
             {/* Routine quick-actions */}
             {presets.length > 0 && (
@@ -299,7 +298,7 @@ export default function ExercisePage() {
                                 'width': 30,
                                 'height': 30,
                                 'borderRadius': '50%',
-                                'backgroundColor': colors.primaryYellow,
+                                'backgroundColor': '#ffe0b2',
                                 'border': `1.5px solid ${colors.primaryBlack}`,
                                 'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                                 'display': 'flex',

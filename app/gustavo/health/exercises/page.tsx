@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, hardShadow } from '@/lib/colors'
 import type { Exercise, MuscleGroupWithParents } from '@/lib/health-types'
 import { GROUP_TARGETS, isTarget } from '@/lib/health/muscle-groups'
 import {
@@ -9,6 +9,7 @@ import {
     primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
+import { IconStretching } from '@tabler/icons-react'
 import { useRegisterFab } from 'providers/fab-provider'
 import {
     Box,
@@ -181,14 +182,12 @@ export default function ExercisesPage() {
                 paddingBottom: 2,
                 gap: 2,
             }}>
-            <Typography
-                sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-serif)',
-                }}>
-                Exercises
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#fff9c4', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                <IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Exercises
+                </Typography>
+            </Box>
 
             {exercises.length === 0 ? (
                 <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>

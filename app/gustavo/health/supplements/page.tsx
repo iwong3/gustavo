@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, hardShadow } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -21,7 +21,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconArrowLeft, IconBolt, IconMinus, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconBolt, IconMinus, IconPencil, IconPill, IconPlus, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import {
     arrayMove,
@@ -45,6 +45,16 @@ function formatDate(dateStr: string): string {
         month: 'short',
         day: 'numeric',
     })
+}
+
+function formatWeekday(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { weekday: 'short' })
+}
+
+function formatMonthDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 // Group logs by date
@@ -153,9 +163,6 @@ function SupplementLogCard({
                     backgroundColor: colors.primaryWhite,
                     '&:active': offsetX === 0 ? { backgroundColor: colors.secondaryYellow } : {},
                 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.75 }}>
-                    {formatDate(group.date)}
-                </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {group.logs.map((log) => (
                         <Chip
@@ -307,14 +314,12 @@ export default function SupplementsPage() {
                 gap: 2,
             }}>
             {/* Header */}
-            <Typography
-                sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-serif)',
-                }}>
-                Supplements
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#cdbfdb', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                <IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Supplements
+                </Typography>
+            </Box>
 
             {/* Preset quick-actions */}
             <Box
@@ -331,7 +336,7 @@ export default function SupplementsPage() {
                         'width': 30,
                         'height': 30,
                         'borderRadius': '50%',
-                        'backgroundColor': colors.primaryYellow,
+                        'backgroundColor': '#cdbfdb',
                         'border': `1.5px solid ${colors.primaryBlack}`,
                         'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                         'display': 'flex',
@@ -393,42 +398,6 @@ export default function SupplementsPage() {
                 </HorizontalSortableList>
             </Box>
 
-            {/* Horizontal supplement chips */}
-            {activeSupplements.length > 0 && (
-                <Box
-                    sx={{
-                        'display': 'flex',
-                        'gap': 0.75,
-                        'overflowX': 'auto',
-                        'pb': 0.5,
-                        '&::-webkit-scrollbar': { display: 'none' },
-                        'scrollbarWidth': 'none',
-                    }}>
-                    {activeSupplements.map((supp) => (
-                        <Chip
-                            key={supp.id}
-                            label={
-                                supp.dosage
-                                    ? `${supp.name} · ${supp.dosage}`
-                                    : supp.name
-                            }
-                            size="small"
-                            sx={{
-                                'height': 28,
-                                'fontSize': 12,
-                                'fontWeight': 600,
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'flexShrink': 0,
-                                '& .MuiChip-label': { px: 1.25 },
-                            }}
-                        />
-                    ))}
-                </Box>
-            )}
-
             {/* Log history */}
             {dayGroups.length === 0 ? (
                 <Typography
@@ -441,14 +410,32 @@ export default function SupplementsPage() {
                     No supplements logged yet.
                 </Typography>
             ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {dayGroups.map((group) => (
-                        <SupplementLogCard
-                            key={group.date}
-                            group={group}
-                            onEdit={() => openEditDate(group.date)}
-                            onDelete={() => handleDeleteDate(group.date)}
-                        />
+                        <Box key={group.date}>
+                            {/* Date label */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+                                <Box sx={{
+                                    px: 0.75, py: 0.25,
+                                    backgroundColor: colors.primaryYellow,
+                                    border: `1px solid ${colors.primaryBlack}`,
+                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                    borderRadius: '3px',
+                                }}>
+                                    <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1.2 }}>
+                                        {formatWeekday(group.date)}
+                                    </Typography>
+                                </Box>
+                                <Typography sx={{ fontSize: 12, fontWeight: 600, color: colors.primaryBrown }}>
+                                    {formatMonthDay(group.date)}
+                                </Typography>
+                            </Box>
+                            <SupplementLogCard
+                                group={group}
+                                onEdit={() => openEditDate(group.date)}
+                                onDelete={() => handleDeleteDate(group.date)}
+                            />
+                        </Box>
                     ))}
                 </Box>
             )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, hardShadow } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -17,7 +17,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconFirstAidKit, IconPencil, IconTrash } from '@tabler/icons-react'
 import { InlineForensicContent } from 'components/health/forensic-view'
 import FormDrawer from 'components/form-drawer'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
@@ -336,14 +336,12 @@ export default function SymptomsPage() {
                 gap: 2,
             }}>
             {/* Header */}
-            <Typography
-                sx={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-serif)',
-                }}>
-                Symptoms
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#ffcdd2', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
+                <IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Symptoms
+                </Typography>
+            </Box>
 
             {/* Log history */}
             {dayGroups.length === 0 ? (
