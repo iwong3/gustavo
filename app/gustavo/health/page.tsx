@@ -89,10 +89,10 @@ function getDaysSinceColor(days: number | null): string {
 }
 
 function getDaysSinceBg(days: number | null): string {
-    if (days === null) return '#9e9e9e12'
-    if (days <= 3) return '#4caf5012'
-    if (days <= 6) return '#ff980012'
-    return '#f4433612'
+    if (days === null) return '#f5f5f5'
+    if (days <= 3) return '#e8f5e9'
+    if (days <= 6) return '#fff3e0'
+    return '#fce4ec'
 }
 
 function getDaysSinceBorder(days: number | null): string {
@@ -302,13 +302,11 @@ export default function HealthPage() {
                 flexDirection: 'column',
                 width: '100%',
                 maxWidth: 600,
-                paddingX: 2,
                 paddingBottom: 2,
-                gap: 2.5,
             }}>
 
             {/* ── Workouts Section ─────────────────────────────────── */}
-            <Box>
+            <Box sx={{ backgroundColor: '#ffe8cc', px: 2, py: 2 }}>
                 <Typography
                     component={Link}
                     href="/gustavo/health/exercise"
@@ -445,7 +443,7 @@ export default function HealthPage() {
                     <Box sx={{ display: 'flex', gap: 1, mt: 1.5, alignItems: 'flex-end' }}>
                         {workoutStats.streak > 0 && (
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5, textAlign: 'center' }}>
+                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5 }}>
                                     Streak
                                 </Typography>
                                 <Box sx={{
@@ -457,7 +455,7 @@ export default function HealthPage() {
                                     borderRadius: '6px',
                                     border: `1.5px solid ${colors.primaryBlack}`,
                                     boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    backgroundColor: '#fff3e0',
+                                    backgroundColor: '#fbf6e8',
                                 }}>
                                     <Typography sx={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>
                                         {workoutStats.streak}
@@ -470,7 +468,7 @@ export default function HealthPage() {
                         )}
                         {/* 30-day split card */}
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <Typography sx={{ fontSize: 10, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5, textAlign: 'center' }}>
+                            <Typography sx={{ fontSize: 10, fontWeight: 700, color: colors.primaryBrown, textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5 }}>
                                 Last 30 days
                             </Typography>
                             <Box sx={{
@@ -487,7 +485,7 @@ export default function HealthPage() {
                                     justifyContent: 'center',
                                     gap: 0.5,
                                     padding: '6px 10px',
-                                    backgroundColor: '#e8f5e9',
+                                    backgroundColor: '#ffe0b2',
                                 }}>
                                     <Typography sx={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>
                                         {workoutStats.workoutDays}
@@ -504,7 +502,7 @@ export default function HealthPage() {
                                     justifyContent: 'center',
                                     gap: 0.5,
                                     padding: '6px 10px',
-                                    backgroundColor: '#f5f5f5',
+                                    backgroundColor: '#c8e6c9',
                                 }}>
                                     <Typography sx={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>
                                         {workoutStats.restDays}
@@ -520,7 +518,7 @@ export default function HealthPage() {
             </Box>
 
             {/* ── Diet Section ─────────────────────────────────────── */}
-            <Box>
+            <Box sx={{ backgroundColor: '#e8f5e9', px: 2, py: 2 }}>
                 <Typography
                     component={Link}
                     href="/gustavo/health/diet"
@@ -595,20 +593,21 @@ export default function HealthPage() {
                                         {formatMonthDay(day.date)}
                                     </Typography>
                                 </Box>
-                                {/* Chips card */}
+                                {/* Chips card — single row, horizontally scrollable */}
                                 <Box sx={{
                                     ...cardSx,
-                                    p: 1.25,
+                                    p: 1,
                                     display: 'flex',
-                                    flexWrap: 'wrap',
                                     gap: 0.5,
+                                    overflowX: 'auto',
+                                    WebkitOverflowScrolling: 'touch',
                                 }}>
                                     {day.mealGroups.map((group) => (
                                         <Chip
                                             key={`meal-${group.id}`}
                                             label={`${group.quantity > 1 ? `${group.quantity}× ` : ''}${group.label}`}
                                             size="small"
-                                            sx={mealChipSx}
+                                            sx={{ ...mealChipSx, flexShrink: 0 }}
                                         />
                                     ))}
                                     {day.standaloneFoods.map((entry) => (
@@ -616,7 +615,7 @@ export default function HealthPage() {
                                             key={`food-${entry.id}`}
                                             label={`${entry.quantity > 1 ? `${entry.quantity}× ` : ''}${entry.food.name}`}
                                             size="small"
-                                            sx={foodChipSx}
+                                            sx={{ ...foodChipSx, flexShrink: 0 }}
                                         />
                                     ))}
                                 </Box>
@@ -627,7 +626,7 @@ export default function HealthPage() {
             </Box>
 
             {/* ── Supplements Section ──────────────────────────────── */}
-            <Box>
+            <Box sx={{ backgroundColor: '#ede7f6', px: 2, py: 2 }}>
                 <Typography
                     component={Link}
                     href="/gustavo/health/supplements"
@@ -702,20 +701,21 @@ export default function HealthPage() {
                                         {formatMonthDay(group.date)}
                                     </Typography>
                                 </Box>
-                                {/* Chips card */}
+                                {/* Chips card — single row, horizontally scrollable */}
                                 <Box sx={{
                                     ...cardSx,
-                                    p: 1.25,
+                                    p: 1,
                                     display: 'flex',
-                                    flexWrap: 'wrap',
                                     gap: 0.5,
+                                    overflowX: 'auto',
+                                    WebkitOverflowScrolling: 'touch',
                                 }}>
                                     {group.logs.map((log) => (
                                         <Chip
                                             key={log.id}
                                             label={log.quantity > 1 ? `${log.supplementName} ×${log.quantity}` : log.supplementName}
                                             size="small"
-                                            sx={supplementChipSx}
+                                            sx={{ ...supplementChipSx, flexShrink: 0 }}
                                         />
                                     ))}
                                 </Box>
@@ -726,7 +726,7 @@ export default function HealthPage() {
             </Box>
 
             {/* ── Tools ────────────────────────────────────────────── */}
-            <Box>
+            <Box sx={{ px: 2, py: 2 }}>
                 <Typography sx={sectionHeaderSx}>Tools</Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {tools.map((tool) => {
