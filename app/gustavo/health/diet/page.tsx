@@ -447,7 +447,7 @@ export default function DietPage() {
     )
 
     const applyPreset = useCallback(
-        async (presetId: number) => {
+        async (presetId: number, date?: string) => {
             setApplyingPreset(presetId)
             try {
                 const res = await fetch(
@@ -455,7 +455,7 @@ export default function DietPage() {
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date: getLocalDate() }),
+                        body: JSON.stringify({ date: date ?? getLocalDate() }),
                     }
                 )
                 if (res.ok) fetchData()
@@ -625,6 +625,8 @@ export default function DietPage() {
                 foods={foods}
                 editTarget={editTarget}
                 dietDays={dietDays}
+                presets={presets}
+                onReorderPresets={reorderPresets}
                 onDataChanged={fetchData}
                 alphabetIndexSide={alphabetIndexSide}
             />
@@ -666,6 +668,8 @@ type DietDrawerProps = {
     foods: Food[]
     editTarget: EditTarget | null
     dietDays: DietDay[]
+    presets: DietPreset[]
+    onReorderPresets: (from: number, to: number) => void
     onDataChanged: () => void
     alphabetIndexSide: 'left' | 'right'
 }
@@ -676,6 +680,8 @@ function DietDrawer({
     foods,
     editTarget,
     dietDays,
+    presets,
+    onReorderPresets,
     onDataChanged,
     alphabetIndexSide,
 }: DietDrawerProps) {
@@ -685,6 +691,8 @@ function DietDrawer({
     const [mealQuantity, setMealQuantity] = useState(1)
     const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
     const [saving, setSaving] = useState(false)
+    // Staged presets — presetId → quantity to apply (new logs only)
+    const [stagedPresets, setStagedPresets] = useState<Map<number, number>>(new Map())
 
     // Manage mode state
     const [name, setName] = useState('')
@@ -772,6 +780,7 @@ function DietDrawer({
             setName('')
             setFoodSearch('')
             setInlineEditId(null)
+            setStagedPresets(new Map())
 
             if (editTarget) {
                 // Editing an existing meal
@@ -879,7 +888,20 @@ function DietDrawer({
 
                 await Promise.all(ops)
             } else {
-                // New meal — create food logs (POST creates meal group automatically)
+                // New log — apply staged presets, then create standalone food logs
+
+                // Apply each staged preset (each call handles meal group creation/quantity increment)
+                for (const [presetId, qty] of Array.from(stagedPresets.entries())) {
+                    for (let i = 0; i < qty; i++) {
+                        await fetch(`/api/health/presets/${presetId}/apply`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ date }),
+                        })
+                    }
+                }
+
+                // Create standalone food logs (no meal label)
                 for (const food of foodsList) {
                     await fetch('/api/health/food-logs', {
                         method: 'POST',
@@ -888,7 +910,6 @@ function DietDrawer({
                             date,
                             foodId: food.foodId,
                             quantity: food.quantity,
-                            mealLabel: trimmedLabel,
                         }),
                     })
                 }
@@ -901,7 +922,7 @@ function DietDrawer({
         } finally {
             setSaving(false)
         }
-    }, [date, mealLabel, mealQuantity, quantities, editTarget, onDataChanged, onClose])
+    }, [date, mealLabel, mealQuantity, quantities, stagedPresets, editTarget, onDataChanged, onClose])
 
 
     const startInlineEdit = useCallback((food: Food) => {
@@ -1040,64 +1061,212 @@ function DietDrawer({
                                 />
                             </Box>
 
-                            {/* Name + Quantity row */}
-                            <Box sx={{ display: 'flex', gap: 2 }}>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography sx={labelSx}>Name</Typography>
-                                    <TextField
-                                        value={mealLabel}
-                                        onChange={(e) => setMealLabel(e.target.value)}
-                                        size="small"
-                                        fullWidth
-                                        placeholder="Optional"
-                                        error={labelConflict}
-                                        helperText={labelConflict ? 'Already exists for this date' : undefined}
-                                        sx={labelConflict ? errorFieldSx : fieldSx}
-                                    />
-                                </Box>
-                                {trimmedLabel && <Box sx={{ flexShrink: 0, pr: 1.5 }}>
-                                    <Typography sx={labelSx}>Quantity</Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: 40 }}>
-                                        <Box
-                                            onClick={() => setMealQuantity((q) => Math.max(1, q - 1))}
-                                            sx={{
-                                                'width': 24,
-                                                'height': 24,
-                                                'borderRadius': '50%',
-                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'justifyContent': 'center',
-                                                'cursor': 'pointer',
-                                                'backgroundColor': colors.primaryWhite,
-                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                            }}>
-                                            <IconMinus size={12} stroke={2.5} />
-                                        </Box>
-                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                            {mealQuantity}
-                                        </Typography>
-                                        <Box
-                                            onClick={() => setMealQuantity((q) => q + 1)}
-                                            sx={{
-                                                'width': 24,
-                                                'height': 24,
-                                                'borderRadius': '50%',
-                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                'display': 'flex',
-                                                'alignItems': 'center',
-                                                'justifyContent': 'center',
-                                                'cursor': 'pointer',
-                                                'backgroundColor': colors.primaryWhite,
-                                                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                            }}>
-                                            <IconPlus size={12} stroke={2.5} />
-                                        </Box>
+                            {isEditing ? (
+                                /* Edit mode — Name + Quantity row */
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography sx={labelSx}>Name</Typography>
+                                        <TextField
+                                            value={mealLabel}
+                                            onChange={(e) => setMealLabel(e.target.value)}
+                                            size="small"
+                                            fullWidth
+                                            placeholder="Optional"
+                                            error={labelConflict}
+                                            helperText={labelConflict ? 'Already exists for this date' : undefined}
+                                            sx={labelConflict ? errorFieldSx : fieldSx}
+                                        />
                                     </Box>
-                                </Box>}
-                            </Box>
+                                    {trimmedLabel && <Box sx={{ flexShrink: 0, pr: 1.5 }}>
+                                        <Typography sx={labelSx}>Quantity</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: 40 }}>
+                                            <Box
+                                                onClick={() => setMealQuantity((q) => Math.max(1, q - 1))}
+                                                sx={{
+                                                    'width': 24,
+                                                    'height': 24,
+                                                    'borderRadius': '50%',
+                                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                    'display': 'flex',
+                                                    'alignItems': 'center',
+                                                    'justifyContent': 'center',
+                                                    'cursor': 'pointer',
+                                                    'backgroundColor': colors.primaryWhite,
+                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                }}>
+                                                <IconMinus size={12} stroke={2.5} />
+                                            </Box>
+                                            <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                {mealQuantity}
+                                            </Typography>
+                                            <Box
+                                                onClick={() => setMealQuantity((q) => q + 1)}
+                                                sx={{
+                                                    'width': 24,
+                                                    'height': 24,
+                                                    'borderRadius': '50%',
+                                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                    'display': 'flex',
+                                                    'alignItems': 'center',
+                                                    'justifyContent': 'center',
+                                                    'cursor': 'pointer',
+                                                    'backgroundColor': colors.primaryWhite,
+                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                }}>
+                                                <IconPlus size={12} stroke={2.5} />
+                                            </Box>
+                                        </Box>
+                                    </Box>}
+                                </Box>
+                            ) : (
+                                /* New log — preset chips + staged preset cards */
+                                <>
+                                    {presets.length > 0 && (
+                                        <Box>
+                                            <Typography sx={{ ...labelSx, mb: 0.75 }}>Presets</Typography>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 30,
+                                                        height: 30,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: '#c8e6c9',
+                                                        border: `1.5px solid ${colors.primaryBlack}`,
+                                                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0,
+                                                    }}>
+                                                    <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
+                                                </Box>
+                                                <HorizontalSortableList items={presets} onReorder={onReorderPresets}>
+                                                    {presets.map((preset) => {
+                                                        const staged = stagedPresets.get(preset.id) ?? 0
+                                                        return (
+                                                            <SortablePresetChip key={preset.id} id={preset.id}>
+                                                                <Box
+                                                                    onClick={() => {
+                                                                        setStagedPresets((prev) => {
+                                                                            const next = new Map(prev)
+                                                                            next.set(preset.id, (next.get(preset.id) ?? 0) + 1)
+                                                                            return next
+                                                                        })
+                                                                    }}
+                                                                    sx={{
+                                                                        'px': 1.25,
+                                                                        'py': 0.5,
+                                                                        'backgroundColor': staged > 0
+                                                                            ? '#f1f8e9'
+                                                                            : colors.primaryWhite,
+                                                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                                        'borderRadius': '4px',
+                                                                        'cursor': 'pointer',
+                                                                        'transition': 'all 0.15s',
+                                                                        '&:active': {
+                                                                            boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                                            transform: 'translate(1px, 1px)',
+                                                                        },
+                                                                    }}>
+                                                                    <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                                                                        {preset.name}{staged > 0 ? ` x${staged}` : ''}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </SortablePresetChip>
+                                                        )
+                                                    })}
+                                                </HorizontalSortableList>
+                                            </Box>
+                                            {/* Staged preset summary with quantity controls */}
+                                            {stagedPresets.size > 0 && (
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.5 }}>
+                                                    {Array.from(stagedPresets.entries()).map(([presetId, qty]) => {
+                                                        const preset = presets.find((p) => p.id === presetId)
+                                                        if (!preset) return null
+                                                        return (
+                                                            <Box
+                                                                key={presetId}
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: 1,
+                                                                    width: '100%',
+                                                                }}>
+                                                                <Box
+                                                                    sx={{
+                                                                        padding: '6px 12px',
+                                                                        ...cardSx,
+                                                                        backgroundColor: '#f1f8e9',
+                                                                        borderColor: colors.primaryBlack,
+                                                                    }}>
+                                                                    <Typography sx={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                                        {preset.name}
+                                                                    </Typography>
+                                                                </Box>
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 'auto' }}>
+                                                                    <Box
+                                                                        onClick={() => {
+                                                                            setStagedPresets((prev) => {
+                                                                                const next = new Map(prev)
+                                                                                if (qty <= 1) next.delete(presetId)
+                                                                                else next.set(presetId, qty - 1)
+                                                                                return next
+                                                                            })
+                                                                        }}
+                                                                        sx={{
+                                                                            'width': 24,
+                                                                            'height': 24,
+                                                                            'borderRadius': '50%',
+                                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                            'display': 'flex',
+                                                                            'alignItems': 'center',
+                                                                            'justifyContent': 'center',
+                                                                            'cursor': 'pointer',
+                                                                            'backgroundColor': colors.primaryWhite,
+                                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                                        }}>
+                                                                        <IconMinus size={12} stroke={2.5} />
+                                                                    </Box>
+                                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                                        {qty}
+                                                                    </Typography>
+                                                                    <Box
+                                                                        onClick={() => {
+                                                                            setStagedPresets((prev) => {
+                                                                                const next = new Map(prev)
+                                                                                next.set(presetId, qty + 1)
+                                                                                return next
+                                                                            })
+                                                                        }}
+                                                                        sx={{
+                                                                            'width': 24,
+                                                                            'height': 24,
+                                                                            'borderRadius': '50%',
+                                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                            'display': 'flex',
+                                                                            'alignItems': 'center',
+                                                                            'justifyContent': 'center',
+                                                                            'cursor': 'pointer',
+                                                                            'backgroundColor': colors.primaryWhite,
+                                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                                        }}>
+                                                                        <IconPlus size={12} stroke={2.5} />
+                                                                    </Box>
+                                                                </Box>
+                                                            </Box>
+                                                        )
+                                                    })}
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    )}
+                                </>
+                            )}
 
                             {/* Food checklist */}
                             <Typography sx={{ ...labelSx, mb: -1 }}>Foods</Typography>
@@ -1566,7 +1735,7 @@ function DietDrawer({
                     {mode === 'log' && (
                         <Button
                             onClick={handleLogSubmit}
-                            disabled={quantities.size === 0 || saving || labelConflict}
+                            disabled={(quantities.size === 0 && stagedPresets.size === 0) || saving || (isEditing && labelConflict)}
                             size="large"
                             sx={primaryButtonSx}>
                             {saving ? 'Saving...' : isEditing ? 'Save' : 'Log'}

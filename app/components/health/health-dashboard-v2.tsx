@@ -13,6 +13,7 @@ import { Box, Chip, Typography } from '@mui/material'
 import {
     IconBarbell,
     IconBolt,
+    IconCalendarRepeat,
     IconFirstAidKit,
     IconPill,
     IconSalad,
@@ -258,59 +259,69 @@ export function HealthDashboardV2({
                     </Box>
                     {!loading && daysSince.length > 0 && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            {workoutStats.streak > 0 && (
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.5,
-                                    px: 1,
-                                    py: 0.5,
-                                    borderRadius: '4px',
-                                    border: `1px solid ${colors.primaryBlack}`,
-                                    boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    backgroundColor: colors.secondaryYellow,
-                                }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                        {workoutStats.streak}
-                                    </Typography>
-                                    <Typography sx={{ fontSize: 10, fontWeight: 600, color: colors.primaryBrown, lineHeight: 1 }}>
-                                        streak
-                                    </Typography>
-                                </Box>
-                            )}
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.4,
+                            px: 0.6,
+                            py: 0.4,
+                            borderRadius: '4px',
+                            border: `1px solid ${colors.primaryBlack}`,
+                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                            backgroundColor: colors.primaryWhite,
+                        }}>
+                            <IconCalendarRepeat size={14} stroke={2} color={colors.primaryBrown} />
+                            <Typography sx={{ fontSize: 9, fontWeight: 800, color: colors.primaryBrown, lineHeight: 1 }}>
+                                30
+                            </Typography>
+                        </Box>
+                        {workoutStats.streak > 0 && (
                             <Box sx={{
                                 display: 'flex',
                                 alignItems: 'center',
+                                gap: 0.5,
+                                px: 1,
+                                py: 0.5,
                                 borderRadius: '4px',
                                 border: `1px solid ${colors.primaryBlack}`,
                                 boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                overflow: 'hidden',
+                                backgroundColor: colors.secondaryYellow,
                             }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#ffe0b2' }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                        {workoutStats.workoutDays}
-                                    </Typography>
-                                    <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
-                                        active
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack, alignSelf: 'stretch' }} />
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#c8e6c9' }}>
-                                    <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                        {workoutStats.restDays}
-                                    </Typography>
-                                    <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
-                                        rest
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack, alignSelf: 'stretch' }} />
-                                <Box sx={{ px: 0.5, py: 0.5, backgroundColor: colors.primaryWhite }}>
-                                    <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
-                                        30d
-                                    </Typography>
-                                </Box>
+                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
+                                    {workoutStats.streak}
+                                </Typography>
+                                <Typography sx={{ fontSize: 10, fontWeight: 600, color: colors.primaryBrown, lineHeight: 1 }}>
+                                    streak
+                                </Typography>
+                            </Box>
+                        )}
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '4px',
+                            border: `1px solid ${colors.primaryBlack}`,
+                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                            overflow: 'hidden',
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#ffe0b2' }}>
+                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
+                                    {workoutStats.workoutDays}
+                                </Typography>
+                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
+                                    active
+                                </Typography>
+                            </Box>
+                            <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack, alignSelf: 'stretch' }} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#c8e6c9' }}>
+                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
+                                    {workoutStats.restDays}
+                                </Typography>
+                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
+                                    rest
+                                </Typography>
                             </Box>
                         </Box>
+                    </Box>
                     )}
                 </Box>
 
@@ -319,7 +330,7 @@ export function HealthDashboardV2({
                     <PresetsSkeleton />
                 ) : workoutPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={boltCircleSx}>
+                        <Box sx={{ ...boltCircleSx, backgroundColor: '#ffe0b2' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         <HorizontalSortableList items={workoutPresets} onReorder={(from, to) => reorderPresets('workout', from, to)}>
@@ -415,7 +426,7 @@ export function HealthDashboardV2({
                     <PresetsSkeleton />
                 ) : dietPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={boltCircleSx}>
+                        <Box sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         <HorizontalSortableList items={dietPresets} onReorder={(from, to) => reorderPresets('diet', from, to)}>
@@ -503,7 +514,7 @@ export function HealthDashboardV2({
                     <PresetsSkeleton />
                 ) : supplementPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={boltCircleSx}>
+                        <Box sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         <HorizontalSortableList items={supplementPresets} onReorder={(from, to) => reorderPresets('supplement', from, to)}>
