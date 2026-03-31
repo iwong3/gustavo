@@ -13,7 +13,6 @@ import { Box, Chip, Typography } from '@mui/material'
 import {
     IconBarbell,
     IconBolt,
-    IconCalendarRepeat,
     IconFirstAidKit,
     IconPill,
     IconSalad,
@@ -262,16 +261,18 @@ export function HealthDashboardV2({
                         <Box sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 0.4,
-                            px: 0.6,
-                            py: 0.4,
+                            gap: 0.25,
+                            pl: 0.25,
+                            pr: 0.75,
+                            py: 0.75,
                             borderRadius: '4px',
-                            border: `1px solid ${colors.primaryBlack}`,
-                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                            ...hardShadow,
                             backgroundColor: colors.primaryWhite,
                         }}>
-                            <IconCalendarRepeat size={14} stroke={2} color={colors.primaryBrown} />
-                            <Typography sx={{ fontSize: 9, fontWeight: 800, color: colors.primaryBrown, lineHeight: 1 }}>
+                            <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
+                                📅
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, fontWeight: 800, color: colors.primaryBrown, lineHeight: 1 }}>
                                 30
                             </Typography>
                         </Box>
@@ -279,19 +280,19 @@ export function HealthDashboardV2({
                             <Box sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 0.5,
-                                px: 1,
-                                py: 0.5,
+                                gap: 0.25,
+                                pl: 0.25,
+                                pr: 0.75,
+                                py: 0.75,
                                 borderRadius: '4px',
-                                border: `1px solid ${colors.primaryBlack}`,
-                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                ...hardShadow,
                                 backgroundColor: colors.secondaryYellow,
                             }}>
-                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                    {workoutStats.streak}
+                                <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
+                                    🔥
                                 </Typography>
-                                <Typography sx={{ fontSize: 10, fontWeight: 600, color: colors.primaryBrown, lineHeight: 1 }}>
-                                    streak
+                                <Typography sx={{ fontSize: 14, fontWeight: 800, lineHeight: 1 }}>
+                                    {workoutStats.streak}
                                 </Typography>
                             </Box>
                         )}
@@ -299,25 +300,24 @@ export function HealthDashboardV2({
                             display: 'flex',
                             alignItems: 'center',
                             borderRadius: '4px',
-                            border: `1px solid ${colors.primaryBlack}`,
-                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                            ...hardShadow,
                             overflow: 'hidden',
                         }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#ffe0b2' }}>
-                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                    {workoutStats.workoutDays}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.25, pr: 0.75, py: 0.75, background: 'linear-gradient(135deg, #ffe0b2, #ffccbc)' }}>
+                                <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
+                                    💪
                                 </Typography>
-                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
-                                    active
+                                <Typography sx={{ fontSize: 14, fontWeight: 800, lineHeight: 1, minWidth: '1.2em', textAlign: 'center' }}>
+                                    {workoutStats.workoutDays}
                                 </Typography>
                             </Box>
                             <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack, alignSelf: 'stretch' }} />
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, px: 0.75, py: 0.5, backgroundColor: '#c8e6c9' }}>
-                                <Typography sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1 }}>
-                                    {workoutStats.restDays}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.25, pr: 0.75, py: 0.75, background: 'linear-gradient(135deg, #d1c4e9, #bbdefb)' }}>
+                                <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
+                                    🛋️
                                 </Typography>
-                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: colors.primaryBrown, lineHeight: 1 }}>
-                                    rest
+                                <Typography sx={{ fontSize: 14, fontWeight: 800, lineHeight: 1, minWidth: '1.2em', textAlign: 'center' }}>
+                                    {workoutStats.restDays}
                                 </Typography>
                             </Box>
                         </Box>
