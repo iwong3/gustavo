@@ -11,15 +11,22 @@ export async function GET(request: NextRequest) {
     const showAll = request.nextUrl.searchParams.get('all') === 'true'
 
     let query = `
-        SELECT id, name, is_active
-        FROM foods
-        WHERE user_id = $1 AND deleted_at IS NULL`
+        SELECT f.id, f.name, f.is_active,
+               COALESCE(
+                   json_agg(json_build_object('id', fg.id, 'name', fg.name, 'color', fg.color) ORDER BY fg.name)
+                   FILTER (WHERE fg.id IS NOT NULL),
+                   '[]'
+               ) AS groups
+        FROM foods f
+        LEFT JOIN food_group_members fgm ON fgm.food_id = f.id
+        LEFT JOIN food_groups fg ON fg.id = fgm.food_group_id AND fg.deleted_at IS NULL
+        WHERE f.user_id = $1 AND f.deleted_at IS NULL`
 
     if (!showAll) {
-        query += ` AND is_active = true`
+        query += ` AND f.is_active = true`
     }
 
-    query += ` ORDER BY name`
+    query += ` GROUP BY f.id ORDER BY f.name`
 
     const { rows } = await pool.query(query, [authUser.userId])
 
@@ -27,6 +34,7 @@ export async function GET(request: NextRequest) {
         id: Number(r.id),
         name: r.name,
         isActive: r.is_active,
+        groups: r.groups,
     }))
 
     return NextResponse.json(foods)
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
                 id: Number(food.id),
                 name: food.name,
                 isActive: food.is_active,
+                groups: [],
             } as Food,
             { status: 201 }
         )

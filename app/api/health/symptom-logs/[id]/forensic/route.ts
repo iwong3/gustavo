@@ -80,7 +80,14 @@ async function getDaySnapshots(userId: number, endDate: string, daysBefore: numb
     const foodRes = await pool.query(
         `SELECT fl.id, fl.food_id, f.name AS food_name, f.is_active,
                 fl.date, fl.quantity, fl.meal_group_id,
-                mg.label AS meal_label, mg.quantity AS meal_quantity
+                mg.label AS meal_label, mg.quantity AS meal_quantity,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('id', fg.id, 'name', fg.name, 'color', fg.color) ORDER BY fg.name)
+                     FROM food_group_members fgm
+                     JOIN food_groups fg ON fg.id = fgm.food_group_id AND fg.deleted_at IS NULL
+                     WHERE fgm.food_id = f.id),
+                    '[]'
+                ) AS food_groups
          FROM food_logs fl
          JOIN foods f ON f.id = fl.food_id
          LEFT JOIN meal_groups mg ON mg.id = fl.meal_group_id
@@ -128,7 +135,7 @@ async function getDaySnapshots(userId: number, endDate: string, daysBefore: numb
         for (const r of dayFoods) {
             const entry: FoodLogEntry = {
                 id: Number(r.id),
-                food: { id: Number(r.food_id), name: r.food_name, isActive: r.is_active },
+                food: { id: Number(r.food_id), name: r.food_name, isActive: r.is_active, groups: r.food_groups },
                 quantity: r.quantity,
                 mealGroupId: r.meal_group_id ? Number(r.meal_group_id) : null,
             }

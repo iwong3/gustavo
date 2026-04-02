@@ -112,48 +112,49 @@ export default function InviteUsersPage() {
             </Typography>
 
             {/* Add email form */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                    value={newEmail}
-                    onChange={(e) => {
-                        setNewEmail(e.target.value)
-                        setError(null)
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAdd()
-                    }}
-                    placeholder="email@gmail.com"
-                    type="email"
-                    autoComplete="off"
-                    slotProps={{ htmlInput: { maxLength: 254 } }}
-                    size="small"
-                    fullWidth
-                    disabled={adding}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            'border': `1px solid ${colors.primaryBlack}`,
-                            'borderRadius': 1,
-                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                            'backgroundColor': colors.primaryWhite,
-                            'fontSize': 14,
-                            '& fieldset': { border: 'none' },
-                        },
-                    }}
-                />
-                <Button
-                    onClick={handleAdd}
-                    disabled={adding || !newEmail.trim()}
-                    sx={{
-                        ...primaryButtonSx,
-                        minWidth: 0,
-                        width: 40,
-                        padding: 0,
-                        flexShrink: 0,
-                        aspectRatio: '1 / 1',
-                    }}>
-                    <IconPlus size={18} />
-                </Button>
-            </Box>
+            <TextField
+                value={newEmail}
+                onChange={(e) => {
+                    setNewEmail(e.target.value)
+                    setError(null)
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAdd()
+                }}
+                placeholder="email@gmail.com"
+                type="email"
+                autoComplete="off"
+                size="small"
+                fullWidth
+                disabled={adding}
+                slotProps={{
+                    htmlInput: { maxLength: 254 },
+                    input: {
+                        endAdornment: (
+                            <Box
+                                onClick={handleAdd}
+                                sx={{
+                                    'display': 'flex',
+                                    'cursor': newEmail.trim() && !adding ? 'pointer' : 'default',
+                                    'opacity': newEmail.trim() && !adding ? 1 : 0.3,
+                                    '&:active': newEmail.trim() && !adding ? { transform: 'scale(0.9)' } : {},
+                                }}>
+                                <IconPlus size={18} stroke={2.5} color={colors.primaryBlack} />
+                            </Box>
+                        ),
+                    },
+                }}
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        'border': `1px solid ${colors.primaryBlack}`,
+                        'borderRadius': 1,
+                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                        'backgroundColor': colors.primaryWhite,
+                        'fontSize': 14,
+                        '& fieldset': { border: 'none' },
+                    },
+                }}
+            />
 
             {error && (
                 <Typography

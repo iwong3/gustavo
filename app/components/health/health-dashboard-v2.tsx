@@ -456,7 +456,7 @@ export function HealthDashboardV2({
 
                 {/* Recent logs */}
                 {loading ? (
-                    <LogCardSkeleton />
+                    <LogCardSkeleton rows={3} />
                 ) : recentDiet.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>
                         No food logged yet
@@ -544,7 +544,7 @@ export function HealthDashboardV2({
 
                 {/* Recent logs */}
                 {loading ? (
-                    <LogCardSkeleton />
+                    <LogCardSkeleton rows={3} />
                 ) : recentSupplementDays.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>
                         No supplements logged yet

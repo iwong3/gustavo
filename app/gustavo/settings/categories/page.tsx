@@ -253,44 +253,34 @@ export default function CategoriesPage() {
 
             {/* Add category */}
             <Box sx={{ marginBottom: 0.5 }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField
                     size="small"
+                    fullWidth
                     placeholder="New category name"
                     value={newName}
                     onChange={(e) => { setNewName(e.target.value); setAddError('') }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAdd()
                     }}
-                    slotProps={{ htmlInput: { maxLength: 100 } }}
-                    sx={{ flex: 1, ...(addError ? errorFieldSx : fieldSx) }}
+                    slotProps={{
+                        htmlInput: { maxLength: 100 },
+                        input: {
+                            endAdornment: (
+                                <Box
+                                    onClick={handleAdd}
+                                    sx={{
+                                        'display': 'flex',
+                                        'cursor': newName.trim() ? 'pointer' : 'default',
+                                        'opacity': newName.trim() ? 1 : 0.3,
+                                        '&:active': newName.trim() ? { transform: 'scale(0.9)' } : {},
+                                    }}>
+                                    <IconPlus size={18} stroke={2.5} color={colors.primaryBlack} />
+                                </Box>
+                            ),
+                        },
+                    }}
+                    sx={addError ? errorFieldSx : fieldSx}
                 />
-                <IconButton
-                    onClick={handleAdd}
-                    disabled={!newName.trim()}
-                    sx={{
-                        ...hardShadow,
-                        'borderRadius': '4px',
-                        'width': 40,
-                        'height': 40,
-                        'backgroundColor': colors.primaryYellow,
-                        'color': colors.primaryBlack,
-                        '&:hover': { backgroundColor: colors.primaryYellow },
-                        '&:active': {
-                            boxShadow: 'none',
-                            transform: 'translate(2px, 2px)',
-                        },
-                        '&.Mui-disabled': {
-                            backgroundColor: `${colors.primaryYellow}60`,
-                            color: `${colors.primaryBlack}40`,
-                            border: `1px solid ${colors.primaryBlack}40`,
-                            boxShadow: `2px 2px 0px ${colors.primaryBlack}40`,
-                        },
-                        'transition': 'transform 0.1s, box-shadow 0.1s',
-                    }}>
-                    <IconPlus size={20} />
-                </IconButton>
-              </Box>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: colors.primaryRed, marginTop: 0.5, marginLeft: '14px', height: 18, visibility: addError ? 'visible' : 'hidden' }}>
                   {addError || '\u00A0'}
               </Typography>

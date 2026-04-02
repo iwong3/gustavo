@@ -176,27 +176,37 @@ export default function LocationsPage() {
             {selectedTripId !== '' && (
                 <>
                     {/* Add location */}
-                    <Box sx={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                    <Box sx={{ marginBottom: 2 }}>
                         <TextField
                             size="small"
+                            fullWidth
                             placeholder="New location name"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleAdd()
                             }}
-                            slotProps={{ htmlInput: { maxLength: 200 } }}
+                            slotProps={{
+                                htmlInput: { maxLength: 200 },
+                                input: {
+                                    endAdornment: (
+                                        <Box
+                                            onClick={handleAdd}
+                                            sx={{
+                                                'display': 'flex',
+                                                'cursor': newName.trim() ? 'pointer' : 'default',
+                                                'opacity': newName.trim() ? 1 : 0.3,
+                                                '&:active': newName.trim() ? { transform: 'scale(0.9)' } : {},
+                                            }}>
+                                            <IconPlus size={18} stroke={2.5} color={colors.primaryBlack} />
+                                        </Box>
+                                    ),
+                                },
+                            }}
                             sx={{
-                                flex: 1,
                                 '& .MuiInputBase-root': { backgroundColor: '#FFFFEF' },
                             }}
                         />
-                        <IconButton
-                            onClick={handleAdd}
-                            disabled={!newName.trim()}
-                            sx={{ color: '#FBBC04' }}>
-                            <IconPlus size={20} />
-                        </IconButton>
                     </Box>
 
                     {loading ? (

@@ -75,10 +75,25 @@ export type SupplementPreset = {
 
 // --- Diet ---
 
+export type FoodGroupTag = {
+    id: number
+    name: string
+    color: string
+}
+
 export type Food = {
     id: number
     name: string
     isActive: boolean
+    groups: FoodGroupTag[]
+}
+
+export type FoodGroup = {
+    id: number
+    name: string
+    color: string
+    isActive: boolean
+    foodIds: number[]
 }
 
 export type MealGroup = {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import type { Food } from '@/lib/health-types'
+import type { FoodGroup } from '@/lib/health-types'
 
 type Params = { id: string }
 
@@ -14,10 +14,10 @@ export async function PUT(
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
-    const { name, isActive } = await request.json()
+    const { name, color, isActive } = await request.json()
 
     const check = await pool.query(
-        'SELECT id FROM foods WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+        'SELECT id FROM food_groups WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
         [id, authUser.userId]
     )
     if (check.rows.length === 0) {
@@ -27,38 +27,37 @@ export async function PUT(
     try {
         const updated = await withAuditUser(authUser.userId, async (client) => {
             const res = await client.query(
-                `UPDATE foods
+                `UPDATE food_groups
                  SET name = COALESCE($1, name),
-                     is_active = COALESCE($2, is_active)
-                 WHERE id = $3
-                 RETURNING id, name, is_active`,
-                [name?.trim() || null, isActive, id]
+                     color = COALESCE($2, color),
+                     is_active = COALESCE($3, is_active),
+                     updated_at = now()
+                 WHERE id = $4
+                 RETURNING id, name, color, is_active`,
+                [name?.trim() || null, color?.trim() || null, isActive, id]
             )
             return res.rows[0]
         })
 
-        // Fetch current groups
-        const { rows: groupRows } = await pool.query(
-            `SELECT fg.id, fg.name, fg.color
-             FROM food_group_members fgm
-             JOIN food_groups fg ON fg.id = fgm.food_group_id AND fg.deleted_at IS NULL
-             WHERE fgm.food_id = $1
-             ORDER BY fg.name`,
+        // Fetch members
+        const { rows: members } = await pool.query(
+            'SELECT food_id FROM food_group_members WHERE food_group_id = $1 ORDER BY food_id',
             [id]
         )
 
         return NextResponse.json({
             id: Number(updated.id),
             name: updated.name,
+            color: updated.color,
             isActive: updated.is_active,
-            groups: groupRows.map((g) => ({ id: Number(g.id), name: g.name, color: g.color })),
-        } as Food)
+            foodIds: members.map((m) => Number(m.food_id)),
+        } as FoodGroup)
     } catch (err: unknown) {
         if (err instanceof Error && 'code' in err && (err as { code: string }).code === '23505') {
-            return NextResponse.json({ error: 'A food with that name already exists' }, { status: 409 })
+            return NextResponse.json({ error: 'A food group with that name already exists' }, { status: 409 })
         }
-        console.error('Error updating food:', err)
-        return NextResponse.json({ error: 'Failed to update food' }, { status: 500 })
+        console.error('Error updating food group:', err)
+        return NextResponse.json({ error: 'Failed to update food group' }, { status: 500 })
     }
 }
 
@@ -72,7 +71,7 @@ export async function DELETE(
     const { id } = await params
 
     const check = await pool.query(
-        'SELECT id FROM foods WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+        'SELECT id FROM food_groups WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
         [id, authUser.userId]
     )
     if (check.rows.length === 0) {
@@ -80,10 +79,9 @@ export async function DELETE(
     }
 
     await withAuditUser(authUser.userId, async (client) => {
-        await client.query(
-            'UPDATE foods SET deleted_at = now() WHERE id = $1',
-            [id]
-        )
+        // Remove members first
+        await client.query('DELETE FROM food_group_members WHERE food_group_id = $1', [id])
+        await client.query('UPDATE food_groups SET deleted_at = now() WHERE id = $1', [id])
     })
 
     return NextResponse.json({ success: true })
