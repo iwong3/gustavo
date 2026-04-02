@@ -203,6 +203,7 @@ export default function ExercisesPage() {
                                 onEdit={() => openEdit(exercise)}
                                 onDelete={() => handleDelete(exercise.id)}
                                 backgroundColor={colors.primaryWhite}
+                                borderColor={colors.primaryBlack}
                             >
                                 <Box
                                     onClick={() => openEdit(exercise)}

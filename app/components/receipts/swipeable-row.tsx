@@ -19,6 +19,8 @@ interface SwipeableRowProps {
     showBottomBorder?: boolean
     borderRadius?: string | number
     boxShadow?: string
+    border?: string
+    borderColor?: string
 }
 
 export const SwipeableRow = ({
@@ -31,7 +33,10 @@ export const SwipeableRow = ({
     showBottomBorder = false,
     borderRadius,
     boxShadow,
+    border,
+    borderColor: borderColorProp,
 }: SwipeableRowProps) => {
+    const dividerColor = borderColorProp ?? 'rgba(0, 0, 0, 0.23)'
     const [offset, setOffset] = useState(0)
     const [swiping, setSwiping] = useState(false)
     const startXRef = useRef(0)
@@ -130,6 +135,7 @@ export const SwipeableRow = ({
                 }),
                 ...(borderRadius != null && { borderRadius }),
                 ...(boxShadow != null && { boxShadow }),
+                ...(border != null && { border }),
             }}>
                 {children}
             </Box>
@@ -146,6 +152,7 @@ export const SwipeableRow = ({
             }),
             ...(borderRadius != null && { borderRadius }),
             ...(boxShadow != null && { boxShadow }),
+            ...(border != null && { border }),
         }}>
             {/* Left action (edit) — revealed by swiping right */}
             {canEdit && (
@@ -187,6 +194,36 @@ export const SwipeableRow = ({
                     }}>
                     <IconTrash size={22} color={colors.primaryWhite} />
                 </Box>
+            )}
+
+            {/* Border dividers — travel with content but cap at button edge */}
+            {canEdit && offset > 0 && (
+                <Box sx={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 0,
+                    borderRight: `1px solid ${dividerColor}`,
+                    transform: `translateX(${Math.min(offset, ACTION_WIDTH)}px)`,
+                    transition: swiping ? 'none' : 'transform 200ms cubic-bezier(0.25, 0.8, 0.25, 1)',
+                    zIndex: 2,
+                    pointerEvents: 'none',
+                }} />
+            )}
+            {canDelete && offset < 0 && (
+                <Box sx={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 0,
+                    borderLeft: `1px solid ${dividerColor}`,
+                    transform: `translateX(${Math.max(offset, -ACTION_WIDTH)}px)`,
+                    transition: swiping ? 'none' : 'transform 200ms cubic-bezier(0.25, 0.8, 0.25, 1)',
+                    zIndex: 2,
+                    pointerEvents: 'none',
+                }} />
             )}
 
             {/* Sliding content — solid bg to cover action buttons when not swiped */}

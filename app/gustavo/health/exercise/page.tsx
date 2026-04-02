@@ -547,7 +547,8 @@ export default function ExercisePage() {
                                                 }
                                                 backgroundColor={
                                                     colors.primaryWhite
-                                                }>
+                                                }
+                                                borderColor={colors.primaryBlack}>
                                                 <Box
                                                     onClick={() =>
                                                         openDetail(workout)
@@ -966,7 +967,8 @@ function PresetFormDrawer({
                                                         }
                                                         backgroundColor={
                                                             colors.primaryWhite
-                                                        }>
+                                                        }
+                                                        borderColor={colors.primaryBlack}>
                                                         <Box
                                                             onClick={() =>
                                                                 openForm(p)

@@ -2,7 +2,6 @@
 
 import { cardSx, colors, hardShadow } from '@/lib/colors'
 import {
-    errorFieldSx,
     fieldSx,
     labelSx,
     primaryButtonSx,
@@ -121,26 +120,33 @@ function formatMonthDay(dateStr: string): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ── Edit target type ─────────────────────────────────────────────────────────
+// ── Edit target type (day-level) ─────────────────────────────────────────────
 
 type EditTarget = {
     date: string
-    mealGroupId: number | null
+    mealGroups: MealGroup[]
+    standaloneFoods: FoodLogEntry[]
+}
+
+// Staged meal — editable meal group card shown in the form during day edit
+type StagedMeal = {
+    key: string // unique React key
+    mealGroupId: number | null // null = new (from preset)
     label: string
     quantity: number
-    foods: FoodLogEntry[]
+    foods: { foodId: number; quantity: number }[]
 }
 
 // ── Diet Day Card (expandable with per-meal rows) ────────────────────────────
 
 function DietDayCard({
     day,
-    onEditMeal,
-    onDeleteMeal,
+    onEdit,
+    onDelete,
 }: {
     day: DietDay
-    onEditMeal: (target: EditTarget) => void
-    onDeleteMeal: (mealGroupId: number | null, logIds: number[]) => void
+    onEdit: (day: DietDay) => void
+    onDelete: (day: DietDay) => void
 }) {
     const [expanded, setExpanded] = useState(false)
 
@@ -184,14 +190,17 @@ function DietDayCard({
                 </Typography>
             </Box>
 
-            {/* Day card — outer container always visible */}
-            <Box
-                sx={{
-                    ...cardSx,
-                    overflow: 'hidden',
-                }}>
-                {!expanded ? (
-                    /* Collapsed: meal + food chips wrapping */
+            {!expanded ? (
+                /* Collapsed: swipeable day card with meal + food chips */
+                <SwipeableRow
+                    canEdit
+                    canDelete
+                    onEdit={() => onEdit(day)}
+                    onDelete={() => onDelete(day)}
+                    borderRadius="4px"
+                    border={`1px solid ${colors.primaryBlack}`}
+                    borderColor={colors.primaryBlack}
+                    boxShadow={`2px 2px 0px ${colors.primaryBlack}`}>
                     <Box
                         onClick={() => setExpanded(true)}
                         sx={{
@@ -200,6 +209,7 @@ function DietDayCard({
                             'display': 'flex',
                             'flexWrap': 'wrap',
                             'gap': 0.5,
+                            'backgroundColor': colors.primaryWhite,
                             '&:active': { backgroundColor: colors.secondaryYellow },
                             'transition': 'background-color 150ms ease',
                         }}>
@@ -222,162 +232,120 @@ function DietDayCard({
                             />
                         ))}
                     </Box>
-                ) : (
-                    /* Expanded: trips-style rows with dividers inside the day card */
-                    <Box>
-                        {/* Collapse header — styled like DateGroupHeader */}
-                        <Box
-                            onClick={() => setExpanded(false)}
-                            sx={{
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 1,
-                                'px': 1.5,
-                                'py': 1,
-                                'cursor': 'pointer',
-                                'borderBottom': `1px solid ${colors.primaryBlack}`,
-                                'backgroundColor': '#d4ddb6',
-                                'userSelect': 'none',
-                                '&:active': { backgroundColor: '#e2e8c8' },
-                                'transition': 'background-color 150ms ease',
-                            }}>
-                            <IconChevronDown size={16} color={colors.primaryBlack} />
-                        </Box>
-
-                        {/* Meal group rows */}
-                        {day.mealGroups.map((group, i) => {
-                            const isLast = i === day.mealGroups.length - 1 && day.standaloneFoods.length === 0
-                            return (
-                                <SwipeableRow
-                                    key={`meal-${group.id}`}
-                                    canEdit
-                                    canDelete
-                                    onEdit={() => onEditMeal({
-                                        date: day.date,
-                                        mealGroupId: group.id,
-                                        label: group.label,
-                                        quantity: group.quantity,
-                                        foods: group.foods,
-                                    })}
-                                    onDelete={() => onDeleteMeal(group.id, group.foods.map((f) => f.id))}
-                                    backgroundColor={colors.primaryWhite}
-                                    showBottomBorder={!isLast}>
-                                    <Box
-                                        onClick={() => onEditMeal({
-                                            date: day.date,
-                                            mealGroupId: group.id,
-                                            label: group.label,
-                                            quantity: group.quantity,
-                                            foods: group.foods,
-                                        })}
-                                        sx={{
-                                            'display': 'flex',
-                                            'alignItems': 'center',
-                                            'gap': 1.5,
-                                            'px': 1.5,
-                                            'py': 1.25,
-                                            'cursor': 'pointer',
-                                            '&:active': { backgroundColor: colors.secondaryYellow },
-                                            'transition': 'background-color 150ms ease',
-                                        }}>
-                                        <Box
-                                            component="span"
-                                            sx={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: 28,
-                                                height: 28,
-                                                borderRadius: '50%',
-                                                backgroundColor: colors.primaryWhite,
-                                                border: `1.5px solid ${colors.primaryBlack}`,
-                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                                color: colors.primaryBlack,
-                                                fontSize: 13,
-                                                fontWeight: 700,
-                                                lineHeight: 1,
-                                                flexShrink: 0,
-                                            }}>
-                                            {group.quantity}
-                                        </Box>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography sx={{
-                                                fontSize: 14,
-                                                fontWeight: 700,
-                                                lineHeight: 1.3,
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                            }}>
-                                                {group.label}
-                                            </Typography>
-                                            <Typography sx={{
-                                                fontSize: 12,
-                                                color: colors.primaryBrown,
-                                                lineHeight: 1.3,
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                                mt: 0.25,
-                                            }}>
-                                                {group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </SwipeableRow>
-                            )
-                        })}
-
-                        {/* Standalone foods row */}
-                        {day.standaloneFoods.length > 0 && (
-                            <SwipeableRow
-                                canEdit
-                                canDelete
-                                onEdit={() => onEditMeal({
-                                    date: day.date,
-                                    mealGroupId: null,
-                                    label: '',
-                                    quantity: 1,
-                                    foods: day.standaloneFoods,
-                                })}
-                                onDelete={() => onDeleteMeal(null, day.standaloneFoods.map((f) => f.id))}
-                                backgroundColor={colors.primaryWhite}>
-                                <Box
-                                    onClick={() => onEditMeal({
-                                        date: day.date,
-                                        mealGroupId: null,
-                                        label: '',
-                                        quantity: 1,
-                                        foods: day.standaloneFoods,
-                                    })}
-                                    sx={{
-                                        'display': 'flex',
-                                        'alignItems': 'center',
-                                        'gap': 1.5,
-                                        'px': 1.5,
-                                        'py': 1.25,
-                                        'cursor': 'pointer',
-                                        '&:active': { backgroundColor: colors.secondaryYellow },
-                                        'transition': 'background-color 150ms ease',
-                                    }}>
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Typography sx={{
-                                            fontSize: 12,
-                                            color: colors.primaryBrown,
-                                            lineHeight: 1.3,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                        }}>
-                                            {day.standaloneFoods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </SwipeableRow>
-                        )}
+                </SwipeableRow>
+            ) : (
+                /* Expanded: read-only detail rows inside the day card */
+                <Box
+                    sx={{
+                        ...cardSx,
+                        overflow: 'hidden',
+                    }}>
+                    {/* Collapse header */}
+                    <Box
+                        onClick={() => setExpanded(false)}
+                        sx={{
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'gap': 1,
+                            'px': 1.5,
+                            'py': 1,
+                            'cursor': 'pointer',
+                            'borderBottom': `1px solid ${colors.primaryBlack}`,
+                            'backgroundColor': '#d4ddb6',
+                            'userSelect': 'none',
+                            '&:active': { backgroundColor: '#e2e8c8' },
+                            'transition': 'background-color 150ms ease',
+                        }}>
+                        <IconChevronDown size={16} color={colors.primaryBlack} />
                     </Box>
-                )}
-            </Box>
+
+                    {/* Meal group rows (read-only) */}
+                    {day.mealGroups.map((group, i) => {
+                        const isLast = i === day.mealGroups.length - 1 && day.standaloneFoods.length === 0
+                        return (
+                            <Box
+                                key={`meal-${group.id}`}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    px: 1.5,
+                                    py: 1.25,
+                                    borderBottom: isLast ? 'none' : `1px solid ${colors.primaryBlack}15`,
+                                }}>
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: '50%',
+                                        backgroundColor: colors.primaryWhite,
+                                        border: `1.5px solid ${colors.primaryBlack}`,
+                                        boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                        color: colors.primaryBlack,
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        lineHeight: 1,
+                                        flexShrink: 0,
+                                    }}>
+                                    {group.quantity}
+                                </Box>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography sx={{
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        lineHeight: 1.3,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                        {group.label}
+                                    </Typography>
+                                    <Typography sx={{
+                                        fontSize: 12,
+                                        color: colors.primaryBrown,
+                                        lineHeight: 1.3,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        mt: 0.25,
+                                    }}>
+                                        {group.foods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        )
+                    })}
+
+                    {/* Standalone foods row (read-only) */}
+                    {day.standaloneFoods.length > 0 && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                px: 1.5,
+                                py: 1.25,
+                            }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{
+                                    fontSize: 12,
+                                    color: colors.primaryBrown,
+                                    lineHeight: 1.3,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {day.standaloneFoods.map((f) => f.quantity > 1 ? `${f.food.name} \u00d7${f.quantity}` : f.food.name).join(', ')}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+                </Box>
+            )}
         </Box>
     )
 }
@@ -419,28 +387,31 @@ export default function DietPage() {
         setDrawerOpen(true)
     }, [])
 
-    const openEditMeal = useCallback((target: EditTarget) => {
-        setEditTarget(target)
+    const openEditDay = useCallback((day: DietDay) => {
+        setEditTarget({
+            date: day.date,
+            mealGroups: day.mealGroups,
+            standaloneFoods: day.standaloneFoods,
+        })
         setDrawerOpen(true)
     }, [])
 
-    const handleDeleteMealLogs = useCallback(
-        async (mealGroupId: number | null, logIds: number[]) => {
+    const handleDeleteDay = useCallback(
+        async (day: DietDay) => {
             try {
-                if (mealGroupId) {
-                    // Transactional delete — meal group + all food logs in one call
-                    await fetch(`/api/health/meal-groups/${mealGroupId}`, { method: 'DELETE' })
-                } else {
-                    // Standalone foods — delete individually
-                    await Promise.all(
-                        logIds.map((id) =>
-                            fetch(`/api/health/food-logs/${id}`, { method: 'DELETE' })
-                        )
-                    )
+                const ops: Promise<Response>[] = []
+                // Delete all meal groups (cascade deletes their food logs)
+                for (const group of day.mealGroups) {
+                    ops.push(fetch(`/api/health/meal-groups/${group.id}`, { method: 'DELETE' }))
                 }
+                // Delete standalone food logs
+                for (const entry of day.standaloneFoods) {
+                    ops.push(fetch(`/api/health/food-logs/${entry.id}`, { method: 'DELETE' }))
+                }
+                await Promise.all(ops)
                 fetchData()
             } catch (err) {
-                console.error('Failed to delete logs:', err)
+                console.error('Failed to delete day logs:', err)
             }
         },
         [fetchData]
@@ -608,8 +579,8 @@ export default function DietPage() {
                         <DietDayCard
                             key={day.date}
                             day={day}
-                            onEditMeal={openEditMeal}
-                            onDeleteMeal={handleDeleteMealLogs}
+                            onEdit={openEditDay}
+                            onDelete={handleDeleteDay}
                         />
                     ))}
                 </Box>
@@ -687,12 +658,14 @@ function DietDrawer({
 }: DietDrawerProps) {
     const [mode, setMode] = useState<DrawerMode>('log')
     const [date, setDate] = useState(getLocalDate)
-    const [mealLabel, setMealLabel] = useState('')
-    const [mealQuantity, setMealQuantity] = useState(1)
     const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
     const [saving, setSaving] = useState(false)
     // Staged presets — presetId → quantity to apply (new logs only)
     const [stagedPresets, setStagedPresets] = useState<Map<number, number>>(new Map())
+    // Staged meals — existing meal groups being edited (day-level edit only)
+    const [stagedMeals, setStagedMeals] = useState<StagedMeal[]>([])
+    // Track meal groups marked for deletion during day-level edit
+    const [deletedMealGroupIds, setDeletedMealGroupIds] = useState<Set<number>>(new Set())
 
     // Manage mode state
     const [name, setName] = useState('')
@@ -781,22 +754,29 @@ function DietDrawer({
             setFoodSearch('')
             setInlineEditId(null)
             setStagedPresets(new Map())
+            setDeletedMealGroupIds(new Set())
 
             if (editTarget) {
-                // Editing an existing meal
+                // Editing a day — populate staged meals + standalone foods
                 setDate(editTarget.date)
-                setMealLabel(editTarget.label)
-                setMealQuantity(editTarget.quantity ?? 1)
+                // Meal groups → staged meals
+                setStagedMeals(editTarget.mealGroups.map((g) => ({
+                    key: `existing-${g.id}`,
+                    mealGroupId: g.id,
+                    label: g.label,
+                    quantity: g.quantity,
+                    foods: g.foods.map((f) => ({ foodId: f.food.id, quantity: f.quantity })),
+                })))
+                // Standalone foods → quantities map
                 const qMap = new Map<number, number>()
-                for (const l of editTarget.foods) {
+                for (const l of editTarget.standaloneFoods) {
                     qMap.set(l.food.id, l.quantity)
                 }
                 setQuantities(qMap)
             } else {
                 // New meal defaults
                 setDate(getLocalDate())
-                setMealLabel('')
-                setMealQuantity(1)
+                setStagedMeals([])
                 setQuantities(new Map())
             }
         }
@@ -829,64 +809,155 @@ function DietDrawer({
     const handleLogSubmit = useCallback(async () => {
         setSaving(true)
         try {
-            const trimmedLabel = mealLabel.trim() || null
-            const foodsList = Array.from(quantities.entries()).map(([foodId, qty]) => ({
+            const standaloneFoodsList = Array.from(quantities.entries()).map(([foodId, qty]) => ({
                 foodId,
                 quantity: qty,
             }))
 
-            if (editTarget?.mealGroupId) {
-                // Editing an existing meal group — single transactional call
-                await fetch(`/api/health/meal-groups/${editTarget.mealGroupId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date,
-                        label: trimmedLabel,
-                        quantity: mealQuantity,
-                        foods: foodsList,
-                    }),
-                })
-            } else if (editTarget) {
-                // Editing standalone foods — individual operations
-                const existingLogs = editTarget.foods
-                const logMap = new Map<number, FoodLogEntry>()
-                for (const l of existingLogs) logMap.set(l.food.id, l)
+            if (editTarget) {
+                const dateChanged = date !== editTarget.date
 
-                const ops: Promise<Response>[] = []
+                if (dateChanged) {
+                    // Date changed — nuke both source and target, then recreate from form state.
+                    // The form already merged source + target data when the date was changed.
 
-                for (const food of foodsList) {
-                    const existing = logMap.get(food.foodId)
-                    if (existing) {
-                        const needsUpdate = existing.quantity !== food.quantity || date !== editTarget.date
-                        if (needsUpdate) {
-                            ops.push(fetch(`/api/health/food-logs/${existing.id}`, {
+                    // 1. Delete everything on source day
+                    const deleteOps: Promise<Response>[] = []
+                    for (const g of editTarget.mealGroups) {
+                        deleteOps.push(fetch(`/api/health/meal-groups/${g.id}`, { method: 'DELETE' }))
+                    }
+                    for (const f of editTarget.standaloneFoods) {
+                        deleteOps.push(fetch(`/api/health/food-logs/${f.id}`, { method: 'DELETE' }))
+                    }
+                    // 2. Delete everything on target day
+                    const targetDay = dietDays.find((d) => d.date === date)
+                    if (targetDay) {
+                        for (const g of targetDay.mealGroups) {
+                            deleteOps.push(fetch(`/api/health/meal-groups/${g.id}`, { method: 'DELETE' }))
+                        }
+                        for (const f of targetDay.standaloneFoods) {
+                            deleteOps.push(fetch(`/api/health/food-logs/${f.id}`, { method: 'DELETE' }))
+                        }
+                    }
+                    await Promise.all(deleteOps)
+
+                    // 3. Recreate staged meals — POST foods with mealLabel, then set quantity
+                    for (const meal of stagedMeals) {
+                        let mealGroupId: number | null = null
+                        for (const food of meal.foods) {
+                            const res = await fetch('/api/health/food-logs', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    date,
+                                    foodId: food.foodId,
+                                    quantity: food.quantity,
+                                    mealLabel: meal.label,
+                                }),
+                            })
+                            if (!mealGroupId && res.ok) {
+                                const data = await res.json()
+                                mealGroupId = data.mealGroupId
+                            }
+                        }
+                        // Set meal quantity if > 1
+                        if (mealGroupId && meal.quantity > 1) {
+                            await fetch(`/api/health/meal-groups/${mealGroupId}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ quantity: food.quantity, date }),
-                            }))
+                                body: JSON.stringify({ quantity: meal.quantity }),
+                            })
                         }
-                    } else {
-                        ops.push(fetch('/api/health/food-logs', {
+                    }
+
+                    // 4. Create standalone foods
+                    const createOps: Promise<Response>[] = []
+                    for (const food of standaloneFoodsList) {
+                        createOps.push(fetch('/api/health/food-logs', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 date,
                                 foodId: food.foodId,
                                 quantity: food.quantity,
-                                mealLabel: trimmedLabel,
                             }),
                         }))
                     }
-                }
+                    await Promise.all(createOps)
+                } else {
+                    // Same date — per-item reconciliation
+                    const ops: Promise<Response>[] = []
 
-                for (const [foodId, log] of Array.from(logMap.entries())) {
-                    if (!quantities.has(foodId)) {
-                        ops.push(fetch(`/api/health/food-logs/${log.id}`, { method: 'DELETE' }))
+                    // 1. Delete removed meal groups
+                    for (const id of Array.from(deletedMealGroupIds)) {
+                        ops.push(fetch(`/api/health/meal-groups/${id}`, { method: 'DELETE' }))
                     }
-                }
 
-                await Promise.all(ops)
+                    // 2. Update existing meal groups / create new ones
+                    for (const meal of stagedMeals) {
+                        if (meal.mealGroupId) {
+                            ops.push(fetch(`/api/health/meal-groups/${meal.mealGroupId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    date,
+                                    label: meal.label || null,
+                                    quantity: meal.quantity,
+                                    foods: meal.foods,
+                                }),
+                            }))
+                        } else {
+                            for (const food of meal.foods) {
+                                ops.push(fetch('/api/health/food-logs', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        date,
+                                        foodId: food.foodId,
+                                        quantity: food.quantity,
+                                        mealLabel: meal.label,
+                                    }),
+                                }))
+                            }
+                        }
+                    }
+
+                    // 3. Reconcile standalone foods
+                    const existingStandalone = editTarget.standaloneFoods
+                    const logMap = new Map<number, FoodLogEntry>()
+                    for (const l of existingStandalone) logMap.set(l.food.id, l)
+
+                    for (const food of standaloneFoodsList) {
+                        const existing = logMap.get(food.foodId)
+                        if (existing) {
+                            if (existing.quantity !== food.quantity) {
+                                ops.push(fetch(`/api/health/food-logs/${existing.id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ quantity: food.quantity, date }),
+                                }))
+                            }
+                        } else {
+                            ops.push(fetch('/api/health/food-logs', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    date,
+                                    foodId: food.foodId,
+                                    quantity: food.quantity,
+                                }),
+                            }))
+                        }
+                    }
+
+                    for (const [foodId, log] of Array.from(logMap.entries())) {
+                        if (!quantities.has(foodId)) {
+                            ops.push(fetch(`/api/health/food-logs/${log.id}`, { method: 'DELETE' }))
+                        }
+                    }
+
+                    await Promise.all(ops)
+                }
             } else {
                 // New log — apply staged presets, then create standalone food logs
 
@@ -902,7 +973,7 @@ function DietDrawer({
                 }
 
                 // Create standalone food logs (no meal label)
-                for (const food of foodsList) {
+                for (const food of standaloneFoodsList) {
                     await fetch('/api/health/food-logs', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -922,7 +993,7 @@ function DietDrawer({
         } finally {
             setSaving(false)
         }
-    }, [date, mealLabel, mealQuantity, quantities, stagedPresets, editTarget, onDataChanged, onClose])
+    }, [date, quantities, stagedPresets, stagedMeals, deletedMealGroupIds, editTarget, onDataChanged, onClose])
 
 
     const startInlineEdit = useCallback((food: Food) => {
@@ -990,17 +1061,71 @@ function DietDrawer({
 
     const isEditing = editTarget !== null
 
-    // Label conflict check: does a meal with this label already exist on the selected date?
-    const trimmedLabel = mealLabel.trim()
-    const labelConflict = (() => {
-        if (!trimmedLabel) return false
-        const dayData = dietDays.find((d) => d.date === date)
-        if (!dayData) return false
-        return dayData.mealGroups.some(
-            (g) => g.label.toLowerCase() === trimmedLabel.toLowerCase()
-                && g.id !== editTarget?.mealGroupId
-        )
-    })()
+    // When date changes during edit, rebuild form from source + target day data
+    const handleEditDateChange = useCallback((newDate: string) => {
+        setDate(newDate)
+        if (!editTarget) return
+
+        // Start with source day data
+        const meals: StagedMeal[] = editTarget.mealGroups.map((g) => ({
+            key: `existing-${g.id}`,
+            mealGroupId: g.id,
+            label: g.label,
+            quantity: g.quantity,
+            foods: g.foods.map((f) => ({ foodId: f.food.id, quantity: f.quantity })),
+        }))
+        const qMap = new Map<number, number>()
+        for (const l of editTarget.standaloneFoods) {
+            qMap.set(l.food.id, l.quantity)
+        }
+
+        // Merge target day data if moving to a different date
+        if (newDate !== editTarget.date) {
+            const targetDay = dietDays.find((d) => d.date === newDate)
+            if (targetDay) {
+                for (const g of targetDay.mealGroups) {
+                    const match = meals.find((m) => m.label.toLowerCase() === g.label.toLowerCase())
+                    if (match) {
+                        // Same label — sum quantities
+                        match.quantity += g.quantity
+                    } else {
+                        meals.push({
+                            key: `target-${g.id}`,
+                            mealGroupId: g.id,
+                            label: g.label,
+                            quantity: g.quantity,
+                            foods: g.foods.map((f) => ({ foodId: f.food.id, quantity: f.quantity })),
+                        })
+                    }
+                }
+                for (const l of targetDay.standaloneFoods) {
+                    qMap.set(l.food.id, (qMap.get(l.food.id) ?? 0) + l.quantity)
+                }
+            }
+        }
+
+        setStagedMeals(meals)
+        setQuantities(qMap)
+        setDeletedMealGroupIds(new Set())
+        setStagedPresets(new Map())
+    }, [editTarget, dietDays])
+
+    const removeStagedMeal = useCallback((key: string, mealGroupId: number | null) => {
+        setStagedMeals((prev) => prev.filter((m) => m.key !== key))
+        if (mealGroupId) {
+            setDeletedMealGroupIds((prev) => {
+                const next = new Set(prev)
+                next.add(mealGroupId)
+                return next
+            })
+        }
+    }, [])
+
+    const setStagedMealQuantity = useCallback((key: string, qty: number) => {
+        setStagedMeals((prev) => prev.map((m) =>
+            m.key === key ? { ...m, quantity: Math.max(1, qty) } : m
+        ))
+    }, [])
 
     return (
         <FormDrawer open={open} onClose={onClose}>
@@ -1019,7 +1144,7 @@ function DietDrawer({
                         borderBottom: `1px solid ${colors.primaryBlack}20`,
                     }}>
                     <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
-                        {isEditing ? 'Edit Meal' : 'Log Meal'}
+                        {isEditing ? 'Edit Day' : 'Log Meal'}
                     </Typography>
 
                     {/* Mode toggle */}
@@ -1054,222 +1179,271 @@ function DietDrawer({
                                 <TextField
                                     type="date"
                                     value={date}
-                                    onChange={(e) => setDate(e.target.value)}
+                                    onChange={(e) => isEditing ? handleEditDateChange(e.target.value) : setDate(e.target.value)}
                                     size="small"
                                     fullWidth
                                     sx={fieldSx}
                                 />
                             </Box>
 
-                            {isEditing ? (
-                                /* Edit mode — Name + Quantity row */
-                                <Box sx={{ display: 'flex', gap: 2 }}>
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Typography sx={labelSx}>Name</Typography>
-                                        <TextField
-                                            value={mealLabel}
-                                            onChange={(e) => setMealLabel(e.target.value)}
-                                            size="small"
-                                            fullWidth
-                                            placeholder="Optional"
-                                            error={labelConflict}
-                                            helperText={labelConflict ? 'Already exists for this date' : undefined}
-                                            sx={labelConflict ? errorFieldSx : fieldSx}
-                                        />
-                                    </Box>
-                                    {trimmedLabel && <Box sx={{ flexShrink: 0, pr: 1.5 }}>
-                                        <Typography sx={labelSx}>Quantity</Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: 40 }}>
-                                            <Box
-                                                onClick={() => setMealQuantity((q) => Math.max(1, q - 1))}
-                                                sx={{
-                                                    'width': 24,
-                                                    'height': 24,
-                                                    'borderRadius': '50%',
-                                                    'border': `1.5px solid ${colors.primaryBlack}`,
-                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'justifyContent': 'center',
-                                                    'cursor': 'pointer',
-                                                    'backgroundColor': colors.primaryWhite,
-                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                                }}>
-                                                <IconMinus size={12} stroke={2.5} />
-                                            </Box>
-                                            <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                {mealQuantity}
-                                            </Typography>
-                                            <Box
-                                                onClick={() => setMealQuantity((q) => q + 1)}
-                                                sx={{
-                                                    'width': 24,
-                                                    'height': 24,
-                                                    'borderRadius': '50%',
-                                                    'border': `1.5px solid ${colors.primaryBlack}`,
-                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'justifyContent': 'center',
-                                                    'cursor': 'pointer',
-                                                    'backgroundColor': colors.primaryWhite,
-                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                                }}>
-                                                <IconPlus size={12} stroke={2.5} />
-                                            </Box>
+                            {/* Preset chips — available in both new and edit modes */}
+                            {presets.length > 0 && (
+                                <Box>
+                                    <Typography sx={{ ...labelSx, mb: 0.75 }}>Presets</Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                width: 30,
+                                                height: 30,
+                                                borderRadius: '50%',
+                                                backgroundColor: '#c8e6c9',
+                                                border: `1.5px solid ${colors.primaryBlack}`,
+                                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                            }}>
+                                            <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                                         </Box>
-                                    </Box>}
-                                </Box>
-                            ) : (
-                                /* New log — preset chips + staged preset cards */
-                                <>
-                                    {presets.length > 0 && (
-                                        <Box>
-                                            <Typography sx={{ ...labelSx, mb: 0.75 }}>Presets</Typography>
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                                                <Box
-                                                    sx={{
-                                                        width: 30,
-                                                        height: 30,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: '#c8e6c9',
-                                                        border: `1.5px solid ${colors.primaryBlack}`,
-                                                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        flexShrink: 0,
-                                                    }}>
-                                                    <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
-                                                </Box>
-                                                <HorizontalSortableList items={presets} onReorder={onReorderPresets}>
-                                                    {presets.map((preset) => {
-                                                        const staged = stagedPresets.get(preset.id) ?? 0
-                                                        return (
-                                                            <SortablePresetChip key={preset.id} id={preset.id}>
-                                                                <Box
-                                                                    onClick={() => {
-                                                                        setStagedPresets((prev) => {
-                                                                            const next = new Map(prev)
-                                                                            next.set(preset.id, (next.get(preset.id) ?? 0) + 1)
-                                                                            return next
-                                                                        })
-                                                                    }}
-                                                                    sx={{
-                                                                        'px': 1.25,
-                                                                        'py': 0.5,
-                                                                        'backgroundColor': staged > 0
-                                                                            ? '#f1f8e9'
-                                                                            : colors.primaryWhite,
-                                                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                                                        'borderRadius': '4px',
-                                                                        'cursor': 'pointer',
-                                                                        'transition': 'all 0.15s',
-                                                                        '&:active': {
-                                                                            boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                                            transform: 'translate(1px, 1px)',
+                                        <HorizontalSortableList items={presets} onReorder={onReorderPresets}>
+                                            {presets.map((preset) => {
+                                                const staged = isEditing
+                                                    ? stagedMeals.filter((m) => !m.mealGroupId && m.label === preset.name).length
+                                                    : stagedPresets.get(preset.id) ?? 0
+                                                return (
+                                                    <SortablePresetChip key={preset.id} id={preset.id}>
+                                                        <Box
+                                                            onClick={() => {
+                                                                if (isEditing) {
+                                                                    // Add preset as a new staged meal
+                                                                    setStagedMeals((prev) => [
+                                                                        ...prev,
+                                                                        {
+                                                                            key: `preset-${preset.id}-${Date.now()}`,
+                                                                            mealGroupId: null,
+                                                                            label: preset.name,
+                                                                            quantity: 1,
+                                                                            foods: preset.items.map((item) => ({
+                                                                                foodId: item.foodId,
+                                                                                quantity: item.quantity,
+                                                                            })),
                                                                         },
-                                                                    }}>
-                                                                    <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                                                        {preset.name}{staged > 0 ? ` x${staged}` : ''}
-                                                                    </Typography>
-                                                                </Box>
-                                                            </SortablePresetChip>
-                                                        )
-                                                    })}
-                                                </HorizontalSortableList>
-                                            </Box>
-                                            {/* Staged preset summary with quantity controls */}
-                                            {stagedPresets.size > 0 && (
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.5 }}>
-                                                    {Array.from(stagedPresets.entries()).map(([presetId, qty]) => {
-                                                        const preset = presets.find((p) => p.id === presetId)
-                                                        if (!preset) return null
-                                                        return (
+                                                                    ])
+                                                                } else {
+                                                                    setStagedPresets((prev) => {
+                                                                        const next = new Map(prev)
+                                                                        next.set(preset.id, (next.get(preset.id) ?? 0) + 1)
+                                                                        return next
+                                                                    })
+                                                                }
+                                                            }}
+                                                            sx={{
+                                                                'px': 1.25,
+                                                                'py': 0.5,
+                                                                'backgroundColor': staged > 0
+                                                                    ? '#f1f8e9'
+                                                                    : colors.primaryWhite,
+                                                                'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                                'borderRadius': '4px',
+                                                                'cursor': 'pointer',
+                                                                'transition': 'all 0.15s',
+                                                                '&:active': {
+                                                                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                                    transform: 'translate(1px, 1px)',
+                                                                },
+                                                            }}>
+                                                            <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                                                                {preset.name}{staged > 0 ? ` x${staged}` : ''}
+                                                            </Typography>
+                                                        </Box>
+                                                    </SortablePresetChip>
+                                                )
+                                            })}
+                                        </HorizontalSortableList>
+                                    </Box>
+                                    {/* Staged preset summary — new log only */}
+                                    {!isEditing && stagedPresets.size > 0 && (
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.5 }}>
+                                            {Array.from(stagedPresets.entries()).map(([presetId, qty]) => {
+                                                const preset = presets.find((p) => p.id === presetId)
+                                                if (!preset) return null
+                                                return (
+                                                    <Box
+                                                        key={presetId}
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 1,
+                                                            width: '100%',
+                                                        }}>
+                                                        <Box
+                                                            sx={{
+                                                                padding: '6px 12px',
+                                                                ...cardSx,
+                                                                backgroundColor: '#f1f8e9',
+                                                                borderColor: colors.primaryBlack,
+                                                            }}>
+                                                            <Typography sx={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                                {preset.name}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 'auto' }}>
                                                             <Box
-                                                                key={presetId}
+                                                                onClick={() => {
+                                                                    setStagedPresets((prev) => {
+                                                                        const next = new Map(prev)
+                                                                        if (qty <= 1) next.delete(presetId)
+                                                                        else next.set(presetId, qty - 1)
+                                                                        return next
+                                                                    })
+                                                                }}
                                                                 sx={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: 1,
-                                                                    width: '100%',
+                                                                    'width': 24,
+                                                                    'height': 24,
+                                                                    'borderRadius': '50%',
+                                                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                    'display': 'flex',
+                                                                    'alignItems': 'center',
+                                                                    'justifyContent': 'center',
+                                                                    'cursor': 'pointer',
+                                                                    'backgroundColor': colors.primaryWhite,
+                                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
                                                                 }}>
-                                                                <Box
-                                                                    sx={{
-                                                                        padding: '6px 12px',
-                                                                        ...cardSx,
-                                                                        backgroundColor: '#f1f8e9',
-                                                                        borderColor: colors.primaryBlack,
-                                                                    }}>
-                                                                    <Typography sx={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                                                        {preset.name}
-                                                                    </Typography>
-                                                                </Box>
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 'auto' }}>
-                                                                    <Box
-                                                                        onClick={() => {
-                                                                            setStagedPresets((prev) => {
-                                                                                const next = new Map(prev)
-                                                                                if (qty <= 1) next.delete(presetId)
-                                                                                else next.set(presetId, qty - 1)
-                                                                                return next
-                                                                            })
-                                                                        }}
-                                                                        sx={{
-                                                                            'width': 24,
-                                                                            'height': 24,
-                                                                            'borderRadius': '50%',
-                                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                            'display': 'flex',
-                                                                            'alignItems': 'center',
-                                                                            'justifyContent': 'center',
-                                                                            'cursor': 'pointer',
-                                                                            'backgroundColor': colors.primaryWhite,
-                                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                                                        }}>
-                                                                        <IconMinus size={12} stroke={2.5} />
-                                                                    </Box>
-                                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                                        {qty}
-                                                                    </Typography>
-                                                                    <Box
-                                                                        onClick={() => {
-                                                                            setStagedPresets((prev) => {
-                                                                                const next = new Map(prev)
-                                                                                next.set(presetId, qty + 1)
-                                                                                return next
-                                                                            })
-                                                                        }}
-                                                                        sx={{
-                                                                            'width': 24,
-                                                                            'height': 24,
-                                                                            'borderRadius': '50%',
-                                                                            'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                            'display': 'flex',
-                                                                            'alignItems': 'center',
-                                                                            'justifyContent': 'center',
-                                                                            'cursor': 'pointer',
-                                                                            'backgroundColor': colors.primaryWhite,
-                                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                                                                        }}>
-                                                                        <IconPlus size={12} stroke={2.5} />
-                                                                    </Box>
-                                                                </Box>
+                                                                <IconMinus size={12} stroke={2.5} />
                                                             </Box>
-                                                        )
-                                                    })}
-                                                </Box>
-                                            )}
+                                                            <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                                {qty}
+                                                            </Typography>
+                                                            <Box
+                                                                onClick={() => {
+                                                                    setStagedPresets((prev) => {
+                                                                        const next = new Map(prev)
+                                                                        next.set(presetId, qty + 1)
+                                                                        return next
+                                                                    })
+                                                                }}
+                                                                sx={{
+                                                                    'width': 24,
+                                                                    'height': 24,
+                                                                    'borderRadius': '50%',
+                                                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                                    'display': 'flex',
+                                                                    'alignItems': 'center',
+                                                                    'justifyContent': 'center',
+                                                                    'cursor': 'pointer',
+                                                                    'backgroundColor': colors.primaryWhite,
+                                                                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                                }}>
+                                                                <IconPlus size={12} stroke={2.5} />
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                )
+                                            })}
                                         </Box>
                                     )}
-                                </>
+                                </Box>
                             )}
 
-                            {/* Food checklist */}
-                            <Typography sx={{ ...labelSx, mb: -1 }}>Foods</Typography>
+                            {/* Staged meals — day-level edit shows existing + newly-added meal groups */}
+                            {isEditing && stagedMeals.length > 0 && (
+                                <Box>
+                                    <Typography sx={{ ...labelSx, mb: 0.75 }}>Meals</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                        {stagedMeals.map((meal) => (
+                                            <Box
+                                                key={meal.key}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    width: '100%',
+                                                }}>
+                                                <Box
+                                                    sx={{
+                                                        padding: '6px 12px',
+                                                        ...cardSx,
+                                                        backgroundColor: '#e3f2fd',
+                                                        borderColor: colors.primaryBlue,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                    }}>
+                                                    <Typography sx={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {meal.label}
+                                                    </Typography>
+                                                    <Typography sx={{ fontSize: 11, color: colors.primaryBrown, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', mt: 0.25 }}>
+                                                        {meal.foods.map((f) => {
+                                                            const food = foods.find((fd) => fd.id === f.foodId)
+                                                            return f.quantity > 1 ? `${food?.name ?? '?'} \u00d7${f.quantity}` : food?.name ?? '?'
+                                                        }).join(', ')}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                                                    <Box
+                                                        onClick={() => setStagedMealQuantity(meal.key, meal.quantity - 1)}
+                                                        sx={{
+                                                            'width': 24,
+                                                            'height': 24,
+                                                            'borderRadius': '50%',
+                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'justifyContent': 'center',
+                                                            'cursor': 'pointer',
+                                                            'backgroundColor': colors.primaryWhite,
+                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                        }}>
+                                                        <IconMinus size={12} stroke={2.5} />
+                                                    </Box>
+                                                    <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                        {meal.quantity}
+                                                    </Typography>
+                                                    <Box
+                                                        onClick={() => setStagedMealQuantity(meal.key, meal.quantity + 1)}
+                                                        sx={{
+                                                            'width': 24,
+                                                            'height': 24,
+                                                            'borderRadius': '50%',
+                                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                                            'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'justifyContent': 'center',
+                                                            'cursor': 'pointer',
+                                                            'backgroundColor': colors.primaryWhite,
+                                                            '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                                                        }}>
+                                                        <IconPlus size={12} stroke={2.5} />
+                                                    </Box>
+                                                    <Box
+                                                        onClick={() => removeStagedMeal(meal.key, meal.mealGroupId)}
+                                                        sx={{
+                                                            'width': 24,
+                                                            'height': 24,
+                                                            'borderRadius': '50%',
+                                                            'display': 'flex',
+                                                            'alignItems': 'center',
+                                                            'justifyContent': 'center',
+                                                            'cursor': 'pointer',
+                                                            'ml': 0.25,
+                                                            '&:active': { backgroundColor: `${colors.primaryRed}20` },
+                                                        }}>
+                                                        <IconX size={14} stroke={2.5} color={colors.primaryRed} />
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* Food checklist (standalone foods — not part of meal groups) */}
+                            <Typography sx={{ ...labelSx, mb: -1 }}>{isEditing ? 'Individual Foods' : 'Foods'}</Typography>
                             {activeFoods.length > 5 && (
                                 <TextField
                                     value={foodSearch}
@@ -1735,7 +1909,7 @@ function DietDrawer({
                     {mode === 'log' && (
                         <Button
                             onClick={handleLogSubmit}
-                            disabled={(quantities.size === 0 && stagedPresets.size === 0) || saving || (isEditing && labelConflict)}
+                            disabled={(quantities.size === 0 && stagedPresets.size === 0 && stagedMeals.length === 0) || saving}
                             size="large"
                             sx={primaryButtonSx}>
                             {saving ? 'Saving...' : isEditing ? 'Save' : 'Log'}
@@ -1948,7 +2122,8 @@ function DietPresetDrawer({
                                                         canDelete
                                                         onEdit={() => openForm(p)}
                                                         onDelete={() => onDelete(p.id)}
-                                                        backgroundColor={colors.primaryWhite}>
+                                                        backgroundColor={colors.primaryWhite}
+                                                        borderColor={colors.primaryBlack}>
                                                         <Box
                                                             onClick={async () => {
                                                                 await onApplyPreset(p.id)

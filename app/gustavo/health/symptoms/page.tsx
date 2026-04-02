@@ -145,7 +145,8 @@ function SymptomDayCard({
                     canDelete
                     onEdit={onEdit}
                     onDelete={onDelete}
-                    backgroundColor={colors.primaryWhite}>
+                    backgroundColor={colors.primaryWhite}
+                    borderColor={colors.primaryBlack}>
                     <Box
                         onClick={onView}
                         sx={{
