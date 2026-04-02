@@ -198,7 +198,7 @@ export default function LocationsPage() {
                                                 'opacity': newName.trim() ? 1 : 0.3,
                                                 '&:active': newName.trim() ? { transform: 'scale(0.9)' } : {},
                                             }}>
-                                            <IconPlus size={18} stroke={2.5} color={colors.primaryBlack} />
+                                            <IconPlus size={18} stroke={2.5} />
                                         </Box>
                                     ),
                                 },
