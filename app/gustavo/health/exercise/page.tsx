@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -20,7 +20,6 @@ import {
     Button,
     Checkbox,
     Chip,
-    CircularProgress,
     TextField,
     Typography,
 } from '@mui/material'
@@ -42,6 +41,7 @@ import {
     VerticalSortableList,
 } from 'components/health/sortable-preset'
 import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
+import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -249,124 +249,101 @@ export default function ExercisePage() {
     const fabCallback = useCallback(() => openAdd(), [openAdd])
     useRegisterFab(fabCallback)
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress
-                    size={24}
-                    sx={{ color: colors.primaryYellow }}
-                />
-            </Box>
-        )
-    }
-
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                width: '100%',
-                maxWidth: 600,
-                paddingX: 2,
-                paddingBottom: 2,
-                gap: 2,
-            }}>
-            {/* Header */}
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#ffe0b2', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
-                <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Workouts
-                </Typography>
-            </Box>
-
-            {/* Routine quick-actions */}
-            {presets.length > 0 && (
-                <HorizontalSortableList
-                    items={presets}
-                    onReorder={reorderPresets}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 1,
-                            alignItems: 'center',
-                        }}>
-                        {/* Lightning circle icon — opens preset drawer */}
+        <HealthPageLayout loading={loading}>
+            <HealthPageHeader
+                icon={<IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
+                title="Workouts"
+                color="#ffe0b2">
+                {/* Routine quick-actions */}
+                {presets.length > 0 && (
+                    <HorizontalSortableList
+                        items={presets}
+                        onReorder={reorderPresets}>
                         <Box
-                            onClick={() => setPresetDrawerOpen(true)}
                             sx={{
-                                'width': 30,
-                                'height': 30,
-                                'borderRadius': '50%',
-                                'backgroundColor': '#ffe0b2',
-                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'justifyContent': 'center',
-                                'flexShrink': 0,
-                                'cursor': 'pointer',
-                                '&:active': {
-                                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                    transform: 'translate(1px, 1px)',
-                                },
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 1,
+                                alignItems: 'center',
                             }}>
-                            <IconBolt
-                                size={14}
-                                stroke={2.5}
-                                fill={colors.primaryWhite}
-                                color={colors.primaryBlack}
-                            />
-                        </Box>
-                        {presets.map((preset) => (
-                            <SortablePresetChip key={preset.id} id={preset.id}>
-                                <Box
-                                    onClick={() =>
-                                        applyingPreset === null &&
-                                        applyPreset(preset.id)
-                                    }
-                                    sx={{
-                                        'px': 1.25,
-                                        'py': 0.5,
-                                        'backgroundColor':
-                                            applyingPreset === preset.id
-                                                ? colors.primaryYellow
-                                                : colors.primaryWhite,
-                                        'border': `1.5px solid ${colors.primaryBlack}`,
-                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                        'borderRadius': '4px',
-                                        'cursor':
-                                            applyingPreset !== null
-                                                ? 'default'
-                                                : 'pointer',
-                                        'opacity':
-                                            applyingPreset !== null &&
-                                            applyingPreset !== preset.id
-                                                ? 0.5
-                                                : 1,
-                                        'transition': 'all 0.15s',
-                                        '&:active':
-                                            applyingPreset === null
-                                                ? {
-                                                      boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                      transform:
-                                                          'translate(1px, 1px)',
-                                                  }
-                                                : {},
-                                    }}>
-                                    <Typography
+                            {/* Lightning circle icon — opens preset drawer */}
+                            <Box
+                                onClick={() => setPresetDrawerOpen(true)}
+                                sx={{
+                                    'width': 30,
+                                    'height': 30,
+                                    'borderRadius': '50%',
+                                    'backgroundColor': '#ffe0b2',
+                                    'border': `1.5px solid ${colors.primaryBlack}`,
+                                    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'justifyContent': 'center',
+                                    'flexShrink': 0,
+                                    'cursor': 'pointer',
+                                    '&:active': {
+                                        boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                        transform: 'translate(1px, 1px)',
+                                    },
+                                }}>
+                                <IconBolt
+                                    size={14}
+                                    stroke={2.5}
+                                    fill={colors.primaryWhite}
+                                    color={colors.primaryBlack}
+                                />
+                            </Box>
+                            {presets.map((preset) => (
+                                <SortablePresetChip key={preset.id} id={preset.id}>
+                                    <Box
+                                        onClick={() =>
+                                            applyingPreset === null &&
+                                            applyPreset(preset.id)
+                                        }
                                         sx={{
-                                            fontSize: 12,
-                                            fontWeight: 600,
+                                            'px': 1.25,
+                                            'py': 0.5,
+                                            'backgroundColor':
+                                                applyingPreset === preset.id
+                                                    ? colors.primaryYellow
+                                                    : colors.primaryWhite,
+                                            'border': `1.5px solid ${colors.primaryBlack}`,
+                                            'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                            'borderRadius': '4px',
+                                            'cursor':
+                                                applyingPreset !== null
+                                                    ? 'default'
+                                                    : 'pointer',
+                                            'opacity':
+                                                applyingPreset !== null &&
+                                                applyingPreset !== preset.id
+                                                    ? 0.5
+                                                    : 1,
+                                            'transition': 'all 0.15s',
+                                            '&:active':
+                                                applyingPreset === null
+                                                    ? {
+                                                          boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                          transform:
+                                                              'translate(1px, 1px)',
+                                                      }
+                                                    : {},
                                         }}>
-                                        {preset.name}
-                                    </Typography>
-                                </Box>
-                            </SortablePresetChip>
-                        ))}
-                    </Box>
-                </HorizontalSortableList>
-            )}
+                                        <Typography
+                                            sx={{
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                            }}>
+                                            {preset.name}
+                                        </Typography>
+                                    </Box>
+                                </SortablePresetChip>
+                            ))}
+                        </Box>
+                    </HorizontalSortableList>
+                )}
+            </HealthPageHeader>
 
             {/* Workout timeline */}
             {workouts.length === 0 ? (
@@ -719,7 +696,7 @@ export default function ExercisePage() {
                 }}
                 onReorder={reorderPresets}
             />
-        </Box>
+        </HealthPageLayout>
     )
 }
 

@@ -6,6 +6,7 @@ import type {
     DietPreset,
     SupplementLog,
     SupplementPreset,
+    SymptomLog,
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
@@ -59,6 +60,7 @@ export default function HealthPage() {
     const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([])
     const [recentDietDays, setRecentDietDays] = useState<DietDay[]>([])
     const [recentSupplements, setRecentSupplements] = useState<SupplementLog[]>([])
+    const [recentSymptoms, setRecentSymptoms] = useState<SymptomLog[]>([])
     const [loading, setLoading] = useState(true)
 
     const [applyingId, setApplyingId] = useState<number | null>(null)
@@ -82,6 +84,12 @@ export default function HealthPage() {
             .then(setRecentSupplements)
     }, [])
 
+    const fetchRecentSymptoms = useCallback(() => {
+        return fetch('/api/health/symptom-logs')
+            .then((r) => r.json())
+            .then(setRecentSymptoms)
+    }, [])
+
     const fetchRecentWorkouts = useCallback(() => {
         return fetch(`/api/health/workouts?startDate=${thirtyDaysAgo}&endDate=${today}`)
             .then((r) => r.json())
@@ -97,10 +105,11 @@ export default function HealthPage() {
             fetch('/api/health/presets?type=supplement').then((r) => r.json()).then(setSupplementPresets),
             fetchRecentDiet(),
             fetchRecentSupplements(),
+            fetchRecentSymptoms(),
         ])
             .catch((err) => console.error('Failed to fetch health data:', err))
             .finally(() => setLoading(false))
-    }, [fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements])
+    }, [fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements, fetchRecentSymptoms])
 
     const applyPreset = useCallback(async (presetId: number, type: 'workout' | 'diet' | 'supplement') => {
         if (applyingId) return
@@ -157,6 +166,32 @@ export default function HealthPage() {
         [recentWorkouts, today],
     )
 
+    const topExercises = useMemo(() => {
+        const counts = new Map<string, number>()
+        for (const w of recentWorkouts) {
+            for (const ex of w.exercises) {
+                counts.set(ex.exercise.name, (counts.get(ex.exercise.name) ?? 0) + 1)
+            }
+        }
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name, count]) => ({ name, count }))
+    }, [recentWorkouts])
+
+    const recentSymptomDays = useMemo(() => {
+        const groups: { date: string; logs: SymptomLog[] }[] = []
+        for (const log of recentSymptoms) {
+            const last = groups[groups.length - 1]
+            if (last && last.date === log.date) {
+                last.logs.push(log)
+            } else {
+                groups.push({ date: log.date, logs: [log] })
+            }
+        }
+        return groups.slice(0, 3)
+    }, [recentSymptoms])
+
     const recentDiet = useMemo(() => recentDietDays.slice(0, 3), [recentDietDays])
 
     const recentSupplementDays = useMemo(() => {
@@ -185,6 +220,8 @@ export default function HealthPage() {
             workoutStats={workoutStats}
             applyingId={applyingId}
             appliedId={appliedId}
+            topExercises={topExercises}
+            recentSymptomDays={recentSymptomDays}
             applyPreset={applyPreset}
             reorderPresets={reorderPresetsHandler}
         />

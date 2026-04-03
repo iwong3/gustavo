@@ -106,7 +106,10 @@ export function AlphabetIndex({
     const STRIP_PY = 4 // py: 0.5 = 4px
 
     return (
-        <>
+        <Box sx={{
+            flexShrink: 0,
+            alignSelf: 'stretch',
+        }}>
             {/* Floating bubble */}
             {activeLetter && (
                 <Box
@@ -144,13 +147,11 @@ export function AlphabetIndex({
                 sx={{
                     position: 'sticky',
                     top: topOffset,
-                    alignSelf: 'flex-start',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     py: 0.5,
                     ...(side === 'right' ? { ml: 2.5 } : { mr: 2.5 }),
-                    flexShrink: 0,
                     touchAction: 'none',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -204,6 +205,6 @@ export function AlphabetIndex({
                     </Typography>
                 ))}
             </Box>
-        </>
+        </Box>
     )
 }

@@ -7,8 +7,11 @@ import type {
     DietPreset,
     SupplementLog,
     SupplementPreset,
+    SymptomLog,
     WorkoutPreset,
 } from '@/lib/health-types'
+import type { HealthSection } from '@/lib/health-section-order'
+import { getSectionOrder, saveSectionOrder } from '@/lib/health-section-order'
 import { Box, Chip, Typography } from '@mui/material'
 import {
     IconBarbell,
@@ -19,10 +22,26 @@ import {
     IconStretching,
 } from '@tabler/icons-react'
 import {
+    closestCenter,
+    DndContext,
+    type DragEndEvent,
+    PointerSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core'
+import {
+    arrayMove,
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
     HorizontalSortableList,
     SortablePresetChip,
 } from 'components/health/sortable-preset'
 import Link from 'next/link'
+import { useCallback, useState } from 'react'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +54,8 @@ export type HealthDashboardProps = {
     supplementPresets: SupplementPreset[]
     recentDiet: DietDay[]
     recentSupplementDays: { date: string; logs: SupplementLog[] }[]
+    topExercises: { name: string; count: number }[]
+    recentSymptomDays: { date: string; logs: SymptomLog[] }[]
     workoutStats: { streak: number; workoutDays: number; restDays: number }
     applyingId: number | null
     appliedId: number | null
@@ -93,13 +114,6 @@ const DAYS_SINCE_ROWS: { label: string; groups: string[] }[] = [
 
 const daysSinceCardWidth = 'calc((100% - 12px) / 3)'
 
-const tools = [
-    { name: 'Workouts', path: '/gustavo/health/exercise', icon: IconBarbell, bg: '#ffe0b2' },
-    { name: 'Exercises', path: '/gustavo/health/exercises', icon: IconStretching, bg: '#fff9c4' },
-    { name: 'Diet', path: '/gustavo/health/diet', icon: IconSalad, bg: '#c8e6c9' },
-    { name: 'Supplements', path: '/gustavo/health/supplements', icon: IconPill, bg: '#cdbfdb' },
-    { name: 'Symptoms', path: '/gustavo/health/symptoms', icon: IconFirstAidKit, bg: '#ffcdd2' },
-]
 
 const badgeSx = {
     'display': 'inline-flex',
@@ -221,6 +235,35 @@ function LogCardSkeleton({ rows = 2 }: { rows?: number }) {
     )
 }
 
+// ── Sortable Section Wrapper ─────────────────────────────────────────────────
+
+function toCssTransform(
+    transform: { x: number; y: number; scaleX: number; scaleY: number } | null
+): string | undefined {
+    if (!transform) return undefined
+    return `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${transform.scaleX}) scaleY(${transform.scaleY})`
+}
+
+function SortableSection({ id, children }: { id: string; children: React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+    return (
+        <Box
+            ref={setNodeRef}
+            {...attributes}
+            {...listeners}
+            sx={{
+                transform: toCssTransform(transform),
+                transition,
+                opacity: isDragging ? 0.5 : 1,
+                zIndex: isDragging ? 10 : 'auto',
+                touchAction: 'none',
+                cursor: 'grab',
+            }}>
+            {children}
+        </Box>
+    )
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function HealthDashboardV2({
@@ -232,24 +275,36 @@ export function HealthDashboardV2({
     supplementPresets,
     recentDiet,
     recentSupplementDays,
+    topExercises,
+    recentSymptomDays,
     workoutStats,
     applyingId,
     appliedId,
     applyPreset,
     reorderPresets,
 }: HealthDashboardProps) {
-    return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            maxWidth: 450,
-            px: 2,
-            py: 2,
-            gap: 3,
-        }}>
+    const [sectionOrder, setSectionOrder] = useState<HealthSection[]>(getSectionOrder)
 
-            {/* ── Workouts ──────────────────────────────────────── */}
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
+    )
+
+    const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
+        const { active, over } = event
+        if (!over || active.id === over.id) return
+        setSectionOrder((prev) => {
+            const oldIndex = prev.indexOf(active.id as HealthSection)
+            const newIndex = prev.indexOf(over.id as HealthSection)
+            const next = arrayMove(prev, oldIndex, newIndex)
+            saveSectionOrder(next)
+            return next
+        })
+    }, [])
+
+    // Section renderers keyed by ID
+    const sections: Record<HealthSection, React.ReactNode> = {
+        workouts: (
             <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
                     <Box component={Link} href="/gustavo/health/exercise" sx={{ ...badgeSx, backgroundColor: '#ffe0b2', mb: 0 }}>
@@ -325,7 +380,6 @@ export function HealthDashboardV2({
                     )}
                 </Box>
 
-                {/* Presets */}
                 {loading ? (
                     <PresetsSkeleton />
                 ) : workoutPresets.length > 0 ? (
@@ -358,7 +412,6 @@ export function HealthDashboardV2({
                     </Box>
                 ) : null}
 
-                {/* Days since grid */}
                 {loading ? (
                     <DaysSinceSkeleton />
                 ) : daysSince.length === 0 ? (
@@ -411,20 +464,15 @@ export function HealthDashboardV2({
                         ))}
                     </Box>
                 )}
-
             </Box>
-
-            {/* ── Diet ─────────────────────────────────────────── */}
+        ),
+        diet: (
             <Box>
                 <Box component={Link} href="/gustavo/health/diet" sx={{ ...badgeSx, backgroundColor: '#c8e6c9' }}>
                     <IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Diet</Typography>
                 </Box>
-
-                {/* Presets */}
-                {loading ? (
-                    <PresetsSkeleton />
-                ) : dietPresets.length > 0 ? (
+                {loading ? <PresetsSkeleton /> : dietPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
@@ -436,63 +484,35 @@ export function HealthDashboardV2({
                                         onClick={() => applyingId === null && applyPreset(preset.id, 'diet')}
                                         sx={{
                                             ...presetItemSx,
-                                            backgroundColor: applyingId === preset.id
-                                                ? colors.primaryYellow
-                                                : appliedId === preset.id
-                                                    ? '#c8e6c9'
-                                                    : colors.primaryWhite,
+                                            backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
                                             cursor: applyingId !== null ? 'default' : 'pointer',
                                             opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
                                         }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                            {preset.name}
-                                        </Typography>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
                                     </Box>
                                 </SortablePresetChip>
                             ))}
                         </HorizontalSortableList>
                     </Box>
                 ) : null}
-
-                {/* Recent logs */}
-                {loading ? (
-                    <LogCardSkeleton rows={3} />
-                ) : recentDiet.length === 0 ? (
-                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>
-                        No food logged yet
-                    </Typography>
+                {loading ? <LogCardSkeleton rows={3} /> : recentDiet.length === 0 ? (
+                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No food logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                         {recentDiet.map((day, i) => (
                             <Box key={day.date}>
                                 {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
-                                    {/* Date */}
                                     <Box sx={{ flexShrink: 0, minWidth: 44 }}>
-                                        <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>
-                                            {formatWeekday(day.date)}
-                                        </Typography>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>
-                                            {formatMonthDay(day.date)}
-                                        </Typography>
+                                        <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>{formatWeekday(day.date)}</Typography>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{formatMonthDay(day.date)}</Typography>
                                     </Box>
-                                    {/* Chips — single row scroll */}
                                     <Box sx={{ display: 'flex', gap: 0.5, overflowX: 'auto', flex: 1, minWidth: 0, WebkitOverflowScrolling: 'touch' }}>
                                         {day.mealGroups.map((group) => (
-                                            <Chip
-                                                key={`meal-${group.id}`}
-                                                label={`${group.quantity > 1 ? `${group.quantity}× ` : ''}${group.label}`}
-                                                size="small"
-                                                sx={{ ...logChipSx, backgroundColor: '#e3f2fd', border: '1px solid #4b6981' }}
-                                            />
+                                            <Chip key={`meal-${group.id}`} label={`${group.quantity > 1 ? `${group.quantity}× ` : ''}${group.label}`} size="small" sx={{ ...logChipSx, backgroundColor: '#e3f2fd', border: '1px solid #4b6981' }} />
                                         ))}
                                         {day.standaloneFoods.map((entry) => (
-                                            <Chip
-                                                key={`food-${entry.id}`}
-                                                label={`${entry.quantity > 1 ? `${entry.quantity}× ` : ''}${entry.food.name}`}
-                                                size="small"
-                                                sx={{ ...logChipSx, backgroundColor: colors.secondaryYellow, border: `1px solid ${colors.primaryBlack}` }}
-                                            />
+                                            <Chip key={`food-${entry.id}`} label={`${entry.quantity > 1 ? `${entry.quantity}× ` : ''}${entry.food.name}`} size="small" sx={{ ...logChipSx, backgroundColor: colors.secondaryYellow, border: `1px solid ${colors.primaryBlack}` }} />
                                         ))}
                                     </Box>
                                 </Box>
@@ -501,18 +521,14 @@ export function HealthDashboardV2({
                     </Box>
                 )}
             </Box>
-
-            {/* ── Supplements ──────────────────────────────────── */}
+        ),
+        supplements: (
             <Box>
                 <Box component={Link} href="/gustavo/health/supplements" sx={{ ...badgeSx, backgroundColor: '#cdbfdb' }}>
                     <IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Supplements</Typography>
                 </Box>
-
-                {/* Presets */}
-                {loading ? (
-                    <PresetsSkeleton />
-                ) : supplementPresets.length > 0 ? (
+                {loading ? <PresetsSkeleton /> : supplementPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
@@ -524,55 +540,32 @@ export function HealthDashboardV2({
                                         onClick={() => applyingId === null && applyPreset(preset.id, 'supplement')}
                                         sx={{
                                             ...presetItemSx,
-                                            backgroundColor: applyingId === preset.id
-                                                ? colors.primaryYellow
-                                                : appliedId === preset.id
-                                                    ? '#c8e6c9'
-                                                    : colors.primaryWhite,
+                                            backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
                                             cursor: applyingId !== null ? 'default' : 'pointer',
                                             opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
                                         }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                            {preset.name}
-                                        </Typography>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
                                     </Box>
                                 </SortablePresetChip>
                             ))}
                         </HorizontalSortableList>
                     </Box>
                 ) : null}
-
-                {/* Recent logs */}
-                {loading ? (
-                    <LogCardSkeleton rows={3} />
-                ) : recentSupplementDays.length === 0 ? (
-                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>
-                        No supplements logged yet
-                    </Typography>
+                {loading ? <LogCardSkeleton rows={3} /> : recentSupplementDays.length === 0 ? (
+                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No supplements logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                         {recentSupplementDays.map((group, i) => (
                             <Box key={group.date}>
                                 {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
-                                    {/* Date */}
                                     <Box sx={{ flexShrink: 0, minWidth: 44 }}>
-                                        <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>
-                                            {formatWeekday(group.date)}
-                                        </Typography>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>
-                                            {formatMonthDay(group.date)}
-                                        </Typography>
+                                        <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>{formatWeekday(group.date)}</Typography>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{formatMonthDay(group.date)}</Typography>
                                     </Box>
-                                    {/* Chips — single row scroll */}
                                     <Box sx={{ display: 'flex', gap: 0.5, overflowX: 'auto', flex: 1, minWidth: 0, WebkitOverflowScrolling: 'touch' }}>
                                         {group.logs.map((log) => (
-                                            <Chip
-                                                key={log.id}
-                                                label={log.quantity > 1 ? `${log.supplementName} ×${log.quantity}` : log.supplementName}
-                                                size="small"
-                                                sx={{ ...logChipSx, backgroundColor: '#f1f8e9', border: '1px solid #4caf50' }}
-                                            />
+                                            <Chip key={log.id} label={log.quantity > 1 ? `${log.supplementName} ×${log.quantity}` : log.supplementName} size="small" sx={{ ...logChipSx, backgroundColor: '#f1f8e9', border: '1px solid #4caf50' }} />
                                         ))}
                                     </Box>
                                 </Box>
@@ -581,56 +574,81 @@ export function HealthDashboardV2({
                     </Box>
                 )}
             </Box>
-
-            {/* ── Tools ────────────────────────────────────────── */}
+        ),
+        exercises: (
             <Box>
-                <Typography sx={{ fontFamily: 'var(--font-serif)', fontSize: 24, mb: 2 }}>
-                    Tools
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {tools.map((tool) => {
-                        const Icon = tool.icon
-                        return (
-                            <Box
-                                key={tool.name}
-                                component={Link}
-                                href={tool.path}
-                                sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'gap': 2,
-                                    'padding': 2,
-                                    ...cardSx,
-                                    'textDecoration': 'none',
-                                    'color': colors.primaryBlack,
-                                    '&:active': {
-                                        boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                        transform: 'translate(1px, 1px)',
-                                    },
-                                    'transition': 'box-shadow 0.1s, transform 0.1s',
-                                }}>
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: '50%',
-                                    backgroundColor: tool.bg,
-                                    border: `1.5px solid ${colors.primaryBlack}`,
-                                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                    flexShrink: 0,
-                                }}>
-                                    <Icon size={22} stroke={1.8} color={colors.primaryBlack} fill={colors.primaryWhite} />
-                                </Box>
-                                <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
-                                    {tool.name}
-                                </Typography>
-                            </Box>
-                        )
-                    })}
+                <Box component={Link} href="/gustavo/health/exercises" sx={{ ...badgeSx, backgroundColor: '#fff9c4' }}>
+                    <IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                    <Typography sx={badgeTextSx}>Exercises</Typography>
                 </Box>
+                {loading ? <LogCardSkeleton rows={3} /> : topExercises.length === 0 ? (
+                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No exercises logged yet</Typography>
+                ) : (
+                    <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                        {topExercises.map((ex, i) => (
+                            <Box key={ex.name}>
+                                {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.25, py: 1 }}>
+                                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{ex.name}</Typography>
+                                    <Chip label={`${ex.count}`} size="small" sx={{ ...logChipSx, backgroundColor: '#fff9c4', border: '1px solid #b57b00' }} />
+                                </Box>
+                            </Box>
+                        ))}
+                    </Box>
+                )}
             </Box>
+        ),
+        symptoms: (
+            <Box>
+                <Box component={Link} href="/gustavo/health/symptoms" sx={{ ...badgeSx, backgroundColor: '#ffcdd2' }}>
+                    <IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
+                    <Typography sx={badgeTextSx}>Symptoms</Typography>
+                </Box>
+                {loading ? <LogCardSkeleton rows={3} /> : recentSymptomDays.length === 0 ? (
+                    <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No symptoms logged yet</Typography>
+                ) : (
+                    <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                        {recentSymptomDays.map((group, i) => (
+                            <Box key={group.date}>
+                                {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
+                                    <Box sx={{ flexShrink: 0, minWidth: 44 }}>
+                                        <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>{formatWeekday(group.date)}</Typography>
+                                        <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{formatMonthDay(group.date)}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', gap: 0.5, overflowX: 'auto', flex: 1, minWidth: 0, WebkitOverflowScrolling: 'touch' }}>
+                                        {group.logs.map((log) => (
+                                            <Chip key={log.id} label={log.symptomName} size="small" sx={{ ...logChipSx, backgroundColor: '#ffebee', border: '1px solid #e57373' }} />
+                                        ))}
+                                    </Box>
+                                </Box>
+                            </Box>
+                        ))}
+                    </Box>
+                )}
+            </Box>
+        ),
+    }
+
+    return (
+        <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            maxWidth: 450,
+            px: 2,
+            py: 2,
+            gap: 3,
+        }}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+                <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
+                    {sectionOrder.map((key) => (
+                        <SortableSection key={key} id={key}>
+                            {sections[key]}
+                        </SortableSection>
+                    ))}
+                </SortableContext>
+            </DndContext>
         </Box>
     )
 }

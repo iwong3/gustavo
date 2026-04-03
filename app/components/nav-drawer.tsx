@@ -16,10 +16,20 @@ import {
     IconSalad,
     IconSettings,
 } from '@tabler/icons-react'
+import type { HealthSection } from '@/lib/health-section-order'
+import { getSectionOrder, onSectionOrderChange } from '@/lib/health-section-order'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchTrips } from 'utils/api'
+
+const HEALTH_MENU_ITEMS: Record<HealthSection, { href: string; label: string; icon: React.ReactNode; isActive: (pathname: string) => boolean }> = {
+    workouts: { href: '/gustavo/health/exercise', label: 'Workouts', icon: <IconBarbell size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />, isActive: (p) => p === '/gustavo/health/exercise' },
+    exercises: { href: '/gustavo/health/exercises', label: 'Exercises', icon: <IconList size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/exercises') },
+    diet: { href: '/gustavo/health/diet', label: 'Diet', icon: <IconSalad size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/diet') },
+    supplements: { href: '/gustavo/health/supplements', label: 'Supplements', icon: <IconPill size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />, isActive: (p) => p.startsWith('/gustavo/health/supplements') },
+    symptoms: { href: '/gustavo/health/symptoms', label: 'Symptoms', icon: <IconFirstAidKit size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/symptoms') },
+}
 
 const DRAWER_WIDTH = 272
 
@@ -60,6 +70,9 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
     const [loading, setLoading] = useState(true)
     const [pastExpanded, setPastExpanded] = useState(false)
     const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
+    const [healthSectionOrder, setHealthSectionOrder] = useState(getSectionOrder)
+
+    useEffect(() => onSectionOrderChange(() => setHealthSectionOrder(getSectionOrder())), [])
 
     useEffect(() => {
         if (open) {
@@ -390,47 +403,21 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     Health
                 </Box>
 
-                {/* Health sub-items */}
-                <Box
-                    component={Link}
-                    href="/gustavo/health/exercise"
-                    onClick={onClose}
-                    sx={tripItemSx(isWithin('/gustavo/health/exercise'))}>
-                    <IconBarbell size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
-                    Workouts
-                </Box>
-                <Box
-                    component={Link}
-                    href="/gustavo/health/exercises"
-                    onClick={onClose}
-                    sx={tripItemSx(isWithin('/gustavo/health/exercises'))}>
-                    <IconList size={14} stroke={2} color={colors.primaryBrown} />
-                    Exercises
-                </Box>
-                <Box
-                    component={Link}
-                    href="/gustavo/health/supplements"
-                    onClick={onClose}
-                    sx={tripItemSx(isWithin('/gustavo/health/supplements'))}>
-                    <IconPill size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />
-                    Supplements
-                </Box>
-                <Box
-                    component={Link}
-                    href="/gustavo/health/diet"
-                    onClick={onClose}
-                    sx={tripItemSx(isWithin('/gustavo/health/diet'))}>
-                    <IconSalad size={14} stroke={2} color={colors.primaryBrown} />
-                    Diet
-                </Box>
-                <Box
-                    component={Link}
-                    href="/gustavo/health/symptoms"
-                    onClick={onClose}
-                    sx={tripItemSx(isWithin('/gustavo/health/symptoms'))}>
-                    <IconFirstAidKit size={14} stroke={2} color={colors.primaryBrown} />
-                    Symptoms
-                </Box>
+                {/* Health sub-items — order matches dashboard */}
+                {healthSectionOrder.map((section) => {
+                    const item = HEALTH_MENU_ITEMS[section]
+                    return (
+                        <Box
+                            key={section}
+                            component={Link}
+                            href={item.href}
+                            onClick={onClose}
+                            sx={tripItemSx(item.isActive(pathname))}>
+                            {item.icon}
+                            {item.label}
+                        </Box>
+                    )
+                })}
 
                 {/* Settings */}
                 <Box

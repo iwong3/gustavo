@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import type { Exercise, MuscleGroupWithParents } from '@/lib/health-types'
 import { GROUP_TARGETS, isTarget } from '@/lib/health/muscle-groups'
 import {
@@ -15,12 +15,12 @@ import {
     Box,
     Button,
     Chip,
-    CircularProgress,
     TextField,
     Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useState } from 'react'
 import FormDrawer from 'components/form-drawer'
+import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 
@@ -163,31 +163,13 @@ export default function ExercisesPage() {
 
     useRegisterFab(openAdd)
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={24} sx={{ color: colors.primaryYellow }} />
-            </Box>
-        )
-    }
-
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                width: '100%',
-                maxWidth: 600,
-                paddingX: 2,
-                paddingBottom: 2,
-                gap: 2,
-            }}>
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#fff9c4', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
-                <IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Exercises
-                </Typography>
-            </Box>
+        <HealthPageLayout loading={loading}>
+            <HealthPageHeader
+                icon={<IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
+                title="Exercises"
+                color="#fff9c4"
+            />
 
             {exercises.length === 0 ? (
                 <Typography sx={{ fontSize: 14, color: colors.primaryBrown, textAlign: 'center', py: 4 }}>
@@ -272,7 +254,7 @@ export default function ExercisesPage() {
                 editingExercise={editingExercise}
                 onSaved={fetchData}
             />
-        </Box>
+        </HealthPageLayout>
     )
 }
 

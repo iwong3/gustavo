@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -20,6 +20,7 @@ import {
 import { IconFirstAidKit, IconPencil, IconTrash } from '@tabler/icons-react'
 import { InlineForensicContent } from 'components/health/forensic-view'
 import FormDrawer from 'components/form-drawer'
+import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
@@ -314,35 +315,13 @@ export default function SymptomsPage() {
 
     const dayGroups = groupLogsByDate(allLogs)
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress
-                    size={24}
-                    sx={{ color: colors.primaryYellow }}
-                />
-            </Box>
-        )
-    }
-
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                width: '100%',
-                maxWidth: 600,
-                paddingX: 2,
-                paddingBottom: 2,
-                gap: 2,
-            }}>
-            {/* Header */}
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#ffcdd2', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
-                <IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Symptoms
-                </Typography>
-            </Box>
+        <HealthPageLayout loading={loading}>
+            <HealthPageHeader
+                icon={<IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
+                title="Symptoms"
+                color="#ffcdd2"
+            />
 
             {/* Log history */}
             {dayGroups.length === 0 ? (
@@ -453,7 +432,7 @@ export default function SymptomsPage() {
                 initialDate={drawerInitialDate}
                 onDataChanged={fetchData}
             />
-        </Box>
+        </HealthPageLayout>
     )
 }
 

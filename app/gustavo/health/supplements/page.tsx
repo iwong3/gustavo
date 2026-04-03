@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -17,12 +17,12 @@ import {
     Button,
     Checkbox,
     Chip,
-    CircularProgress,
     TextField,
     Typography,
 } from '@mui/material'
 import { IconArrowLeft, IconBolt, IconMinus, IconPencil, IconPill, IconPlus, IconTrash } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
+import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import {
     arrayMove,
     SortablePresetChip,
@@ -291,112 +291,89 @@ export default function SupplementsPage() {
     const activeSupplements = supplements.filter((s) => s.isActive)
     const dayGroups = groupLogsByDate(allLogs)
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress
-                    size={24}
-                    sx={{ color: colors.primaryYellow }}
-                />
-            </Box>
-        )
-    }
-
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                width: '100%',
-                maxWidth: 600,
-                paddingX: 2,
-                paddingBottom: 2,
-                gap: 2,
-            }}>
-            {/* Header */}
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, backgroundColor: '#cdbfdb', ...hardShadow, borderRadius: '4px', alignSelf: 'flex-start' }}>
-                <IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
-                <Typography sx={{ fontSize: 15, fontWeight: 700, color: colors.primaryBlack, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Supplements
-                </Typography>
-            </Box>
-
-            {/* Preset quick-actions */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                    alignItems: 'center',
-                }}>
-                {/* Lightning circle icon — opens preset drawer */}
+        <HealthPageLayout loading={loading}>
+            <HealthPageHeader
+                icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
+                title="Supplements"
+                color="#cdbfdb">
+                {/* Preset quick-actions */}
                 <Box
-                    onClick={() => setPresetDrawerOpen(true)}
                     sx={{
-                        'width': 30,
-                        'height': 30,
-                        'borderRadius': '50%',
-                        'backgroundColor': '#cdbfdb',
-                        'border': `1.5px solid ${colors.primaryBlack}`,
-                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                        'display': 'flex',
-                        'alignItems': 'center',
-                        'justifyContent': 'center',
-                        'flexShrink': 0,
-                        'cursor': 'pointer',
-                        '&:active': {
-                            boxShadow: 'none',
-                            transform: 'translate(2px, 2px)',
-                        },
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        alignItems: 'center',
                     }}>
-                    <IconBolt
-                        size={14}
-                        stroke={2.5}
-                        fill={colors.primaryWhite}
-                        color={colors.primaryBlack}
-                    />
+                    {/* Lightning circle icon — opens preset drawer */}
+                    <Box
+                        onClick={() => setPresetDrawerOpen(true)}
+                        sx={{
+                            'width': 30,
+                            'height': 30,
+                            'borderRadius': '50%',
+                            'backgroundColor': '#cdbfdb',
+                            'border': `1.5px solid ${colors.primaryBlack}`,
+                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'justifyContent': 'center',
+                            'flexShrink': 0,
+                            'cursor': 'pointer',
+                            '&:active': {
+                                boxShadow: 'none',
+                                transform: 'translate(2px, 2px)',
+                            },
+                        }}>
+                        <IconBolt
+                            size={14}
+                            stroke={2.5}
+                            fill={colors.primaryWhite}
+                            color={colors.primaryBlack}
+                        />
+                    </Box>
+                    <HorizontalSortableList items={presets} onReorder={reorderPresets}>
+                        {presets.map((preset) => (
+                            <SortablePresetChip key={preset.id} id={preset.id}>
+                                <Box
+                                    onClick={() =>
+                                        applyingPreset === null && applyPreset(preset.id)
+                                    }
+                                    sx={{
+                                        'px': 1.25,
+                                        'py': 0.5,
+                                        'backgroundColor':
+                                            applyingPreset === preset.id
+                                                ? colors.primaryYellow
+                                                : colors.primaryWhite,
+                                        'border': `1.5px solid ${colors.primaryBlack}`,
+                                        'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                        'borderRadius': '4px',
+                                        'cursor':
+                                            applyingPreset !== null ? 'default' : 'pointer',
+                                        'opacity':
+                                            applyingPreset !== null &&
+                                            applyingPreset !== preset.id
+                                                ? 0.5
+                                                : 1,
+                                        'transition': 'all 0.15s',
+                                        '&:active':
+                                            applyingPreset === null
+                                                ? {
+                                                      boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                                                      transform: 'translate(1px, 1px)',
+                                                  }
+                                                : {},
+                                    }}>
+                                    <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                                        {preset.name}
+                                    </Typography>
+                                </Box>
+                            </SortablePresetChip>
+                        ))}
+                    </HorizontalSortableList>
                 </Box>
-                <HorizontalSortableList items={presets} onReorder={reorderPresets}>
-                    {presets.map((preset) => (
-                        <SortablePresetChip key={preset.id} id={preset.id}>
-                            <Box
-                                onClick={() =>
-                                    applyingPreset === null && applyPreset(preset.id)
-                                }
-                                sx={{
-                                    'px': 1.25,
-                                    'py': 0.5,
-                                    'backgroundColor':
-                                        applyingPreset === preset.id
-                                            ? colors.primaryYellow
-                                            : colors.primaryWhite,
-                                    'border': `1.5px solid ${colors.primaryBlack}`,
-                                    'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    'borderRadius': '4px',
-                                    'cursor':
-                                        applyingPreset !== null ? 'default' : 'pointer',
-                                    'opacity':
-                                        applyingPreset !== null &&
-                                        applyingPreset !== preset.id
-                                            ? 0.5
-                                            : 1,
-                                    'transition': 'all 0.15s',
-                                    '&:active':
-                                        applyingPreset === null
-                                            ? {
-                                                  boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                                  transform: 'translate(1px, 1px)',
-                                              }
-                                            : {},
-                                }}>
-                                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                    {preset.name}
-                                </Typography>
-                            </Box>
-                        </SortablePresetChip>
-                    ))}
-                </HorizontalSortableList>
-            </Box>
+            </HealthPageHeader>
 
             {/* Log history */}
             {dayGroups.length === 0 ? (
@@ -468,7 +445,7 @@ export default function SupplementsPage() {
                 }}
                 onReorder={reorderPresets}
             />
-        </Box>
+        </HealthPageLayout>
     )
 }
 
