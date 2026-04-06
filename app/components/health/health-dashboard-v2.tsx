@@ -258,6 +258,8 @@ function SortableSection({ id, children }: { id: string; children: React.ReactNo
                 zIndex: isDragging ? 10 : 'auto',
                 touchAction: 'none',
                 cursor: 'grab',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
             }}>
             {children}
         </Box>
