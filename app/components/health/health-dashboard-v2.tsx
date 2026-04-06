@@ -286,8 +286,8 @@ export function HealthDashboardV2({
     const [sectionOrder, setSectionOrder] = useState<HealthSection[]>(getSectionOrder)
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
+        useSensor(PointerSensor, { activationConstraint: { distance: 15 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } })
     )
 
     const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
