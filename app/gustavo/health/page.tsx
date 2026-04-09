@@ -7,6 +7,7 @@ import type {
     SupplementLog,
     SupplementPreset,
     SymptomLog,
+    WeightLog,
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
@@ -61,6 +62,7 @@ export default function HealthPage() {
     const [recentDietDays, setRecentDietDays] = useState<DietDay[]>([])
     const [recentSupplements, setRecentSupplements] = useState<SupplementLog[]>([])
     const [recentSymptoms, setRecentSymptoms] = useState<SymptomLog[]>([])
+    const [recentWeightLogs, setRecentWeightLogs] = useState<WeightLog[]>([])
     const [loading, setLoading] = useState(true)
 
     const [applyingId, setApplyingId] = useState<number | null>(null)
@@ -90,6 +92,12 @@ export default function HealthPage() {
             .then(setRecentSymptoms)
     }, [])
 
+    const fetchRecentWeight = useCallback(() => {
+        return fetch('/api/health/weight-logs')
+            .then((r) => r.json())
+            .then(setRecentWeightLogs)
+    }, [])
+
     const fetchRecentWorkouts = useCallback(() => {
         return fetch(`/api/health/workouts?startDate=${thirtyDaysAgo}&endDate=${today}`)
             .then((r) => r.json())
@@ -106,10 +114,11 @@ export default function HealthPage() {
             fetchRecentDiet(),
             fetchRecentSupplements(),
             fetchRecentSymptoms(),
+            fetchRecentWeight(),
         ])
             .catch((err) => console.error('Failed to fetch health data:', err))
             .finally(() => setLoading(false))
-    }, [fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements, fetchRecentSymptoms])
+    }, [fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements, fetchRecentSymptoms, fetchRecentWeight])
 
     const applyPreset = useCallback(async (presetId: number, type: 'workout' | 'diet' | 'supplement') => {
         if (applyingId) return
@@ -223,6 +232,7 @@ export default function HealthPage() {
             topExercises={topExercises}
             recentSymptomDays={recentSymptomDays}
             applyPreset={applyPreset}
+            recentWeightLogs={recentWeightLogs}
             reorderPresets={reorderPresetsHandler}
         />
     )

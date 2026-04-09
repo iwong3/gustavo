@@ -145,6 +145,15 @@ export type SymptomLog = {
     createdAt: string
 }
 
+// --- Weight ---
+
+export type WeightLog = {
+    id: number
+    date: string            // ISO YYYY-MM-DD
+    weightLbs: number       // e.g. 185.5
+    createdAt: string       // ISO timestamp
+}
+
 // --- Forensic View ---
 
 export type DaySnapshot = {

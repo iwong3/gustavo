@@ -8,6 +8,7 @@ import type {
     SupplementLog,
     SupplementPreset,
     SymptomLog,
+    WeightLog,
     WorkoutPreset,
 } from '@/lib/health-types'
 import type { HealthSection } from '@/lib/health-section-order'
@@ -19,6 +20,7 @@ import {
     IconFirstAidKit,
     IconPill,
     IconSalad,
+    IconScale,
     IconStretching,
 } from '@tabler/icons-react'
 import {
@@ -41,7 +43,7 @@ import {
     SortablePresetChip,
 } from 'components/health/sortable-preset'
 import Link from 'next/link'
-import { useCallback, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,7 @@ export type HealthDashboardProps = {
     recentSupplementDays: { date: string; logs: SupplementLog[] }[]
     topExercises: { name: string; count: number }[]
     recentSymptomDays: { date: string; logs: SymptomLog[] }[]
+    recentWeightLogs: WeightLog[]
     workoutStats: { streak: number; workoutDays: number; restDays: number }
     applyingId: number | null
     appliedId: number | null
@@ -245,17 +248,40 @@ function toCssTransform(
 }
 
 function SortableSection({ id, children }: { id: string; children: React.ReactNode }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id })
     return (
         <Box
             ref={setNodeRef}
             {...attributes}
-            {...listeners}
             sx={{
                 transform: toCssTransform(transform),
                 transition,
                 opacity: isDragging ? 0.5 : 1,
                 zIndex: isDragging ? 10 : 'auto',
+            }}>
+            {/* Wrap children, passing drag handle ref via context */}
+            <DragHandleContext.Provider value={{ listeners, setActivatorNodeRef }}>
+                {children}
+            </DragHandleContext.Provider>
+        </Box>
+    )
+}
+
+// Context to pass drag listeners down to badge components
+const DragHandleContext = React.createContext<{
+    listeners: ReturnType<typeof useSortable>['listeners']
+    setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef']
+} | null>(null)
+
+/** Wrap the badge row to make it the drag handle for section reordering */
+function DragHandleBadge({ children }: { children: React.ReactNode }) {
+    const ctx = React.useContext(DragHandleContext)
+    if (!ctx) return <>{children}</>
+    return (
+        <Box
+            ref={ctx.setActivatorNodeRef}
+            {...ctx.listeners}
+            sx={{
                 touchAction: 'none',
                 cursor: 'grab',
                 userSelect: 'none',
@@ -279,6 +305,7 @@ export function HealthDashboardV2({
     recentSupplementDays,
     topExercises,
     recentSymptomDays,
+    recentWeightLogs,
     workoutStats,
     applyingId,
     appliedId,
@@ -308,6 +335,7 @@ export function HealthDashboardV2({
     const sections: Record<HealthSection, React.ReactNode> = {
         workouts: (
             <Box>
+                <DragHandleBadge>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
                     <Box component={Link} href="/gustavo/health/exercise" sx={{ ...badgeSx, backgroundColor: '#ffe0b2', mb: 0 }}>
                         <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
@@ -381,6 +409,7 @@ export function HealthDashboardV2({
                     </Box>
                     )}
                 </Box>
+                </DragHandleBadge>
 
                 {loading ? (
                     <PresetsSkeleton />
@@ -470,10 +499,12 @@ export function HealthDashboardV2({
         ),
         diet: (
             <Box>
+                <DragHandleBadge>
                 <Box component={Link} href="/gustavo/health/diet" sx={{ ...badgeSx, backgroundColor: '#c8e6c9' }}>
                     <IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Diet</Typography>
                 </Box>
+                </DragHandleBadge>
                 {loading ? <PresetsSkeleton /> : dietPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9' }}>
@@ -526,10 +557,12 @@ export function HealthDashboardV2({
         ),
         supplements: (
             <Box>
+                <DragHandleBadge>
                 <Box component={Link} href="/gustavo/health/supplements" sx={{ ...badgeSx, backgroundColor: '#cdbfdb' }}>
                     <IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Supplements</Typography>
                 </Box>
+                </DragHandleBadge>
                 {loading ? <PresetsSkeleton /> : supplementPresets.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb' }}>
@@ -579,10 +612,12 @@ export function HealthDashboardV2({
         ),
         exercises: (
             <Box>
+                <DragHandleBadge>
                 <Box component={Link} href="/gustavo/health/exercises" sx={{ ...badgeSx, backgroundColor: '#fff9c4' }}>
                     <IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Exercises</Typography>
                 </Box>
+                </DragHandleBadge>
                 {loading ? <LogCardSkeleton rows={3} /> : topExercises.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No exercises logged yet</Typography>
                 ) : (
@@ -602,10 +637,12 @@ export function HealthDashboardV2({
         ),
         symptoms: (
             <Box>
+                <DragHandleBadge>
                 <Box component={Link} href="/gustavo/health/symptoms" sx={{ ...badgeSx, backgroundColor: '#ffcdd2' }}>
                     <IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Symptoms</Typography>
                 </Box>
+                </DragHandleBadge>
                 {loading ? <LogCardSkeleton rows={3} /> : recentSymptomDays.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No symptoms logged yet</Typography>
                 ) : (
@@ -630,6 +667,75 @@ export function HealthDashboardV2({
                 )}
             </Box>
         ),
+        weight: (() => {
+            const recent = recentWeightLogs.slice(0, 3)
+            // Compute deltas and find widest delta label for fixed-width column
+            const deltas = recent.map((log, i) => {
+                const idx = recentWeightLogs.indexOf(log)
+                const prev = recentWeightLogs[idx + 1] ?? null
+                return prev ? log.weightLbs - prev.weightLbs : null
+            })
+            const hasDelta = deltas.some((d) => d !== null && d !== 0)
+
+            return (
+                <Box>
+                    <DragHandleBadge>
+                    <Box component={Link} href="/gustavo/health/weight" sx={{ ...badgeSx, backgroundColor: '#b3e5fc' }}>
+                        <IconScale size={20} stroke={2} color={colors.primaryBlack} />
+                        <Typography sx={badgeTextSx}>Weight</Typography>
+                    </Box>
+                    </DragHandleBadge>
+                    {loading ? <LogCardSkeleton rows={3} /> : recent.length === 0 ? (
+                        <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No weight logged yet</Typography>
+                    ) : (
+                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                            {recent.map((log, i) => {
+                                const delta = deltas[i]
+                                const deltaStr = delta !== null && delta !== 0
+                                    ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`
+                                    : null
+                                return (
+                                    <Box key={log.id}>
+                                        {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.25, py: 1 }}>
+                                            {/* Date — left */}
+                                            <Box sx={{ flexShrink: 0, minWidth: 44 }}>
+                                                <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: colors.primaryBrown, lineHeight: 1.2 }}>{formatWeekday(log.date)}</Typography>
+                                                <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{formatMonthDay(log.date)}</Typography>
+                                            </Box>
+                                            {/* Delta + Weight — right-aligned, delta in fixed-width slot */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                {hasDelta && (
+                                                    <Box sx={{ mr: 0.75, minWidth: 32, textAlign: 'right' }}>
+                                                        {deltaStr && (
+                                                            <Typography sx={{
+                                                                fontSize: 11,
+                                                                fontWeight: 700,
+                                                                lineHeight: 1,
+                                                                color: delta! < 0 ? '#2e7d32' : '#c62828',
+                                                                whiteSpace: 'nowrap',
+                                                            }}>
+                                                                {deltaStr}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                )}
+                                                <Typography sx={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-serif)', lineHeight: 1, minWidth: 36, textAlign: 'right' }}>
+                                                    {log.weightLbs}
+                                                </Typography>
+                                                <Typography sx={{ fontSize: 10, fontWeight: 600, color: colors.primaryBrown, ml: 0.5 }}>
+                                                    lbs
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                )
+                            })}
+                        </Box>
+                    )}
+                </Box>
+            )
+        })(),
     }
 
     return (

@@ -14,6 +14,7 @@ import {
     IconPill,
     IconPlaneDeparture,
     IconSalad,
+    IconScale,
     IconSettings,
 } from '@tabler/icons-react'
 import type { HealthSection } from '@/lib/health-section-order'
@@ -29,6 +30,7 @@ const HEALTH_MENU_ITEMS: Record<HealthSection, { href: string; label: string; ic
     diet: { href: '/gustavo/health/diet', label: 'Diet', icon: <IconSalad size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/diet') },
     supplements: { href: '/gustavo/health/supplements', label: 'Supplements', icon: <IconPill size={14} stroke={2} color={colors.primaryBrown} fill={colors.primaryWhite} />, isActive: (p) => p.startsWith('/gustavo/health/supplements') },
     symptoms: { href: '/gustavo/health/symptoms', label: 'Symptoms', icon: <IconFirstAidKit size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/symptoms') },
+    weight: { href: '/gustavo/health/weight', label: 'Weight', icon: <IconScale size={14} stroke={2} color={colors.primaryBrown} />, isActive: (p) => p.startsWith('/gustavo/health/weight') },
 }
 
 const DRAWER_WIDTH = 272

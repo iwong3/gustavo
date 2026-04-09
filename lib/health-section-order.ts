@@ -1,7 +1,7 @@
-export type HealthSection = 'workouts' | 'diet' | 'supplements' | 'exercises' | 'symptoms'
+export type HealthSection = 'workouts' | 'diet' | 'supplements' | 'exercises' | 'symptoms' | 'weight'
 
 export const DEFAULT_SECTION_ORDER: HealthSection[] = [
-    'workouts', 'diet', 'supplements', 'exercises', 'symptoms',
+    'workouts', 'diet', 'supplements', 'exercises', 'symptoms', 'weight',
 ]
 
 const STORAGE_KEY = 'health-section-order'
