@@ -827,6 +827,7 @@ export default function TripFormDialog({
                                                 }}
                                                 size="small"
                                                 MenuProps={{
+                                                    sx: { zIndex: 1600 },
                                                     PaperProps: {
                                                         sx: {
                                                             'backgroundColor':
