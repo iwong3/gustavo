@@ -178,6 +178,7 @@ export default function TripFormDialog({
         setEndDate('')
         setDescription('')
         setCountryCodes([])
+        setCountriesOpen(false)
         setSelectedUserIds([])
         setVisibility('participants')
         setParticipantRoles(new Map())
@@ -570,7 +571,6 @@ export default function TripFormDialog({
                     <Autocomplete
                         multiple
                         fullWidth
-                        disablePortal
                         size="small"
                         open={countriesOpen}
                         onOpen={() => setCountriesOpen(true)}
@@ -585,6 +585,11 @@ export default function TripFormDialog({
                         getOptionLabel={(c) => c.name}
                         isOptionEqualToValue={(a, b) => a.code === b.code}
                         slotProps={{
+                            // Portal to body and bump z-index above
+                            // FormDrawer (1500). This avoids the popper
+                            // drifting when the form scrolls (Popper anchors
+                            // to viewport, not nested scroll containers).
+                            popper: { sx: { zIndex: 1600 } },
                             listbox: {
                                 sx: {
                                     'maxHeight': 240,
@@ -666,13 +671,18 @@ export default function TripFormDialog({
                                     countriesOpen
                                         ? {
                                               ...fieldSx,
+                                              // Keep the field's 2px black
+                                              // shadow (override focused
+                                              // yellow → black) so the right
+                                              // edge of input + paper has one
+                                              // continuous black shadow.
                                               '& .MuiOutlinedInput-root': {
                                                   borderRadius: '4px 4px 0 0',
-                                                  boxShadow: 'none',
+                                                  boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                               },
                                               '& .MuiOutlinedInput-root.Mui-focused':
                                                   {
-                                                      boxShadow: 'none',
+                                                      boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                                                   },
                                               '& .MuiOutlinedInput-notchedOutline':
                                                   {
