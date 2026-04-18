@@ -1,27 +1,23 @@
-import {
-    Box,
-    ClickAwayListener,
-    InputAdornment,
-    TextField,
-} from '@mui/material'
+import { Box, InputAdornment, TextField, Typography } from '@mui/material'
 import Fuse from 'fuse.js'
-import { useState } from 'react'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import { useCollapseAllStore } from 'components/menu/items/collapse-all'
-import { defaultBackgroundColor } from 'utils/colors'
+import { colors } from '@/lib/colors'
+import { useSpendData } from 'providers/spend-data-provider'
 import { getTablerIcon } from 'utils/icons'
 
 import type { Expense } from '@/lib/types'
 
 const fuseOptions = {
     keys: [
-        { name: 'name', weight: 1 },
-        { name: 'date', weight: 1 },
+        { name: 'name', weight: 3 },
+        { name: 'locationName', weight: 2 },
         { name: 'paidBy.firstName', weight: 1 },
-        { name: 'locationName', weight: 1 },
     ],
+    threshold: 0.5,
+    distance: 100,
+    ignoreLocation: true,
     includeMatches: true,
 }
 
@@ -55,14 +51,7 @@ export const useSearchBarStore = create<SearchBarState & SearchBarActions>(
             const searchResults = fuse.search(searchInput)
 
             // search results are ordered by relevance, so return spend data with same order
-            const searchResultsIndexes = searchResults.map(
-                (result) => result.refIndex
-            )
-            const searchedAndOrderedSpendData = searchResultsIndexes.map(
-                (index) => spendData[index]
-            )
-
-            return searchedAndOrderedSpendData
+            return searchResults.map((result) => result.item)
         },
 
         setSearchInput: (searchInput: string) => set({ searchInput }),
@@ -78,97 +67,77 @@ export const SearchBar = () => {
     const { searchInput, setSearchInput, isActive } = useSearchBarStore(
         useShallow((state) => state)
     )
-    const { toggle: collapseAll } = useCollapseAllStore(
-        useShallow((state) => state)
-    )
-
-    const [focused, setFocused] = useState(false)
+    const { filteredExpenses, isSearching } = useSpendData()
+    const resultCount = isSearching ? filteredExpenses.length : null
 
     return (
-        <ClickAwayListener
-            onClickAway={() => {
-                if (!isActive()) {
-                    setFocused(false)
-                }
-            }}>
-            <Box
-                onClick={() => setFocused(true)}
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: focused || isActive() ? '120px' : '32px',
-                    height: '32px',
-                    transition: 'width 0.1s ease-out',
-                }}>
-                <TextField
-                    value={searchInput}
-                    onChange={(e) => {
-                        setSearchInput(e.target.value)
-                        collapseAll()
-                    }}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    slotProps={{
-                        input: {
-                            startAdornment: (
-                                <InputAdornment
-                                    position="start"
-                                    sx={{
-                                        margin: 0,
-                                    }}>
-                                    {getTablerIcon({
-                                        name: 'IconSearch',
-                                        size: 16,
-                                    })}
-                                </InputAdornment>
-                            ),
-                            endAdornment: isActive() && (
-                                <InputAdornment
-                                    position="end"
-                                    sx={{
-                                        margin: 0,
-                                    }}
-                                    onClick={() => {
-                                        setSearchInput('')
-                                        setFocused(false)
-                                        collapseAll()
-                                    }}>
+        <Box sx={{ width: '100%' }}>
+            <TextField
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search expenses"
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start" sx={{ margin: 0, mr: 0.5 }}>
+                                {getTablerIcon({ name: 'IconSearch', size: 16 })}
+                            </InputAdornment>
+                        ),
+                        endAdornment: isActive() && (
+                            <InputAdornment
+                                position="end"
+                                sx={{ margin: 0, gap: 0.75 }}>
+                                {resultCount !== null && (
+                                    <Typography
+                                        sx={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: colors.primaryBrown,
+                                            lineHeight: 1,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        {resultCount} result{resultCount === 1 ? '' : 's'}
+                                    </Typography>
+                                )}
+                                <Box
+                                    sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                    onClick={() => setSearchInput('')}>
                                     {getTablerIcon({ name: 'IconX', size: 16 })}
-                                </InputAdornment>
-                            ),
+                                </Box>
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+                sx={{
+                    width: '100%',
+                    '& fieldset': {
+                        border: `1px solid ${colors.primaryBlack}`,
+                        borderRadius: '4px',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                        height: 36,
+                        backgroundColor: colors.primaryWhite,
+                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        '&.Mui-focused fieldset': {
+                            borderColor: colors.primaryBlack,
+                            borderWidth: '1px',
                         },
-                    }}
-                    sx={{
-                        // whole component
-                        '& fieldset': {
-                            border: '1px solid #FBBC04',
-                            borderRadius: '10px',
-                            backgroundColor: defaultBackgroundColor,
-                            zIndex: -1,
+                        '&:hover fieldset': {
+                            borderColor: colors.primaryBlack,
                         },
-                        // whole component when focused
-                        '& .MuiOutlinedInput-root': {
-                            '&.Mui-focused fieldset': {
-                                borderColor: '#FBBC04',
-                            },
-                        },
-                        // text input
-                        '& .MuiInputBase-input': {
-                            paddingY: 1,
-                            paddingX: 0.5,
-                            height: 14,
-                            fontSize: 12,
-                        },
-                        // start adornment
-                        '& .MuiInputBase-root': {
-                            paddingLeft: 1,
-                            paddingRight: 1,
-                        },
-                    }}
-                    fullWidth
-                />
-            </Box>
-        </ClickAwayListener>
+                    },
+                    '& .MuiInputBase-input': {
+                        paddingY: 0,
+                        paddingX: 0.5,
+                        fontSize: 13,
+                    },
+                    '& .MuiInputBase-root': {
+                        paddingLeft: 1.25,
+                        paddingRight: 1.25,
+                    },
+                }}
+                fullWidth
+            />
+        </Box>
     )
 }

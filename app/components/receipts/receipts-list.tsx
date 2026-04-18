@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Collapse } from '@mui/material'
+import { Box, Collapse, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
@@ -30,7 +30,7 @@ type DateGroup = {
 }
 
 export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
-    const { filteredExpenses, getUsdValue } = useSpendData()
+    const { filteredExpenses, getUsdValue, isSearching, searchInput } = useSpendData()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
 
@@ -43,6 +43,8 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const [swipeDeleteExpense, setSwipeDeleteExpense] = useState<Expense | null>(null)
 
     const displayData = expenses || filteredExpenses
+    // Only apply search-mode rendering when using context data (not when parent passes filtered expenses)
+    const showSearchView = isSearching && !expenses
 
     // Keep selectedExpense in sync with refreshed data
     const resolvedExpense = useMemo(() => {
@@ -107,7 +109,68 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     return (
         <>
             <Box id="receipts-list" sx={{ paddingTop: 1, scrollMarginTop: '54px', pb: 2 }}>
-                {dateGroups.map((group) => {
+                {showSearchView ? (
+                    <Box sx={{ mx: 2 }}>
+                        {displayData.map((row) => {
+                            const isReporter = row.reportedBy?.id === trip.currentUserId
+                            const rowCanEdit = canEditExpense(trip.userRole, trip.isAdmin, isReporter)
+                            const rowCanDelete = canDeleteExpense(trip.userRole, trip.isAdmin, isReporter)
+                            const rowDate = dayjs(row.date + 'T00:00:00')
+
+                            return (
+                                <Box key={row.id} sx={{ mb: 1.25 }}>
+                                    {/* Date label above the card — matches health page pattern */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+                                        <Box
+                                            sx={{
+                                                px: 0.75,
+                                                py: 0.25,
+                                                backgroundColor: colors.primaryYellow,
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                                borderRadius: '3px',
+                                            }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 10,
+                                                    fontWeight: 700,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.3px',
+                                                    lineHeight: 1.2,
+                                                }}>
+                                                {rowDate.format('ddd')}
+                                            </Typography>
+                                        </Box>
+                                        <Typography
+                                            sx={{
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                color: colors.primaryBrown,
+                                            }}>
+                                            {rowDate.format('MMM D')}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                                        <SwipeableRow
+                                            canEdit={rowCanEdit}
+                                            canDelete={rowCanDelete}
+                                            onEdit={() => setSwipeEditExpense(row)}
+                                            onDelete={() => setSwipeDeleteExpense(row)}
+                                            backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
+                                            showBottomBorder={false}
+                                        >
+                                            <ExpenseRow
+                                                expense={row}
+                                                onTap={handleTap}
+                                                hideDate
+                                            />
+                                        </SwipeableRow>
+                                    </Box>
+                                </Box>
+                            )
+                        })}
+                    </Box>
+                ) : dateGroups.map((group) => {
                     const expenseDate = dayjs(group.date + 'T00:00:00')
                     const dayNumber = expenseDate.diff(tripStart, 'day') + 1
                     const isWithinTrip = dayNumber >= 1 && dayNumber <= totalDays

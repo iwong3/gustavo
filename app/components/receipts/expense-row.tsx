@@ -13,15 +13,19 @@ import type { Expense } from '@/lib/types'
 interface ExpenseRowProps {
     expense: Expense
     onTap: (expense: Expense) => void
+    /** When true, hides the date from the subtext (shown above the card instead). */
+    hideDate?: boolean
 }
 
-export const ExpenseRow = ({ expense, onTap }: ExpenseRowProps) => {
+export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps) => {
     const { getUsdValue } = useSpendData()
 
     const costUsd = getUsdValue(expense)
 
     // Location: prefer trip location name, fall back to place address
     const locationDisplay = expense.locationName || expense.place?.address?.split(',')[0]
+
+    const expenseDate = dayjs(expense.date + 'T00:00:00')
 
     return (
         <Box
@@ -70,8 +74,9 @@ export const ExpenseRow = ({ expense, onTap }: ExpenseRowProps) => {
                         whiteSpace: 'nowrap',
                         mt: 0.25,
                     }}>
-                    {dayjs(expense.date + 'T00:00:00').format('M/D')}
-                    {locationDisplay && ` \u2022 ${locationDisplay}`}
+                    {!hideDate && expenseDate.format('M/D')}
+                    {!hideDate && locationDisplay && ' \u2022 '}
+                    {hideDate ? (locationDisplay || '\u2014') : locationDisplay}
                 </Typography>
             </Box>
 

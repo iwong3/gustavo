@@ -18,6 +18,7 @@ import {
     IconBarbell,
     IconBolt,
     IconFirstAidKit,
+    IconGripVertical,
     IconPill,
     IconSalad,
     IconScale,
@@ -273,10 +274,10 @@ const DragHandleContext = React.createContext<{
     setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef']
 } | null>(null)
 
-/** Wrap the badge row to make it the drag handle for section reordering */
-function DragHandleBadge({ children }: { children: React.ReactNode }) {
+/** Small grip icon — the only element that blocks scrolling for drag */
+function DragGrip() {
     const ctx = React.useContext(DragHandleContext)
-    if (!ctx) return <>{children}</>
+    if (!ctx) return null
     return (
         <Box
             ref={ctx.setActivatorNodeRef}
@@ -286,8 +287,26 @@ function DragHandleBadge({ children }: { children: React.ReactNode }) {
                 cursor: 'grab',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                p: 0.5,
+                ml: -0.5,
+                borderRadius: '4px',
+                color: `${colors.primaryBlack}30`,
             }}>
-            {children}
+            <IconGripVertical size={16} stroke={2} />
+        </Box>
+    )
+}
+
+/** Wrap the badge row — renders grip handle inline, children scroll normally */
+function DragHandleBadge({ children }: { children: React.ReactNode }) {
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <DragGrip />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                {children}
+            </Box>
         </Box>
     )
 }

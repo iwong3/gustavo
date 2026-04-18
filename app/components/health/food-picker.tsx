@@ -181,18 +181,10 @@ export function FoodPicker({
                     />
                 )}
                 {selectedIds.size > 0 && (
-                    <Box
-                        sx={{
-                            mt: foods.length > 5 ? 1.5 : 0,
-                            display: 'flex',
-                            alignItems: 'flex-end',
-                            gap: 0.5,
-                        }}>
+                    <Box sx={{ mt: foods.length > 5 ? 1.5 : 0 }}>
                         <Box
                             ref={selectedChipsRef}
                             sx={{
-                                flex: 1,
-                                minWidth: 0,
                                 display: 'flex',
                                 flexWrap: 'wrap',
                                 gap: 0.5,
@@ -207,19 +199,17 @@ export function FoodPicker({
                                 onClick={() => setChipsExpanded((v) => !v)}
                                 sx={{
                                     display: 'flex',
+                                    justifyContent: 'center',
                                     alignItems: 'center',
+                                    height: 16,
+                                    mt: 0.25,
                                     cursor: 'pointer',
                                     color: accentColor,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    pb: '2px',
                                 }}>
                                 {chipsExpanded ? (
-                                    <IconChevronUp size={16} stroke={2.5} />
+                                    <IconChevronUp size={14} stroke={2.5} />
                                 ) : (
-                                    <IconChevronDown size={16} stroke={2.5} />
+                                    <IconChevronDown size={14} stroke={2.5} />
                                 )}
                             </Box>
                         )}

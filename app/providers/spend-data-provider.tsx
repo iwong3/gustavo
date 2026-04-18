@@ -18,6 +18,8 @@ import type { Expense, UserSummary } from '@/lib/types'
 type SpendDataValue = {
     expenses: Expense[]
     filteredExpenses: Expense[]
+    isSearching: boolean
+    searchInput: string
     totalSpend: number
     debtMap: Map<number, Map<number, number>> // userId → userId → amount
     filteredTotalSpend: number
@@ -37,11 +39,13 @@ const SpendDataContext = createContext<SpendDataValue | null>(null)
 
 const fuseOptions = {
     keys: [
-        { name: 'name', weight: 1 },
-        { name: 'date', weight: 1 },
+        { name: 'name', weight: 3 },
+        { name: 'locationName', weight: 2 },
         { name: 'paidBy.firstName', weight: 1 },
-        { name: 'locationName', weight: 1 },
     ],
+    threshold: 0.5,
+    distance: 100,
+    ignoreLocation: true,
     includeMatches: true,
 }
 
@@ -126,7 +130,7 @@ function applySearch(data: Expense[], searchInput: string): Expense[] {
     if (searchInput === '') return data
     const fuse = new Fuse(data, fuseOptions)
     const results = fuse.search(searchInput)
-    return results.map((r) => data[r.refIndex])
+    return results.map((r) => r.item)
 }
 
 // --- Blended exchange rate calculation ---
@@ -362,17 +366,21 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
         [filteredExpenses, expenses, splitBetweenFilters, participants.length]
     )
 
+    const isSearching = searchInput !== ''
+
     const value = useMemo<SpendDataValue>(
         () => ({
             expenses,
             filteredExpenses,
+            isSearching,
+            searchInput,
             totalSpend,
             debtMap,
             participants,
             getUsdValue,
             ...summaries,
         }),
-        [expenses, filteredExpenses, totalSpend, debtMap, participants, getUsdValue, summaries]
+        [expenses, filteredExpenses, isSearching, searchInput, totalSpend, debtMap, participants, getUsdValue, summaries]
     )
 
     return (
