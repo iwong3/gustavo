@@ -274,7 +274,7 @@ const DragHandleContext = React.createContext<{
     setActivatorNodeRef: ReturnType<typeof useSortable>['setActivatorNodeRef']
 } | null>(null)
 
-/** Small grip icon — the only element that blocks scrolling for drag */
+/** Small grip icon — dedicated drag handle that doesn't interfere with badge tap/scroll */
 function DragGrip() {
     const ctx = React.useContext(DragHandleContext)
     if (!ctx) return null
@@ -289,23 +289,24 @@ function DragGrip() {
                 WebkitUserSelect: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                p: 0.5,
-                ml: -0.5,
-                borderRadius: '4px',
-                color: `${colors.primaryBlack}30`,
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                flexShrink: 0,
+                color: colors.primaryBrown,
             }}>
-            <IconGripVertical size={16} stroke={2} />
+            <IconGripVertical size={18} stroke={2} />
         </Box>
     )
 }
 
-/** Wrap the badge row — renders grip handle inline, children scroll normally */
+/** Wrap the section — grip is pinned to the top-right and does not affect layout. */
 function DragHandleBadge({ children }: { children: React.ReactNode }) {
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            <DragGrip />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-                {children}
+        <Box sx={{ position: 'relative' }}>
+            {children}
+            <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
+                <DragGrip />
             </Box>
         </Box>
     )
@@ -334,8 +335,8 @@ export function HealthDashboardV2({
     const [sectionOrder, setSectionOrder] = useState<HealthSection[]>(getSectionOrder)
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { delay: 1000, tolerance: 5 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 1000, tolerance: 5 } })
+        useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
     )
 
     const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
@@ -355,59 +356,21 @@ export function HealthDashboardV2({
         workouts: (
             <Box>
                 <DragHandleBadge>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5, pr: 4 }}>
                     <Box component={Link} href="/gustavo/health/exercise" sx={{ ...badgeSx, backgroundColor: '#ffe0b2', mb: 0 }}>
                         <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                         <Typography sx={badgeTextSx}>Workouts</Typography>
                     </Box>
                     {!loading && daysSince.length > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <Box sx={{
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.25,
-                            pl: 0.25,
-                            pr: 0.75,
-                            py: 0.75,
-                            borderRadius: '4px',
-                            ...hardShadow,
-                            backgroundColor: colors.primaryWhite,
-                        }}>
-                            <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
-                                📅
-                            </Typography>
-                            <Typography sx={{ fontSize: 12, fontWeight: 800, color: colors.primaryBrown, lineHeight: 1 }}>
-                                30
-                            </Typography>
-                        </Box>
-                        {workoutStats.streak > 0 && (
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.25,
-                                pl: 0.25,
-                                pr: 0.75,
-                                py: 0.75,
-                                borderRadius: '4px',
-                                ...hardShadow,
-                                backgroundColor: colors.secondaryYellow,
-                            }}>
-                                <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
-                                    🔥
-                                </Typography>
-                                <Typography sx={{ fontSize: 14, fontWeight: 800, lineHeight: 1 }}>
-                                    {workoutStats.streak}
-                                </Typography>
-                            </Box>
-                        )}
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'stretch',
+                            height: 34,
                             borderRadius: '4px',
                             ...hardShadow,
                             overflow: 'hidden',
                         }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.25, pr: 0.75, py: 0.75, background: 'linear-gradient(135deg, #ffe0b2, #ffccbc)' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.5, pr: 0.75, background: 'linear-gradient(135deg, #ffe0b2, #ffccbc)' }}>
                                 <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
                                     💪
                                 </Typography>
@@ -415,8 +378,8 @@ export function HealthDashboardV2({
                                     {workoutStats.workoutDays}
                                 </Typography>
                             </Box>
-                            <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack, alignSelf: 'stretch' }} />
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.25, pr: 0.75, py: 0.75, background: 'linear-gradient(135deg, #d1c4e9, #bbdefb)' }}>
+                            <Box sx={{ width: '1px', backgroundColor: colors.primaryBlack }} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, pl: 0.5, pr: 0.75, background: 'linear-gradient(135deg, #d1c4e9, #bbdefb)' }}>
                                 <Typography sx={{ fontSize: 16, lineHeight: 1 }}>
                                     🛋️
                                 </Typography>
@@ -425,7 +388,6 @@ export function HealthDashboardV2({
                                 </Typography>
                             </Box>
                         </Box>
-                    </Box>
                     )}
                 </Box>
                 </DragHandleBadge>

@@ -108,7 +108,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
 
     return (
         <>
-            <Box id="receipts-list" sx={{ paddingTop: 1, scrollMarginTop: '54px', pb: 2 }}>
+            <Box id="receipts-list" sx={{ scrollMarginTop: '54px', pb: 2 }}>
                 {showSearchView ? (
                     <Box sx={{ mx: 2 }}>
                         {displayData.map((row) => {

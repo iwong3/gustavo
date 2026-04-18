@@ -96,7 +96,7 @@ export const TripToolbar = () => {
                     zIndex: 4,
                     backgroundColor: colors.secondaryYellow,
                     paddingTop: 1,
-                    paddingBottom: 1,
+                    paddingBottom: 2,
                 }}>
                 {/* Row 1: full-width search */}
                 <Box sx={{ paddingX: 2 }}>
