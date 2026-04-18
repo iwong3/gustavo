@@ -31,7 +31,7 @@ import FormDrawer from 'components/form-drawer'
 import PlaceAutocomplete from 'components/place-autocomplete'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, updateExpense } from 'utils/api'
-import { Currency, formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
+import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
 import {
     getColorForCategory,
     getIconFromCategory,
@@ -150,7 +150,7 @@ export default function ExpenseFormDialog({
     const [name, setName] = useState('')
     const [date, setDate] = useState(todayISO())
     const [cost, setCost] = useState('')
-    const [currency, setCurrency] = useState<Currency>(Currency.USD)
+    const [currency, setCurrency] = useState<string>('USD')
     const [categoryId, setCategoryId] = useState<number | ''>('')
     const [paidBy, setPaidBy] = useState(currentUserName)
     const [splitBetween, setSplitBetween] = useState<string[]>(['Everyone'])
@@ -300,7 +300,7 @@ export default function ExpenseFormDialog({
             setName(expense.name)
             setDate(expense.date)
             setCost(expense.costOriginal.toFixed(2))
-            setCurrency(expense.currency as Currency)
+            setCurrency(expense.currency)
             setCategoryId(expense.categoryId ?? '')
             setPaidBy(expense.paidBy.firstName)
             if (expense.isEveryone) {
@@ -342,25 +342,44 @@ export default function ExpenseFormDialog({
         }
     }, [open, mode, expense])
 
-    const tripCurrency = (trip.currency ?? 'USD') as Currency
-    const availableCurrencies =
-        tripCurrency === Currency.USD
-            ? [Currency.USD]
-            : [Currency.USD, tripCurrency]
+    // Trip currencies (USD always included). Falls back to legacy single
+    // `currency` field for safety when API hasn't been redeployed yet.
+    const availableCurrencies = useMemo(() => {
+        const list = trip.currencies && trip.currencies.length > 0
+            ? trip.currencies
+            : [trip.currency ?? 'USD']
+        const set = new Set(list)
+        set.add('USD')
+        // USD first, then alphabetical
+        return ['USD', ...Array.from(set).filter((c) => c !== 'USD').sort()]
+    }, [trip.currencies, trip.currency])
+
+    // Foreign currencies on this trip (used when Currency Exchange is selected
+    // — that category's local currency must be one of these, never USD).
+    const foreignCurrencies = useMemo(
+        () => availableCurrencies.filter((c) => c !== 'USD'),
+        [availableCurrencies]
+    )
 
     const selectedCategory = categories.find((c) => c.id === categoryId)
     const isCurrencyExchange = selectedCategory?.slug === 'currency_exchange'
     const isEveryone = splitBetween.includes('Everyone')
 
-    // When currency exchange is selected, force currency to trip currency and split to paidBy
+    // When currency exchange is selected, force the currency away from USD
+    // (currency exchanges record "USD paid → local received", so the local
+    // currency must be a foreign currency) and force split to paidBy.
     useEffect(() => {
         if (isCurrencyExchange) {
-            setCurrency(tripCurrency)
+            setCurrency((cur) =>
+                cur === 'USD' || !foreignCurrencies.includes(cur)
+                    ? (foreignCurrencies[0] ?? cur)
+                    : cur
+            )
             if (paidBy) {
                 setSplitBetween([paidBy])
             }
         }
-    }, [isCurrencyExchange, paidBy, tripCurrency])
+    }, [isCurrencyExchange, paidBy, foreignCurrencies])
 
     // Remove payer from covered if they become the payer
     useEffect(() => {
@@ -411,7 +430,7 @@ export default function ExpenseFormDialog({
         setName('')
         setDate(todayISO())
         setCost('')
-        setCurrency(Currency.USD)
+        setCurrency('USD')
         setCategoryId('')
         setPaidBy(currentUserName)
         setSplitBetween(['Everyone'])
@@ -614,28 +633,34 @@ export default function ExpenseFormDialog({
                                 sx={adornedFieldSx}
                             />
                         </Box>
-                        {!isCurrencyExchange && (
-                            <Box sx={{ minWidth: 100 }}>
-                                <Typography sx={labelSx}>Currency *</Typography>
-                                <FormControl size="small" fullWidth>
-                                    <Select
-                                        value={currency}
-                                        onChange={(e) =>
-                                            setCurrency(
-                                                e.target.value as Currency
-                                            )
-                                        }
-                                        MenuProps={selectMenuProps}
-                                        sx={fieldSx}>
-                                        {availableCurrencies.map((c) => (
-                                            <MenuItem key={c} value={c}>
-                                                {formatCurrencyLabel(c)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        )}
+                        {/* Currency picker. For Currency Exchange the picker
+                          * shows only foreign currencies (the local-received
+                          * side of the exchange). */}
+                        <Box sx={{ minWidth: 100 }}>
+                            <Typography sx={labelSx}>
+                                {isCurrencyExchange
+                                    ? 'To currency *'
+                                    : 'Currency *'}
+                            </Typography>
+                            <FormControl size="small" fullWidth>
+                                <Select
+                                    value={currency}
+                                    onChange={(e) =>
+                                        setCurrency(e.target.value)
+                                    }
+                                    MenuProps={selectMenuProps}
+                                    sx={fieldSx}>
+                                    {(isCurrencyExchange
+                                        ? foreignCurrencies
+                                        : availableCurrencies
+                                    ).map((c) => (
+                                        <MenuItem key={c} value={c}>
+                                            {formatCurrencyLabel(c)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                         <Box>
                             <Typography sx={labelSx}>Paid by *</Typography>
                             <FormControl size="small">
@@ -711,13 +736,13 @@ export default function ExpenseFormDialog({
                 {/* 3. Local currency received (currency exchange only) */}
                 {isCurrencyExchange &&
                     (() => {
-                        const localMeta = getCurrencyMeta(tripCurrency)
+                        const localMeta = getCurrencyMeta(currency)
                         return (
                             <Box>
                                 <Typography
                                     sx={
                                         labelSx
-                                    }>{`Local currency received (${tripCurrency}) *`}</Typography>
+                                    }>{`Local currency received (${currency}) *`}</Typography>
                                 <TextField
                                     value={localCurrencyReceived}
                                     onChange={(e) => {

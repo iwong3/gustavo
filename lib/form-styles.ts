@@ -185,6 +185,9 @@ export const dropdownMenuItemSx = {
  * Combines dropdownPaperSx + dropdownMenuItemSx.
  */
 export const selectMenuProps = {
+    // Bump above FormDrawer (z-index 1500) so the menu isn't hidden behind
+    // the drawer when a Select is used inside one.
+    sx: { zIndex: 1600 },
     PaperProps: {
         sx: {
             ...dropdownPaperSx,

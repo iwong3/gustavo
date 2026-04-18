@@ -27,7 +27,10 @@ export type CreateTripData = {
     description?: string
     participantIds?: number[]
     visibility?: 'participants' | 'all_users'
-    currency?: string
+    /** ISO 3166-1 alpha-2 country codes. */
+    countries?: string[]
+    /** Full currency code list to persist. USD always included server-side. */
+    currencies?: string[]
 }
 
 export const createTrip = async (data: CreateTripData): Promise<{ id: number; slug: string }> => {

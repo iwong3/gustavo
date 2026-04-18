@@ -9,7 +9,13 @@ export type TripSummary = {
     startDate: string  // ISO YYYY-MM-DD
     endDate: string    // ISO YYYY-MM-DD
     description: string | null
+    /** Legacy single-currency field; superseded by `currencies`. Kept until
+     *  migration drops the column. New code should read from `currencies`. */
     currency: string
+    /** Currencies available on this trip's expense form (always includes USD). */
+    currencies: string[]
+    /** ISO 3166-1 alpha-2 country codes the user picked at trip creation. */
+    countries: string[]
     visibility: 'participants' | 'all_users'
     userRole: TripRole | null  // current user's role, null if non-participant viewing public trip
     isAdmin: boolean

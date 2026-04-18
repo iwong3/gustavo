@@ -15,6 +15,12 @@ type UpdateTripBody = {
     description?: string | null
     visibility?: 'participants' | 'all_users'
     currency?: string
+    /** Replace the trip's country list (full set, not delta). */
+    countries?: string[]
+    /** Replace the trip's currency list (full set, not delta). USD is added if
+     *  missing. Currencies that have expenses against them are protected — the
+     *  client should not include removals for in-use currencies. */
+    currencies?: string[]
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -84,6 +90,39 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                     `UPDATE trips SET ${sets.join(', ')} WHERE id = $${idx}`,
                     values
                 )
+            }
+
+            // Replace currency + country sets if provided. We protect against
+            // removing a currency that has expenses against it: such codes are
+            // re-inserted even if the client omitted them.
+            if (body.currencies !== undefined) {
+                const desired = new Set(body.currencies)
+                desired.add('USD')
+                const inUseRes = await client.query(
+                    `SELECT DISTINCT currency FROM expenses
+                     WHERE trip_id = $1 AND deleted_at IS NULL`,
+                    [id]
+                )
+                for (const row of inUseRes.rows) {
+                    desired.add(row.currency)
+                }
+                await client.query('DELETE FROM trip_currencies WHERE trip_id = $1', [id])
+                for (const code of Array.from(desired)) {
+                    await client.query(
+                        'INSERT INTO trip_currencies (trip_id, currency_code) VALUES ($1, $2)',
+                        [id, code]
+                    )
+                }
+            }
+
+            if (body.countries !== undefined) {
+                await client.query('DELETE FROM trip_countries WHERE trip_id = $1', [id])
+                for (const code of body.countries) {
+                    await client.query(
+                        'INSERT INTO trip_countries (trip_id, country_code) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [id, code]
+                    )
+                }
             }
         })
 

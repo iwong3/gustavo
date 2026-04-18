@@ -1,10 +1,10 @@
 'use client'
 
 import {
+    Autocomplete,
     Box,
     Button,
     Chip,
-    FormControl,
     IconButton,
     MenuItem,
     Select,
@@ -13,11 +13,13 @@ import {
     Typography,
 } from '@mui/material'
 import { IconPencil, IconPlus, IconCheck, IconX } from '@tabler/icons-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
 import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
+    dropdownMenuItemSx,
+    dropdownPaperSx,
     errorFieldSx,
     errorLabelSx,
     errorMessageSx,
@@ -37,7 +39,7 @@ import {
     updateParticipantRole,
     updateTrip,
 } from 'utils/api'
-import { Currency, formatCurrencyLabel } from 'utils/currency'
+import { COUNTRIES, deriveCurrenciesFromCountries } from '@/lib/countries'
 import { InitialsIcon } from 'utils/icons'
 import { canManageRoles } from 'utils/permissions'
 
@@ -80,7 +82,8 @@ export default function TripFormDialog({
     const [endDate, setEndDate] = useState('')
     const [description, setDescription] = useState('')
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
-    const [currency, setCurrency] = useState<Currency>(Currency.USD)
+    const [countryCodes, setCountryCodes] = useState<string[]>([])
+    const [countriesOpen, setCountriesOpen] = useState(false)
     const [visibility, setVisibility] = useState<'participants' | 'all_users'>(
         'participants'
     )
@@ -123,7 +126,7 @@ export default function TripFormDialog({
             setStartDate(trip.startDate)
             setEndDate(trip.endDate)
             setDescription(trip.description ?? '')
-            setCurrency((trip.currency ?? 'USD') as Currency)
+            setCountryCodes(trip.countries ?? [])
             setSelectedUserIds(trip.participants.map((p) => p.id))
             setVisibility(trip.visibility)
             setParticipantRoles(
@@ -174,7 +177,7 @@ export default function TripFormDialog({
         setStartDate(todayISO())
         setEndDate('')
         setDescription('')
-        setCurrency(Currency.USD)
+        setCountryCodes([])
         setSelectedUserIds([])
         setVisibility('participants')
         setParticipantRoles(new Map())
@@ -324,7 +327,8 @@ export default function TripFormDialog({
                     endDate,
                     description: description.trim() || undefined,
                     visibility,
-                    currency,
+                    countries: countryCodes,
+                    currencies: derivedCurrencies,
                 })
 
                 // Manage participants: compute additions and removals
@@ -404,7 +408,8 @@ export default function TripFormDialog({
                             ? selectedUserIds
                             : undefined,
                     visibility,
-                    currency,
+                    countries: countryCodes,
+                    currencies: derivedCurrencies,
                 })
 
                 // Apply any non-default role assignments
@@ -439,6 +444,19 @@ export default function TripFormDialog({
             setSubmitting(false)
         }
     }
+
+    // Currencies the trip will use, derived from selected countries (USD always
+     // included). Sent verbatim to the API on save.
+    const derivedCurrencies = useMemo(
+        () => deriveCurrenciesFromCountries(countryCodes),
+        [countryCodes]
+    )
+
+    // Sorted country options for the picker (by name).
+    const countryOptions = useMemo(
+        () => COUNTRIES.slice().sort((a, b) => a.name.localeCompare(b.name)),
+        []
+    )
 
     const isEdit = mode === 'edit'
     const showRoleManagement =
@@ -548,22 +566,133 @@ export default function TripFormDialog({
                 </Box>
 
                 <Box>
-                    <Typography sx={labelSx}>Local currency</Typography>
-                    <FormControl size="small" sx={{ width: 120 }}>
-                        <Select
-                            value={currency}
-                            onChange={(e) =>
-                                setCurrency(e.target.value as Currency)
-                            }
-                            displayEmpty
-                            sx={fieldSx}>
-                            {Object.values(Currency).map((c) => (
-                                <MenuItem key={c} value={c}>
-                                    {formatCurrencyLabel(c)}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    <Typography sx={labelSx}>Countries</Typography>
+                    <Autocomplete
+                        multiple
+                        fullWidth
+                        disablePortal
+                        size="small"
+                        open={countriesOpen}
+                        onOpen={() => setCountriesOpen(true)}
+                        onClose={() => setCountriesOpen(false)}
+                        options={countryOptions}
+                        value={countryOptions.filter((c) =>
+                            countryCodes.includes(c.code)
+                        )}
+                        onChange={(_e, val) =>
+                            setCountryCodes(val.map((c) => c.code))
+                        }
+                        getOptionLabel={(c) => c.name}
+                        isOptionEqualToValue={(a, b) => a.code === b.code}
+                        slotProps={{
+                            listbox: {
+                                sx: {
+                                    'maxHeight': 240,
+                                    'padding': 0,
+                                    '& .MuiAutocomplete-option':
+                                        dropdownMenuItemSx,
+                                },
+                            },
+                            paper: {
+                                sx: {
+                                    ...dropdownPaperSx,
+                                    overflow: 'hidden',
+                                    boxSizing: 'border-box',
+                                    // When open, paper joins flush with the
+                                    // input above: square top corners, zero
+                                    // margin, no top border (input border
+                                    // serves as the seam).
+                                    borderRadius: '0 0 4px 4px',
+                                    borderTop: 'none',
+                                    marginTop: 0,
+                                },
+                            },
+                        }}
+                        renderOption={(props, option) => {
+                            const { key: _key, ...rest } = props
+                            return (
+                                <li key={option.code} {...rest}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                        }}>
+                                        <Box
+                                            component="span"
+                                            sx={{ fontSize: 16 }}>
+                                            {option.flag}
+                                        </Box>
+                                        <Typography sx={{ fontSize: 14 }}>
+                                            {option.name}
+                                        </Typography>
+                                    </Box>
+                                </li>
+                            )
+                        }}
+                        renderTags={(value, getTagProps) =>
+                            value.map((c, index) => {
+                                const { key, ...tagProps } = getTagProps({
+                                    index,
+                                })
+                                return (
+                                    <Chip
+                                        key={key}
+                                        label={`${c.flag} ${c.name}`}
+                                        size="small"
+                                        {...tagProps}
+                                        sx={{
+                                            fontSize: 13,
+                                            height: 26,
+                                            border: `1px solid ${colors.primaryBlack}`,
+                                            boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                            backgroundColor:
+                                                colors.primaryYellow,
+                                        }}
+                                    />
+                                )
+                            })
+                        }
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                size="small"
+                                placeholder={
+                                    countryCodes.length === 0
+                                        ? 'Add countries'
+                                        : ''
+                                }
+                                sx={
+                                    countriesOpen
+                                        ? {
+                                              ...fieldSx,
+                                              '& .MuiOutlinedInput-root': {
+                                                  borderRadius: '4px 4px 0 0',
+                                                  boxShadow: 'none',
+                                              },
+                                              '& .MuiOutlinedInput-root.Mui-focused':
+                                                  {
+                                                      boxShadow: 'none',
+                                                  },
+                                              '& .MuiOutlinedInput-notchedOutline':
+                                                  {
+                                                      borderColor: `${colors.primaryBlack} !important`,
+                                                      borderWidth: '1px !important',
+                                                      borderBottom: 'none',
+                                                      borderRadius:
+                                                          '4px 4px 0 0',
+                                                  },
+                                              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                  {
+                                                      borderColor: `${colors.primaryBlack} !important`,
+                                                      borderWidth: '1px !important',
+                                                  },
+                                          }
+                                        : fieldSx
+                                }
+                            />
+                        )}
+                    />
                 </Box>
 
                 {/* Participants — avatar grid + inline role list */}

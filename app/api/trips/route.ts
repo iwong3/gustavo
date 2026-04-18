@@ -49,16 +49,30 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
         }
 
-        const participantsRes = await pool.query(
-            `SELECT u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
-                    u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
-                    tp.role
-             FROM trip_participants tp
-             JOIN users u ON tp.user_id = u.id
-             WHERE tp.trip_id = $1 AND tp.left_at IS NULL
-             ORDER BY u.name`,
-            [trip.id]
-        )
+        const [participantsRes, currenciesRes, countriesRes] = await Promise.all([
+            pool.query(
+                `SELECT u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
+                        u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
+                        tp.role
+                 FROM trip_participants tp
+                 JOIN users u ON tp.user_id = u.id
+                 WHERE tp.trip_id = $1 AND tp.left_at IS NULL
+                 ORDER BY u.name`,
+                [trip.id]
+            ),
+            pool.query(
+                'SELECT currency_code FROM trip_currencies WHERE trip_id = $1 ORDER BY currency_code',
+                [trip.id]
+            ),
+            pool.query(
+                'SELECT country_code FROM trip_countries WHERE trip_id = $1 ORDER BY country_code',
+                [trip.id]
+            ),
+        ])
+
+        const currencies = currenciesRes.rows.map((r) => r.currency_code)
+        // USD is always available on the expense form, even if not in trip_currencies
+        if (!currencies.includes('USD')) currencies.unshift('USD')
 
         return NextResponse.json({
             id: trip.id,
@@ -70,6 +84,8 @@ export async function GET(request: NextRequest) {
             createdBy: trip.created_by,
             visibility: trip.visibility,
             currency: trip.currency,
+            currencies,
+            countries: countriesRes.rows.map((r) => r.country_code),
             userRole: trip.user_role as TripRole | null,
             isAdmin,
             currentUserId: userId,
@@ -98,17 +114,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.json([])
     }
 
-    // Fetch all participants for all trips in one query
-    const participantsRes = await pool.query(
-        `SELECT tp.trip_id, u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
-                u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
-                tp.role
-         FROM trip_participants tp
-         JOIN users u ON tp.user_id = u.id
-         WHERE tp.trip_id = ANY($1) AND tp.left_at IS NULL
-         ORDER BY u.name`,
-        [tripIds]
-    )
+    // Fetch all participants, currencies, and countries for all trips in parallel
+    const [participantsRes, currenciesRes, countriesRes] = await Promise.all([
+        pool.query(
+            `SELECT tp.trip_id, u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
+                    u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
+                    tp.role
+             FROM trip_participants tp
+             JOIN users u ON tp.user_id = u.id
+             WHERE tp.trip_id = ANY($1) AND tp.left_at IS NULL
+             ORDER BY u.name`,
+            [tripIds]
+        ),
+        pool.query(
+            'SELECT trip_id, currency_code FROM trip_currencies WHERE trip_id = ANY($1) ORDER BY currency_code',
+            [tripIds]
+        ),
+        pool.query(
+            'SELECT trip_id, country_code FROM trip_countries WHERE trip_id = ANY($1) ORDER BY country_code',
+            [tripIds]
+        ),
+    ])
 
     // Group participants by trip
     const participantsByTrip = new Map<number, typeof participantsRes.rows>()
@@ -118,24 +144,44 @@ export async function GET(request: NextRequest) {
         participantsByTrip.set(p.trip_id, list)
     }
 
-    const trips = tripsRes.rows.map((t) => ({
-        id: t.id,
-        name: t.name,
-        slug: t.slug,
-        description: t.description,
-        startDate: formatDate(t.start_date),
-        endDate: formatDate(t.end_date),
-        createdBy: t.created_by,
-        visibility: t.visibility,
-        currency: t.currency,
-        userRole: t.user_role as TripRole | null,
-        isAdmin,
-        currentUserId: userId,
-        participants: (participantsByTrip.get(t.id) ?? []).map((u) => ({
-            ...mapUser(u),
-            role: u.role as TripRole,
-        })),
-    }))
+    const currenciesByTrip = new Map<number, string[]>()
+    for (const r of currenciesRes.rows) {
+        const list = currenciesByTrip.get(r.trip_id) ?? []
+        list.push(r.currency_code)
+        currenciesByTrip.set(r.trip_id, list)
+    }
+
+    const countriesByTrip = new Map<number, string[]>()
+    for (const r of countriesRes.rows) {
+        const list = countriesByTrip.get(r.trip_id) ?? []
+        list.push(r.country_code)
+        countriesByTrip.set(r.trip_id, list)
+    }
+
+    const trips = tripsRes.rows.map((t) => {
+        const currencies = currenciesByTrip.get(t.id) ?? []
+        if (!currencies.includes('USD')) currencies.unshift('USD')
+        return {
+            id: t.id,
+            name: t.name,
+            slug: t.slug,
+            description: t.description,
+            startDate: formatDate(t.start_date),
+            endDate: formatDate(t.end_date),
+            createdBy: t.created_by,
+            visibility: t.visibility,
+            currency: t.currency,
+            currencies,
+            countries: countriesByTrip.get(t.id) ?? [],
+            userRole: t.user_role as TripRole | null,
+            isAdmin,
+            currentUserId: userId,
+            participants: (participantsByTrip.get(t.id) ?? []).map((u) => ({
+                ...mapUser(u),
+                role: u.role as TripRole,
+            })),
+        }
+    })
 
     return NextResponse.json(trips)
 }
@@ -150,6 +196,14 @@ type CreateTripBody = {
     description?: string
     participantIds?: number[]
     visibility?: 'participants' | 'all_users'
+    /** ISO 3166-1 alpha-2 country codes. Currencies are derived in code. */
+    countries?: string[]
+    /** Final currency list to persist. Caller derives this from `countries` so
+     *  the server doesn't need to know the country→currency map. USD is always
+     *  added if missing. */
+    currencies?: string[]
+    /** @deprecated single-currency field — kept for backward compatibility
+     *  while migrating callers to `currencies`. */
     currency?: string
 }
 
@@ -179,14 +233,40 @@ export async function POST(request: NextRequest) {
             const visibility = body.visibility ?? prefsRes.rows[0]?.default_trip_visibility ?? 'participants'
             const defaultRole = prefsRes.rows[0]?.default_participant_role ?? 'viewer'
 
-            const currency = body.currency ?? 'USD'
+            // Currency list: prefer `currencies` (multi); fall back to legacy
+            // `currency` (single). Legacy `trips.currency` column stores the
+            // first non-USD entry for now (or USD if there isn't one) — it's
+            // unused by new code but the column still has NOT NULL.
+            const currencyList = (body.currencies && body.currencies.length > 0)
+                ? body.currencies
+                : [body.currency ?? 'USD']
+            const currencySet = new Set(currencyList)
+            currencySet.add('USD')
+            const currencies = Array.from(currencySet)
+            const legacyPrimary = currencies.find((c) => c !== 'USD') ?? 'USD'
 
             const res = await client.query(
                 `INSERT INTO trips (name, slug, start_date, end_date, description, created_by, visibility, currency)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-                [body.name, slug, body.startDate, body.endDate, body.description || null, creatorId, visibility, currency]
+                [body.name, slug, body.startDate, body.endDate, body.description || null, creatorId, visibility, legacyPrimary]
             )
             const newTripId = res.rows[0].id
+
+            // Persist currency + country join rows
+            for (const code of currencies) {
+                await client.query(
+                    'INSERT INTO trip_currencies (trip_id, currency_code) VALUES ($1, $2)',
+                    [newTripId, code]
+                )
+            }
+            if (body.countries) {
+                for (const code of body.countries) {
+                    await client.query(
+                        'INSERT INTO trip_countries (trip_id, country_code) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [newTripId, code]
+                    )
+                }
+            }
 
             // Add creator as owner
             await client.query(

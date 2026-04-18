@@ -6,7 +6,6 @@ import dayjs from 'dayjs'
 import { colors } from '@/lib/colors'
 import { CategoryIcon, InitialsIcon } from 'utils/icons'
 import { FormattedMoney } from 'utils/currency'
-import { useSpendData } from 'providers/spend-data-provider'
 
 import type { Expense } from '@/lib/types'
 
@@ -18,10 +17,6 @@ interface ExpenseRowProps {
 }
 
 export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps) => {
-    const { getUsdValue } = useSpendData()
-
-    const costUsd = getUsdValue(expense)
-
     // Location: prefer trip location name, fall back to place address
     const locationDisplay = expense.locationName || expense.place?.address?.split(',')[0]
 
@@ -97,7 +92,7 @@ export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps
                             ? colors.primaryRed
                             : colors.primaryBlack,
                     }}>
-                    {FormattedMoney('USD', 0).format(costUsd)}
+                    {FormattedMoney(expense.currency, 0).format(expense.costOriginal)}
                 </Typography>
                 <InitialsIcon
                     name={expense.paidBy.firstName}
