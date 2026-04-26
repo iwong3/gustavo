@@ -12,7 +12,6 @@ import type {
     WorkoutPreset,
 } from '@/lib/health-types'
 import { HealthDashboardV2 } from 'components/health/health-dashboard-v2'
-import { arrayMove } from 'components/health/sortable-preset'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -149,22 +148,7 @@ export default function HealthPage() {
         }
     }, [applyingId, today, fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements])
 
-    const reorderPresetsHandler = useCallback((type: 'workout' | 'diet' | 'supplement', from: number, to: number) => {
-        const doReorder = <T extends { id: number }>(prev: T[]): T[] => {
-            const next = arrayMove(prev, from, to)
-            fetch('/api/health/presets/reorder', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ presetIds: next.map((p) => p.id) }),
-            }).catch((err) => console.error('Failed to save preset order:', err))
-            return next
-        }
-        if (type === 'workout') setWorkoutPresets(doReorder)
-        else if (type === 'diet') setDietPresets(doReorder)
-        else setSupplementPresets(doReorder)
-    }, [])
-
-    const daysSinceMap = useMemo(() => {
+const daysSinceMap = useMemo(() => {
         const map = new Map<string, DaysSince>()
         for (const item of daysSince) map.set(item.muscleGroup, item)
         return map
@@ -233,7 +217,6 @@ export default function HealthPage() {
             recentSymptomDays={recentSymptomDays}
             applyPreset={applyPreset}
             recentWeightLogs={recentWeightLogs}
-            reorderPresets={reorderPresetsHandler}
         />
     )
 }

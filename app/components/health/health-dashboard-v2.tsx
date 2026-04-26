@@ -39,10 +39,6 @@ import {
     useSortable,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import {
-    HorizontalSortableList,
-    SortablePresetChip,
-} from 'components/health/sortable-preset'
 import Link from 'next/link'
 import React, { useCallback, useState } from 'react'
 
@@ -64,7 +60,6 @@ export type HealthDashboardProps = {
     applyingId: number | null
     appliedId: number | null
     applyPreset: (presetId: number, type: 'workout' | 'diet' | 'supplement') => void
-    reorderPresets: (type: 'workout' | 'diet' | 'supplement', from: number, to: number) => void
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -155,7 +150,11 @@ const boltCircleSx = {
 
 const presetItemSx = {
     'px': 1.25,
-    'py': 0.5,
+    'height': 28,
+    'display': 'flex',
+    'alignItems': 'center',
+    'flexShrink': 0, // keep chip full-size when the row scrolls horizontally
+    'whiteSpace': 'nowrap',
     'border': `1.5px solid ${colors.primaryBlack}`,
     'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
     'borderRadius': '4px',
@@ -164,6 +163,22 @@ const presetItemSx = {
         boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
         transform: 'translate(1px, 1px)',
     },
+}
+
+// Horizontal scroll container for preset rows. Hides the scrollbar visually
+// (these rows sit in a mobile-first layout where a scrollbar looks out of
+// place) while still allowing horizontal swipe/scroll.
+const presetRowScrollSx = {
+    'display': 'flex',
+    'gap': 1,
+    'alignItems': 'center',
+    'mb': 1.5,
+    'overflowX': 'auto',
+    'flexWrap': 'nowrap',
+    'scrollbarWidth': 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    // Leave a bit of shadow room at the bottom so chip shadows aren't clipped
+    'pb': 0.5,
 }
 
 const logChipSx = {
@@ -330,7 +345,6 @@ export function HealthDashboardV2({
     applyingId,
     appliedId,
     applyPreset,
-    reorderPresets,
 }: HealthDashboardProps) {
     const [sectionOrder, setSectionOrder] = useState<HealthSection[]>(getSectionOrder)
 
@@ -395,32 +409,32 @@ export function HealthDashboardV2({
                 {loading ? (
                     <PresetsSkeleton />
                 ) : workoutPresets.length > 0 ? (
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={{ ...boltCircleSx, backgroundColor: '#ffe0b2' }}>
+                    <Box sx={presetRowScrollSx}>
+                        <Box
+                            component={Link}
+                            href="/gustavo/health/exercise?presets=open"
+                            sx={{ ...boltCircleSx, backgroundColor: '#ffe0b2', cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
-                        <HorizontalSortableList items={workoutPresets} onReorder={(from, to) => reorderPresets('workout', from, to)}>
-                            {workoutPresets.map((preset) => (
-                                <SortablePresetChip key={preset.id} id={preset.id}>
-                                    <Box
-                                        onClick={() => applyingId === null && applyPreset(preset.id, 'workout')}
-                                        sx={{
-                                            ...presetItemSx,
-                                            backgroundColor: applyingId === preset.id
-                                                ? colors.primaryYellow
-                                                : appliedId === preset.id
-                                                    ? '#c8e6c9'
-                                                    : colors.primaryWhite,
-                                            cursor: applyingId !== null ? 'default' : 'pointer',
-                                            opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
-                                        }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
-                                            {preset.name}
-                                        </Typography>
-                                    </Box>
-                                </SortablePresetChip>
-                            ))}
-                        </HorizontalSortableList>
+                        {workoutPresets.map((preset) => (
+                            <Box
+                                key={preset.id}
+                                onClick={() => applyingId === null && applyPreset(preset.id, 'workout')}
+                                sx={{
+                                    ...presetItemSx,
+                                    backgroundColor: applyingId === preset.id
+                                        ? colors.primaryYellow
+                                        : appliedId === preset.id
+                                            ? '#c8e6c9'
+                                            : colors.primaryWhite,
+                                    cursor: applyingId !== null ? 'default' : 'pointer',
+                                    opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
+                                }}>
+                                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                                    {preset.name}
+                                </Typography>
+                            </Box>
+                        ))}
                     </Box>
                 ) : null}
 
@@ -487,26 +501,26 @@ export function HealthDashboardV2({
                 </Box>
                 </DragHandleBadge>
                 {loading ? <PresetsSkeleton /> : dietPresets.length > 0 ? (
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9' }}>
+                    <Box sx={presetRowScrollSx}>
+                        <Box
+                            component={Link}
+                            href="/gustavo/health/diet?presets=open"
+                            sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9', cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
-                        <HorizontalSortableList items={dietPresets} onReorder={(from, to) => reorderPresets('diet', from, to)}>
-                            {dietPresets.map((preset) => (
-                                <SortablePresetChip key={preset.id} id={preset.id}>
-                                    <Box
-                                        onClick={() => applyingId === null && applyPreset(preset.id, 'diet')}
-                                        sx={{
-                                            ...presetItemSx,
-                                            backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
-                                            cursor: applyingId !== null ? 'default' : 'pointer',
-                                            opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
-                                        }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
-                                    </Box>
-                                </SortablePresetChip>
-                            ))}
-                        </HorizontalSortableList>
+                        {dietPresets.map((preset) => (
+                            <Box
+                                key={preset.id}
+                                onClick={() => applyingId === null && applyPreset(preset.id, 'diet')}
+                                sx={{
+                                    ...presetItemSx,
+                                    backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
+                                    cursor: applyingId !== null ? 'default' : 'pointer',
+                                    opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
+                                }}>
+                                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
+                            </Box>
+                        ))}
                     </Box>
                 ) : null}
                 {loading ? <LogCardSkeleton rows={3} /> : recentDiet.length === 0 ? (
@@ -545,26 +559,26 @@ export function HealthDashboardV2({
                 </Box>
                 </DragHandleBadge>
                 {loading ? <PresetsSkeleton /> : supplementPresets.length > 0 ? (
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb' }}>
+                    <Box sx={presetRowScrollSx}>
+                        <Box
+                            component={Link}
+                            href="/gustavo/health/supplements?presets=open"
+                            sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb', cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
-                        <HorizontalSortableList items={supplementPresets} onReorder={(from, to) => reorderPresets('supplement', from, to)}>
-                            {supplementPresets.map((preset) => (
-                                <SortablePresetChip key={preset.id} id={preset.id}>
-                                    <Box
-                                        onClick={() => applyingId === null && applyPreset(preset.id, 'supplement')}
-                                        sx={{
-                                            ...presetItemSx,
-                                            backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
-                                            cursor: applyingId !== null ? 'default' : 'pointer',
-                                            opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
-                                        }}>
-                                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
-                                    </Box>
-                                </SortablePresetChip>
-                            ))}
-                        </HorizontalSortableList>
+                        {supplementPresets.map((preset) => (
+                            <Box
+                                key={preset.id}
+                                onClick={() => applyingId === null && applyPreset(preset.id, 'supplement')}
+                                sx={{
+                                    ...presetItemSx,
+                                    backgroundColor: applyingId === preset.id ? colors.primaryYellow : appliedId === preset.id ? '#c8e6c9' : colors.primaryWhite,
+                                    cursor: applyingId !== null ? 'default' : 'pointer',
+                                    opacity: applyingId !== null && applyingId !== preset.id ? 0.5 : 1,
+                                }}>
+                                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{preset.name}</Typography>
+                            </Box>
+                        ))}
                     </Box>
                 ) : null}
                 {loading ? <LogCardSkeleton rows={3} /> : recentSupplementDays.length === 0 ? (

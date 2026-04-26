@@ -51,6 +51,7 @@ import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import Fuse from 'fuse.js'
 import { useRegisterFab } from 'providers/fab-provider'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 function getLocalDate(): string {
@@ -386,6 +387,13 @@ export default function DietPage() {
     const [alphabetIndexSide, setAlphabetIndexSide] = useState<
         'left' | 'right'
     >('right')
+
+    // Auto-open the preset drawer when arriving with ?presets=open (from the
+    // dashboard lightning icon).
+    const searchParams = useSearchParams()
+    useEffect(() => {
+        if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
+    }, [searchParams])
 
     const fetchData = useCallback(() => {
         Promise.all([

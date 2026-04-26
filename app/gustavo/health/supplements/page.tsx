@@ -25,12 +25,15 @@ import FormDrawer from 'components/form-drawer'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import {
     arrayMove,
+    SortableDragHandle,
     SortablePresetChip,
     SortablePresetRow,
     HorizontalSortableList,
     VerticalSortableList,
 } from 'components/health/sortable-preset'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 function getLocalDate(): string {
@@ -203,6 +206,14 @@ export default function SupplementsPage() {
     )
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+
+    // Auto-open the preset drawer when arriving with ?presets=open (from the
+    // dashboard lightning icon).
+    const searchParams = useSearchParams()
+    useEffect(() => {
+        if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
+    }, [searchParams])
+
 
     const fetchData = useCallback(() => {
         Promise.all([
@@ -1282,75 +1293,62 @@ function SupplementPresetDrawer({
                                             gap: 1,
                                         }}>
                                         {existingPresets.map((p) => (
-                                            <SortablePresetRow key={p.id} id={p.id}>
-                                                <Box sx={{ ...cardSx, p: 1.5 }}>
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'flex-start',
-                                                        }}>
+                                            <SortablePresetRow
+                                                key={p.id}
+                                                id={p.id}>
+                                                <Box
+                                                    sx={{
+                                                        ...cardSx,
+                                                        overflow: 'hidden',
+                                                    }}>
+                                                    <SwipeableRow
+                                                        canEdit
+                                                        canDelete
+                                                        onEdit={() => openForm(p)}
+                                                        onDelete={() => onDelete(p.id)}
+                                                        backgroundColor={colors.primaryWhite}
+                                                        borderColor={colors.primaryBlack}>
                                                         <Box
-                                                            sx={{ flex: 1, cursor: 'pointer' }}
-                                                            onClick={() => openForm(p)}>
-                                                            <Typography
-                                                                sx={{
-                                                                    fontSize: 14,
-                                                                    fontWeight: 600,
-                                                                    mb: 0.5,
-                                                                }}>
-                                                                {p.name}
-                                                            </Typography>
-                                                            <Typography
-                                                                sx={{
-                                                                    fontSize: 12,
-                                                                    color: colors.primaryBrown,
-                                                                }}>
-                                                                {p.supplements
-                                                                    .map((s) => s.name)
-                                                                    .join(', ')}
-                                                            </Typography>
-                                                        </Box>
-                                                        <Box
+                                                            onClick={() => openForm(p)}
                                                             sx={{
-                                                                display: 'flex',
-                                                                gap: 0.5,
-                                                                flexShrink: 0,
+                                                                'display': 'flex',
+                                                                'alignItems': 'center',
+                                                                'gap': 1.5,
+                                                                'p': 1.5,
+                                                                'cursor': 'pointer',
+                                                                '&:active': {
+                                                                    backgroundColor:
+                                                                        colors.secondaryYellow,
+                                                                },
+                                                                'transition':
+                                                                    'background-color 150ms ease',
                                                             }}>
+                                                            <SortableDragHandle id={p.id} />
                                                             <Box
-                                                                onClick={() => openForm(p)}
                                                                 sx={{
-                                                                    'cursor': 'pointer',
-                                                                    'p': 0.5,
-                                                                    'borderRadius': '4px',
-                                                                    '&:active': {
-                                                                        backgroundColor: `${colors.primaryYellow}40`,
-                                                                    },
+                                                                    flex: 1,
+                                                                    minWidth: 0,
                                                                 }}>
-                                                                <IconPencil
-                                                                    size={16}
-                                                                    stroke={2}
-                                                                    color={colors.primaryBrown}
-                                                                />
-                                                            </Box>
-                                                            <Box
-                                                                onClick={() => onDelete(p.id)}
-                                                                sx={{
-                                                                    'cursor': 'pointer',
-                                                                    'p': 0.5,
-                                                                    'borderRadius': '4px',
-                                                                    '&:active': {
-                                                                        backgroundColor: `${colors.primaryRed}20`,
-                                                                    },
-                                                                }}>
-                                                                <IconTrash
-                                                                    size={16}
-                                                                    stroke={2}
-                                                                    color={colors.primaryRed}
-                                                                />
+                                                                <Typography
+                                                                    sx={{
+                                                                        fontSize: 14,
+                                                                        fontWeight: 600,
+                                                                        mb: 0.5,
+                                                                    }}>
+                                                                    {p.name}
+                                                                </Typography>
+                                                                <Typography
+                                                                    sx={{
+                                                                        fontSize: 12,
+                                                                        color: colors.primaryBrown,
+                                                                    }}>
+                                                                    {p.supplements
+                                                                        .map((s) => s.name)
+                                                                        .join(', ')}
+                                                                </Typography>
                                                             </Box>
                                                         </Box>
-                                                    </Box>
+                                                    </SwipeableRow>
                                                 </Box>
                                             </SortablePresetRow>
                                         ))}

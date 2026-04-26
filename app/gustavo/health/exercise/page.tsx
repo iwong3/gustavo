@@ -44,6 +44,7 @@ import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type WorkoutFormData = {
@@ -72,6 +73,13 @@ export default function ExercisePage() {
     const [detailOpen, setDetailOpen] = useState(false)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+
+    // Auto-open the preset drawer when arriving with ?presets=open (from the
+    // dashboard lightning icon).
+    const searchParams = useSearchParams()
+    useEffect(() => {
+        if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
+    }, [searchParams])
 
     const fetchWorkouts = useCallback(() => {
         fetch('/api/health/workouts')

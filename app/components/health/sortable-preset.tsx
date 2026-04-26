@@ -49,7 +49,11 @@ export function handleDragEnd(
     if (oldIndex !== -1 && newIndex !== -1) reorder(oldIndex, newIndex)
 }
 
-// Sortable chip for horizontal preset rows
+// Sortable chip for horizontal preset rows. No `touchAction: none` here —
+// the row is horizontally scrollable, so we need the browser to own touch
+// gestures until the TouchSensor's 200ms hold threshold activates a drag.
+// `touch-action: manipulation` disables double-tap zoom while still allowing
+// pan, which is what we want on a mobile list.
 export function SortablePresetChip({ id, children }: { id: number; children: React.ReactNode }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
     return (
@@ -62,7 +66,7 @@ export function SortablePresetChip({ id, children }: { id: number; children: Rea
                 transition,
                 opacity: isDragging ? 0.5 : 1,
                 zIndex: isDragging ? 10 : 'auto',
-                touchAction: 'none',
+                touchAction: 'manipulation',
             }}>
             {children}
         </Box>
