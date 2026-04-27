@@ -19,6 +19,9 @@ import {
     Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys, staleTimes } from '@/lib/query-keys'
 import FormDrawer from 'components/form-drawer'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
@@ -120,28 +123,38 @@ function MuscleGroupCard({
 }
 
 export default function ExercisesPage() {
-    const [exercises, setExercises] = useState<Exercise[]>([])
-    const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [editingExercise, setEditingExercise] = useState<Exercise | null>(null)
 
-    const fetchData = useCallback(() => {
-        Promise.all([
-            fetch('/api/health/exercises').then((r) => r.json()),
-            fetch('/api/health/muscle-groups').then((r) => r.json()),
-        ])
-            .then(([ex, mg]) => {
-                setExercises(ex)
-                setMuscleGroups(mg)
-            })
-            .catch((err) => console.error('Failed to load:', err))
-            .finally(() => setLoading(false))
-    }, [])
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: queryKeys.health.exercises,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/exercises')
+                    if (!r.ok) throw new Error('Failed to fetch exercises')
+                    return r.json() as Promise<Exercise[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.muscleGroups,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/muscle-groups')
+                    if (!r.ok) throw new Error('Failed to fetch muscle groups')
+                    return r.json() as Promise<MuscleGroupWithParents[]>
+                },
+                staleTime: staleTimes.forever,
+            },
+        ],
+    })
+    const exercises = queries[0].data ?? []
+    const muscleGroups = queries[1].data ?? []
+    const loading = queries.some((q) => q.isLoading)
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    const invalidateExercises = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.exercises })
+    }, [queryClient])
 
     const openAdd = useCallback(() => {
         setEditingExercise(null)
@@ -153,18 +166,22 @@ export default function ExercisesPage() {
         setDrawerOpen(true)
     }, [])
 
-    const handleDelete = useCallback(
-        async (id: number) => {
+    const deleteMutation = useMutation({
+        mutationFn: async (id: number) => {
             const res = await fetch(`/api/health/exercises/${id}`, { method: 'DELETE' })
-            if (res.ok) fetchData()
+            if (!res.ok) throw new Error('Delete failed')
         },
-        [fetchData]
+        onSuccess: invalidateExercises,
+    })
+    const handleDelete = useCallback(
+        (id: number) => deleteMutation.mutate(id),
+        [deleteMutation],
     )
 
     useRegisterFab(openAdd)
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={invalidateExercises}>
             <HealthPageHeader
                 icon={<IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Exercises"
@@ -252,7 +269,7 @@ export default function ExercisesPage() {
                 }}
                 muscleGroups={muscleGroups}
                 editingExercise={editingExercise}
-                onSaved={fetchData}
+                onSaved={invalidateExercises}
             />
         </HealthPageLayout>
     )

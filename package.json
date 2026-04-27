@@ -38,6 +38,7 @@
         "@mui/material-nextjs": "^7.3.9",
         "@phosphor-icons/react": "^2.1.7",
         "@tabler/icons-react": "^3.19.0",
+        "@tanstack/react-query": "^5.100.5",
         "@visx/annotation": "^3.3.0",
         "@visx/axis": "^3.10.1",
         "@visx/brush": "^3.10.4",

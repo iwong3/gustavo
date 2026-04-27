@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         // Single trip by slug
         const tripRes = await pool.query(
             `SELECT t.id, t.name, t.slug, t.description, t.start_date, t.end_date,
-                    t.created_by, t.visibility, t.currency,
+                    t.created_by, t.visibility, t.currency, t.updated_at,
                     tp.role AS user_role
              FROM trips t
              LEFT JOIN trip_participants tp ON tp.trip_id = t.id AND tp.user_id = $2 AND tp.left_at IS NULL
@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             id: trip.id,
+            updatedAt: new Date(trip.updated_at).toISOString(),
             name: trip.name,
             slug: trip.slug,
             description: trip.description,
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
     // All trips visible to user (participant OR public)
     const tripsRes = await pool.query(
         `SELECT t.id, t.name, t.slug, t.description, t.start_date, t.end_date,
-                t.created_by, t.visibility, t.currency,
+                t.created_by, t.visibility, t.currency, t.updated_at,
                 tp.role AS user_role
          FROM trips t
          LEFT JOIN trip_participants tp ON tp.trip_id = t.id AND tp.user_id = $1 AND tp.left_at IS NULL
@@ -163,6 +164,7 @@ export async function GET(request: NextRequest) {
         if (!currencies.includes('USD')) currencies.unshift('USD')
         return {
             id: t.id,
+            updatedAt: new Date(t.updated_at).toISOString(),
             name: t.name,
             slug: t.slug,
             description: t.description,

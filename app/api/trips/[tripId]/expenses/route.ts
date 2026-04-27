@@ -30,7 +30,7 @@ export async function GET(
     // Fetch expenses with payer + reporter + category + location
     const expensesRes = await pool.query(
         `SELECT
-            e.id, e.name, e.date, e.cost_original, e.currency,
+            e.id, e.name, e.date, e.cost_original, e.currency, e.updated_at,
             e.cost_converted_usd, e.exchange_rate, e.conversion_error,
             e.category_id, ec.name AS category_name, ec.slug AS category_slug,
             e.local_currency_received,
@@ -100,6 +100,7 @@ export async function GET(
             .map(userSummary)
         return {
             id: e.id,
+            updatedAt: new Date(e.updated_at).toISOString(),
             name: e.name,
             date: typeof e.date === 'string' ? e.date.slice(0, 10) : new Date(e.date).toISOString().slice(0, 10),
             costOriginal: parseFloat(e.cost_original),

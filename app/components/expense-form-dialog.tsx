@@ -11,6 +11,10 @@ import {
     Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { fetchExpenseCategories } from 'utils/api'
+import { queryKeys, staleTimes } from '@/lib/query-keys'
 
 import { colors } from '@/lib/colors'
 import type { PlaceDetails } from '@/lib/types'
@@ -30,7 +34,7 @@ import { IconGift } from '@tabler/icons-react'
 import FormDrawer from 'components/form-drawer'
 import PlaceAutocomplete from 'components/place-autocomplete'
 import { useTripData } from 'providers/trip-data-provider'
-import { addExpense, updateExpense } from 'utils/api'
+import { addExpense, ConflictError, updateExpense } from 'utils/api'
 import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
 import {
     getColorForCategory,
@@ -146,7 +150,29 @@ export default function ExpenseFormDialog({
         trip.participants.find((p) => p.id === trip.currentUserId)?.firstName ??
         ''
 
-    const [categories, setCategories] = useState<Category[]>([])
+    const queryClient = useQueryClient()
+
+    const { data: categories = [] } = useQuery<Category[]>({
+        queryKey: queryKeys.expenseCategories.list(),
+        queryFn: fetchExpenseCategories,
+        enabled: open,
+        staleTime: staleTimes.medium,
+    })
+
+    const { data: tripLocationItems = [] } = useQuery<{ id: number; name: string }[]>({
+        queryKey: queryKeys.trips.locations(trip.id),
+        queryFn: async () => {
+            const res = await fetch(`/api/trips/${trip.id}/locations`)
+            if (!res.ok) throw new Error('Failed to fetch locations')
+            return res.json()
+        },
+        enabled: open,
+    })
+    const tripLocations = useMemo(
+        () => tripLocationItems.map((l) => l.name),
+        [tripLocationItems]
+    )
+
     const [name, setName] = useState('')
     const [date, setDate] = useState(todayISO())
     const [cost, setCost] = useState('')
@@ -161,7 +187,6 @@ export default function ExpenseFormDialog({
     const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
-    const [tripLocations, setTripLocations] = useState<string[]>([])
     const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
@@ -228,7 +253,9 @@ export default function ExpenseFormDialog({
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ name: city }),
                             })
-                            setTripLocations((prev) => [...prev, city])
+                            queryClient.invalidateQueries({
+                                queryKey: queryKeys.trips.locations(trip.id),
+                            })
                             setLocation(city)
                         } catch {
                             setLocation(city)
@@ -279,21 +306,6 @@ export default function ExpenseFormDialog({
     const selectedCategoryObj =
         sortedCategories.find((c) => c.id === categoryId) ?? null
 
-    useEffect(() => {
-        if (open) {
-            fetch('/api/expense-categories')
-                .then((res) => res.json())
-                .then((data) => setCategories(data))
-                .catch(() => {})
-
-            fetch(`/api/trips/${trip.id}/locations`)
-                .then((res) => res.json())
-                .then((data: { id: number; name: string }[]) =>
-                    setTripLocations(data.map((l) => l.name))
-                )
-                .catch(() => {})
-        }
-    }, [open, trip.id])
 
     useEffect(() => {
         if (open && mode === 'edit' && expense) {
@@ -508,7 +520,10 @@ export default function ExpenseFormDialog({
 
         try {
             if (mode === 'edit' && expense) {
-                await updateExpense(trip.id, expense.id, payload)
+                await updateExpense(trip.id, expense.id, {
+                    ...payload,
+                    expectedUpdatedAt: expense.updatedAt,
+                })
             } else {
                 await addExpense(trip.id, payload)
             }
@@ -516,6 +531,14 @@ export default function ExpenseFormDialog({
             onClose()
             onSuccess()
         } catch (err) {
+            if (err instanceof ConflictError) {
+                queryClient.invalidateQueries({
+                    queryKey: queryKeys.trips.expenses(trip.id),
+                })
+                setError('This expense was changed by someone else. The form has been refreshed — please review and try again.')
+                setSubmitting(false)
+                return
+            }
             setError(
                 err instanceof Error
                     ? err.message

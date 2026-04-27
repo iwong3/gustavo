@@ -21,6 +21,7 @@ type UpdateTripBody = {
      *  missing. Currencies that have expenses against them are protected — the
      *  client should not include removals for in-use currencies. */
     currencies?: string[]
+    expectedUpdatedAt?: string
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -44,11 +45,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
         await withAuditUser(userId, async (client) => {
             const existing = await client.query(
-                'SELECT id FROM trips WHERE id = $1 AND deleted_at IS NULL',
+                'SELECT id, updated_at FROM trips WHERE id = $1 AND deleted_at IS NULL',
                 [id]
             )
             if (existing.rows.length === 0) {
                 throw new Error('NOT_FOUND')
+            }
+            if (
+                body.expectedUpdatedAt &&
+                new Date(existing.rows[0].updated_at).toISOString() !==
+                    new Date(body.expectedUpdatedAt).toISOString()
+            ) {
+                throw new Error('CONFLICT')
             }
 
             const sets: string[] = []
@@ -131,6 +139,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
         }
+        if (err instanceof Error && err.message === 'CONFLICT') {
+            return NextResponse.json(
+                { error: 'conflict', message: 'This trip was changed by someone else.' },
+                { status: 409 }
+            )
+        }
         console.error('Error updating trip:', err)
         return NextResponse.json({ error: 'Failed to update trip' }, { status: 500 })
     }
@@ -138,7 +152,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // ── DELETE: Soft-delete trip ──
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { tripId } = await params
     const id = parseInt(tripId, 10)
     if (isNaN(id)) {
@@ -154,15 +168,29 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const expectedUpdatedAt = request.nextUrl.searchParams.get('expectedUpdatedAt')
+
     try {
         await withAuditUser(userId, async (client) => {
-            const res = await client.query(
-                `UPDATE trips SET deleted_at = NOW()
-                 WHERE id = $1 AND deleted_at IS NULL
-                 RETURNING id`,
-                [id]
-            )
+            const sql = expectedUpdatedAt
+                ? `UPDATE trips SET deleted_at = NOW()
+                   WHERE id = $1 AND deleted_at IS NULL AND updated_at = $2
+                   RETURNING id`
+                : `UPDATE trips SET deleted_at = NOW()
+                   WHERE id = $1 AND deleted_at IS NULL
+                   RETURNING id`
+            const args: unknown[] = expectedUpdatedAt
+                ? [id, expectedUpdatedAt]
+                : [id]
+            const res = await client.query(sql, args)
             if (res.rows.length === 0) {
+                if (expectedUpdatedAt) {
+                    const check = await client.query(
+                        'SELECT id FROM trips WHERE id = $1 AND deleted_at IS NULL',
+                        [id]
+                    )
+                    throw new Error(check.rows.length > 0 ? 'CONFLICT' : 'NOT_FOUND')
+                }
                 throw new Error('NOT_FOUND')
             }
         })
@@ -171,6 +199,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     } catch (err) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+        }
+        if (err instanceof Error && err.message === 'CONFLICT') {
+            return NextResponse.json(
+                { error: 'conflict', message: 'This trip was changed by someone else.' },
+                { status: 409 }
+            )
         }
         console.error('Error deleting trip:', err)
         return NextResponse.json({ error: 'Failed to delete trip' }, { status: 500 })

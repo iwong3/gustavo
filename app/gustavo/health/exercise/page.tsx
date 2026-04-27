@@ -46,6 +46,9 @@ import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys, staleTimes } from '@/lib/query-keys'
 
 type WorkoutFormData = {
     date: string
@@ -59,19 +62,19 @@ type WorkoutFormData = {
     }[]
 }
 
+const fetchJson = async <T,>(url: string): Promise<T> => {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Failed to fetch ${url}`)
+    return res.json()
+}
+
 export default function ExercisePage() {
-    const [workouts, setWorkouts] = useState<Workout[]>([])
-    const [muscleGroups, setMuscleGroups] = useState<MuscleGroupWithParents[]>(
-        []
-    )
-    const [exercises, setExercises] = useState<Exercise[]>([])
-    const [presets, setPresets] = useState<WorkoutPreset[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
+
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
     const [detailWorkout, setDetailWorkout] = useState<Workout | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)
-    const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
 
     // Auto-open the preset drawer when arriving with ?presets=open (from the
@@ -81,78 +84,85 @@ export default function ExercisePage() {
         if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
     }, [searchParams])
 
-    const fetchWorkouts = useCallback(() => {
-        fetch('/api/health/workouts')
-            .then((res) => res.json())
-            .then(setWorkouts)
-            .catch((err) => console.error('Failed to fetch workouts:', err))
-    }, [])
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: queryKeys.health.muscleGroups,
+                queryFn: () => fetchJson<MuscleGroupWithParents[]>('/api/health/muscle-groups'),
+                staleTime: staleTimes.forever,
+            },
+            {
+                queryKey: queryKeys.health.workouts.list(),
+                queryFn: () => fetchJson<Workout[]>('/api/health/workouts'),
+            },
+            {
+                queryKey: queryKeys.health.exercises,
+                queryFn: () => fetchJson<Exercise[]>('/api/health/exercises'),
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('workout'),
+                queryFn: () => fetchJson<WorkoutPreset[]>('/api/health/presets?type=workout'),
+            },
+        ],
+    })
 
-    const fetchExercises = useCallback(() => {
-        fetch('/api/health/exercises')
-            .then((res) => res.json())
-            .then(setExercises)
-            .catch((err) => console.error('Failed to fetch exercises:', err))
-    }, [])
+    const muscleGroups = queries[0].data ?? []
+    const workouts = queries[1].data ?? []
+    const exercises = queries[2].data ?? []
+    const presets = queries[3].data ?? []
+    const loading = queries.some((q) => q.isLoading)
 
-    const fetchPresets = useCallback(() => {
-        fetch('/api/health/presets?type=workout')
-            .then((res) => res.json())
-            .then(setPresets)
-            .catch((err) => console.error('Failed to fetch presets:', err))
-    }, [])
+    const invalidateWorkouts = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all })
+    }, [queryClient])
+    const invalidateAll = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.exercises })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all })
+    }, [queryClient])
+    const invalidateExercises = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.exercises })
+    }, [queryClient])
+    const invalidatePresets = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all })
+    }, [queryClient])
 
-    useEffect(() => {
-        Promise.all([
-            fetch('/api/health/muscle-groups').then((r) => r.json()),
-            fetch('/api/health/workouts').then((r) => r.json()),
-            fetch('/api/health/exercises').then((r) => r.json()),
-            fetch('/api/health/presets?type=workout').then((r) => r.json()),
-        ])
-            .then(([mg, w, ex, p]) => {
-                setMuscleGroups(mg)
-                setWorkouts(w)
-                setExercises(ex)
-                setPresets(p)
-            })
-            .catch((err) => console.error('Failed to load:', err))
-            .finally(() => setLoading(false))
-    }, [])
-
-    const handleSave = useCallback(
-        async (data: WorkoutFormData) => {
+    const saveMutation = useMutation({
+        mutationFn: async (data: WorkoutFormData) => {
             const isEdit = editingWorkout !== null && editingWorkout.id !== -1
             const url = isEdit
                 ? `/api/health/workouts/${editingWorkout!.id}`
                 : '/api/health/workouts'
             const method = isEdit ? 'PUT' : 'POST'
-
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
             })
-
-            if (res.ok) {
-                setDrawerOpen(false)
-                setEditingWorkout(null)
-                fetchWorkouts()
-                fetchExercises() // refresh in case quick-add was used
-            }
+            if (!res.ok) throw new Error('Save failed')
         },
-        [editingWorkout, fetchWorkouts, fetchExercises]
+        onSuccess: () => {
+            setDrawerOpen(false)
+            setEditingWorkout(null)
+            invalidateWorkouts()
+            invalidateExercises() // in case quick-add was used
+        },
+    })
+    const handleSave = useCallback(
+        (data: WorkoutFormData) => saveMutation.mutateAsync(data),
+        [saveMutation],
     )
 
-    const handleDelete = useCallback(
-        async (id: number) => {
-            const res = await fetch(`/api/health/workouts/${id}`, {
-                method: 'DELETE',
-            })
-            if (res.ok) {
-                fetchWorkouts()
-            }
+    const deleteMutation = useMutation({
+        mutationFn: async (id: number) => {
+            const res = await fetch(`/api/health/workouts/${id}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error('Delete failed')
         },
-        [fetchWorkouts]
+        onSuccess: invalidateWorkouts,
+    })
+    const handleDelete = useCallback(
+        (id: number) => deleteMutation.mutateAsync(id),
+        [deleteMutation],
     )
 
     const handleDuplicate = useCallback((workout: Workout) => {
@@ -171,46 +181,46 @@ export default function ExercisePage() {
         }, 0)
     }, [])
 
-    const applyPreset = useCallback(
-        async (presetId: number) => {
-            setApplyingPreset(presetId)
-            try {
-                const today = new Date()
-                const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-                const res = await fetch(
-                    `/api/health/presets/${presetId}/apply`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date }),
-                    }
-                )
-                if (res.ok) {
-                    fetchWorkouts()
-                }
-            } catch (err) {
-                console.error('Failed to apply preset:', err)
-            } finally {
-                setApplyingPreset(null)
-            }
+    const applyPresetMutation = useMutation({
+        mutationFn: async (presetId: number) => {
+            const today = new Date()
+            const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            const res = await fetch(`/api/health/presets/${presetId}/apply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date }),
+            })
+            if (!res.ok) throw new Error('Apply failed')
+            return presetId
         },
-        [fetchWorkouts]
+        onSuccess: invalidateWorkouts,
+        onError: (err) => console.error('Failed to apply preset:', err),
+    })
+    const applyPreset = useCallback(
+        (presetId: number) => {
+            applyPresetMutation.mutate(presetId)
+        },
+        [applyPresetMutation],
     )
+    const applyingPreset = applyPresetMutation.isPending
+        ? (applyPresetMutation.variables ?? null)
+        : null
 
-    const reorderPresets = useCallback((from: number, to: number) => {
-        setPresets((prev) => {
-            const next = arrayMove(prev, from, to)
-            // Persist to DB (fire-and-forget)
+    const reorderPresets = useCallback(
+        (from: number, to: number) => {
+            // Optimistic local update via cache, then persist
+            const key = queryKeys.health.presets.byType('workout')
+            const current = queryClient.getQueryData<WorkoutPreset[]>(key) ?? presets
+            const next = arrayMove(current, from, to)
+            queryClient.setQueryData(key, next)
             fetch('/api/health/presets/reorder', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ presetIds: next.map((p) => p.id) }),
-            }).catch((err) =>
-                console.error('Failed to save preset order:', err)
-            )
-            return next
-        })
-    }, [])
+            }).catch((err) => console.error('Failed to save preset order:', err))
+        },
+        [queryClient, presets],
+    )
 
     const openAdd = useCallback(() => {
         setEditingWorkout(null)
@@ -258,7 +268,7 @@ export default function ExercisePage() {
     useRegisterFab(fabCallback)
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={invalidateAll}>
             <HealthPageHeader
                 icon={<IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Workouts"
@@ -668,9 +678,9 @@ export default function ExercisePage() {
                 muscleGroups={muscleGroups}
                 exercises={exercises}
                 editingWorkout={editingWorkout}
-                onExerciseCreated={fetchExercises}
+                onExerciseCreated={invalidateExercises}
                 presets={presets}
-                onPresetSaved={fetchPresets}
+                onPresetSaved={invalidatePresets}
                 onReorderPresets={reorderPresets}
             />
 
@@ -695,12 +705,12 @@ export default function ExercisePage() {
                 muscleGroups={muscleGroups}
                 exercises={exercises}
                 existingPresets={presets}
-                onSaved={fetchPresets}
+                onSaved={invalidatePresets}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
                         method: 'DELETE',
                     })
-                    fetchPresets()
+                    invalidatePresets()
                 }}
                 onReorder={reorderPresets}
             />

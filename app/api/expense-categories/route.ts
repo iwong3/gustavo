@@ -9,12 +9,12 @@ export async function GET(request: NextRequest) {
     if (includeCount) {
         const authUser = await requireAuthWithUserId()
         const { rows } = await pool.query(
-            `SELECT ec.id, ec.name, ec.slug, ec.created_by,
+            `SELECT ec.id, ec.name, ec.slug, ec.created_by, ec.updated_at,
                     COUNT(e.id)::int AS usage_count
              FROM expense_categories ec
              LEFT JOIN expenses e ON e.category_id = ec.id AND e.deleted_at IS NULL
              WHERE ec.deleted_at IS NULL
-             GROUP BY ec.id, ec.name, ec.slug, ec.created_by
+             GROUP BY ec.id, ec.name, ec.slug, ec.created_by, ec.updated_at
              ORDER BY ec.name`
         )
         const userId = authUser?.userId
@@ -23,17 +23,25 @@ export async function GET(request: NextRequest) {
             id: r.id,
             name: r.name,
             slug: r.slug,
+            updatedAt: new Date(r.updated_at).toISOString(),
             usageCount: r.usage_count,
             canEdit: r.slug ? false : (isAdmin || r.created_by === userId),
         })))
     }
 
     const { rows } = await pool.query(
-        `SELECT id, name, slug FROM expense_categories
+        `SELECT id, name, slug, updated_at FROM expense_categories
          WHERE deleted_at IS NULL
          ORDER BY name`
     )
-    return NextResponse.json(rows)
+    return NextResponse.json(
+        rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            slug: r.slug,
+            updatedAt: new Date(r.updated_at).toISOString(),
+        }))
+    )
 }
 
 export async function POST(request: NextRequest) {

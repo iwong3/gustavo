@@ -4,16 +4,21 @@ import { colors, hardShadow } from '@/lib/colors'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 
+import { PullToRefresh } from 'components/pull-to-refresh'
+
 /**
  * Shared outer container for all health pages.
  * Handles max-width, padding, loading spinner, and the sticky header section.
+ * If `onRefresh` is provided, the page supports pull-to-refresh.
  */
 export function HealthPageLayout({
     loading,
     children,
+    onRefresh,
 }: {
     loading: boolean
     children: ReactNode
+    onRefresh?: () => Promise<unknown> | unknown
 }) {
     if (loading) {
         return (
@@ -26,7 +31,7 @@ export function HealthPageLayout({
         )
     }
 
-    return (
+    const inner = (
         <Box
             sx={{
                 display: 'flex',
@@ -41,6 +46,11 @@ export function HealthPageLayout({
             {children}
         </Box>
     )
+
+    if (onRefresh) {
+        return <PullToRefresh onRefresh={onRefresh}>{inner}</PullToRefresh>
+    }
+    return inner
 }
 
 /**

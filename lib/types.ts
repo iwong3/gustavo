@@ -21,6 +21,8 @@ export type TripSummary = {
     isAdmin: boolean
     currentUserId: number
     participants: ParticipantSummary[]
+    /** ISO timestamp of the last update — used for optimistic concurrency on PUT/DELETE. */
+    updatedAt: string
 }
 
 export type UserSummary = {
@@ -63,6 +65,8 @@ export type Expense = {
     localCurrencyReceived: number | null
     googlePlaceId: string | null
     place: PlaceInfo | null
+    /** ISO timestamp of the last update — used for optimistic concurrency on PUT/DELETE. */
+    updatedAt: string
 }
 
 /** Place data from the place_details table, returned via JOIN on expenses. */
@@ -85,6 +89,7 @@ export type ExpenseCategory = {
     id: number
     name: string
     slug: string | null
+    updatedAt: string
 }
 
 export type ExpenseCategoryWithMeta = ExpenseCategory & {

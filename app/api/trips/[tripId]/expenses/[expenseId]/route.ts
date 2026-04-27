@@ -33,6 +33,8 @@ type UpdateExpenseBody = {
     google_place_website?: string | null
     google_place_hours_json?: Record<string, unknown> | null
     google_place_photo_refs?: string[] | null
+    /** ISO timestamp the client read; if mismatch, server returns 409. Optional during rollout. */
+    expectedUpdatedAt?: string
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -65,13 +67,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     try {
         await withAuditUser(userId, async (client) => {
-            // Verify expense exists and belongs to trip
+            // Verify expense exists, belongs to trip, and version matches
             const existing = await client.query(
-                'SELECT id FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
+                'SELECT id, updated_at FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
                 [expenseIdNum, tripIdNum]
             )
             if (existing.rows.length === 0) {
                 throw new Error('NOT_FOUND')
+            }
+            if (
+                body.expectedUpdatedAt &&
+                new Date(existing.rows[0].updated_at).toISOString() !==
+                    new Date(body.expectedUpdatedAt).toISOString()
+            ) {
+                throw new Error('CONFLICT')
             }
 
             // Build dynamic UPDATE
@@ -246,6 +255,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
         }
+        if (err instanceof Error && err.message === 'CONFLICT') {
+            return NextResponse.json(
+                { error: 'conflict', message: 'This expense was changed by someone else.' },
+                { status: 409 }
+            )
+        }
         console.error('Error updating expense:', err)
         const message = err instanceof Error ? err.message : 'Failed to update expense'
         return NextResponse.json({ error: message }, { status: 500 })
@@ -254,7 +269,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // ── DELETE: Soft-delete expense ──
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { tripId, expenseId } = await params
     const tripIdNum = parseInt(tripId, 10)
     const expenseIdNum = parseInt(expenseId, 10)
@@ -279,15 +294,30 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const expectedUpdatedAt = request.nextUrl.searchParams.get('expectedUpdatedAt')
+
     try {
         await withAuditUser(userId, async (client) => {
-            const res = await client.query(
-                `UPDATE expenses SET deleted_at = NOW()
-                 WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL
-                 RETURNING id`,
-                [expenseIdNum, tripIdNum]
-            )
+            const sql = expectedUpdatedAt
+                ? `UPDATE expenses SET deleted_at = NOW()
+                   WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL AND updated_at = $3
+                   RETURNING id`
+                : `UPDATE expenses SET deleted_at = NOW()
+                   WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL
+                   RETURNING id`
+            const args: unknown[] = expectedUpdatedAt
+                ? [expenseIdNum, tripIdNum, expectedUpdatedAt]
+                : [expenseIdNum, tripIdNum]
+            const res = await client.query(sql, args)
             if (res.rows.length === 0) {
+                // Distinguish not-found from version-conflict
+                if (expectedUpdatedAt) {
+                    const check = await client.query(
+                        'SELECT id FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
+                        [expenseIdNum, tripIdNum]
+                    )
+                    throw new Error(check.rows.length > 0 ? 'CONFLICT' : 'NOT_FOUND')
+                }
                 throw new Error('NOT_FOUND')
             }
         })
@@ -296,6 +326,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     } catch (err) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
+        }
+        if (err instanceof Error && err.message === 'CONFLICT') {
+            return NextResponse.json(
+                { error: 'conflict', message: 'This expense was changed by someone else.' },
+                { status: 409 }
+            )
         }
         console.error('Error deleting expense:', err)
         return NextResponse.json({ error: 'Failed to delete expense' }, { status: 500 })

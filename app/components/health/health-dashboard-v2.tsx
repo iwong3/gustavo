@@ -198,11 +198,11 @@ const skeletonSx = {
 
 function PresetsSkeleton() {
     return (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
-            <Box sx={{ width: 30, height: 30, borderRadius: '50%', ...skeletonSx }} />
-            <Box sx={{ width: 70, height: 28, ...skeletonSx }} />
-            <Box sx={{ width: 80, height: 28, ...skeletonSx }} />
-            <Box sx={{ width: 60, height: 28, ...skeletonSx }} />
+        <Box sx={presetRowScrollSx}>
+            <Box sx={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, ...skeletonSx }} />
+            <Box sx={{ width: 70, height: 28, flexShrink: 0, ...skeletonSx }} />
+            <Box sx={{ width: 80, height: 28, flexShrink: 0, ...skeletonSx }} />
+            <Box sx={{ width: 60, height: 28, flexShrink: 0, ...skeletonSx }} />
         </Box>
     )
 }
@@ -222,15 +222,32 @@ function DaysSinceSkeleton() {
                                 width: daysSinceCardWidth,
                                 padding: '5px 8px',
                                 borderRadius: '4px',
-                                border: `1px solid ${colors.primaryBlack}15`,
+                                border: `1.5px solid ${colors.primaryBlack}15`,
                                 ...skeletonSx,
-                                height: 36,
-                            }}
-                        />
+                            }}>
+                            <Box sx={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, backgroundColor: `${colors.primaryBlack}15` }} />
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontSize: 11, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}10`, width: '70%' }}>·</Typography>
+                                <Typography sx={{ fontSize: 10, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}08`, width: '50%' }}>·</Typography>
+                            </Box>
+                        </Box>
                     ))}
                 </Box>
             ))}
         </Box>
+    )
+}
+
+function StreakRestSkeleton() {
+    return (
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'stretch',
+            height: 34,
+            width: 110,
+            borderRadius: '4px',
+            ...skeletonSx,
+        }} />
     )
 }
 
@@ -241,7 +258,10 @@ function LogCardSkeleton({ rows = 2 }: { rows?: number }) {
                 <Box key={i}>
                     {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
-                        <Box sx={{ width: 44, height: 28, ...skeletonSx }} />
+                        <Box sx={{ flexShrink: 0, minWidth: 44 }}>
+                            <Typography sx={{ fontSize: 10, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}10`, width: '70%' }}>·</Typography>
+                            <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'transparent', backgroundColor: `${colors.primaryBlack}08`, width: '90%' }}>·</Typography>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
                             <Box sx={{ width: 60, height: 22, ...skeletonSx }} />
                             <Box sx={{ width: 50, height: 22, ...skeletonSx }} />
@@ -375,7 +395,9 @@ export function HealthDashboardV2({
                         <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                         <Typography sx={badgeTextSx}>Workouts</Typography>
                     </Box>
-                    {!loading && daysSince.length > 0 && (
+                    {loading ? (
+                        <StreakRestSkeleton />
+                    ) : daysSince.length > 0 && (
                         <Box sx={{
                             display: 'flex',
                             alignItems: 'stretch',

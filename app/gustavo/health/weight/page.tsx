@@ -21,6 +21,9 @@ import { HealthPageLayout, HealthPageHeader } from 'components/health/health-pag
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 import { Group } from '@visx/group'
 import { scaleLinear, scaleTime } from '@visx/scale'
 import { LinePath } from '@visx/shape'
@@ -323,8 +326,7 @@ function WeightLogCard({
 // ── Page Component ──────────────────────────────────────────────────────────
 
 export default function WeightPage() {
-    const [logs, setLogs] = useState<WeightLog[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
     const [chartRange, setChartRange] = useState<ChartRange>('3m')
 
     // Drawer state
@@ -336,17 +338,18 @@ export default function WeightPage() {
 
     const prevOpenRef = useRef(false)
 
-    const fetchLogs = useCallback(() => {
-        return fetch('/api/health/weight-logs')
-            .then((r) => r.json())
-            .then(setLogs)
-            .catch((err) => console.error('Failed to load weight logs:', err))
-            .finally(() => setLoading(false))
-    }, [])
+    const { data: logs = [], isLoading: loading } = useQuery({
+        queryKey: queryKeys.health.weightLogs,
+        queryFn: async () => {
+            const r = await fetch('/api/health/weight-logs')
+            if (!r.ok) throw new Error('Failed to load weight logs')
+            return r.json() as Promise<WeightLog[]>
+        },
+    })
 
-    useEffect(() => {
-        fetchLogs()
-    }, [fetchLogs])
+    const fetchLogs = useCallback(() => {
+        return queryClient.invalidateQueries({ queryKey: queryKeys.health.weightLogs })
+    }, [queryClient])
 
     // FAB → new log
     const openAdd = useCallback(() => {
@@ -426,7 +429,7 @@ export default function WeightPage() {
     ]
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={fetchLogs}>
             <HealthPageHeader
                 icon={<IconScale size={20} stroke={2} color={colors.primaryBlack} />}
                 title="Weight"

@@ -1,18 +1,19 @@
 'use client'
 
 import type {
-    DaysSince,
-    DietDay,
     DietPreset,
     SupplementLog,
     SupplementPreset,
     SymptomLog,
-    WeightLog,
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
 import { HealthDashboardV2 } from 'components/health/health-dashboard-v2'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PullToRefresh } from 'components/pull-to-refresh'
+import { useCallback, useMemo, useState } from 'react'
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,109 +48,124 @@ function computeWorkoutStats(workouts: Workout[], today: string) {
     return { streak, workoutDays, restDays }
 }
 
+const fetchJson = async <T,>(url: string): Promise<T> => {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Failed to fetch ${url}`)
+    return res.json()
+}
+
 // ── Page Component ───────────────────────────────────────────────────────────
 
 export default function HealthPage() {
     const today = useMemo(() => getLocalDate(), [])
     const thirtyDaysAgo = useMemo(() => getDateDaysAgo(30), [])
+    const queryClient = useQueryClient()
 
-    const [daysSince, setDaysSince] = useState<DaysSince[]>([])
-    const [workoutPresets, setWorkoutPresets] = useState<WorkoutPreset[]>([])
-    const [dietPresets, setDietPresets] = useState<DietPreset[]>([])
-    const [supplementPresets, setSupplementPresets] = useState<SupplementPreset[]>([])
-    const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([])
-    const [recentDietDays, setRecentDietDays] = useState<DietDay[]>([])
-    const [recentSupplements, setRecentSupplements] = useState<SupplementLog[]>([])
-    const [recentSymptoms, setRecentSymptoms] = useState<SymptomLog[]>([])
-    const [recentWeightLogs, setRecentWeightLogs] = useState<WeightLog[]>([])
-    const [loading, setLoading] = useState(true)
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: queryKeys.health.workouts.daysSince,
+                queryFn: () => fetchJson<import('@/lib/health-types').DaysSince[]>(`/api/health/workouts/days-since?today=${today}`),
+            },
+            {
+                queryKey: [...queryKeys.health.workouts.list(), { startDate: thirtyDaysAgo, endDate: today }],
+                queryFn: () => fetchJson<Workout[]>(`/api/health/workouts?startDate=${thirtyDaysAgo}&endDate=${today}`),
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('workout'),
+                queryFn: () => fetchJson<WorkoutPreset[]>('/api/health/presets?type=workout'),
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('diet'),
+                queryFn: () => fetchJson<DietPreset[]>('/api/health/presets?type=diet'),
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('supplement'),
+                queryFn: () => fetchJson<SupplementPreset[]>('/api/health/presets?type=supplement'),
+            },
+            {
+                queryKey: queryKeys.health.foodLogs.all,
+                queryFn: () => fetchJson<import('@/lib/health-types').DietDay[]>('/api/health/food-logs'),
+            },
+            {
+                queryKey: queryKeys.health.supplementLogs.all,
+                queryFn: () => fetchJson<SupplementLog[]>('/api/health/supplement-logs'),
+            },
+            {
+                queryKey: queryKeys.health.symptomLogs.all,
+                queryFn: () => fetchJson<SymptomLog[]>('/api/health/symptom-logs'),
+            },
+            {
+                queryKey: queryKeys.health.weightLogs,
+                queryFn: () => fetchJson<import('@/lib/health-types').WeightLog[]>('/api/health/weight-logs'),
+            },
+        ],
+    })
 
-    const [applyingId, setApplyingId] = useState<number | null>(null)
+    const [
+        daysSinceQ,
+        recentWorkoutsQ,
+        workoutPresetsQ,
+        dietPresetsQ,
+        supplementPresetsQ,
+        recentDietDaysQ,
+        recentSupplementsQ,
+        recentSymptomsQ,
+        recentWeightLogsQ,
+    ] = queries
+
+    const daysSince = daysSinceQ.data ?? []
+    const recentWorkouts = recentWorkoutsQ.data ?? []
+    const workoutPresets = workoutPresetsQ.data ?? []
+    const dietPresets = dietPresetsQ.data ?? []
+    const supplementPresets = supplementPresetsQ.data ?? []
+    const recentDietDays = recentDietDaysQ.data ?? []
+    const recentSupplements = recentSupplementsQ.data ?? []
+    const recentSymptoms = recentSymptomsQ.data ?? []
+    const recentWeightLogs = recentWeightLogsQ.data ?? []
+
+    const loading = queries.some((q) => q.isLoading)
+
     const [appliedId, setAppliedId] = useState<number | null>(null)
 
-    const fetchDaysSince = useCallback(() => {
-        return fetch(`/api/health/workouts/days-since?today=${today}`)
-            .then((r) => r.json())
-            .then(setDaysSince)
-    }, [today])
-
-    const fetchRecentDiet = useCallback(() => {
-        return fetch('/api/health/food-logs')
-            .then((r) => r.json())
-            .then(setRecentDietDays)
-    }, [])
-
-    const fetchRecentSupplements = useCallback(() => {
-        return fetch('/api/health/supplement-logs')
-            .then((r) => r.json())
-            .then(setRecentSupplements)
-    }, [])
-
-    const fetchRecentSymptoms = useCallback(() => {
-        return fetch('/api/health/symptom-logs')
-            .then((r) => r.json())
-            .then(setRecentSymptoms)
-    }, [])
-
-    const fetchRecentWeight = useCallback(() => {
-        return fetch('/api/health/weight-logs')
-            .then((r) => r.json())
-            .then(setRecentWeightLogs)
-    }, [])
-
-    const fetchRecentWorkouts = useCallback(() => {
-        return fetch(`/api/health/workouts?startDate=${thirtyDaysAgo}&endDate=${today}`)
-            .then((r) => r.json())
-            .then(setRecentWorkouts)
-    }, [thirtyDaysAgo, today])
-
-    useEffect(() => {
-        Promise.all([
-            fetchDaysSince(),
-            fetchRecentWorkouts(),
-            fetch('/api/health/presets?type=workout').then((r) => r.json()).then(setWorkoutPresets),
-            fetch('/api/health/presets?type=diet').then((r) => r.json()).then(setDietPresets),
-            fetch('/api/health/presets?type=supplement').then((r) => r.json()).then(setSupplementPresets),
-            fetchRecentDiet(),
-            fetchRecentSupplements(),
-            fetchRecentSymptoms(),
-            fetchRecentWeight(),
-        ])
-            .catch((err) => console.error('Failed to fetch health data:', err))
-            .finally(() => setLoading(false))
-    }, [fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements, fetchRecentSymptoms, fetchRecentWeight])
-
-    const applyPreset = useCallback(async (presetId: number, type: 'workout' | 'diet' | 'supplement') => {
-        if (applyingId) return
-        setApplyingId(presetId)
-        setAppliedId(null)
-        try {
+    const applyPresetMutation = useMutation({
+        mutationFn: async ({ presetId }: { presetId: number; type: 'workout' | 'diet' | 'supplement' }) => {
             const res = await fetch(`/api/health/presets/${presetId}/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ date: today }),
             })
             if (!res.ok) throw new Error('Apply failed')
-
+            return presetId
+        },
+        onSuccess: (presetId, { type }) => {
             setAppliedId(presetId)
             setTimeout(() => setAppliedId(null), 1200)
-
             if (type === 'workout') {
-                await Promise.all([fetchDaysSince(), fetchRecentWorkouts()])
+                queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all })
             } else if (type === 'diet') {
-                await fetchRecentDiet()
+                queryClient.invalidateQueries({ queryKey: queryKeys.health.foodLogs.all })
             } else {
-                await fetchRecentSupplements()
+                queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all })
             }
-        } catch (err) {
-            console.error('Failed to apply preset:', err)
-        } finally {
-            setApplyingId(null)
-        }
-    }, [applyingId, today, fetchDaysSince, fetchRecentWorkouts, fetchRecentDiet, fetchRecentSupplements])
+        },
+        onError: (err) => console.error('Failed to apply preset:', err),
+    })
 
-const daysSinceMap = useMemo(() => {
-        const map = new Map<string, DaysSince>()
+    const applyPreset = useCallback(
+        async (presetId: number, type: 'workout' | 'diet' | 'supplement') => {
+            if (applyPresetMutation.isPending) return
+            applyPresetMutation.mutate({ presetId, type })
+        },
+        [applyPresetMutation],
+    )
+
+    const applyingId = applyPresetMutation.isPending
+        ? (applyPresetMutation.variables?.presetId ?? null)
+        : null
+
+    const daysSinceMap = useMemo(() => {
+        const map = new Map<string, import('@/lib/health-types').DaysSince>()
         for (const item of daysSince) map.set(item.muscleGroup, item)
         return map
     }, [daysSince])
@@ -200,7 +216,18 @@ const daysSinceMap = useMemo(() => {
         return groups.slice(0, 3)
     }, [recentSupplements])
 
+    const refreshDashboard = () =>
+        Promise.all([
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.foodLogs.all }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.symptomLogs.all }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.weightLogs }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all }),
+        ])
+
     return (
+        <PullToRefresh onRefresh={refreshDashboard}>
         <HealthDashboardV2
             loading={loading}
             daysSince={daysSince}
@@ -218,5 +245,6 @@ const daysSinceMap = useMemo(() => {
             applyPreset={applyPreset}
             recentWeightLogs={recentWeightLogs}
         />
+        </PullToRefresh>
     )
 }

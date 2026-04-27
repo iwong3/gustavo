@@ -53,6 +53,9 @@ import Fuse from 'fuse.js'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -375,49 +378,85 @@ function DietDayCard({
 }
 
 export default function DietPage() {
-    const [foods, setFoods] = useState<Food[]>([])
-    const [foodGroups, setFoodGroups] = useState<FoodGroup[]>([])
-    const [dietDays, setDietDays] = useState<DietDay[]>([])
-    const [presets, setPresets] = useState<DietPreset[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
     const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
-    const [alphabetIndexSide, setAlphabetIndexSide] = useState<
-        'left' | 'right'
-    >('right')
 
-    // Auto-open the preset drawer when arriving with ?presets=open (from the
-    // dashboard lightning icon).
     const searchParams = useSearchParams()
     useEffect(() => {
         if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
     }, [searchParams])
 
-    const fetchData = useCallback(() => {
-        Promise.all([
-            fetch('/api/health/foods?all=true').then((r) => r.json()),
-            fetch('/api/health/food-logs').then((r) => r.json()),
-            fetch('/api/health/presets?type=diet').then((r) => r.json()),
-            fetch('/api/users/me/preferences').then((r) => r.json()),
-            fetch('/api/health/food-groups').then((r) => r.json()),
-        ])
-            .then(([f, days, p, prefs, fg]) => {
-                setFoods(f)
-                setDietDays(days)
-                setPresets(p)
-                setFoodGroups(fg)
-                if (prefs.alphabetIndexSide)
-                    setAlphabetIndexSide(prefs.alphabetIndexSide)
-            })
-            .catch((err) => console.error('Failed to load:', err))
-            .finally(() => setLoading(false))
-    }, [])
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: [...queryKeys.health.foods, 'all'] as const,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/foods?all=true')
+                    if (!r.ok) throw new Error('Failed to fetch foods')
+                    return r.json() as Promise<Food[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.foodLogs.all,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/food-logs')
+                    if (!r.ok) throw new Error('Failed to fetch food logs')
+                    return r.json() as Promise<DietDay[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('diet'),
+                queryFn: async () => {
+                    const r = await fetch('/api/health/presets?type=diet')
+                    if (!r.ok) throw new Error('Failed to fetch presets')
+                    return r.json() as Promise<DietPreset[]>
+                },
+            },
+            {
+                queryKey: queryKeys.users.preferences,
+                queryFn: async () => {
+                    const r = await fetch('/api/users/me/preferences')
+                    if (!r.ok) throw new Error('Failed to fetch prefs')
+                    return r.json() as Promise<{ alphabetIndexSide?: 'left' | 'right' }>
+                },
+            },
+            {
+                queryKey: queryKeys.health.foodGroups,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/food-groups')
+                    if (!r.ok) throw new Error('Failed to fetch food groups')
+                    return r.json() as Promise<FoodGroup[]>
+                },
+            },
+        ],
+    })
+    const foods = queries[0].data ?? []
+    const dietDays = queries[1].data ?? []
+    const presets = queries[2].data ?? []
+    const prefs = queries[3].data
+    const foodGroups = queries[4].data ?? []
+    const loading = queries.some((q) => q.isLoading)
+    const alphabetIndexSide: 'left' | 'right' = prefs?.alphabetIndexSide ?? 'right'
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    const fetchData = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.foods })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.foodLogs.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.foodGroups })
+    }, [queryClient])
+
+    // setPresets shim used by reorderPresets — writes to cache for instant feedback
+    const setPresets = useCallback(
+        (updater: (prev: DietPreset[]) => DietPreset[]) => {
+            const key = queryKeys.health.presets.byType('diet')
+            const current = queryClient.getQueryData<DietPreset[]>(key) ?? presets
+            queryClient.setQueryData(key, updater(current))
+        },
+        [queryClient, presets],
+    )
 
     const openAdd = useCallback(() => {
         setEditTarget(null)
@@ -505,7 +544,7 @@ export default function DietPage() {
     )
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={fetchData}>
             <HealthPageHeader
                 icon={<IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Diet"

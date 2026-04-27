@@ -180,7 +180,7 @@ export const ExpenseDetailDrawer = ({
                 expense={expense}
                 onClose={() => setDeleteDialogOpen(false)}
                 onConfirm={async () => {
-                    await deleteExpense(trip.id, expense.id)
+                    await deleteExpense(trip.id, expense.id, expense.updatedAt)
                     setDeleteDialogOpen(false)
                     onClose()
                     onRefresh()

@@ -42,6 +42,39 @@
     - [ ] What does $0 total this trip mean for the "Paid by X" section? is this
           how much that person covered you? if so, make it clearer
 
+---
+
+- Disable submit while pending (you already mentioned). Use the button's loading
+  state — show a spinner inline so the user knows something's happening.
+- Optimistic UI for low-risk actions — toggling a checkbox, reordering, marking
+  done. The action feels instant; rollback on error is rare and acceptable.
+- Toast for every mutation result — success and error. Silent success is
+  disorienting ("did it save?"). Errors must never be silent.
+- Idempotency keys on create endpoints — generate a UUID client-side, send it
+  with the POST, server dedupes. Protects against double-submits from network
+  retries, not just double-clicks.
+- Confirm destructive actions — you already do this for delete. The bar:
+  anything that loses data the user can't easily recreate.
+- Undo over confirm where possible — for soft-delete actions, a "Deleted. Undo"
+  toast for 5s feels much better than a confirm dialog. You have soft deletes
+  already, so this is essentially free.
+- Skeleton loaders, not spinners, for first loads. They feel faster because the
+  layout doesn't jump.
+- No layout shift when data arrives — reserve space for content that's loading.
+- Debounce search/filter inputs — 200–300ms is the sweet spot.
+- Form state preserved across navigation — if a user starts typing an expense,
+  navigates away, and comes back, the draft should still be there. Bigger lift,
+  lower priority.
+- Disable the entire form during submission, not just the button — prevents
+  editing fields mid-save.
+- Show "saved" indicators for autosave flows. Not relevant if everything is
+  explicit save.
+- Focus management — after closing a dialog, return focus to the trigger. Helps
+  keyboard + screen reader users; also just feels right.
+- Optimistic navigation — when you submit a form that creates a thing and
+  redirects, navigate immediately and let the new page's query do the loading.
+  Don't wait for the POST response and then navigate.
+
 ## Tech Debt
 
 - [ ] Simplify Zustand usage

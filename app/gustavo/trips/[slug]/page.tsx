@@ -8,12 +8,15 @@ import { useRouter } from 'next/navigation'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteTrip } from 'utils/api'
 import { getTablerIcon, InitialsIcon } from 'utils/icons'
 import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripFormDialog from 'components/trip-form-dialog'
+
+import { queryKeys } from '@/lib/query-keys'
 
 const formatDateRange = (start: string, end: string, tripName?: string) => {
     const s = new Date(start + 'T00:00:00')
@@ -71,6 +74,7 @@ export default function TripHubPage() {
     const { trip } = useTripData()
     const { totalSpend, debtMap } = useSpendData()
     const router = useRouter()
+    const queryClient = useQueryClient()
 
     // Dialog state
     const [formOpen, setFormOpen] = useState(false)
@@ -80,19 +84,23 @@ export default function TripHubPage() {
     const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
 
     const handleEditSuccess = () => {
-        // Reload the page to pick up updated trip data from the layout
-        router.refresh()
-        window.location.reload()
+        queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
     }
 
-    const handleDeleteConfirm = async () => {
-        try {
-            await deleteTrip(trip.id)
+    const deleteMutation = useMutation({
+        mutationFn: () => deleteTrip(trip.id, trip.updatedAt),
+        onSuccess: () => {
             setDeleteOpen(false)
+            queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
             router.push('/gustavo/trips')
-        } catch (err) {
+        },
+        onError: (err) => {
             console.error('Failed to delete trip:', err)
-        }
+        },
+    })
+
+    const handleDeleteConfirm = async () => {
+        deleteMutation.mutate()
     }
 
     const formatUsd = (n: number) =>

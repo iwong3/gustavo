@@ -25,6 +25,9 @@ import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -234,34 +237,41 @@ function SymptomDayCard({
 }
 
 export default function SymptomsPage() {
-    const [symptoms, setSymptoms] = useState<Symptom[]>([])
-    const [allLogs, setAllLogs] = useState<SymptomLog[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
 
-    // Details drawer (read-only + forensic)
     const [detailsOpen, setDetailsOpen] = useState(false)
     const [detailsDate, setDetailsDate] = useState<string | null>(null)
-
-    // Log/manage drawer
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(null)
 
-    const fetchData = useCallback(() => {
-        Promise.all([
-            fetch('/api/health/symptoms?all=true').then((r) => r.json()),
-            fetch('/api/health/symptom-logs').then((r) => r.json()),
-        ])
-            .then(([syms, logs]) => {
-                setSymptoms(syms)
-                setAllLogs(logs)
-            })
-            .catch((err) => console.error('Failed to load:', err))
-            .finally(() => setLoading(false))
-    }, [])
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: [...queryKeys.health.symptoms, 'all'] as const,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/symptoms?all=true')
+                    if (!r.ok) throw new Error('Failed to fetch symptoms')
+                    return r.json() as Promise<Symptom[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.symptomLogs.all,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/symptom-logs')
+                    if (!r.ok) throw new Error('Failed to fetch symptom logs')
+                    return r.json() as Promise<SymptomLog[]>
+                },
+            },
+        ],
+    })
+    const symptoms = queries[0].data ?? []
+    const allLogs = queries[1].data ?? []
+    const loading = queries.some((q) => q.isLoading)
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    const fetchData = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.symptoms })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.symptomLogs.all })
+    }, [queryClient])
 
     // FAB → new log
     const openAdd = useCallback(() => {
@@ -316,7 +326,7 @@ export default function SymptomsPage() {
     const dayGroups = groupLogsByDate(allLogs)
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={fetchData}>
             <HealthPageHeader
                 icon={<IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Symptoms"

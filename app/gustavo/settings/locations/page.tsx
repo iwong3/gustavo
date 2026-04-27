@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     Box,
     Button,
@@ -21,6 +22,7 @@ import {
 } from '@mui/material'
 import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
 import { fetchTrips } from 'utils/api'
+import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
 
 type LocationItem = {
@@ -29,45 +31,38 @@ type LocationItem = {
 }
 
 export default function LocationsPage() {
-    const [trips, setTrips] = useState<TripSummary[]>([])
+    const queryClient = useQueryClient()
     const [selectedTripId, setSelectedTripId] = useState<number | ''>('')
-    const [locations, setLocations] = useState<LocationItem[]>([])
-    const [loading, setLoading] = useState(false)
-    const [tripsLoading, setTripsLoading] = useState(true)
     const [newName, setNewName] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editName, setEditName] = useState('')
     const [deleteTarget, setDeleteTarget] = useState<LocationItem | null>(null)
     const editRef = useRef<HTMLInputElement>(null)
 
-    useEffect(() => {
-        fetchTrips()
-            .then(setTrips)
-            .catch((err: unknown) => console.error('Failed to fetch trips:', err))
-            .finally(() => setTripsLoading(false))
-    }, [])
+    const { data: trips = [], isLoading: tripsLoading } = useQuery({
+        queryKey: queryKeys.trips.list(),
+        queryFn: fetchTrips,
+    })
 
-    const fetchLocations = useCallback(async (tripId: number) => {
-        setLoading(true)
-        try {
-            const res = await fetch(`/api/trips/${tripId}/locations`)
+    const { data: locations = [], isLoading: loading } = useQuery({
+        queryKey:
+            selectedTripId === ''
+                ? ['locations', 'none']
+                : queryKeys.trips.locations(selectedTripId),
+        queryFn: async () => {
+            const res = await fetch(`/api/trips/${selectedTripId}/locations`)
             if (!res.ok) throw new Error('Failed to fetch')
-            const data: LocationItem[] = await res.json()
-            setLocations(data)
-        } catch (err) {
-            console.error('Failed to fetch locations:', err)
-        } finally {
-            setLoading(false)
-        }
-    }, [])
+            return (await res.json()) as LocationItem[]
+        },
+        enabled: selectedTripId !== '',
+    })
 
-    useEffect(() => {
-        if (selectedTripId !== '') {
-            fetchLocations(selectedTripId)
-        } else {
-            setLocations([])
-        }
-    }, [selectedTripId, fetchLocations])
+    const invalidateLocations = () => {
+        if (selectedTripId === '') return
+        queryClient.invalidateQueries({
+            queryKey: queryKeys.trips.locations(selectedTripId),
+        })
+    }
 
     useEffect(() => {
         if (editingId !== null && editRef.current) {
@@ -76,24 +71,54 @@ export default function LocationsPage() {
         }
     }, [editingId])
 
-    const handleAdd = async () => {
+    const addMutation = useMutation({
+        mutationFn: (name: string) =>
+            fetch(`/api/trips/${selectedTripId}/locations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            }),
+        onSuccess: () => {
+            setNewName('')
+            invalidateLocations()
+        },
+        onError: (err) => console.error('Failed to add location:', err),
+    })
+
+    const renameMutation = useMutation({
+        mutationFn: ({ id, name }: { id: number; name: string }) =>
+            fetch(`/api/trips/${selectedTripId}/locations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            }),
+        onSuccess: () => {
+            setEditingId(null)
+            invalidateLocations()
+        },
+        onError: (err) => console.error('Failed to rename location:', err),
+    })
+
+    const deleteLocationMutation = useMutation({
+        mutationFn: (id: number) =>
+            fetch(`/api/trips/${selectedTripId}/locations/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            setDeleteTarget(null)
+            invalidateLocations()
+        },
+        onError: (err) => console.error('Failed to delete location:', err),
+    })
+
+    const handleAdd = () => {
         if (selectedTripId === '') return
         const trimmed = newName.trim()
         if (!trimmed) return
-        try {
-            await fetch(`/api/trips/${selectedTripId}/locations`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: trimmed }),
-            })
-            setNewName('')
-            await fetchLocations(selectedTripId)
-        } catch (err) {
-            console.error('Failed to add location:', err)
-        }
+        addMutation.mutate(trimmed)
     }
 
-    const handleRename = async (id: number) => {
+    const handleRename = (id: number) => {
         if (selectedTripId === '') return
         const trimmed = editName.trim()
         if (!trimmed) {
@@ -105,30 +130,12 @@ export default function LocationsPage() {
             setEditingId(null)
             return
         }
-        try {
-            await fetch(`/api/trips/${selectedTripId}/locations/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: trimmed }),
-            })
-            setEditingId(null)
-            await fetchLocations(selectedTripId)
-        } catch (err) {
-            console.error('Failed to rename location:', err)
-        }
+        renameMutation.mutate({ id, name: trimmed })
     }
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (!deleteTarget || selectedTripId === '') return
-        try {
-            await fetch(`/api/trips/${selectedTripId}/locations/${deleteTarget.id}`, {
-                method: 'DELETE',
-            })
-            setDeleteTarget(null)
-            await fetchLocations(selectedTripId)
-        } catch (err) {
-            console.error('Failed to delete location:', err)
-        }
+        deleteLocationMutation.mutate(deleteTarget.id)
     }
 
     const startEdit = (loc: LocationItem) => {

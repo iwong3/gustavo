@@ -32,6 +32,7 @@ import FormDrawer from 'components/form-drawer'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useCurrentUser } from 'hooks/useCurrentUser'
 import {
+    ConflictError,
     createTrip,
     fetchLocations,
     fetchUserPreferences,
@@ -39,6 +40,9 @@ import {
     updateParticipantRole,
     updateTrip,
 } from 'utils/api'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 import { COUNTRIES, deriveCurrenciesFromCountries } from '@/lib/countries'
 import { InitialsIcon } from 'utils/icons'
 import { canManageRoles } from 'utils/permissions'
@@ -76,6 +80,7 @@ export default function TripFormDialog({
     trip,
 }: Props) {
     const currentUser = useCurrentUser()
+    const queryClient = useQueryClient()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
     const [name, setName] = useState('')
     const [startDate, setStartDate] = useState(todayISO())
@@ -330,6 +335,7 @@ export default function TripFormDialog({
                     visibility,
                     countries: countryCodes,
                     currencies: derivedCurrencies,
+                    expectedUpdatedAt: trip.updatedAt,
                 })
 
                 // Manage participants: compute additions and removals
@@ -434,6 +440,12 @@ export default function TripFormDialog({
             onClose()
             onSuccess()
         } catch (err) {
+            if (err instanceof ConflictError) {
+                queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
+                setError('This trip was changed by someone else. Please close and re-open this dialog to see the latest data.')
+                setSubmitting(false)
+                return
+            }
             setError(
                 err instanceof Error
                     ? err.message

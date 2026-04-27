@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     Box,
     Button,
@@ -33,6 +34,7 @@ import {
     dialogPaperSx,
 } from '@/lib/form-styles'
 import { fetchExpenseCategoriesWithMeta } from 'utils/api'
+import { queryKeys, staleTimes } from '@/lib/query-keys'
 import type { ExpenseCategoryWithMeta } from '@/lib/types'
 
 type SortField = 'alpha' | 'count'
@@ -51,8 +53,18 @@ const iconButtonSx = {
 } as const
 
 export default function CategoriesPage() {
-    const [categories, setCategories] = useState<ExpenseCategoryWithMeta[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
+
+    const { data: categories = [], isLoading: loading } = useQuery({
+        queryKey: queryKeys.expenseCategories.listWithMeta(),
+        queryFn: fetchExpenseCategoriesWithMeta,
+        staleTime: staleTimes.medium,
+    })
+
+    const invalidateCategories = () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.expenseCategories.all })
+    }
+
     const [newName, setNewName] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editName, setEditName] = useState('')
@@ -66,21 +78,6 @@ export default function CategoriesPage() {
     const alphaRef = useRef<HTMLDivElement>(null)
     const countRef = useRef<HTMLDivElement>(null)
     const [barStyle, setBarStyle] = useState<{ left: number; width: number } | null>(null)
-
-    const loadCategories = useCallback(async () => {
-        try {
-            const data = await fetchExpenseCategoriesWithMeta()
-            setCategories(data)
-        } catch (err) {
-            console.error('Failed to fetch categories:', err)
-        } finally {
-            setLoading(false)
-        }
-    }, [])
-
-    useEffect(() => {
-        loadCategories()
-    }, [loadCategories])
 
     useEffect(() => {
         if (editingId !== null && editRef.current) {
@@ -131,7 +128,68 @@ export default function CategoriesPage() {
             (c) => c.id !== excludeId && c.name.toLowerCase() === name.toLowerCase()
         )
 
-    const handleAdd = async () => {
+    const addMutation = useMutation({
+        mutationFn: (name: string) =>
+            fetch('/api/expense-categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            }),
+        onSuccess: () => {
+            setNewName('')
+            invalidateCategories()
+        },
+        onError: (err) => console.error('Failed to add category:', err),
+    })
+
+    const renameMutation = useMutation({
+        mutationFn: async ({ id, name, expectedUpdatedAt }: { id: number; name: string; expectedUpdatedAt: string }) => {
+            const res = await fetch(`/api/expense-categories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, expectedUpdatedAt }),
+            })
+            if (res.status === 409) throw new Error('CONFLICT')
+            if (!res.ok) throw new Error('Failed to rename')
+        },
+        onSuccess: () => {
+            setEditingId(null)
+            invalidateCategories()
+        },
+        onError: (err) => {
+            if (err instanceof Error && err.message === 'CONFLICT') {
+                invalidateCategories()
+                setEditError('This category was changed by someone else. Please review and try again.')
+                return
+            }
+            console.error('Failed to rename category:', err)
+        },
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: async ({ id, expectedUpdatedAt }: { id: number; expectedUpdatedAt: string }) => {
+            const res = await fetch(
+                `/api/expense-categories/${id}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`,
+                { method: 'DELETE' }
+            )
+            if (res.status === 409) throw new Error('CONFLICT')
+            if (!res.ok) throw new Error('Failed to delete')
+        },
+        onSuccess: () => {
+            setDeleteTarget(null)
+            invalidateCategories()
+        },
+        onError: (err) => {
+            if (err instanceof Error && err.message === 'CONFLICT') {
+                invalidateCategories()
+                setDeleteTarget(null)
+                return
+            }
+            console.error('Failed to delete category:', err)
+        },
+    })
+
+    const handleAdd = () => {
         const trimmed = newName.trim()
         if (!trimmed) return
         if (isDuplicate(trimmed)) {
@@ -139,20 +197,10 @@ export default function CategoriesPage() {
             return
         }
         setAddError('')
-        try {
-            await fetch('/api/expense-categories', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: trimmed }),
-            })
-            setNewName('')
-            await loadCategories()
-        } catch (err) {
-            console.error('Failed to add category:', err)
-        }
+        addMutation.mutate(trimmed)
     }
 
-    const handleRename = async (id: number) => {
+    const handleRename = (id: number) => {
         const trimmed = editName.trim()
         if (!trimmed) {
             setEditingId(null)
@@ -170,30 +218,14 @@ export default function CategoriesPage() {
             return
         }
         setEditError('')
-        try {
-            await fetch(`/api/expense-categories/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: trimmed }),
-            })
-            setEditingId(null)
-            await loadCategories()
-        } catch (err) {
-            console.error('Failed to rename category:', err)
-        }
+        const target = categories.find((c) => c.id === id)
+        if (!target) return
+        renameMutation.mutate({ id, name: trimmed, expectedUpdatedAt: target.updatedAt })
     }
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (!deleteTarget) return
-        try {
-            await fetch(`/api/expense-categories/${deleteTarget.id}`, {
-                method: 'DELETE',
-            })
-            setDeleteTarget(null)
-            await loadCategories()
-        } catch (err) {
-            console.error('Failed to delete category:', err)
-        }
+        deleteMutation.mutate({ id: deleteTarget.id, expectedUpdatedAt: deleteTarget.updatedAt })
     }
 
     const startEdit = (cat: ExpenseCategoryWithMeta) => {

@@ -35,6 +35,9 @@ import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '@/lib/query-keys'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -196,43 +199,66 @@ function SupplementLogCard({
 }
 
 export default function SupplementsPage() {
-    const [supplements, setSupplements] = useState<Supplement[]>([])
-    const [allLogs, setAllLogs] = useState<SupplementLog[]>([])
-    const [presets, setPresets] = useState<SupplementPreset[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(
         null
     )
-    const [applyingPreset, setApplyingPreset] = useState<number | null>(null)
     const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
 
-    // Auto-open the preset drawer when arriving with ?presets=open (from the
-    // dashboard lightning icon).
+    // Auto-open the preset drawer when arriving with ?presets=open
     const searchParams = useSearchParams()
     useEffect(() => {
         if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
     }, [searchParams])
 
+    const queries = useQueries({
+        queries: [
+            {
+                queryKey: [...queryKeys.health.supplements, 'all'] as const,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/supplements?all=true')
+                    if (!r.ok) throw new Error('Failed to fetch supplements')
+                    return r.json() as Promise<Supplement[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.supplementLogs.all,
+                queryFn: async () => {
+                    const r = await fetch('/api/health/supplement-logs')
+                    if (!r.ok) throw new Error('Failed to fetch supplement logs')
+                    return r.json() as Promise<SupplementLog[]>
+                },
+            },
+            {
+                queryKey: queryKeys.health.presets.byType('supplement'),
+                queryFn: async () => {
+                    const r = await fetch('/api/health/presets?type=supplement')
+                    if (!r.ok) throw new Error('Failed to fetch presets')
+                    return r.json() as Promise<SupplementPreset[]>
+                },
+            },
+        ],
+    })
+    const supplements = queries[0].data ?? []
+    const allLogs = queries[1].data ?? []
+    const presets = queries[2].data ?? []
+    const loading = queries.some((q) => q.isLoading)
 
-    const fetchData = useCallback(() => {
-        Promise.all([
-            fetch('/api/health/supplements?all=true').then((r) => r.json()),
-            fetch('/api/health/supplement-logs').then((r) => r.json()),
-            fetch('/api/health/presets?type=supplement').then((r) => r.json()),
-        ])
-            .then(([supps, logs, p]) => {
-                setSupplements(supps)
-                setAllLogs(logs)
-                setPresets(p)
-            })
-            .catch((err) => console.error('Failed to load:', err))
-            .finally(() => setLoading(false))
-    }, [])
-
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    const invalidateSupplements = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.supplements })
+    }, [queryClient])
+    const invalidateLogs = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all })
+    }, [queryClient])
+    const invalidatePresets = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all })
+    }, [queryClient])
+    const invalidateAll = useCallback(() => {
+        invalidateSupplements()
+        invalidateLogs()
+        invalidatePresets()
+    }, [invalidateSupplements, invalidateLogs, invalidatePresets])
 
     const openAdd = useCallback(() => {
         setDrawerInitialDate(null)
@@ -244,58 +270,62 @@ export default function SupplementsPage() {
         setDrawerOpen(true)
     }, [])
 
-    const handleDeleteDate = useCallback(
-        async (date: string) => {
+    const deleteDateMutation = useMutation({
+        mutationFn: async (date: string) => {
             const logsForDate = allLogs.filter((l) => l.date === date)
-            try {
-                await Promise.all(
-                    logsForDate.map((l) =>
-                        fetch(`/api/health/supplement-logs/${l.id}`, {
-                            method: 'DELETE',
-                        })
-                    )
+            await Promise.all(
+                logsForDate.map((l) =>
+                    fetch(`/api/health/supplement-logs/${l.id}`, {
+                        method: 'DELETE',
+                    })
                 )
-                fetchData()
-            } catch (err) {
-                console.error('Failed to delete logs:', err)
-            }
+            )
         },
-        [allLogs, fetchData]
+        onSuccess: invalidateLogs,
+        onError: (err) => console.error('Failed to delete logs:', err),
+    })
+    const handleDeleteDate = useCallback(
+        (date: string) => deleteDateMutation.mutate(date),
+        [deleteDateMutation],
     )
 
+    const applyPresetMutation = useMutation({
+        mutationFn: async (presetId: number) => {
+            const res = await fetch(`/api/health/presets/${presetId}/apply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: getLocalDate() }),
+            })
+            if (!res.ok) throw new Error('Apply failed')
+            return presetId
+        },
+        onSuccess: invalidateLogs,
+        onError: (err) => console.error('Failed to apply preset:', err),
+    })
     const applyPreset = useCallback(
-        async (presetId: number) => {
-            setApplyingPreset(presetId)
-            try {
-                const res = await fetch(
-                    `/api/health/presets/${presetId}/apply`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date: getLocalDate() }),
-                    }
-                )
-                if (res.ok) fetchData()
-            } catch (err) {
-                console.error('Failed to apply preset:', err)
-            } finally {
-                setApplyingPreset(null)
-            }
+        (presetId: number) => {
+            applyPresetMutation.mutate(presetId)
         },
-        [fetchData]
+        [applyPresetMutation],
     )
+    const applyingPreset = applyPresetMutation.isPending
+        ? (applyPresetMutation.variables ?? null)
+        : null
 
-    const reorderPresets = useCallback((from: number, to: number) => {
-        setPresets((prev) => {
-            const next = arrayMove(prev, from, to)
+    const reorderPresets = useCallback(
+        (from: number, to: number) => {
+            const key = queryKeys.health.presets.byType('supplement')
+            const current = queryClient.getQueryData<SupplementPreset[]>(key) ?? presets
+            const next = arrayMove(current, from, to)
+            queryClient.setQueryData(key, next)
             fetch('/api/health/presets/reorder', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ presetIds: next.map((p) => p.id) }),
             }).catch((err) => console.error('Failed to save preset order:', err))
-            return next
-        })
-    }, [])
+        },
+        [queryClient, presets],
+    )
 
     useRegisterFab(openAdd)
 
@@ -303,7 +333,7 @@ export default function SupplementsPage() {
     const dayGroups = groupLogsByDate(allLogs)
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={loading} onRefresh={invalidateAll}>
             <HealthPageHeader
                 icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Supplements"
@@ -438,7 +468,7 @@ export default function SupplementsPage() {
                 supplements={supplements}
                 allLogs={allLogs}
                 initialDate={drawerInitialDate}
-                onDataChanged={fetchData}
+                onDataChanged={invalidateAll}
             />
 
             {/* Supplement preset drawer */}
@@ -447,12 +477,12 @@ export default function SupplementsPage() {
                 onClose={() => setPresetDrawerOpen(false)}
                 supplements={supplements}
                 existingPresets={presets}
-                onSaved={fetchData}
+                onSaved={invalidatePresets}
                 onDelete={async (id) => {
                     await fetch(`/api/health/presets/${id}`, {
                         method: 'DELETE',
                     })
-                    fetchData()
+                    invalidatePresets()
                 }}
                 onReorder={reorderPresets}
             />

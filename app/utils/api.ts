@@ -5,6 +5,15 @@
 
 import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails } from '@/lib/types'
 
+/** Thrown when a PUT/DELETE fails because the row's updated_at no longer
+ *  matches the version the client read. Caller should refresh and retry. */
+export class ConflictError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'ConflictError'
+    }
+}
+
 // ── Trips ──
 
 export const fetchTrips = async (): Promise<TripSummary[]> => {
@@ -46,22 +55,37 @@ export const createTrip = async (data: CreateTripData): Promise<{ id: number; sl
     return res.json()
 }
 
-export const updateTrip = async (tripId: number, data: Partial<CreateTripData> & { visibility?: string }): Promise<void> => {
+export const updateTrip = async (
+    tripId: number,
+    data: Partial<CreateTripData> & { visibility?: string; expectedUpdatedAt?: string }
+): Promise<void> => {
     const res = await fetch(`/api/trips/${tripId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
     if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) {
+            throw new ConflictError(err.message || 'This trip was changed by someone else.')
+        }
         throw new Error(err.error || 'Failed to update trip')
     }
 }
 
-export const deleteTrip = async (tripId: number): Promise<void> => {
-    const res = await fetch(`/api/trips/${tripId}`, { method: 'DELETE' })
+export const deleteTrip = async (
+    tripId: number,
+    expectedUpdatedAt?: string
+): Promise<void> => {
+    const url = expectedUpdatedAt
+        ? `/api/trips/${tripId}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`
+        : `/api/trips/${tripId}`
+    const res = await fetch(url, { method: 'DELETE' })
     if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) {
+            throw new ConflictError(err.message || 'This trip was changed by someone else.')
+        }
         throw new Error(err.error || 'Failed to delete trip')
     }
 }
@@ -120,7 +144,9 @@ export const addExpense = async (tripId: number, data: AddExpenseData): Promise<
     return res.json()
 }
 
-export type UpdateExpenseData = Partial<AddExpenseData>
+export type UpdateExpenseData = Partial<AddExpenseData> & {
+    expectedUpdatedAt?: string
+}
 
 export const updateExpense = async (
     tripId: number,
@@ -133,17 +159,28 @@ export const updateExpense = async (
         body: JSON.stringify(data),
     })
     if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) {
+            throw new ConflictError(err.message || 'This expense was changed by someone else.')
+        }
         throw new Error(err.error || 'Failed to update expense')
     }
 }
 
-export const deleteExpense = async (tripId: number, expenseId: number): Promise<void> => {
-    const res = await fetch(`/api/trips/${tripId}/expenses/${expenseId}`, {
-        method: 'DELETE',
-    })
+export const deleteExpense = async (
+    tripId: number,
+    expenseId: number,
+    expectedUpdatedAt?: string
+): Promise<void> => {
+    const url = expectedUpdatedAt
+        ? `/api/trips/${tripId}/expenses/${expenseId}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`
+        : `/api/trips/${tripId}/expenses/${expenseId}`
+    const res = await fetch(url, { method: 'DELETE' })
     if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) {
+            throw new ConflictError(err.message || 'This expense was changed by someone else.')
+        }
         throw new Error(err.error || 'Failed to delete expense')
     }
 }

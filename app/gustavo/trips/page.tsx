@@ -12,14 +12,17 @@ import {
 import { IconDots } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import DeleteTripDialog from 'components/delete-trip-dialog'
+import { PullToRefresh } from 'components/pull-to-refresh'
 import TripFormDialog from 'components/trip-form-dialog'
 import { deleteTrip, fetchTrips } from 'utils/api'
 import { InitialsIcon } from 'utils/icons'
 import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
+import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
 
 const formatDateRange = (start: string, end: string, tripName?: string) => {
@@ -177,8 +180,7 @@ const TripCard = ({ trip, onEdit, onDelete }: TripCardProps) => {
 }
 
 export default function TripsPage() {
-    const [trips, setTrips] = useState<TripSummary[]>([])
-    const [loading, setLoading] = useState(true)
+    const queryClient = useQueryClient()
 
     // Dialog state
     const [formOpen, setFormOpen] = useState(false)
@@ -187,16 +189,27 @@ export default function TripsPage() {
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<TripSummary | null>(null)
 
-    const loadTrips = useCallback(() => {
-        fetchTrips()
-            .then(setTrips)
-            .catch((err) => console.error('Failed to fetch trips:', err))
-            .finally(() => setLoading(false))
-    }, [])
+    const { data: trips = [], isLoading: loading } = useQuery({
+        queryKey: queryKeys.trips.list(),
+        queryFn: fetchTrips,
+    })
 
-    useEffect(() => {
-        loadTrips()
-    }, [loadTrips])
+    const invalidateTrips = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
+    }, [queryClient])
+
+    const deleteMutation = useMutation({
+        mutationFn: ({ tripId, updatedAt }: { tripId: number; updatedAt: string }) =>
+            deleteTrip(tripId, updatedAt),
+        onSuccess: () => {
+            setDeleteOpen(false)
+            setDeleteTarget(null)
+            invalidateTrips()
+        },
+        onError: (err) => {
+            console.error('Failed to delete trip:', err)
+        },
+    })
 
     const handleEdit = (trip: TripSummary) => {
         setEditTrip(trip)
@@ -211,14 +224,7 @@ export default function TripsPage() {
 
     const handleDeleteConfirm = async () => {
         if (!deleteTarget) return
-        try {
-            await deleteTrip(deleteTarget.id)
-            setDeleteOpen(false)
-            setDeleteTarget(null)
-            loadTrips()
-        } catch (err) {
-            console.error('Failed to delete trip:', err)
-        }
+        deleteMutation.mutate({ tripId: deleteTarget.id, updatedAt: deleteTarget.updatedAt })
     }
 
     const now = new Date().toISOString().slice(0, 10)
@@ -254,6 +260,7 @@ export default function TripsPage() {
         otherTrips.length === 0
 
     return (
+        <PullToRefresh onRefresh={invalidateTrips}>
         <Box
             sx={{
                 display: 'flex',
@@ -390,7 +397,7 @@ export default function TripsPage() {
             <TripFormDialog
                 open={formOpen}
                 onClose={() => setFormOpen(false)}
-                onSuccess={loadTrips}
+                onSuccess={invalidateTrips}
                 mode={formMode}
                 trip={editTrip}
             />
@@ -405,5 +412,6 @@ export default function TripsPage() {
                 onConfirm={handleDeleteConfirm}
             />
         </Box>
+        </PullToRefresh>
     )
 }

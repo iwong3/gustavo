@@ -256,7 +256,11 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                 onClose={() => setSwipeDeleteExpense(null)}
                 onConfirm={async () => {
                     if (swipeDeleteExpense) {
-                        await deleteExpense(trip.id, swipeDeleteExpense.id)
+                        await deleteExpense(
+                            trip.id,
+                            swipeDeleteExpense.id,
+                            swipeDeleteExpense.updatedAt
+                        )
                     }
                     setSwipeDeleteExpense(null)
                     onRefresh()

@@ -8,89 +8,73 @@ import { useParams } from 'next/navigation'
 import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchExpenses, fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
 
-import type { Expense, TripSummary } from '@/lib/types'
+import { queryKeys } from '@/lib/query-keys'
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
     const { slug } = useParams<{ slug: string }>()
-
-    const [trip, setTrip] = useState<TripSummary | null>(null)
-    const [expenses, setExpenses] = useState<Expense[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
+    const queryClient = useQueryClient()
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
 
+    const tripQuery = useQuery({
+        queryKey: queryKeys.trips.bySlug(slug),
+        queryFn: () => fetchTripBySlug(slug),
+        enabled: Boolean(slug),
+    })
+    const trip = tripQuery.data ?? null
+
+    const expensesQuery = useQuery({
+        queryKey: trip ? queryKeys.trips.expenses(trip.id) : ['trip-expenses', 'pending'],
+        queryFn: () => fetchExpenses(trip!.id),
+        enabled: Boolean(trip),
+    })
+    const expenses = expensesQuery.data ?? []
+
+    const loading =
+        tripQuery.isLoading ||
+        (Boolean(trip) && expensesQuery.isLoading) ||
+        (Boolean(trip) && !expensesQuery.data && !expensesQuery.isError)
+    const error = tripQuery.isError || expensesQuery.isError
+
+    // Reset menu/search stores once per loaded (trip, expenses) pair so
+    // sub-pages mount into clean filter state. Keyed by trip.id + expenses
+    // identity so we don't reset on every background refetch.
+    const resetKeyRef = useRef<string | null>(null)
     useEffect(() => {
-        if (!slug) return
-        let ignore = false
+        if (!trip || !expensesQuery.data) return
+        const key = `${trip.id}:${expensesQuery.dataUpdatedAt}`
+        if (resetKeyRef.current === key) return
+        // Only do the reset on the first load for this trip (not on background refetches)
+        const tripChanged = !resetKeyRef.current?.startsWith(`${trip.id}:`)
+        resetKeyRef.current = key
+        if (!tripChanged) return
 
-        setLoading(true)
-        setError(false)
-        setExpenses([])
-        setTrip(null)
-
-        async function loadTrip() {
-            try {
-                const tripData = await fetchTripBySlug(slug)
-                if (ignore) return
-
-                const expensesData = await fetchExpenses(tripData.id)
-                if (ignore) return
-
-                const participantNames = tripData.participants.map(
-                    (p) => p.firstName
-                )
-                const categoryNames = Array.from(
-                    new Set(expensesData.map((e) => e.categoryName ?? 'Other'))
-                )
-                const locationNames = Array.from(
-                    new Set(
-                        expensesData
-                            .map((e) => e.locationName)
-                            .filter((l): l is string => l != null)
-                    )
-                )
-
-                // Reset filter stores so sub-pages mount into clean state
-                resetAllMenuItemStores({
-                    participantNames,
-                    categoryNames,
-                    locationNames,
-                })
-                resetSearchBarStore()
-
-                setTrip(tripData)
-                setExpenses(expensesData)
-                setLoading(false)
-            } catch (err) {
-                console.error(err)
-                if (!ignore) {
-                    setError(true)
-                    setLoading(false)
-                }
-            }
-        }
-
-        loadTrip()
-
-        return () => {
-            ignore = true
-        }
-    }, [slug, resetSearchBarStore])
+        const participantNames = trip.participants.map((p) => p.firstName)
+        const categoryNames = Array.from(
+            new Set(expensesQuery.data.map((e) => e.categoryName ?? 'Other'))
+        )
+        const locationNames = Array.from(
+            new Set(
+                expensesQuery.data
+                    .map((e) => e.locationName)
+                    .filter((l): l is string => l != null)
+            )
+        )
+        resetAllMenuItemStores({ participantNames, categoryNames, locationNames })
+        resetSearchBarStore()
+    }, [trip, expensesQuery.data, expensesQuery.dataUpdatedAt, resetSearchBarStore])
 
     const refreshData = useCallback(async () => {
         if (!trip) return
-        try {
-            const data = await fetchExpenses(trip.id)
-            setExpenses(data)
-        } catch (err) {
-            console.error('Error refreshing expenses:', err)
-        }
-    }, [trip])
+        await queryClient.invalidateQueries({
+            queryKey: queryKeys.trips.expenses(trip.id),
+        })
+    }, [trip, queryClient])
 
     if (error) {
         return (
