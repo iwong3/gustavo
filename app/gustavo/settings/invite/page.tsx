@@ -1,6 +1,5 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
 import {
     Box,
     Button,
@@ -15,16 +14,17 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
+import { IconCheck, IconPlus, IconTrash } from '@tabler/icons-react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
 import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
+import type { AllowedEmail } from 'utils/api'
 import {
-    fetchAllowedEmails,
     addAllowedEmail,
+    fetchAllowedEmails,
     removeAllowedEmail,
 } from 'utils/api'
-import type { AllowedEmail } from 'utils/api'
 
 export default function InviteUsersPage() {
     const [entries, setEntries] = useState<AllowedEmail[]>([])
@@ -107,8 +107,8 @@ export default function InviteUsersPage() {
                     color: 'text.secondary',
                     marginBottom: 1,
                 }}>
-                Add a Google email to allow someone to sign in. They&apos;ll get
-                an account automatically on first login.
+                Add a Google email to invite someone. They first time they sign
+                in through Google SSO, an account will be created for them.
             </Typography>
 
             {/* Add email form */}
@@ -135,11 +135,22 @@ export default function InviteUsersPage() {
                                 onClick={handleAdd}
                                 sx={{
                                     'display': 'flex',
-                                    'cursor': newEmail.trim() && !adding ? 'pointer' : 'default',
-                                    'opacity': newEmail.trim() && !adding ? 1 : 0.3,
-                                    '&:active': newEmail.trim() && !adding ? { transform: 'scale(0.9)' } : {},
+                                    'cursor':
+                                        newEmail.trim() && !adding
+                                            ? 'pointer'
+                                            : 'default',
+                                    'opacity':
+                                        newEmail.trim() && !adding ? 1 : 0.3,
+                                    '&:active':
+                                        newEmail.trim() && !adding
+                                            ? { transform: 'scale(0.9)' }
+                                            : {},
                                 }}>
-                                <IconPlus size={18} stroke={2.5} color={colors.primaryBlack} />
+                                <IconPlus
+                                    size={18}
+                                    stroke={2.5}
+                                    color={colors.primaryBlack}
+                                />
                             </Box>
                         ),
                     },
@@ -204,7 +215,12 @@ export default function InviteUsersPage() {
                                         : 'Invited — not yet signed in'}
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                }}>
                                 {entry.hasAccount && (
                                     <IconCheck
                                         size={16}
