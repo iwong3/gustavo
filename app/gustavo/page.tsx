@@ -25,6 +25,12 @@ const apps = [
         icon: 'IconHeartbeat',
         bg: '#f0b8b4',
     },
+    {
+        name: 'Settings',
+        href: '/gustavo/settings',
+        icon: 'IconSettings',
+        bg: '#cdd9e3',
+    },
 ]
 
 export default function GustavoHomePage() {
