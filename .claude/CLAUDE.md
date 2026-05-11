@@ -5,10 +5,9 @@ Personal travel expense tracking PWA. Next.js 15 + TypeScript frontend,
 Neon (Postgres) for DB, Auth.js for auth, Vercel Blob for storage, deployed on Vercel.
 
 ## Branch strategy
-- `main` → GitHub Pages (existing app, keep untouched)
-- `fullstack` → new full-stack app (based on `main-backup-vercel-setup`), Vercel watches this branch
+- `main` → full-stack app, Vercel watches this branch (auto-deploys on push)
+- `fullstack` → legacy integration branch (predecessor to `main`); no longer the deploy target
 - Trip-specific work (Japan 2025, etc.) → branch off `main`, merge back as usual
-- When fullstack app is ready to replace old one: merge `fullstack` → `main`
 
 ## Package manager: pnpm (not yarn, not npm)
 Always use `pnpm` for installs and scripts.
@@ -45,7 +44,7 @@ Always use `pnpm` for installs and scripts.
 - `local-app-alpha` branch has useful reference: pg pool connection pattern in app/api/db-app/
 
 ## Deploying
-Push to `fullstack` → Vercel auto-deploys. No manual steps.
+Push to `main` → Vercel auto-deploys. No manual steps.
 
 ## Detailed architecture plan
 See .claude/docs/architecture.md
