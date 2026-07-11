@@ -24,6 +24,9 @@ const buildTime = new Date().toISOString()
 const nextConfig = {
     reactStrictMode: false,
     devIndicators: false,
+    // Don't bundle pg on the server — resolves at runtime like a normal Node
+    // module. Silences the "Can't resolve 'pg-native'" warning on every compile.
+    serverExternalPackages: ['pg'],
     experimental: {
         optimizePackageImports: [
             '@mui/material',
