@@ -1,240 +1,80 @@
-# App Suite
+# Gustavo — Personal App Suite
 
-A multi-feature application suite
+A multi-feature personal PWA: travel expense tracking for the trip group, plus
+personal health tracking.
 
 ## Features
 
-### Gustavo - Spending Tracker (`/gustavo`)
+### Expenses (`/gustavo/trips`)
 
-Track spending and split costs
+Travel expense tracking and cost splitting — trips, multi-currency expenses
+converted to USD, debt settling.
 
-## Architecture
+### Health (`/gustavo/health`)
 
-This app is designed as a multi-feature suite:
+Personal health tracking — exercise, diet, supplements, symptoms, weight.
 
--   **Root (`/`)**: Landing page with feature selection
--   **Gustavo (`/gustavo`)**: Spending tracker feature
--   **Future features**: Will be added at their own paths (e.g., `/feature2`,
-    `/feature3`)
+## Stack
 
-## Troubleshooting
+Next.js 15 (App Router) + TypeScript PWA, MUI v7, Neon Postgres, Auth.js
+(Google OAuth + email allowlist), hosted on Vercel.
 
-### WSL Issues on Windows
+Deeper docs live in `.claude/docs/`:
 
-If you encounter errors like
-`execvpe(/bin/bash) failed: No such file or directory` when running npm scripts:
+-   [repo-overview.md](.claude/docs/repo-overview.md) — structure, build, deployment
+-   [schema.md](.claude/docs/schema.md) — database schema
+-   [code-guide.md](.claude/docs/code-guide.md) — how the code is organized
 
-#### Problem
+## Quick Start
 
-Your WSL default distribution might be set to `docker-desktop` which doesn't
-include bash, causing bash-based npm scripts to fail.
+Requires Node 24 (`.nvmrc`), pnpm, and Docker.
 
-#### Solution
-
-1. Check your current WSL distributions:
-
-    ```bash
-    wsl --list --verbose
-    wsl --status
-    ```
-
-2. If the default distribution is `docker-desktop`, change it to Ubuntu:
-
-    ```bash
-    wsl --set-default Ubuntu
-    ```
-
-3. Verify bash is available:
-
-    ```bash
-    wsl bash --version
-    ```
-
-4. Confirm the change:
-    ```bash
-    wsl --status
-    ```
-
-#### Expected Output
-
-After fixing, `wsl --status` should show:
-
-```
-Default Distribution: Ubuntu
-Default Version: 2
+```bash
+pnpm install
+pnpm docker:up      # Postgres 17 + Metabase (local only)
+pnpm db:migrate     # apply migrations
+pnpm dev            # http://localhost:3000
 ```
 
-This change persists after PC restarts and allows all bash-based npm scripts
-(`db:reset`, `db:migrate`, `db:seed`, etc.) to work properly.
+Local DB: `localhost:5432`, user `gus`, pass `yellow_shirt_dev`, db
+`gustavo_dev` (use DBeaver). Metabase: `localhost:3001`.
+
+## Common Scripts
+
+| Script | What it does |
+| --- | --- |
+| `pnpm dev` | Start dev server |
+| `pnpm build` / `pnpm lint` / `pnpm tsc --noEmit` | Verify |
+| `pnpm check:cycles` | Detect circular imports |
+| `pnpm db:migrate` / `pnpm db:migrate:prod` | Migrations (prod is manual + deliberate) |
+| `pnpm db:create-migration <name>` | New migration file |
+| `pnpm db:reset` | Reset local DB (destructive) |
 
 ## Deployment
 
-### Vercel (Current)
+Push to `main` → Vercel auto-deploys (~1-2 min). PRs get preview deployments.
+Prod DB migrations are **manual**: `pnpm db:migrate:prod`.
 
-1. Connect your GitHub repository to Vercel
-2. Vercel will automatically detect this as a React app
-3. Deploy!
+The `gh-pages` branch hosts the legacy static version of the app — untouched.
 
-The app is configured to run from the root path and `vercel.json` handles
-client-side routing.
+## Troubleshooting
 
-### GitHub Pages (Legacy)
+### WSL issues on Windows (bash-based scripts fail)
 
-To re-enable GitHub Pages deployment, add this to `package.json`:
-
-```json
-"homepage": "https://iwong3.github.io/gustavo/"
-```
-
-Then run:
+If `pnpm db:reset` / `db:create-migration` fail with
+`execvpe(/bin/bash) failed`, your WSL default distribution is probably
+`docker-desktop` (which has no bash):
 
 ```bash
-npm run deploy
+wsl --list --verbose
+wsl --set-default Ubuntu
 ```
 
-## Gustavo Feature To-Do:
+### Port 5432 conflict
 
-Graphs
+A locally installed Windows Postgres service can conflict with Docker.
+Disable its auto-start:
 
--   Line graph by person
-    -   Clicking shows each person's spend on date
-    -   Click to see bar totals vs. person lines
-    -   Filter which person's line to show
--   Fix filter brightness not working on ios
-
-UX
-
--   Dark mode
-
-To-Do
-
--   Separate Google Sheet for tracking To-Do items
-
-### Done
-
-Receipts
-
--   Search bar
--   Scroll to top
-
-Totals
-
--   Total spent
--   Compare person / spend type to total spent
-    -   Compare to absolute total? Or total of current filters?
-
-Graphs
-
--   Horizontally scrollable
-
-UX
-
--   Collapse all receipts
--   Reset debt calculator
--   Show active filters
--   Protect against $NaN values as Google Sheets currency conversion sometimes
-    fails
--   Log errors and add view to see which rows were affected
--   Link to View Only Google Sheet
--   Clicking on trip name should bring user back to trip menu
-
-# Gustavo - Spending Tracker
-
-## 🚀 Quick Start
-
-### Setup
-
-1. Install dependencies: `yarn install`
-2. Copy environment template: `cp config/env.example .env.local`
-3. Start database: `yarn docker:db`
-4. Start development: `yarn start`
-
-Visit [http://localhost:3000](http://localhost:3000) to view the app.
-
-## 📋 Available Scripts
-
--   `yarn start` - Start full development environment
--   `yarn react` - Start React development server only
--   `yarn backend` - Start Express backend only
--   `yarn build` - Build for production
--   `yarn test` - Run tests
--   `yarn deploy` - Deploy to Vercel
-
-## 🛠️ Development Setup
-
-See [infra/README-Docker.md](infra/README-Docker.md) for detailed setup
-instructions.
-
-## 📂 Project Structure
-
+```powershell
+Get-Service -Name "postgresql*" | Set-Service -StartupType Disabled
 ```
-gustavo/
-├── frontend/          # React application
-├── backend/           # Express development server
-├── api/              # Vercel serverless functions
-├── database/         # PostgreSQL schemas
-├── infra/           # Docker configuration
-├── config/          # Environment configuration
-└── scripts/         # Utility scripts
-```
-
-## 🔧 Database
-
-Uses PostgreSQL with Docker for local development:
-
--   Local: `yarn docker:db` (port 5432)
--   Production: Configured via Vercel environment variables
-
-### Database Operations
-
-#### Resetting the Database
-
-To completely reset your local database (removes all data and recreates from
-schema):
-
-```bash
-# Stop the database containers
-docker-compose -f infra/docker-compose.yml down
-
-# Remove database volumes (this deletes all data!)
-docker volume rm infra_postgres_data infra_pgadmin_data infra_pgadmin_config
-
-# Start fresh database
-yarn docker:db
-```
-
-**⚠️ Warning:** This will permanently delete all local database data!
-
-#### pgAdmin4 Access
-
-pgAdmin4 is included for database management and runs alongside PostgreSQL:
-
--   **URL**: [http://localhost:8080](http://localhost:8080)
--   **Email**: `admin@example.com`
--   **Password**: `admin123`
-
-**Connecting to Database in pgAdmin:**
-
-1. Open [http://localhost:8080](http://localhost:8080)
-2. Login with the credentials above
-3. Right-click "Servers" → "Create" → "Server"
-4. **General Tab**: Name: `Gustavo Local`
-5. **Connection Tab**:
-    - Host: `postgres` (container name)
-    - Port: `5432`
-    - Database: `gustavo_dev`
-    - Username: `gus`
-    - Password: `yellow_shirt_dev`
-6. Click "Save"
-
-## 🚀 Deployment
-
-Automatic deployment via Vercel when pushing to main branch.
-
-Manual deployment: `yarn deploy`
-
-## 📚 Documentation
-
--   [Docker Setup Guide](infra/README-Docker.md)
--   [Database Configuration](config/README.md)
--   [Project TODO](TODO.md)

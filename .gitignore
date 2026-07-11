@@ -101,3 +101,5 @@ postgres_data/
 # Misc
 *.tgz
 *.tar.gz
+# Claude Code personal settings (machine-local)
+.claude/settings.local.json

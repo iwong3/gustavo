@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(pnpm build)",
+      "Bash(pnpm check:cycles)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm list *)",
+      "Bash(pnpm tsc --noEmit)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Test-Path *)"
+    ]
+  }
+}

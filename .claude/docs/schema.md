@@ -1,5 +1,7 @@
 # Database Schema
 
+> Current through migration **00037**. When you add a migration, update this doc in the same change.
+
 ## ER Diagram
 
 ```
@@ -14,6 +16,7 @@ users
   is_admin BOOLEAN (default false)
   default_trip_visibility TEXT (default 'participants')
   default_participant_role TEXT (default 'viewer')
+  alphabet_index_side TEXT (default 'right')
   created_at, updated_at, deleted_at
 
 trips
@@ -24,7 +27,7 @@ trips
   start_date DATE
   end_date DATE
   visibility TEXT (default 'participants')
-  currency TEXT (default 'USD') -- local currency for the trip destination
+  currency TEXT (default 'USD') -- legacy; superseded by trip_currencies, kept until nothing reads it
   created_by BIGINT FK -> users
   created_at, updated_at, deleted_at
 
@@ -36,6 +39,16 @@ trip_participants
   joined_at TIMESTAMPTZ
   left_at TIMESTAMPTZ
   UNIQUE(trip_id, user_id)
+
+trip_countries -- countries selected for a trip (00035)
+  trip_id BIGINT FK -> trips (CASCADE)
+  country_code TEXT
+  PK (trip_id, country_code)
+
+trip_currencies -- currencies available on a trip; source of truth for expense form (00035)
+  trip_id BIGINT FK -> trips (CASCADE)
+  currency_code TEXT
+  PK (trip_id, currency_code)
 
 locations
   id BIGINT PK
@@ -67,14 +80,30 @@ expenses
   notes TEXT
   reported_by BIGINT FK -> users
   reported_at TIMESTAMPTZ
-  created_at, updated_at, deleted_at
+  google_place_id TEXT FK -> place_details (nullable)
   local_currency_received NUMERIC(12,2) -- only for currency exchange expenses
+  created_at, updated_at, deleted_at
 
 expense_participants
   id BIGINT PK
   expense_id BIGINT FK -> expenses (CASCADE)
   user_id BIGINT FK -> users
+  covered_by BIGINT FK -> users (nullable) -- set = share absorbed by coverer, no debt accrued
   UNIQUE(expense_id, user_id)
+
+place_details -- cached Google Places metadata (00020)
+  google_place_id TEXT PK
+  name TEXT
+  address TEXT
+  lat, lng DOUBLE PRECISION
+  price_level INTEGER -- 0-4
+  rating NUMERIC(2,1)
+  primary_type TEXT
+  types JSONB
+  website TEXT
+  hours_json JSONB
+  photo_refs JSONB
+  fetched_at, created_at, updated_at
 
 audit_log
   id BIGINT PK
@@ -86,7 +115,7 @@ audit_log
   changed_by BIGINT
   changed_at TIMESTAMPTZ
 
-muscle_groups
+muscle_groups -- seed-only reference; after 00026: "Upper Back" + standalone "Lower Back" groups
   id BIGINT PK
   name TEXT (unique)
   created_at TIMESTAMPTZ
@@ -129,13 +158,13 @@ workout_exercises
   workout_id BIGINT FK -> workouts (CASCADE)
   exercise_id BIGINT FK -> exercises
   sort_order INT (default 0)
+  weight_lbs NUMERIC (nullable) -- weight lives here, not per-set (00024)
   created_at TIMESTAMPTZ
 
-workout_exercise_sets
+workout_exercise_sets -- sets only track reps; weight is on workout_exercises
   id BIGINT PK
   workout_exercise_id BIGINT FK -> workout_exercises (CASCADE)
   set_number INT
-  weight_lbs NUMERIC
   reps INT
   UNIQUE(workout_exercise_id, set_number)
 
@@ -156,13 +185,16 @@ supplement_logs
   created_at, updated_at
   UNIQUE(user_id, supplement_id, date)
 
-presets
+presets -- unified presets across features
   id BIGINT PK
   user_id BIGINT FK -> users
   name TEXT
-  type TEXT ('workout' | 'supplement')
+  type TEXT ('workout' | 'supplement' | 'diet')
+  sort_order INT (default 0) -- user-defined ordering (00027)
   created_at, updated_at, deleted_at
   UNIQUE(user_id, name, type) WHERE deleted_at IS NULL
+  -- meal_label was added in 00028 and dropped in 00031: diet presets use the
+  -- preset name as the meal group label when applied
 
 preset_muscle_groups
   id BIGINT PK
@@ -182,6 +214,75 @@ preset_supplements
   preset_id BIGINT FK -> presets (CASCADE)
   supplement_id BIGINT FK -> supplements
   UNIQUE(preset_id, supplement_id)
+
+preset_foods -- diet preset items (00028)
+  id BIGINT PK
+  preset_id BIGINT FK -> presets (CASCADE)
+  food_id BIGINT FK -> foods
+  quantity INT (default 1)
+  UNIQUE(preset_id, food_id)
+
+foods -- user-defined food library (00028)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT -- unique per user, case-insensitive, among non-deleted
+  is_active BOOLEAN (default true)
+  created_at, updated_at, deleted_at
+
+meal_groups -- optional grouping of food logs within a day, e.g. "Chipotle" (00028)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  date DATE
+  label TEXT -- unique per user+date, case-insensitive
+  quantity INT (default 1) -- how many times the meal was logged (00030)
+  created_at, updated_at
+
+food_logs (00028)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  food_id BIGINT FK -> foods
+  date DATE
+  quantity INT (default 1)
+  meal_group_id BIGINT FK -> meal_groups (nullable, ON DELETE SET NULL)
+  created_at, updated_at
+  -- unique per (user, food, date, meal_group) when grouped; per (user, food, date) when standalone
+
+food_groups -- classification tags, e.g. High FODMAP, Probiotic (00033)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT -- unique per user, case-insensitive, among non-deleted
+  color TEXT -- hex, e.g. '#e57373'
+  is_active BOOLEAN (default true)
+  created_at, updated_at, deleted_at
+
+food_group_members (00033)
+  food_group_id BIGINT FK -> food_groups
+  food_id BIGINT FK -> foods
+  PK (food_group_id, food_id)
+  -- no audit trigger: composite PK is incompatible with audit_trigger_func (reads NEW.id)
+
+symptoms -- user-defined symptom library (00029)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  name TEXT -- unique per user, case-insensitive, among non-deleted
+  is_active BOOLEAN (default true)
+  created_at, updated_at, deleted_at
+
+symptom_logs (00029)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  symptom_id BIGINT FK -> symptoms
+  date DATE
+  notes TEXT
+  created_at, updated_at
+  UNIQUE(user_id, symptom_id, date)
+
+weight_logs (00034)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  date DATE -- no unique constraint; flexible logging
+  weight_lbs NUMERIC(5,1)
+  created_at, updated_at, deleted_at
 ```
 
 ## Relationships
@@ -190,15 +291,16 @@ preset_supplements
 users 1──* trips (created_by)
 users 1──* trip_participants
 trips 1──* trip_participants
+trips 1──* trip_countries / trip_currencies
 trips 1──* locations
 trips 1──* expenses
-users 1──* expenses (paid_by)
-users 1──* expenses (reported_by)
+users 1──* expenses (paid_by, reported_by)
 expense_categories 1──* expenses (category_id)
 users 1──* expense_categories (created_by)
 locations 1──* expenses
+place_details 1──* expenses (google_place_id)
 expenses 1──* expense_participants
-users 1──* expense_participants
+users 1──* expense_participants (user_id, covered_by)
 ```
 
 ## Permissions Model
@@ -236,14 +338,19 @@ users 1──* expense_participants
 
 - **BIGINT PKs** — simpler and more efficient than UUID for a single-DB personal app
 - **TEXT for role/visibility/currency** — no Postgres ENUMs (can't remove values). Validated in app code.
-- **Soft deletes** — `deleted_at TIMESTAMPTZ` on users, trips, locations, expenses, expense_categories. All queries filter `WHERE deleted_at IS NULL`.
+- **Soft deletes** — `deleted_at TIMESTAMPTZ` on long-lived entities (users, trips, locations, expenses, expense_categories, exercises, supplements, presets, foods, food_groups, symptoms, weight_logs, workouts). All queries filter `WHERE deleted_at IS NULL`.
 - **Expense categories** — global (not trip-scoped), with `created_by` for ownership. System categories have a `slug` (e.g. `currency_exchange`) and `created_by = NULL`; they cannot be renamed or deleted. Soft-deleted categories still display on existing expenses and remain filterable.
 - **"Everyone" split detection** — compare expense_participants count to trip_participants count for that trip. No separate flag column.
+- **Covered participants** — `expense_participants.covered_by` set means that share is absorbed by the coverer (in practice the payer) and accrues no debt.
 - **Users without email** — some participants don't have Google accounts. They have `email = NULL` and cannot log in, but can be referenced as payers/participants.
 - **Trip ownership** — `trips.created_by` determines the owner. The owner is also recorded as a participant with `role = 'owner'`.
-- **`updated_at` trigger** — automatically set on UPDATE via `set_updated_at()` trigger function on users, trips, expenses.
-- **Home currency** — always USD for debt calculation. Trip-level `currency` column stores the destination's local currency (e.g., JPY for Japan). Expense form shows only USD + trip currency.
-- **Audit log** — Postgres triggers on all tables automatically write to `audit_log`. User attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`).
+- **Multi-currency trips (00035)** — `trip_currencies` is the source of truth for the expense form's currency options; `trip_countries` records destinations. Legacy `trips.currency` is backfilled into `trip_currencies` and awaits a drop migration.
+- **Google Places (00019–00020)** — expenses store only `google_place_id`; all place metadata is cached in `place_details` (PK = Google's place id, refreshable via `fetched_at`).
+- **Optimistic concurrency (00037)** — `updated_at` is the OCC token. A trigger bumps the parent `expenses.updated_at` whenever its `expense_participants` change, so an expense + its participants behave as one aggregate.
+- **Home currency** — always USD for debt calculation.
+- **Audit log** — Postgres triggers write to `audit_log`; user attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`). Join tables with composite PKs (trip_countries, trip_currencies, food_group_members) have NO audit triggers — `audit_trigger_func()` reads `NEW.id` and blows up without an `id` column (00036).
+- **Workout weight (00024)** — `weight_lbs` lives on `workout_exercises` (one weight per exercise per session); sets track reps only.
+- **Muscle groups (00026)** — "Back" split into "Upper Back" (targets: Lats, Rhomboids, Traps, Rear Delts) and standalone "Lower Back". Group vs. target is implicit via `muscle_group_parents`.
 
 ## Common Query Patterns
 
@@ -287,24 +394,6 @@ WHERE t.deleted_at IS NULL
 ORDER BY t.start_date DESC;
 ```
 
-### Get locations for a trip
-```sql
-SELECT id, name FROM locations
-WHERE trip_id = $1 AND deleted_at IS NULL
-ORDER BY name;
-```
-
-### Get expense categories (with usage count and edit permission)
-```sql
-SELECT ec.id, ec.name, ec.created_by,
-       COUNT(e.id)::int AS usage_count
-FROM expense_categories ec
-LEFT JOIN expenses e ON e.category_id = ec.id AND e.deleted_at IS NULL
-WHERE ec.deleted_at IS NULL
-GROUP BY ec.id, ec.name, ec.created_by
-ORDER BY ec.name;
-```
-
 ### Look up user by email (Auth.js sign-in)
 ```sql
 SELECT id, name, email, avatar_url, is_admin FROM users
@@ -313,42 +402,24 @@ WHERE email = $1 AND deleted_at IS NULL;
 
 ## Migration System
 
-- Runner: `scripts/migrate.js`
+- Runner: `scripts/db/migrate.js`
 - Files: `database/migrations/NNNNN_description.sql`
 - Tracking: `schema_migrations` table (version + applied_at)
-- Commands: `pnpm db:migrate` (local), `DATABASE_URL=<url> node scripts/migrate.js` (prod)
+- Commands: `pnpm db:migrate` (local, .env.local), `pnpm db:migrate:prod` (Neon, .env.production.local)
 - Create new: `pnpm db:create-migration <description>`
 - Reset local: `pnpm db:reset`
+- **Prod migrations are manual** — run `pnpm db:migrate:prod` around the deploy; nothing in Vercel runs them.
 
-## Indexes
+## Indexes (highlights)
+
+Every FK used in list queries has an index; partial indexes on `deleted_at IS NULL` for active-row filters; unique partial indexes enforce per-user, case-insensitive name uniqueness on the library tables (exercises, foods, food_groups, symptoms). Notable ones:
 
 | Index | Table | Purpose |
 |-------|-------|---------|
-| idx_users_deleted_at (partial) | users | Filter active users |
-| idx_trips_created_by | trips | Trips by creator |
-| idx_trips_deleted_at (partial) | trips | Filter active trips |
-| idx_trip_participants_trip_id | trip_participants | Participants per trip |
-| idx_trip_participants_user_id | trip_participants | Trips per user |
-| idx_trip_participants_role | trip_participants | Participants by trip + role |
-| idx_locations_trip_id | locations | Locations per trip |
-| idx_expenses_trip_id | expenses | Expenses per trip |
 | idx_expenses_trip_date | expenses | Expenses by trip + date |
-| idx_expenses_paid_by | expenses | Expenses by payer |
-| idx_expenses_deleted_at (partial) | expenses | Filter active expenses |
-| idx_expenses_category (partial) | expenses | Filter by category |
-| idx_expense_participants_expense_id | expense_participants | Participants per expense |
-| idx_expense_participants_user_id | expense_participants | Expenses per participant |
-| idx_workouts_user_id | workouts | Workouts per user |
-| idx_workouts_user_date | workouts | Workouts by user + date |
-| idx_workouts_deleted_at (partial) | workouts | Filter active workouts |
-| idx_workout_muscle_groups_workout | workout_muscle_groups | Muscle groups per workout |
-| idx_workout_muscle_groups_muscle | workout_muscle_groups | Workouts per muscle group |
-| idx_muscle_group_parents_child | muscle_group_parents | Parents of a muscle group |
-| idx_muscle_group_parents_parent | muscle_group_parents | Children of a parent group |
-| idx_exercises_user_name (partial, unique) | exercises | Unique exercise name per user |
-| idx_exercises_user | exercises | Exercises per user |
-| idx_exercise_muscle_groups_exercise | exercise_muscle_groups | Muscle groups per exercise |
-| idx_exercise_muscle_groups_muscle | exercise_muscle_groups | Exercises per muscle group |
-| idx_workout_exercises_workout | workout_exercises | Exercises per workout |
-| idx_workout_exercises_exercise | workout_exercises | Workouts per exercise |
-| idx_workout_exercise_sets_we | workout_exercise_sets | Sets per workout exercise |
+| idx_expenses_google_place (partial) | expenses | Expenses by place |
+| idx_food_logs_grouped / _standalone (unique, partial) | food_logs | Dedup grouped vs standalone logs |
+| idx_symptom_logs_unique (unique) | symptom_logs | One log per symptom per day |
+| idx_weight_logs_user_date | weight_logs | Weight history per user (date DESC) |
+| idx_meal_groups_user_date_label (unique) | meal_groups | One label per user per day |
+| idx_foods_user_name (unique, partial, lower()) | foods | Case-insensitive name per user |
