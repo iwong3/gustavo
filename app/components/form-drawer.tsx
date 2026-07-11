@@ -8,6 +8,12 @@ import { createPortal } from 'react-dom'
 const HEADER_HEIGHT = 56
 const DISMISS_THRESHOLD = 120
 
+// Sits at MUI's drawer layer (1200), below its modal layer (1300), so any
+// Dialog opened from inside the drawer stacks above it. Drawers opened over
+// drawers still stack correctly: same z-index, later portal wins.
+const BACKDROP_Z_INDEX = 1190
+const PANEL_Z_INDEX = 1200
+
 type Props = {
     open: boolean
     onClose: () => void
@@ -84,7 +90,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                 sx={{
                     position: 'fixed',
                     inset: 0,
-                    zIndex: 1400,
+                    zIndex: BACKDROP_Z_INDEX,
                     opacity: visible ? 1 : 0,
                     transition: 'opacity 0.3s ease',
                 }}
@@ -104,7 +110,7 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     borderTopRightRadius: '16px',
                     borderTop: `2px solid ${colors.primaryBlack}`,
                     boxShadow: `2px -2px 0px ${colors.primaryBlack}`,
-                    zIndex: 1500,
+                    zIndex: PANEL_Z_INDEX,
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
