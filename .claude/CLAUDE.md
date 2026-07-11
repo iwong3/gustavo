@@ -37,6 +37,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying
+- Production: **https://gusfring.vercel.app** (Vercel project `gustavo`)
 - `main` is the only active branch — push to `main` → Vercel auto-deploys.
 - **Prod DB migrations are manual**: `pnpm db:migrate:prod` (uses .env.production.local). Nothing runs them automatically — coordinate with the deploy when a change needs a migration.
 - `gh-pages` hosts the legacy static site — keep, don't touch.
