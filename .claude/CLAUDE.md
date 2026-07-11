@@ -8,6 +8,24 @@ Personal app suite (PWA) for me (Ivan) and my partner Jenny, plus friends/family
 
 Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon Postgres, Auth.js v5 (Google OAuth + allowlist), Vercel Blob, deployed on Vercel. Node 24, ESLint 9 flat config.
 
+## Project policies (from Ivan, July 2026)
+- **Security**: Google SSO + allowlist is the right level. Follow general best
+  practices for a project of this scope — no unauthenticated API/DB access ever —
+  but don't add heavy security infrastructure. The data is personal, not financial.
+- **Costs**: $0/month is the goal (not strict). ALWAYS check with Ivan before
+  anything that could accrue a cost (paid APIs, tier upgrades). Google Places API
+  usage must stay within free credit.
+- **Backups**: Neon's built-in restore (~1 day window) is the current story.
+  Wanted: on-demand or automated pg_dump stored somewhere safe (PC or Google
+  Drive) — not yet built.
+- **UX priorities, in order**: (1) fast/snappy/native-feeling — the app should
+  never feel like a mobile website; (2) minimal friction for data entry (fewer
+  taps, less typing, but stay intuitive); (3) consistent neo-brutalist theme.
+- **Testing**: open to a thin unit-test layer on real logic (debt calculation,
+  permissions, split detection) — not yet set up; don't test forms/pages.
+- **Observability**: no monitoring needed (app is light, deploys are verified).
+  Wanted eventually: in-app bug reporting so users can flag issues with context.
+
 ## Rules
 - **pnpm only** — never yarn or npm.
 - **Soft deletes** — `deleted_at`, never hard DELETE. All queries filter `WHERE deleted_at IS NULL`.
