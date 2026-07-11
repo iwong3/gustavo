@@ -3,6 +3,7 @@ import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { canEditCategory, canDeleteCategory } from '@/lib/permissions'
+import { occMatchSql } from '@/lib/occ'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -41,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         await withAuditUser(userId, async (client) => {
             const sql = expectedUpdatedAt
                 ? `UPDATE expense_categories SET name = $1
-                   WHERE id = $2 AND deleted_at IS NULL AND updated_at = $3
+                   WHERE id = $2 AND deleted_at IS NULL AND ${occMatchSql('updated_at', '$3')}
                    RETURNING id`
                 : `UPDATE expense_categories SET name = $1
                    WHERE id = $2 AND deleted_at IS NULL
@@ -109,7 +110,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         await withAuditUser(userId, async (client) => {
             const sql = expectedUpdatedAt
                 ? `UPDATE expense_categories SET deleted_at = now()
-                   WHERE id = $1 AND deleted_at IS NULL AND updated_at = $2
+                   WHERE id = $1 AND deleted_at IS NULL AND ${occMatchSql('updated_at', '$2')}
                    RETURNING id`
                 : `UPDATE expense_categories SET deleted_at = now()
                    WHERE id = $1 AND deleted_at IS NULL

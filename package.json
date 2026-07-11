@@ -24,7 +24,8 @@
         "check:cycles": "madge --circular --extensions ts,tsx app/",
         "lint": "next lint",
         "start:local": "node scripts/app/start.js",
-        "start": "next start"
+        "start": "next start",
+        "test": "vitest run"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -70,7 +71,8 @@
         "eslint-plugin-react-hooks": "^7.1.1",
         "madge": "^8.0.0",
         "prettier": "^3.9.5",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.10"
     },
     "browserslist": {
         "production": [

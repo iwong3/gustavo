@@ -3,6 +3,7 @@ import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, canEditExpense, canDeleteExpense } from '@/lib/permissions'
+import { occMatchSql, occTokensMatch } from '@/lib/occ'
 
 type RouteParams = { params: Promise<{ tripId: string; expenseId: string }> }
 
@@ -77,8 +78,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             }
             if (
                 body.expectedUpdatedAt &&
-                new Date(existing.rows[0].updated_at).toISOString() !==
-                    new Date(body.expectedUpdatedAt).toISOString()
+                !occTokensMatch(existing.rows[0].updated_at, body.expectedUpdatedAt)
             ) {
                 throw new Error('CONFLICT')
             }
@@ -300,7 +300,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         await withAuditUser(userId, async (client) => {
             const sql = expectedUpdatedAt
                 ? `UPDATE expenses SET deleted_at = NOW()
-                   WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL AND updated_at = $3
+                   WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL AND ${occMatchSql('updated_at', '$3')}
                    RETURNING id`
                 : `UPDATE expenses SET deleted_at = NOW()
                    WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL

@@ -21,8 +21,9 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **UX priorities, in order**: (1) fast/snappy/native-feeling — the app should
   never feel like a mobile website; (2) minimal friction for data entry (fewer
   taps, less typing, but stay intuitive); (3) consistent neo-brutalist theme.
-- **Testing**: open to a thin unit-test layer on real logic (debt calculation,
-  permissions, split detection) — not yet set up; don't test forms/pages.
+- **Testing**: thin unit-test layer on real logic only (debt calculation,
+  permissions, split detection, OCC) — Vitest set up July 2026 (`pnpm test`);
+  don't test forms/pages.
 - **Observability**: no monitoring needed (app is light, deploys are verified).
   Wanted eventually: in-app bug reporting so users can flag issues with context.
 
@@ -45,6 +46,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 ## Local dev
 - `pnpm docker:up` (Postgres 17 + Metabase) then `pnpm dev`
 - Verify: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build`
+- Tests: `pnpm test` (Vitest, `tests/`) — DB-backed tests hit local docker Postgres, so `pnpm docker:up` first. Run at checkpoints when touching tested logic (OCC, and future real-logic suites).
 - DB: localhost:5432, user `gus`, pass `yellow_shirt_dev`, db `gustavo_dev` (DBeaver); Metabase localhost:3001
 - Migrations: `pnpm db:create-migration <name>`, `pnpm db:migrate`, reset with `pnpm db:reset`
 
