@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import type { ActivityEntry } from '@/lib/types'
 import {
     Box,
@@ -18,7 +18,6 @@ import {
     IconChevronRight,
     IconFilter,
     IconHistory,
-    IconLayoutList,
     IconPencil,
     IconPlus,
     IconTrash,
@@ -372,47 +371,18 @@ export default function ActivityPage() {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            {/* Header row */}
+            {/* Header row — filter/sort actions */}
             <Box
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-end',
+                    gap: 1,
                     paddingX: 2,
-                    paddingTop: 2,
+                    paddingTop: 1.5,
                     paddingBottom: 1,
                 }}>
-                <Box
-                    sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        paddingX: 1.5,
-                        paddingY: 0.75,
-                        backgroundColor: '#cdbfdb',
-                        ...hardShadow,
-                        borderRadius: '4px',
-                    }}>
-                    <IconLayoutList
-                        size={20}
-                        stroke={2}
-                        color={colors.primaryBlack}
-                        fill={colors.primaryWhite}
-                    />
-                    <Typography
-                        sx={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            color: colors.primaryBlack,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                        }}>
-                        Activity Log
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    {headerActions}
-                </Box>
+                {headerActions}
             </Box>
 
             {/* Timeline */}

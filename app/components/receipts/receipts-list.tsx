@@ -2,13 +2,13 @@
 
 import { Box, Collapse, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
 import { cardSx, colors } from '@/lib/colors'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
-import { ExpenseDetailDrawer } from 'components/receipts/drawer/expense-detail-drawer'
 import ExpenseFormDialog from 'components/expense-form-dialog'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import { useRefresh } from 'providers/refresh-provider'
@@ -33,9 +33,8 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const { filteredExpenses, getUsdValue, isSearching, searchInput } = useSpendData()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
+    const router = useRouter()
 
-    const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
-    const [drawerOpen, setDrawerOpen] = useState(false)
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
 
     // Swipe action dialogs (separate from drawer's dialogs)
@@ -45,12 +44,6 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const displayData = expenses || filteredExpenses
     // Only apply search-mode rendering when using context data (not when parent passes filtered expenses)
     const showSearchView = isSearching && !expenses
-
-    // Keep selectedExpense in sync with refreshed data
-    const resolvedExpense = useMemo(() => {
-        if (!selectedExpense) return null
-        return displayData.find((e) => e.id === selectedExpense.id) ?? selectedExpense
-    }, [selectedExpense, displayData])
 
     // Group expenses by date, most recent date first
     const dateGroups = useMemo<DateGroup[]>(() => {
@@ -81,18 +74,12 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const tripEnd = dayjs(trip.endDate + 'T00:00:00')
     const totalDays = tripEnd.diff(tripStart, 'day') + 1
 
-    const handleTap = useCallback((expense: Expense) => {
-        setSelectedExpense(expense)
-        setDrawerOpen(true)
-    }, [])
-
-    const handleCloseDrawer = useCallback(() => {
-        setDrawerOpen(false)
-    }, [])
-
-    const handleSelectExpense = useCallback((expense: Expense) => {
-        setSelectedExpense(expense)
-    }, [])
+    const handleTap = useCallback(
+        (expense: Expense) => {
+            router.push(`/gustavo/trips/${trip.slug}/expenses/${expense.id}`)
+        },
+        [router, trip.slug]
+    )
 
     const toggleDateCollapse = useCallback((date: string) => {
         setCollapsedDates((prev) => {
@@ -226,16 +213,6 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                     )
                 })}
             </Box>
-
-            {/* Detail drawer */}
-            <ExpenseDetailDrawer
-                expense={resolvedExpense}
-                open={drawerOpen}
-                onClose={handleCloseDrawer}
-                allExpenses={displayData}
-                onRefresh={onRefresh}
-                onSelectExpense={handleSelectExpense}
-            />
 
             {/* Swipe edit dialog */}
             <ExpenseFormDialog

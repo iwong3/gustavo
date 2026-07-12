@@ -17,6 +17,7 @@ import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
 import NavDrawer from 'components/nav-drawer'
+import { TripHeaderControls } from 'components/trip-header-controls'
 import { FabProvider, useFab } from 'providers/fab-provider'
 
 function ContentFab() {
@@ -111,7 +112,8 @@ export default function GustavoLayout({
                                 width: '100%',
                                 height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
                                 paddingTop: 'env(safe-area-inset-top, 0px)',
-                                px: 1,
+                                // Match the body content's 16px edge inset (paddingX: 2)
+                                px: 2,
                                 position: 'fixed',
                                 top: 0,
                                 backgroundColor: colors.secondaryYellow,
@@ -127,6 +129,9 @@ export default function GustavoLayout({
                                     'cursor': 'pointer',
                                     'borderRadius': '50%',
                                     'padding': '6px',
+                                    // Pull the tap-target padding out of the inset
+                                    // so the avatar image sits flush at 16px
+                                    'marginLeft': '-6px',
                                     'transition':
                                         'transform 0.1s ease-out, background-color 0.1s',
                                     '&:active': {
@@ -147,21 +152,38 @@ export default function GustavoLayout({
                                 />
                             </Box>
 
-                            {/* Spacer */}
-                            <Box sx={{ flex: 1 }} />
+                            {/* Trip name + tool switcher (trip pages) / spacer */}
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    paddingX: 0.5,
+                                }}>
+                                <TripHeaderControls />
+                            </Box>
 
                             {/* Back button — shows on sub-pages */}
                             {(() => {
                                 // Determine back URL for nested pages
                                 let backHref: string | null = null
-                                // /gustavo/trips/<slug>/<tool> → trip hub
-                                const tripMatch = pathname.match(
-                                    /^\/gustavo\/trips\/([^/]+)\/.+$/
+                                // /gustavo/trips/<slug>/expenses/<id> → expenses list
+                                const expenseDetailMatch = pathname.match(
+                                    /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
                                 )
-                                if (tripMatch) {
-                                    backHref = `/gustavo/trips/${tripMatch[1]}`
+                                if (expenseDetailMatch) {
+                                    backHref = `/gustavo/trips/${expenseDetailMatch[1]}/expenses`
                                 }
-                                // /gustavo/trips/[slug] (trip hub) → trips list
+                                // /gustavo/trips/<slug>/<tool> → trips list
+                                else if (
+                                    /^\/gustavo\/trips\/[^/]+\/.+$/.test(
+                                        pathname
+                                    )
+                                ) {
+                                    backHref = '/gustavo/trips'
+                                }
+                                // /gustavo/trips/[slug] (legacy hub URL) → trips list
                                 else if (/^\/gustavo\/trips\/[^/]+$/.test(pathname)) {
                                     backHref = '/gustavo/trips'
                                 }
@@ -198,7 +220,6 @@ export default function GustavoLayout({
                                             'height': 34,
                                             'borderRadius': '4px',
                                             'cursor': 'pointer',
-                                            'marginRight': 0.5,
                                             'textDecoration': 'none',
                                             'color': colors.primaryBlack,
                                             'backgroundColor':

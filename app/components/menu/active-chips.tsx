@@ -105,6 +105,9 @@ export function ActiveChips({ leading }: { leading?: React.ReactNode } = {}) {
         if (chips.length === 0 && expanded) setExpanded(false)
     }, [chips.length, expanded])
 
+    // Nothing active and no leading control — don't reserve an empty row
+    if (chips.length === 0 && !leading) return null
+
     return (
         <Box
             sx={{

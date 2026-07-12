@@ -12,6 +12,16 @@
 //   - Error states: primaryRed border + shadow + text
 //   - Focus states: primaryYellow border + shadow
 //
+// Layout polish checklist — apply to every UI change:
+//   - Elements sharing a row get the same explicit height (when it makes sense):
+//     don't let padding+font size determine height implicitly. Known heights:
+//     header buttons/pill 34px, search input + toolbar buttons 36px.
+//   - Consistent gaps: siblings in a row/stack use one `gap` value, not ad-hoc
+//     per-element margins. Common gaps: tight 0.75–1 (6–8px), sections 1.5–2.
+//   - Tap targets ≥ 34px; icons optically centered within them.
+//   - Don't reserve empty space for conditionally-rendered rows — collapse them.
+//   - After building, compare against a neighboring screen for spacing drift.
+//
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const colors = {

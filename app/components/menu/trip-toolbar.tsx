@@ -98,20 +98,25 @@ export const TripToolbar = () => {
                     paddingTop: 1,
                     paddingBottom: 2,
                 }}>
-                {/* Row 1: full-width search */}
-                <Box sx={{ paddingX: 2 }}>
-                    <SearchBar />
+                {/* Row 1: search + refine button */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        paddingX: 2,
+                    }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <SearchBar />
+                    </Box>
+                    <RefineButton
+                        count={refineCount}
+                        onClick={() => setDrawerOpen(true)}
+                    />
                 </Box>
 
-                {/* Row 2: refine icon + active chips */}
-                <ActiveChips
-                    leading={
-                        <RefineButton
-                            count={refineCount}
-                            onClick={() => setDrawerOpen(true)}
-                        />
-                    }
-                />
+                {/* Row 2: active chips (collapses when empty) */}
+                <ActiveChips />
             </Box>
 
             <RefineDrawer
@@ -142,8 +147,9 @@ const RefineButton = ({
             'display': 'flex',
             'alignItems': 'center',
             'justifyContent': 'center',
-            'width': 28,
-            'height': 28,
+            // Matches the search input height so the row reads as one unit
+            'width': 36,
+            'height': 36,
             'borderRadius': '4px',
             'border': `1px solid ${colors.primaryBlack}`,
             'backgroundColor':
