@@ -48,6 +48,11 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - Verify: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build`
 - Tests: `pnpm test` (Vitest, `tests/`) — DB-backed tests hit local docker Postgres, so `pnpm docker:up` first. Run at checkpoints when touching tested logic (OCC, and future real-logic suites).
 - DB: localhost:5432, user `gus`, pass `yellow_shirt_dev`, db `gustavo_dev` (DBeaver); Metabase localhost:3001
+- **Component gallery**: `localhost:3000/dev/gallery` — renders components/forms in
+  isolation with mock data (`app/dev/gallery/fixtures.ts`). Dev-only: 404s in prod
+  (layout gate) and skips auth (middleware exclusion). Use it to view/verify UI
+  without clicking through app flows; add specimens when building new presentational
+  components. Dev-only "Gallery" entry at the bottom of the nav drawer.
 - Migrations: `pnpm db:create-migration <name>`, `pnpm db:migrate`, reset with `pnpm db:reset`
 
 ## Doc map — read before working in an area

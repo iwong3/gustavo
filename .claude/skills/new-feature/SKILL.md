@@ -38,8 +38,15 @@ cleanest small example of the full stack.
 6. **Wire navigation** — dashboard row on `app/gustavo/page.tsx` and/or the relevant
    landing page (health features: also `lib/health-section-order.ts`).
 
-7. **Verify** — `pnpm tsc --noEmit`, then actually drive the feature in the browser
-   (`pnpm docker:up` + `pnpm dev`). Check both light and dark rendering if applicable.
+7. **Gallery specimens** — add new presentational components (rows, cards, form
+   dialogs) to the dev gallery (`app/dev/gallery/`): extend `fixtures.ts` if new mock
+   data is needed, add `Specimen` entries to the matching section page (or a new
+   section — one page file + a line in `sections` in `gallery-ui.tsx`). Cover the
+   interesting states (empty, error, long text), not just the happy path.
 
-8. **Docs** — schema.md is updated via the migration skill; add the feature to
+8. **Verify** — `pnpm tsc --noEmit`, then actually drive the feature in the browser
+   (`pnpm docker:up` + `pnpm dev`); the gallery page is the quick way to eyeball
+   component states. Check both light and dark rendering if applicable.
+
+9. **Docs** — schema.md is updated via the migration skill; add the feature to
    `.claude/docs/repo-overview.md`'s app tree if it adds a new page area.

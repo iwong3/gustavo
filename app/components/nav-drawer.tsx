@@ -11,6 +11,7 @@ import {
     IconHome,
     IconList,
     IconFirstAidKit,
+    IconPalette,
     IconPill,
     IconPlaneDeparture,
     IconSalad,
@@ -43,6 +44,8 @@ const CONTENT_PR = 1.5
 type NavDrawerProps = {
     open: boolean
     onClose: () => void
+    /** Raise above other overlays (default MUI drawer layer is 1200). */
+    zIndex?: number
 }
 
 /** Neo-brutalist icon badge — small rounded square with hard shadow */
@@ -66,7 +69,7 @@ function IconBadge({ children }: { children: React.ReactNode }) {
     )
 }
 
-export default function NavDrawer({ open, onClose }: NavDrawerProps) {
+export default function NavDrawer({ open, onClose, zIndex }: NavDrawerProps) {
     const pathname = usePathname()
     const [trips, setTrips] = useState<TripSummary[]>([])
     const [loading, setLoading] = useState(true)
@@ -185,6 +188,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
             anchor="left"
             open={open}
             onClose={onClose}
+            sx={zIndex ? { zIndex } : undefined}
             slotProps={{
                 paper: {
                     sx: {
@@ -437,6 +441,25 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
                     </IconBadge>
                     Settings
                 </Box>
+
+                {/* Component gallery — dev only (the route 404s in production) */}
+                {process.env.NODE_ENV === 'development' && (
+                    <Box
+                        component={Link}
+                        href="/dev/gallery"
+                        onClick={onClose}
+                        sx={{ ...navItemSx(isWithin('/dev/gallery')), mt: 0.5 }}>
+                        <IconBadge>
+                            <IconPalette
+                                size={17}
+                                stroke={2}
+                                color={colors.primaryBlack}
+                                fill={isWithin('/dev/gallery') ? colors.secondaryYellow : colors.primaryWhite}
+                            />
+                        </IconBadge>
+                        Gallery
+                    </Box>
+                )}
             </Box>
         </Drawer>
     )
