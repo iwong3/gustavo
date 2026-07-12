@@ -147,9 +147,10 @@ const RefineButton = ({
             'display': 'flex',
             'alignItems': 'center',
             'justifyContent': 'center',
-            // Matches the search input height so the row reads as one unit
-            'width': 36,
-            'height': 36,
+            // Square, same 34px as the search input and header back button —
+            // right edge and spacing mirror the header pill → back button gap
+            'width': 34,
+            'height': 34,
             'borderRadius': '4px',
             'border': `1px solid ${colors.primaryBlack}`,
             'backgroundColor':

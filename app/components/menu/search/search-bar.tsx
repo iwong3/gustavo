@@ -115,7 +115,8 @@ export const SearchBar = () => {
                         borderRadius: '4px',
                     },
                     '& .MuiOutlinedInput-root': {
-                        height: 36,
+                        // Matches the 34px header controls (back button, pill)
+                        height: 34,
                         backgroundColor: colors.primaryWhite,
                         boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                         '&.Mui-focused fieldset': {

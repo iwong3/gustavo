@@ -14,8 +14,8 @@
 //
 // Layout polish checklist — apply to every UI change:
 //   - Elements sharing a row get the same explicit height (when it makes sense):
-//     don't let padding+font size determine height implicitly. Known heights:
-//     header buttons/pill 34px, search input + toolbar buttons 36px.
+//     don't let padding+font size determine height implicitly. Standard control
+//     height: 34px (header back button + pill, search input, toolbar buttons).
 //   - Consistent gaps: siblings in a row/stack use one `gap` value, not ad-hoc
 //     per-element margins. Common gaps: tight 0.75–1 (6–8px), sections 1.5–2.
 //   - Tap targets ≥ 34px; icons optically centered within them.
