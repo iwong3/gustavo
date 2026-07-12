@@ -35,6 +35,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **utils files must never import from component files** — extract shared enums/types to a leaf file (prevents circular-import TDZ crashes; check with `pnpm check:cycles`).
 - **New migration ⇒ update `.claude/docs/schema.md`** in the same change.
 - **UI**: neo-brutalist design system — read the `lib/colors.ts` header before styling; shared form styles in `lib/form-styles.ts`.
+- **Custom touch gestures** (swipe, pull, drag) → follow `.claude/docs/code-guide.md` § Touch Gesture Conventions (axis-lock, `touch-action`, yield on `defaultPrevented`).
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying
@@ -45,6 +46,11 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 
 ## Local dev
 - `pnpm docker:up` (Postgres 17 + Metabase) then `pnpm dev`
+- **Port 3000 belongs to Ivan** — he usually has the app running there; never start
+  a dev server on 3000. To verify in the browser, first try attaching to his server
+  (`preview_start {url: "http://localhost:3000"}` — HMR already reflects your edits).
+  Only if nothing is on 3000, start the `gustavo-dev` launch config (runs on **3100**).
+  Never run both dev servers at once — they share `.next` and corrupt each other.
 - Verify: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build`
 - Tests: `pnpm test` (Vitest, `tests/`) — DB-backed tests hit local docker Postgres, so `pnpm docker:up` first. Run at checkpoints when touching tested logic (OCC, and future real-logic suites).
 - DB: localhost:5432, user `gus`, pass `yellow_shirt_dev`, db `gustavo_dev` (DBeaver); Metabase localhost:3001

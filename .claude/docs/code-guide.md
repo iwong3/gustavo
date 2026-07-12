@@ -512,6 +512,36 @@ If you want to understand the codebase by reading files, this order makes sense:
 
 ---
 
+## Touch Gesture Conventions
+
+The app has multiple custom touch handlers that can receive the same touch
+(e.g. `components/receipts/swipeable-row.tsx` rows rendered inside
+`components/pull-to-refresh.tsx`). Any new touch-gesture handler must follow
+these rules so gestures never fight each other or the browser:
+
+1. **Axis-lock on the first significant move** (~5px of travel): decide once
+   whether the gesture is horizontal or vertical, then ignore the touch for the
+   rest of the gesture if it's not on your axis. Never react to raw `dx`/`dy`
+   per-event — a horizontal swipe always has some vertical drift, and reacting
+   to it causes visible jitter (e.g. pull-to-refresh growing during a row swipe
+   shifts the whole body down and back).
+2. **Set `touch-action` CSS to reserve only your axis** (e.g. `pan-y` for a
+   horizontal swipe handler). Without it the browser may start a native scroll
+   first, after which `preventDefault` is a no-op (`e.cancelable === false`)
+   and the drag stutters.
+3. **`preventDefault()` once you own the gesture** (listener registered with
+   `{ passive: false }`), so the browser doesn't scroll underneath you.
+4. **Yield to descendants**: ancestor handlers must bail out when
+   `e.defaultPrevented` is already true — an inner handler (fired first, since
+   bubble listeners run inside-out) has claimed the gesture.
+5. Keep latest callbacks in refs inside the listener effect so it doesn't
+   re-attach on every parent render (callers pass inline closures).
+
+Reference implementations: `swipeable-row.tsx` (horizontal, rules 1–3, 5) and
+`pull-to-refresh.tsx` (vertical, rules 1, 3–5).
+
+---
+
 ## Common Patterns You'll Encounter
 
 ### Fetching on mount

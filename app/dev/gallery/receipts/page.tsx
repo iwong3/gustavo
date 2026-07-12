@@ -1,9 +1,13 @@
 'use client'
 
+import { Box, Typography } from '@mui/material'
 import { useState } from 'react'
 
+import { cardSx } from '@/lib/colors'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { PullToRefresh } from 'components/pull-to-refresh'
 import { GalleryPage, SpecimenGroup, Specimen } from '../gallery-ui'
 import { expenses } from '../fixtures'
 
@@ -11,6 +15,7 @@ const noop = () => {}
 
 export default function ReceiptsGallery() {
     const [collapsed, setCollapsed] = useState(false)
+    const [lastAction, setLastAction] = useState('none')
     const [usd, jpy, longName, error] = expenses
 
     return (
@@ -30,6 +35,30 @@ export default function ReceiptsGallery() {
                 </Specimen>
                 <Specimen label="hideDate (grouped view)">
                     <ExpenseRow expense={usd} onTap={noop} hideDate />
+                </Specimen>
+            </SpecimenGroup>
+
+            <SpecimenGroup title="SwipeableRow — drag to full button reveal fires the action">
+                <Specimen label="inside pull-to-refresh — horizontal swipe must not shift the body">
+                    <PullToRefresh onRefresh={() => new Promise((r) => setTimeout(r, 800))}>
+                        <Box id="swipe-specimen" sx={{ ...cardSx, overflow: 'hidden' }}>
+                            {[usd, jpy].map((exp, i) => (
+                                <SwipeableRow
+                                    key={exp.id}
+                                    canEdit
+                                    canDelete
+                                    onEdit={() => setLastAction(`edit #${exp.id}`)}
+                                    onDelete={() => setLastAction(`delete #${exp.id}`)}
+                                    showBottomBorder={i === 0}
+                                >
+                                    <ExpenseRow expense={exp} onTap={noop} />
+                                </SwipeableRow>
+                            ))}
+                        </Box>
+                    </PullToRefresh>
+                    <Typography sx={{ mt: 1, fontSize: 12 }}>
+                        last action: <span id="swipe-last-action">{lastAction}</span>
+                    </Typography>
                 </Specimen>
             </SpecimenGroup>
 

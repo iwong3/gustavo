@@ -44,6 +44,8 @@ export function PullToRefresh({
 }: PullToRefreshProps) {
     const containerRef = useRef<HTMLDivElement | null>(null)
     const startYRef = useRef<number | null>(null)
+    const startXRef = useRef(0)
+    const axisRef = useRef<'v' | 'h' | null>(null)
     const pullRef = useRef(0)
     const refreshingRef = useRef(false)
     const onRefreshRef = useRef(onRefresh)
@@ -85,11 +87,31 @@ export function PullToRefresh({
             if (refreshingRef.current) return
             startYRef.current =
                 getScrollTop() <= 0 ? e.touches[0].clientY : null
+            startXRef.current = e.touches[0].clientX
+            axisRef.current = null
         }
 
         const handleTouchMove = (e: TouchEvent) => {
             if (refreshingRef.current || startYRef.current == null) return
+            // A descendant already claimed this gesture (e.g. a swipeable row
+            // consuming a horizontal drag) — stay out of its way
+            if (e.defaultPrevented) {
+                startYRef.current = null
+                return
+            }
             const dy = e.touches[0].clientY - startYRef.current
+            // Lock onto an axis on the first significant move; a horizontal
+            // gesture must never grow the indicator (it shifts the whole body
+            // down and back — visible jitter during row swipes)
+            if (axisRef.current == null) {
+                const dx = e.touches[0].clientX - startXRef.current
+                if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return
+                axisRef.current = Math.abs(dy) >= Math.abs(dx) ? 'v' : 'h'
+            }
+            if (axisRef.current === 'h') {
+                startYRef.current = null
+                return
+            }
             if (dy <= 0) {
                 // Finger back at the start point — collapse instantly
                 // (dragging stays true so no transition runs; an animated
