@@ -3,7 +3,7 @@
 import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { IconChevronDown } from '@tabler/icons-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
@@ -11,6 +11,85 @@ import { getTablerIcon } from 'utils/icons'
 import { colors, hardShadow } from '@/lib/colors'
 import { queryKeys } from '@/lib/query-keys'
 import { getActiveTripTool, getTripSlug, tripTools } from '@/lib/trip-tools'
+
+// Font-size / line-count steps tried in order until the trip name fits without
+// truncating. 3 lines at 12.5px (~45px) still fits the 56px header row.
+const TITLE_FIT_STEPS = [
+    { fontSize: 17, lines: 1 },
+    { fontSize: 15, lines: 2 },
+    { fontSize: 12.5, lines: 3 },
+]
+
+// Trip name that steps down in font size and wraps onto more lines until the
+// whole name is visible; only the last step still ellipsizes.
+// Exported for the dev gallery.
+export const FitTripName = ({
+    name,
+    onClick,
+}: {
+    name: string
+    onClick: () => void
+}) => {
+    const ref = useRef<HTMLElement | null>(null)
+    const [step, setStep] = useState(0)
+
+    useLayoutEffect(() => {
+        const el = ref.current
+        if (!el) return
+
+        const fit = () => {
+            let chosen = TITLE_FIT_STEPS.length - 1
+            for (let i = 0; i < TITLE_FIT_STEPS.length; i++) {
+                const { fontSize, lines } = TITLE_FIT_STEPS[i]
+                el.style.fontSize = `${fontSize}px`
+                el.style.webkitLineClamp = String(lines)
+                // scrollHeight is the full (unclamped) text height — count
+                // lines from it; comparing against clientHeight directly
+                // false-positives on sub-pixel line-height rounding
+                const neededLines = Math.round(
+                    el.scrollHeight / (fontSize * 1.2)
+                )
+                if (neededLines <= lines) {
+                    chosen = i
+                    break
+                }
+            }
+            el.style.fontSize = `${TITLE_FIT_STEPS[chosen].fontSize}px`
+            el.style.webkitLineClamp = String(TITLE_FIT_STEPS[chosen].lines)
+            setStep(chosen)
+        }
+
+        fit()
+        // Re-fit when available width changes (tool pill widths differ) and
+        // once the serif webfont loads (metrics shift)
+        const ro = new ResizeObserver(fit)
+        if (el.parentElement) ro.observe(el.parentElement)
+        document.fonts?.ready.then(fit).catch(() => {})
+        return () => ro.disconnect()
+    }, [name])
+
+    return (
+        <Typography
+            ref={ref}
+            onClick={onClick}
+            sx={{
+                fontSize: TITLE_FIT_STEPS[step].fontSize,
+                fontFamily: 'var(--font-serif)',
+                color: colors.primaryBlack,
+                lineHeight: 1.2,
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: TITLE_FIT_STEPS[step].lines,
+                overflow: 'hidden',
+                overflowWrap: 'anywhere',
+                minWidth: 0,
+                flexShrink: 1,
+                cursor: 'pointer',
+            }}>
+            {name}
+        </Typography>
+    )
+}
 
 // Trip name + tool-switcher pill shown in the app header on trip tool pages.
 // Reads the trip via the same query key as the trip layout, so no extra fetch.
@@ -57,21 +136,10 @@ export const TripHeaderControls = () => {
             }}>
             {/* Trip name — taps through to the trip details page */}
             {trip && (
-                <Typography
+                <FitTripName
+                    name={trip.name}
                     onClick={() => handleSelect('details')}
-                    sx={{
-                        fontSize: 17,
-                        fontFamily: 'var(--font-serif)',
-                        color: colors.primaryBlack,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        minWidth: 0,
-                        flexShrink: 1,
-                        cursor: 'pointer',
-                    }}>
-                    {trip.name}
-                </Typography>
+                />
             )}
 
             {/* Tool pill + dropdown — hugs the right edge, next to the back

@@ -30,18 +30,23 @@ export default function ExpensesPage() {
     useRegisterFab(showAddExpense ? fabCallback : null)
 
     return (
-        <PullToRefresh onRefresh={handlePullRefresh}>
         <Box
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 width: '100%',
                 maxWidth: 450,
+                // Fill the scroll container so pull-to-refresh works in the
+                // empty space below the rows too
+                minHeight: '100%',
             }}>
             <TripToolbar />
-            <Box sx={{ maxWidth: 450, width: '100%' }}>
-                <ReceiptsList />
-            </Box>
+            {/* Pull-to-refresh covers everything below the toolbar */}
+            <PullToRefresh onRefresh={handlePullRefresh} sx={{ flex: 1 }}>
+                <Box sx={{ maxWidth: 450, width: '100%' }}>
+                    <ReceiptsList />
+                </Box>
+            </PullToRefresh>
 
             {showAddExpense && (
                 <ExpenseFormDialog
@@ -52,6 +57,5 @@ export default function ExpensesPage() {
                 />
             )}
         </Box>
-        </PullToRefresh>
     )
 }

@@ -260,7 +260,7 @@ export default function TripsPage() {
         otherTrips.length === 0
 
     return (
-        <PullToRefresh onRefresh={invalidateTrips}>
+        <PullToRefresh onRefresh={invalidateTrips} sx={{ minHeight: '100%' }}>
         <Box
             sx={{
                 display: 'flex',

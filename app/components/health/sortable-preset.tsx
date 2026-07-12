@@ -44,8 +44,10 @@ export function handleDragEnd(
 ) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = items.findIndex((i) => i.id === Number(active.id))
-    const newIndex = items.findIndex((i) => i.id === Number(over.id))
+    // String-compare: ids are BIGINTs the pg driver returns as strings at
+    // runtime (despite the number type), so Number(active.id) never matched
+    const oldIndex = items.findIndex((i) => String(i.id) === String(active.id))
+    const newIndex = items.findIndex((i) => String(i.id) === String(over.id))
     if (oldIndex !== -1 && newIndex !== -1) reorder(oldIndex, newIndex)
 }
 

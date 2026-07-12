@@ -48,7 +48,11 @@ export function HealthPageLayout({
     )
 
     if (onRefresh) {
-        return <PullToRefresh onRefresh={onRefresh}>{inner}</PullToRefresh>
+        return (
+            <PullToRefresh onRefresh={onRefresh} sx={{ minHeight: '100%' }}>
+                {inner}
+            </PullToRefresh>
+        )
     }
     return inner
 }

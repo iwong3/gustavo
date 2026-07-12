@@ -44,8 +44,10 @@ export default function ExpenseDetailPage() {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
-    const expenseId = Number(id)
-    const expense = allTripExpenses.find((e) => e.id === expenseId) ?? null
+    // Compare as strings: expense ids are BIGINTs that the pg driver returns
+    // as strings at runtime (lib/types.ts says number, but that's not what
+    // JSON actually carries), so `e.id === Number(id)` never matches
+    const expense = allTripExpenses.find((e) => String(e.id) === id) ?? null
 
     // Position within the current (filtered) list — used by the metadata
     // footer and place-metadata jump links, matching the list the user came from
