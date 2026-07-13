@@ -557,15 +557,14 @@ export default function ExpenseForm({
         weekAnchor.add(i, 'day')
     )
 
-    // Open the native calendar for dates outside the strip's reach
+    // Desktop browsers only open the calendar via showPicker(); on iOS the
+    // tap lands on the (invisible, full-size) input itself, which opens the
+    // native picker without needing this call.
     const openNativePicker = () => {
-        const el = dateInputRef.current
-        if (!el) return
         try {
-            el.showPicker()
+            dateInputRef.current?.showPicker()
         } catch {
-            el.focus()
-            el.click()
+            // iOS: focusing the input (which the tap already did) opens it
         }
     }
 
@@ -634,16 +633,29 @@ export default function ExpenseForm({
                         <Typography sx={{ ...labelSx, marginBottom: 0 }}>
                             Date *
                         </Typography>
-                        {/* Selected date summary — tap to open the full calendar */}
+                        {/* Full-calendar button. The real date input sits
+                            invisibly on top so the tap hits it directly —
+                            iOS opens its native picker from that tap, while
+                            desktop needs the explicit showPicker() call. */}
                         <Box
-                            onClick={openNativePicker}
                             sx={{
-                                position: 'relative',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                cursor: 'pointer',
-                                userSelect: 'none',
+                                'position': 'relative',
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'gap': 0.5,
+                                'height': 34,
+                                'px': 1.25,
+                                'borderRadius': '4px',
+                                'userSelect': 'none',
+                                'backgroundColor': colors.primaryWhite,
+                                'border': `1px solid ${colors.primaryBlack}`,
+                                'boxShadow': fieldShadow,
+                                'transition':
+                                    'transform 0.1s, box-shadow 0.1s',
+                                '&:active': {
+                                    boxShadow: 'none',
+                                    transform: 'translate(2px, 2px)',
+                                },
                             }}>
                             <IconCalendarEvent
                                 size={15}
@@ -660,18 +672,20 @@ export default function ExpenseForm({
                                     ? selectedDay.format('ddd, MMM D')
                                     : 'Pick a date'}
                             </Typography>
-                            {/* Invisible native input anchors the picker here */}
                             <input
                                 ref={dateInputRef}
                                 type="date"
                                 value={date}
                                 onChange={(e) => pickDate(e.target.value)}
-                                tabIndex={-1}
+                                onClick={openNativePicker}
+                                aria-label="Pick a date"
                                 style={{
                                     position: 'absolute',
                                     inset: 0,
+                                    width: '100%',
+                                    height: '100%',
                                     opacity: 0,
-                                    pointerEvents: 'none',
+                                    cursor: 'pointer',
                                     border: 0,
                                     padding: 0,
                                 }}
