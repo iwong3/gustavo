@@ -9,8 +9,10 @@ import {
     IconSettings,
 } from '@tabler/icons-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+
+import { tripTools } from '@/lib/trip-tools'
 
 import { colors } from '@/lib/colors'
 import { Fab } from '@mui/material'
@@ -127,6 +129,92 @@ function BottomTabBar({ activeTab }: { activeTab: string }) {
     )
 }
 
+// Header back button — static URL hierarchy derived from the pathname (not
+// browser history), so back always goes "up" even after a deep link or
+// refresh. Pages can override one hop with ?from=<trip-tool-path> (e.g. the
+// insights list links expenses with ?from=graphs so back returns there).
+function HeaderBackButton({ pathname }: { pathname: string }) {
+    const searchParams = useSearchParams()
+
+    let backHref: string | null = null
+    // /gustavo/trips/<slug>/expenses/<id>/edit → expense detail
+    const expenseEditMatch = pathname.match(
+        /^\/gustavo\/trips\/([^/]+)\/expenses\/([^/]+)\/edit$/
+    )
+    // /gustavo/trips/<slug>/expenses/<id|new> → expenses list (or ?from tool)
+    const expenseDetailMatch = pathname.match(
+        /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
+    )
+    if (expenseEditMatch) {
+        backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
+    } else if (expenseDetailMatch) {
+        const from = searchParams.get('from')
+        const fromTool =
+            from && from !== 'expenses' && tripTools.some((t) => t.path === from)
+                ? from
+                : null
+        backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
+    }
+    // /gustavo/trips/<slug>/<tool> → trips list
+    else if (/^\/gustavo\/trips\/[^/]+\/.+$/.test(pathname)) {
+        backHref = '/gustavo/trips'
+    }
+    // /gustavo/trips/[slug] (legacy hub URL) → trips list
+    else if (/^\/gustavo\/trips\/[^/]+$/.test(pathname)) {
+        backHref = '/gustavo/trips'
+    }
+    // /gustavo/trips → home
+    else if (pathname === '/gustavo/trips') {
+        backHref = '/gustavo'
+    }
+    // /gustavo/health/<sub> → health
+    else if (/^\/gustavo\/health\/.+$/.test(pathname)) {
+        backHref = '/gustavo/health'
+    }
+    // /gustavo/health → home
+    else if (pathname === '/gustavo/health') {
+        backHref = '/gustavo'
+    }
+    // /gustavo/settings/<sub> → settings
+    else if (/^\/gustavo\/settings\/.+$/.test(pathname)) {
+        backHref = '/gustavo/settings'
+    }
+    // /gustavo/settings → home
+    else if (pathname === '/gustavo/settings') {
+        backHref = '/gustavo'
+    }
+    if (!backHref) return null
+    return (
+        <Box
+            component={Link}
+            href={backHref}
+            sx={{
+                'display': 'flex',
+                'alignItems': 'center',
+                'justifyContent': 'center',
+                'width': 34,
+                'height': 34,
+                'borderRadius': '4px',
+                'cursor': 'pointer',
+                'textDecoration': 'none',
+                'color': colors.primaryBlack,
+                'backgroundColor': colors.primaryWhite,
+                'border': `1px solid ${colors.primaryBlack}`,
+                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                'transition': 'transform 0.1s, box-shadow 0.1s',
+                '&:active': {
+                    boxShadow: 'none',
+                    transform: 'translate(2px, 2px)',
+                },
+            }}>
+            <IconArrowLeft
+                size={18}
+                stroke={2}
+            />
+        </Box>
+    )
+}
+
 const tabs = [
     { label: 'Home', href: '/gustavo', icon: IconHome },
     { label: 'Trips', href: '/gustavo/trips', icon: IconPlaneDeparture },
@@ -238,89 +326,11 @@ export default function GustavoLayout({
                                 <TripHeaderControls />
                             </Box>
 
-                            {/* Back button — shows on sub-pages */}
-                            {(() => {
-                                // Determine back URL for nested pages
-                                let backHref: string | null = null
-                                // /gustavo/trips/<slug>/expenses/<id>/edit → expense detail
-                                const expenseEditMatch = pathname.match(
-                                    /^\/gustavo\/trips\/([^/]+)\/expenses\/([^/]+)\/edit$/
-                                )
-                                // /gustavo/trips/<slug>/expenses/<id|new> → expenses list
-                                const expenseDetailMatch = pathname.match(
-                                    /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
-                                )
-                                if (expenseEditMatch) {
-                                    backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
-                                } else if (expenseDetailMatch) {
-                                    backHref = `/gustavo/trips/${expenseDetailMatch[1]}/expenses`
-                                }
-                                // /gustavo/trips/<slug>/<tool> → trips list
-                                else if (
-                                    /^\/gustavo\/trips\/[^/]+\/.+$/.test(
-                                        pathname
-                                    )
-                                ) {
-                                    backHref = '/gustavo/trips'
-                                }
-                                // /gustavo/trips/[slug] (legacy hub URL) → trips list
-                                else if (/^\/gustavo\/trips\/[^/]+$/.test(pathname)) {
-                                    backHref = '/gustavo/trips'
-                                }
-                                // /gustavo/trips → home
-                                else if (pathname === '/gustavo/trips') {
-                                    backHref = '/gustavo'
-                                }
-                                // /gustavo/health/<sub> → health
-                                else if (/^\/gustavo\/health\/.+$/.test(pathname)) {
-                                    backHref = '/gustavo/health'
-                                }
-                                // /gustavo/health → home
-                                else if (pathname === '/gustavo/health') {
-                                    backHref = '/gustavo'
-                                }
-                                // /gustavo/settings/<sub> → settings
-                                else if (/^\/gustavo\/settings\/.+$/.test(pathname)) {
-                                    backHref = '/gustavo/settings'
-                                }
-                                // /gustavo/settings → home
-                                else if (pathname === '/gustavo/settings') {
-                                    backHref = '/gustavo'
-                                }
-                                if (!backHref) return null
-                                return (
-                                    <Box
-                                        component={Link}
-                                        href={backHref}
-                                        sx={{
-                                            'display': 'flex',
-                                            'alignItems': 'center',
-                                            'justifyContent': 'center',
-                                            'width': 34,
-                                            'height': 34,
-                                            'borderRadius': '4px',
-                                            'cursor': 'pointer',
-                                            'textDecoration': 'none',
-                                            'color': colors.primaryBlack,
-                                            'backgroundColor':
-                                                colors.primaryWhite,
-                                            'border': `1px solid ${colors.primaryBlack}`,
-                                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                            'transition':
-                                                'transform 0.1s, box-shadow 0.1s',
-                                            '&:active': {
-                                                boxShadow: 'none',
-                                                transform:
-                                                    'translate(2px, 2px)',
-                                            },
-                                        }}>
-                                        <IconArrowLeft
-                                            size={18}
-                                            stroke={2}
-                                        />
-                                    </Box>
-                                )
-                            })()}
+                            {/* Back button — shows on sub-pages.
+                                useSearchParams needs a Suspense boundary */}
+                            <Suspense fallback={null}>
+                                <HeaderBackButton pathname={pathname} />
+                            </Suspense>
                         </Box>
 
                         {/* Main content — fills space between header and bottom nav, scrolls within */}
@@ -333,6 +343,12 @@ export default function GustavoLayout({
                                 left: 0,
                                 right: 0,
                                 overflowY: 'auto',
+                                // Never a horizontal scroller: with only
+                                // overflowY set, overflowX computes to 'auto',
+                                // so any child a pixel too wide lets iOS drag
+                                // the whole page sideways. Wide content gets
+                                // its own overflowX container instead.
+                                overflowX: 'hidden',
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'flex-start',
