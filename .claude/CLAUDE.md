@@ -37,6 +37,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **UI**: neo-brutalist design system — read the `lib/colors.ts` header before styling; shared form styles in `lib/form-styles.ts`.
 - **Custom touch gestures** (swipe, pull, drag) → follow `.claude/docs/code-guide.md` § Touch Gesture Conventions (axis-lock, `touch-action`, yield on `defaultPrevented`).
 - **No `position: fixed` UI inside `#main-scroll`** (the layout's overflow scroller) — iOS clips fixed elements to the scroller's bounds, so bottom bars render invisible on phones while looking fine on desktop. Portal to `document.body` instead (see `components/page-action-bar.tsx`).
+- **Runtime types lie for DB values.** BIGINT ids (`expenses.id`) arrive as strings; NUMERIC fields typed `number` can be `null` (API `parseFloat(null)` → NaN → JSON serializes as null — e.g. `costConvertedUsd` on conversion-error rows). Never call number methods on raw API numerics (guard with `Number.isFinite`, or use `getUsdValue()` for expense amounts); model `null` (not `0`) in gallery fixtures.
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying
