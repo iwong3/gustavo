@@ -14,6 +14,7 @@ export const sections = [
     { slug: 'header', title: 'Header', description: 'Trip name fitting, pull-to-refresh' },
     { slug: 'receipts', title: 'Receipts', description: 'Expense rows, date group headers' },
     { slug: 'debt', title: 'Debt', description: 'Balance cards, settlement cards' },
+    { slug: 'insights', title: 'Insights', description: 'My Spend chart + share list' },
     { slug: 'forms', title: 'Forms', description: 'Expense/trip forms, delete dialogs — quick-switch to compare' },
 ] as const
 

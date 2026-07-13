@@ -37,6 +37,7 @@ export function SlidingToggle({
             sx={{
                 position: 'relative',
                 display: 'flex',
+                backgroundColor: colors.primaryWhite,
                 border: `${borderWidth}px solid ${colors.primaryBlack}`,
                 borderRadius: 1,
                 boxShadow:
