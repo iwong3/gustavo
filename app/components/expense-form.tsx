@@ -628,39 +628,18 @@ export default function ExpenseForm({
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            marginBottom: 0.5,
+                            marginBottom: 1,
                         }}>
                         <Typography sx={{ ...labelSx, marginBottom: 0 }}>
                             Date *
                         </Typography>
-                        {/* Full-calendar button. The real date input sits
-                            invisibly on top so the tap hits it directly —
-                            iOS opens its native picker from that tap, while
-                            desktop needs the explicit showPicker() call. */}
                         <Box
                             sx={{
-                                'position': 'relative',
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 0.5,
-                                'height': 34,
-                                'px': 1.25,
-                                'borderRadius': '4px',
-                                'userSelect': 'none',
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'boxShadow': fieldShadow,
-                                'transition':
-                                    'transform 0.1s, box-shadow 0.1s',
-                                '&:active': {
-                                    boxShadow: 'none',
-                                    transform: 'translate(2px, 2px)',
-                                },
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
                             }}>
-                            <IconCalendarEvent
-                                size={15}
-                                color={colors.primaryBlack}
-                            />
+                            {/* Selected date — plain text */}
                             <Typography
                                 sx={{
                                     fontSize: 13,
@@ -672,24 +651,53 @@ export default function ExpenseForm({
                                     ? selectedDay.format('ddd, MMM D')
                                     : 'Pick a date'}
                             </Typography>
-                            <input
-                                ref={dateInputRef}
-                                type="date"
-                                value={date}
-                                onChange={(e) => pickDate(e.target.value)}
-                                onClick={openNativePicker}
-                                aria-label="Pick a date"
-                                style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    opacity: 0,
-                                    cursor: 'pointer',
-                                    border: 0,
-                                    padding: 0,
-                                }}
-                            />
+                            {/* Full-calendar button. The real date input sits
+                                invisibly on top so the tap hits it directly —
+                                iOS opens its native picker from that tap, while
+                                desktop needs the explicit showPicker() call. */}
+                            <Box
+                                sx={{
+                                    'position': 'relative',
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'justifyContent': 'center',
+                                    'width': 28,
+                                    'height': 28,
+                                    'borderRadius': '4px',
+                                    'userSelect': 'none',
+                                    'backgroundColor': colors.primaryWhite,
+                                    'border': `1px solid ${colors.primaryBlack}`,
+                                    'boxShadow': fieldShadow,
+                                    'transition':
+                                        'transform 0.1s, box-shadow 0.1s',
+                                    '&:active': {
+                                        boxShadow: 'none',
+                                        transform: 'translate(2px, 2px)',
+                                    },
+                                }}>
+                                <IconCalendarEvent
+                                    size={16}
+                                    color={colors.primaryBlack}
+                                />
+                                <input
+                                    ref={dateInputRef}
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => pickDate(e.target.value)}
+                                    onClick={openNativePicker}
+                                    aria-label="Pick a date"
+                                    style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        opacity: 0,
+                                        cursor: 'pointer',
+                                        border: 0,
+                                        padding: 0,
+                                    }}
+                                />
+                            </Box>
                         </Box>
                     </Box>
                     <Box

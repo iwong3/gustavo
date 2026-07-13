@@ -12,9 +12,10 @@ Jenny daily (health), friends/family during trips (expenses). Don't ship broken.
 
 1. **Verify locally** (all must pass):
    - `pnpm tsc --noEmit`
-   - `pnpm lint`
-   - `pnpm build`
+   - `pnpm build` (the real gate — Vercel runs this; lint is skipped during builds)
    - `pnpm check:cycles` (circular imports crash on hard refresh, not in dev nav)
+   - `pnpm lint` has pre-existing repo-wide errors (react-hooks rules) and is NOT a
+     deploy gate — only treat new errors in files you touched as blockers.
 
 2. **Check for pending migrations**: compare `database/migrations/` against what prod
    has (`pnpm db:migrate:prod` is a no-op if none pending — but know the answer before
@@ -27,9 +28,9 @@ Jenny daily (health), friends/family during trips (expenses). Don't ship broken.
 
 4. **Run prod migration if pending**: `pnpm db:migrate:prod` (uses .env.production.local).
 
-5. **Verify live**: check the Vercel deployment succeeded (dashboard or `vercel` CLI /
-   Vercel MCP tools), then hit the production app — the `/health` status page confirms
-   DB connectivity; spot-check the feature that changed.
+5. **Done — do NOT verify the deployment afterwards** (no Vercel status polling, no
+   hitting prod). Ivan checks the live app himself. Just report that the push went out.
 
-6. **If the deploy broke something**: Vercel dashboard → previous deployment → "Promote
-   to Production" is the fastest rollback (schema rollbacks need a new migration).
+6. **If Ivan reports the deploy broke something**: Vercel dashboard → previous
+   deployment → "Promote to Production" is the fastest rollback (schema rollbacks
+   need a new migration).
