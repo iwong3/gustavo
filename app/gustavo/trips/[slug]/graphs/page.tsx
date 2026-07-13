@@ -219,8 +219,7 @@ export default function MySpendPage() {
                             color: colors.primaryBrown,
                             marginTop: 0.25,
                         }}>
-                        {isMe ? 'I' : person?.firstName} really spent
-                        {hasActiveFilters ? ' · filtered' : ''}
+                        Total spent{hasActiveFilters ? ' · filtered' : ''}
                     </Typography>
                 </Box>
                 <Box
