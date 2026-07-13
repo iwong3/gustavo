@@ -1,10 +1,14 @@
 'use client'
 
+import DebtsPage from '../../../gustavo/trips/[slug]/debts/page'
+import { PairDetail } from 'components/debt/pair-detail'
 import { PersonBalanceCard } from 'components/debt/person-balance-card'
 import { SettlementCard } from 'components/debt/settlement-card'
+import { SpendDataProvider } from 'providers/spend-data-provider'
+import { TripDataProvider } from 'providers/trip-data-provider'
 import { computeNetBalances, simplifyDebts } from '@/lib/debt'
 import { GalleryPage, SpecimenGroup, Specimen } from '../gallery-ui'
-import { currentUserId, debtMap, participantById, participants } from '../fixtures'
+import { currentUserId, debtMap, expenses, ivan, marco, participantById, participants, trip } from '../fixtures'
 
 const noop = () => {}
 
@@ -15,6 +19,30 @@ export default function DebtGallery() {
 
     return (
         <GalleryPage title="Debt">
+            <SpecimenGroup title="Money-map page (real providers + fixture expenses)">
+                <Specimen label="DebtsPage — view-as, stats, map, settle rows">
+                    <TripDataProvider
+                        expenses={expenses}
+                        trip={trip}>
+                        <SpendDataProvider>
+                            <DebtsPage />
+                        </SpendDataProvider>
+                    </TripDataProvider>
+                </Specimen>
+                <Specimen label="PairDetail — Ivan owes Marco (hotel vs ramen)">
+                    <TripDataProvider
+                        expenses={expenses}
+                        trip={trip}>
+                        <SpendDataProvider>
+                            <PairDetail
+                                debtorId={ivan.id}
+                                creditorId={marco.id}
+                            />
+                        </SpendDataProvider>
+                    </TripDataProvider>
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="PersonBalanceCard">
                 {balances.map((balance) => {
                     const participant = participantById.get(balance.userId)

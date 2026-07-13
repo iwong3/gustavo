@@ -220,6 +220,32 @@ export function sortSettlements(
     return [...userOwes, ...userIsOwed, ...others]
 }
 
+// --- Per-expense debt contribution ---
+
+/**
+ * How much one expense contributes to the debt `otherId` owes `payerId`.
+ * Mirrors computeDebtMap's per-expense rule: zero unless `payerId` paid,
+ * `otherId` is in the split (and isn't the payer), and `otherId` isn't
+ * covered ("treat"). `usdValue` comes from useSpendData().getUsdValue.
+ */
+export function expenseDebtContribution(
+    exp: Expense,
+    payerId: number,
+    otherId: number,
+    usdValue: number,
+    participantCount: number
+): number {
+    if (exp.paidBy.id !== payerId) return 0
+    if (otherId === payerId) return 0
+    if (!exp.splitBetween.some((u) => u.id === otherId)) return 0
+    if (exp.coveredParticipants.some((u) => u.id === otherId)) return 0
+    const splitCount = exp.isEveryone
+        ? participantCount
+        : exp.splitBetween.length
+    if (splitCount === 0) return 0
+    return usdValue / splitCount
+}
+
 // --- Filter expenses between two people ---
 
 /**

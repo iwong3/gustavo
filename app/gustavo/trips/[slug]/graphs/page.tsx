@@ -8,12 +8,12 @@ import { cardSx, colors, hardShadow } from '@/lib/colors'
 import type { Expense } from '@/lib/types'
 import { MySpendChart } from 'components/insights/my-spend-chart'
 import { MySpendList } from 'components/insights/my-spend-list'
+import { PersonSwitcher } from 'components/person-switcher'
 import { SlidingToggle } from 'components/sliding-toggle'
 import type { MySpendDimension } from 'hooks/useMySpendData'
 import { useMySpendData } from 'hooks/useMySpendData'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
-import { InitialsIcon } from 'utils/icons'
 
 const dimensionOptions = [
     { value: 'day', label: 'Day' },
@@ -95,45 +95,11 @@ export default function MySpendPage() {
                 gap: 1.5,
             }}>
             {/* Person switcher */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                {participants.map((p) => {
-                    const selected = p.id === personId
-                    return (
-                        <Box
-                            key={p.id}
-                            onClick={() => setPersonId(p.id)}
-                            sx={{
-                                'cursor': 'pointer',
-                                'borderRadius': '50%',
-                                'outline': selected
-                                    ? `3px solid ${colors.primaryYellow}`
-                                    : '3px solid transparent',
-                                'outlineOffset': '1px',
-                                'transition': 'outline-color 0.15s',
-                                '&:active': {
-                                    transform: 'translate(1px, 1px)',
-                                },
-                            }}>
-                            {/* Only the active person keeps their color — the
-                                rest go white so it's obvious whose page it is */}
-                            <InitialsIcon
-                                name={p.firstName}
-                                initials={p.initials}
-                                iconColor={
-                                    selected ? p.iconColor : colors.primaryWhite
-                                }
-                                sx={{
-                                    width: 40,
-                                    height: 40,
-                                    fontSize: 13,
-                                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                    transition: 'background-color 0.15s',
-                                }}
-                            />
-                        </Box>
-                    )
-                })}
-            </Box>
+            <PersonSwitcher
+                participants={participants}
+                selectedId={personId}
+                onSelect={setPersonId}
+            />
 
             {/* Filter chips */}
             <Box

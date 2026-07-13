@@ -145,6 +145,10 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     const expenseDetailMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
     )
+    // /gustavo/trips/<slug>/debts/<pair> → debts page
+    const debtPairMatch = pathname.match(
+        /^\/gustavo\/trips\/([^/]+)\/debts\/.+$/
+    )
     if (expenseEditMatch) {
         backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
     } else if (expenseDetailMatch) {
@@ -154,6 +158,8 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
                 ? from
                 : null
         backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
+    } else if (debtPairMatch) {
+        backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
     }
     // /gustavo/trips/<slug>/<tool> → trips list
     else if (/^\/gustavo\/trips\/[^/]+\/.+$/.test(pathname)) {
