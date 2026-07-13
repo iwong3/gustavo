@@ -41,9 +41,9 @@ export const tripTools: TripTool[] = [
         bg: '#cdbfdb',
     },
     {
-        name: 'Trip',
+        name: 'Trip Details',
         path: 'details',
-        icon: 'IconInfoCircle',
+        icon: 'IconLuggage',
         bg: '#f7cd83',
     },
 ]

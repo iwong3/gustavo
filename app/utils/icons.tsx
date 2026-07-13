@@ -34,6 +34,7 @@ import {
     IconLayoutNavbarCollapse,
     IconLink,
     IconListLetters,
+    IconLuggage,
     IconMap2,
     IconMapQuestion,
     IconNotes,
@@ -133,6 +134,8 @@ export const getTablerIcon = ({
             return <IconLink {...props} />
         case 'IconListLetters':
             return <IconListLetters {...props} fill="none" />
+        case 'IconLuggage':
+            return <IconLuggage {...props} />
         case 'IconMap2':
             return <IconMap2 {...props} />
         case 'IconMapQuestion':
