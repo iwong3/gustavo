@@ -4,8 +4,13 @@
  */
 import type { Expense, TripSummary, UserSummary } from '@/lib/types'
 
+/** users.id is BIGINT — the API returns it as a STRING at runtime even though
+ *  lib/types.ts says number. Fixtures model the runtime truth so id-comparison
+ *  bugs (e.g. Number(param) === p.id never matching) surface in the gallery. */
+const asId = (id: string) => id as unknown as number
+
 export const ivan: UserSummary = {
-    id: 1,
+    id: asId('1'),
     name: 'Ivan Wong',
     firstName: 'Ivan',
     email: 'ivan@example.com',
@@ -16,7 +21,7 @@ export const ivan: UserSummary = {
 }
 
 export const jenny: UserSummary = {
-    id: 2,
+    id: asId('2'),
     name: 'Jenny Lee',
     firstName: 'Jenny',
     email: 'jenny@example.com',
@@ -27,7 +32,7 @@ export const jenny: UserSummary = {
 }
 
 export const marco: UserSummary = {
-    id: 3,
+    id: asId('3'),
     name: 'Marco Rossi',
     firstName: 'Marco',
     email: 'marco@example.com',
@@ -38,7 +43,7 @@ export const marco: UserSummary = {
 }
 
 export const priya: UserSummary = {
-    id: 4,
+    id: asId('4'),
     name: 'Priya Patel',
     firstName: 'Priya',
     email: 'priya@example.com',

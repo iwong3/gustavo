@@ -25,7 +25,9 @@ const W = 340
 const NODE_W = 8
 const LEFT_X = 68
 const RIGHT_X = W - 68
-const PX_PER_DOLLAR = 0.42
+// All ribbons together share this many px of thickness, so the map stays the
+// same height whether the trip owes $200 or $20,000
+const RIBBON_BUDGET = 170
 const NODE_GAP = 36 // ribbon stack gap + label clearance
 const MIN_RIBBON = 13
 const TOP_PAD = 26
@@ -46,8 +48,10 @@ export function MoneyMap({
     youId: number
     onFlowTap: (settlement: Settlement) => void
 }) {
+    const totalAmount = settlements.reduce((t, s) => t + s.amount, 0)
+    const pxPerDollar = totalAmount > 0 ? RIBBON_BUDGET / totalAmount : 0
     const ribbonH = (amount: number) =>
-        Math.max(amount * PX_PER_DOLLAR, MIN_RIBBON)
+        Math.max(amount * pxPerDollar, MIN_RIBBON)
 
     const debtors = Array.from(new Set(settlements.map((s) => s.debtorId)))
     const creditors = Array.from(new Set(settlements.map((s) => s.creditorId)))

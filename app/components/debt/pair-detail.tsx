@@ -128,8 +128,9 @@ export function PairDetail({
     debtorId,
     creditorId,
 }: {
-    debtorId: number
-    creditorId: number
+    /** Compared as strings — user ids are BIGINTs (strings at runtime). */
+    debtorId: number | string
+    creditorId: number | string
 }) {
     const { expenses, participants, getUsdValue, debtMap } = useSpendData()
 
@@ -137,8 +138,12 @@ export function PairDetail({
     const [sort, setSort] = useState<ListSort>('date-asc')
     const [view, setView] = useState<'all' | 'direction'>('all')
 
-    const debtor = participants.find((p) => p.id === debtorId)
-    const creditor = participants.find((p) => p.id === creditorId)
+    // Resolve to participant objects, then use THEIR ids everywhere below so
+    // comparisons stay consistent with the runtime id type
+    const debtor = participants.find((p) => String(p.id) === String(debtorId))
+    const creditor = participants.find(
+        (p) => String(p.id) === String(creditorId)
+    )
 
     // Every expense where one of the pair covered part of the other's cost
     const allRows = useMemo((): DebtRow[] => {
@@ -147,7 +152,7 @@ export function PairDetail({
         for (const expense of expenses) {
             const usd = getUsdValue(expense)
             const creditorCovered = expenseDebtContribution(
-                expense, creditorId, debtorId, usd, participants.length)
+                expense, creditor.id, debtor.id, usd, participants.length)
             if (creditorCovered > 0.005) {
                 rows.push({
                     expense, payer: creditor, beneficiary: debtor,
@@ -155,7 +160,7 @@ export function PairDetail({
                 })
             }
             const debtorCovered = expenseDebtContribution(
-                expense, debtorId, creditorId, usd, participants.length)
+                expense, debtor.id, creditor.id, usd, participants.length)
             if (debtorCovered > 0.005) {
                 rows.push({
                     expense, payer: debtor, beneficiary: creditor,
@@ -164,14 +169,16 @@ export function PairDetail({
             }
         }
         return rows
-    }, [expenses, debtor, creditor, debtorId, creditorId, getUsdValue, participants.length])
+    }, [expenses, debtor, creditor, getUsdValue, participants.length])
 
     // The group-optimal payment for this pair (may differ from the direct
     // pairwise net when the simplifier chains debts through a third person)
     const settlementAmount = useMemo(() => {
         const settlements = simplifyDebts(debtMap, participants)
         return settlements.find(
-            (s) => s.debtorId === debtorId && s.creditorId === creditorId
+            (s) =>
+                String(s.debtorId) === String(debtorId) &&
+                String(s.creditorId) === String(creditorId)
         )?.amount ?? null
     }, [debtMap, participants, debtorId, creditorId])
 
