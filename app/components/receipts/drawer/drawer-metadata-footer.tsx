@@ -30,7 +30,6 @@ export const DrawerMetadataFooter = ({
         <Box
             sx={{
                 mx: 2.5,
-                mb: 2,
                 pt: 1.5,
                 borderTop: '1px solid',
                 borderColor: 'divider',

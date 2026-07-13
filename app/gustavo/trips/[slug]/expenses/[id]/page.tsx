@@ -106,8 +106,11 @@ export default function ExpenseDetailPage() {
                 flexDirection: 'column',
                 width: '100%',
                 maxWidth: 450,
+                // Fill the scroll area so the metadata footer (marginTop:
+                // auto) sits at the bottom even when content is short
+                minHeight: '100%',
                 paddingTop: 1.5,
-                paddingBottom: 2,
+                paddingBottom: 1,
             }}>
             {/* Header — name, date/location */}
             <DrawerHeader expense={expense} />
@@ -173,14 +176,16 @@ export default function ExpenseDetailPage() {
                 onEdit={canEdit ? goToEdit : undefined}
             />
 
-            {/* Metadata footer */}
-            <DrawerMetadataFooter
-                expense={expense}
-                expenseIndex={currentIndex}
-                totalExpenses={navList.length}
-                dayNumber={isWithinTrip ? dayNumber : null}
-                totalDays={isWithinTrip ? totalDays : null}
-            />
+            {/* Metadata footer — pushed to the bottom of the content area */}
+            <Box sx={{ marginTop: 'auto' }}>
+                <DrawerMetadataFooter
+                    expense={expense}
+                    expenseIndex={currentIndex}
+                    totalExpenses={navList.length}
+                    dayNumber={isWithinTrip ? dayNumber : null}
+                    totalDays={isWithinTrip ? totalDays : null}
+                />
+            </Box>
 
             {/* Action bar — edit/delete, permission-gated */}
             {(canEdit || canDelete) && (
