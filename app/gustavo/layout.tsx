@@ -17,6 +17,10 @@ import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
 import NavDrawer from 'components/nav-drawer'
+import {
+    PageActionBarProvider,
+    usePageActionBarActive,
+} from 'components/page-action-bar'
 import { TripHeaderControls } from 'components/trip-header-controls'
 import { FabProvider, useFab } from 'providers/fab-provider'
 
@@ -54,6 +58,75 @@ function ContentFab() {
 
 const HEADER_HEIGHT = 56
 
+// Bottom tab bar — hidden while a leaf page's PageActionBar occupies its slot
+function BottomTabBar({ activeTab }: { activeTab: string }) {
+    const actionBarActive = usePageActionBarActive()
+    if (actionBarActive) return null
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                justifyContent: 'space-around',
+                alignItems: 'center',
+                position: 'fixed',
+                bottom: 0,
+                width: '100%',
+                height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                backgroundColor: colors.primaryYellow,
+                borderTopLeftRadius: 32,
+                borderTopRightRadius: 32,
+                zIndex: 10,
+            }}>
+            {tabs.map((tab) => {
+                const isActive = activeTab === tab.href
+                const Icon = tab.icon
+                return (
+                    <Box
+                        key={tab.href}
+                        component={Link}
+                        href={tab.href}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 0.5,
+                            flex: 1,
+                            height: '100%',
+                            textDecoration: 'none',
+                            color: colors.primaryBrown,
+                            transition: 'color 0.15s',
+                        }}>
+                        <Icon
+                            size={22}
+                            stroke={isActive ? 2 : 1.5}
+                            fill={
+                                isActive
+                                    ? colors.secondaryYellow
+                                    : 'none'
+                            }
+                            color={
+                                isActive
+                                    ? colors.primaryBrown
+                                    : colors.primaryBrown
+                            }
+                        />
+                        <Typography
+                            sx={{
+                                fontSize: 11,
+                                fontWeight: isActive ? 700 : 400,
+                                lineHeight: 1,
+                            }}>
+                            {tab.label}
+                        </Typography>
+                    </Box>
+                )
+            })}
+        </Box>
+    )
+}
+
 const tabs = [
     { label: 'Home', href: '/gustavo', icon: IconHome },
     { label: 'Trips', href: '/gustavo/trips', icon: IconPlaneDeparture },
@@ -89,6 +162,7 @@ export default function GustavoLayout({
     return (
         <ClientOnly>
             <FabProvider>
+                <PageActionBarProvider>
                 <NavDrawer
                     open={drawerOpen}
                     onClose={() => setDrawerOpen(false)}
@@ -168,11 +242,17 @@ export default function GustavoLayout({
                             {(() => {
                                 // Determine back URL for nested pages
                                 let backHref: string | null = null
-                                // /gustavo/trips/<slug>/expenses/<id> → expenses list
+                                // /gustavo/trips/<slug>/expenses/<id>/edit → expense detail
+                                const expenseEditMatch = pathname.match(
+                                    /^\/gustavo\/trips\/([^/]+)\/expenses\/([^/]+)\/edit$/
+                                )
+                                // /gustavo/trips/<slug>/expenses/<id|new> → expenses list
                                 const expenseDetailMatch = pathname.match(
                                     /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
                                 )
-                                if (expenseDetailMatch) {
+                                if (expenseEditMatch) {
+                                    backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
+                                } else if (expenseDetailMatch) {
                                     backHref = `/gustavo/trips/${expenseDetailMatch[1]}/expenses`
                                 }
                                 // /gustavo/trips/<slug>/<tool> → trips list
@@ -273,75 +353,13 @@ export default function GustavoLayout({
                             }}
                         />
 
-                        {/* Bottom tab bar */}
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'space-around',
-                                alignItems: 'center',
-                                position: 'fixed',
-                                bottom: 0,
-                                width: '100%',
-                                height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
-                                paddingBottom:
-                                    'env(safe-area-inset-bottom, 0px)',
-                                backgroundColor: colors.primaryYellow,
-                                borderTopLeftRadius: 32,
-                                borderTopRightRadius: 32,
-                                zIndex: 10,
-                            }}>
-                            {tabs.map((tab) => {
-                                const isActive = activeTab === tab.href
-                                const Icon = tab.icon
-                                return (
-                                    <Box
-                                        key={tab.href}
-                                        component={Link}
-                                        href={tab.href}
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: 0.5,
-                                            flex: 1,
-                                            height: '100%',
-                                            textDecoration: 'none',
-                                            color: colors.primaryBrown,
-                                            transition: 'color 0.15s',
-                                        }}>
-                                        <Icon
-                                            size={22}
-                                            stroke={isActive ? 2 : 1.5}
-                                            fill={
-                                                isActive
-                                                    ? colors.secondaryYellow
-                                                    : 'none'
-                                            }
-                                            color={
-                                                isActive
-                                                    ? colors.primaryBrown
-                                                    : colors.primaryBrown
-                                            }
-                                        />
-                                        <Typography
-                                            sx={{
-                                                fontSize: 11,
-                                                fontWeight: isActive
-                                                    ? 700
-                                                    : 400,
-                                                lineHeight: 1,
-                                            }}>
-                                            {tab.label}
-                                        </Typography>
-                                    </Box>
-                                )
-                            })}
-                        </Box>
+                        {/* Bottom tab bar (hidden while a leaf page's action bar is up) */}
+                        <BottomTabBar activeTab={activeTab} />
                         {/* FAB overlay — fixed to content area bounds, above scroll container */}
                         <ContentFab />
                     </Box>
                 </Box>
+                </PageActionBarProvider>
             </FabProvider>
         </ClientOnly>
     )

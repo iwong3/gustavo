@@ -9,7 +9,6 @@ import { cardSx, colors } from '@/lib/colors'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
-import ExpenseFormDialog from 'components/expense-form-dialog'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import { useRefresh } from 'providers/refresh-provider'
 import { useSpendData } from 'providers/spend-data-provider'
@@ -37,8 +36,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
 
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
 
-    // Swipe action dialogs (separate from drawer's dialogs)
-    const [swipeEditExpense, setSwipeEditExpense] = useState<Expense | null>(null)
+    // Swipe delete confirmation dialog
     const [swipeDeleteExpense, setSwipeDeleteExpense] = useState<Expense | null>(null)
 
     const displayData = expenses || filteredExpenses
@@ -77,6 +75,15 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const handleTap = useCallback(
         (expense: Expense) => {
             router.push(`/gustavo/trips/${trip.slug}/expenses/${expense.id}`)
+        },
+        [router, trip.slug]
+    )
+
+    const handleEdit = useCallback(
+        (expense: Expense) => {
+            router.push(
+                `/gustavo/trips/${trip.slug}/expenses/${expense.id}/edit`
+            )
         },
         [router, trip.slug]
     )
@@ -141,7 +148,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                         <SwipeableRow
                                             canEdit={rowCanEdit}
                                             canDelete={rowCanDelete}
-                                            onEdit={() => setSwipeEditExpense(row)}
+                                            onEdit={() => handleEdit(row)}
                                             onDelete={() => setSwipeDeleteExpense(row)}
                                             backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
                                             showBottomBorder={false}
@@ -194,7 +201,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                                     key={row.id}
                                                     canEdit={rowCanEdit}
                                                     canDelete={rowCanDelete}
-                                                    onEdit={() => setSwipeEditExpense(row)}
+                                                    onEdit={() => handleEdit(row)}
                                                     onDelete={() => setSwipeDeleteExpense(row)}
                                                     backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
                                                     showBottomBorder={i < group.expenses.length - 1}
@@ -213,18 +220,6 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                     )
                 })}
             </Box>
-
-            {/* Swipe edit dialog */}
-            <ExpenseFormDialog
-                open={swipeEditExpense !== null}
-                onClose={() => setSwipeEditExpense(null)}
-                onSuccess={() => {
-                    setSwipeEditExpense(null)
-                    onRefresh()
-                }}
-                mode="edit"
-                expense={swipeEditExpense ?? undefined}
-            />
 
             {/* Swipe delete dialog */}
             <DeleteExpenseDialog

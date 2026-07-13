@@ -7,7 +7,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import DeleteTripDialog from 'components/delete-trip-dialog'
-import ExpenseFormDialog from 'components/expense-form-dialog'
+import ExpenseForm from 'components/expense-form'
 import TripFormDialog from 'components/trip-form-dialog'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { colors, hardShadow } from '@/lib/colors'
@@ -104,31 +104,43 @@ export default function FormsGallery() {
                 </Box>
             </Box>
 
-            {/* Page body — only visible when no form is open */}
-            <Box sx={{ pt: `${HEADER_HEIGHT + 16}px`, px: 2, pb: 4 }}>
-                <Typography sx={{ fontSize: 12, color: 'text.secondary', maxWidth: 480 }}>
-                    Tap a chip to open that form — the header stays on top, so you can flip
-                    directly between forms to compare. Dropdown data (categories, users)
-                    loads from the local API — needs a signed-in browser. Submitting writes
-                    to your local dev DB; the delete buttons are no-ops.
-                </Typography>
-            </Box>
+            {/* Page body — description when nothing (or a drawer form) is open;
+                expense forms render inline as page bodies, like in the app */}
+            {selected !== 'expense-add' && selected !== 'expense-edit' && (
+                <Box sx={{ pt: `${HEADER_HEIGHT + 16}px`, px: 2, pb: 4 }}>
+                    <Typography sx={{ fontSize: 12, color: 'text.secondary', maxWidth: 480 }}>
+                        Tap a chip to open that form — the header stays on top, so you can flip
+                        directly between forms to compare. Dropdown data (categories, users)
+                        loads from the local API — needs a signed-in browser. Submitting writes
+                        to your local dev DB; the delete buttons are no-ops.
+                    </Typography>
+                </Box>
+            )}
 
-            <TripDataProvider trip={trip} expenses={expenses}>
-                <ExpenseFormDialog
-                    open={selected === 'expense-add'}
-                    onClose={close}
-                    onSuccess={close}
-                    mode="add"
-                />
-                <ExpenseFormDialog
-                    open={selected === 'expense-edit'}
-                    onClose={close}
-                    onSuccess={close}
-                    mode="edit"
-                    expense={expenses[0]}
-                />
-            </TripDataProvider>
+            {(selected === 'expense-add' || selected === 'expense-edit') && (
+                <Box
+                    sx={{
+                        pt: `${HEADER_HEIGHT}px`,
+                        display: 'flex',
+                        justifyContent: 'center',
+                    }}>
+                    <Box sx={{ width: '100%', maxWidth: 450 }}>
+                        <TripDataProvider trip={trip} expenses={expenses}>
+                            <ExpenseForm
+                                key={selected}
+                                mode={selected === 'expense-add' ? 'add' : 'edit'}
+                                expense={
+                                    selected === 'expense-edit'
+                                        ? expenses[0]
+                                        : undefined
+                                }
+                                onCancel={close}
+                                onSuccess={close}
+                            />
+                        </TripDataProvider>
+                    </Box>
+                </Box>
+            )}
 
             <TripFormDialog
                 open={selected === 'trip-create'}

@@ -3,7 +3,6 @@
 import {
     Autocomplete,
     Box,
-    Button,
     FormControl,
     MenuItem,
     Select,
@@ -12,6 +11,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 
 import { fetchExpenseCategories } from 'utils/api'
 import { queryKeys, staleTimes } from '@/lib/query-keys'
@@ -23,15 +23,21 @@ import {
     dropdownMenuItemSx,
     dropdownPaperSx,
     errorMessageSx,
+    fieldShadow,
     fieldSx,
     labelSx,
     prefilledFieldSx,
-    primaryButtonSx,
-    secondaryButtonSx,
     selectMenuProps,
 } from '@/lib/form-styles'
-import { IconGift } from '@tabler/icons-react'
-import FormDrawer from 'components/form-drawer'
+import {
+    IconCalendarEvent,
+    IconCheck,
+    IconChevronLeft,
+    IconChevronRight,
+    IconGift,
+    IconX,
+} from '@tabler/icons-react'
+import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 import PlaceAutocomplete from 'components/place-autocomplete'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, ConflictError, updateExpense } from 'utils/api'
@@ -119,29 +125,42 @@ const inferCategoryFromPlace = (types: string[], primaryType: string | null): st
 
 type Category = { id: number; name: string; slug: string | null }
 
-const todayISO = () => {
-    const d = new Date()
-    // Use local date parts (not UTC) to avoid timezone shift
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}`
-}
+// Local date (not UTC) to avoid timezone shift around midnight
+const isoDaysAgo = (days: number) =>
+    dayjs().subtract(days, 'day').format('YYYY-MM-DD')
+
+// Map a stored expense's place back to the PlaceDetails shape the autocomplete uses
+const toPlaceDetails = (expense: Expense | undefined): PlaceDetails | null =>
+    expense?.place
+        ? {
+              placeId: expense.place.googlePlaceId,
+              name: expense.place.name,
+              address: expense.place.address ?? '',
+              lat: expense.place.lat ?? 0,
+              lng: expense.place.lng ?? 0,
+              addressComponents: [], // Not needed for display
+              types: expense.place.types ?? [],
+              primaryType: expense.place.primaryType ?? null,
+              priceLevel: expense.place.priceLevel ?? null,
+              rating: expense.place.rating ?? null,
+              website: expense.place.website ?? null,
+              hoursJson: expense.place.hoursJson ?? null,
+              photoRefs: expense.place.photoRefs ?? null,
+          }
+        : null
 
 type Props = {
-    open: boolean
-    onClose: () => void
-    onSuccess: () => void
     mode: 'add' | 'edit'
     expense?: Expense
+    onCancel: () => void
+    onSuccess: () => void
 }
 
-export default function ExpenseFormDialog({
-    open,
-    onClose,
-    onSuccess,
+export default function ExpenseForm({
     mode,
     expense,
+    onCancel,
+    onSuccess,
 }: Props) {
     const { trip, expenses } = useTripData()
 
@@ -155,7 +174,6 @@ export default function ExpenseFormDialog({
     const { data: categories = [] } = useQuery<Category[]>({
         queryKey: queryKeys.expenseCategories.list(),
         queryFn: fetchExpenseCategories,
-        enabled: open,
         staleTime: staleTimes.medium,
     })
 
@@ -166,31 +184,53 @@ export default function ExpenseFormDialog({
             if (!res.ok) throw new Error('Failed to fetch locations')
             return res.json()
         },
-        enabled: open,
     })
     const tripLocations = useMemo(
         () => tripLocationItems.map((l) => l.name),
         [tripLocationItems]
     )
 
-    const [name, setName] = useState('')
-    const [date, setDate] = useState(todayISO())
-    const [cost, setCost] = useState('')
-    const [currency, setCurrency] = useState<string>('USD')
-    const [categoryId, setCategoryId] = useState<number | ''>('')
-    const [paidBy, setPaidBy] = useState(currentUserName)
-    const [splitBetween, setSplitBetween] = useState<string[]>(['Everyone'])
-    const [location, setLocation] = useState('')
-    const [notes, setNotes] = useState('')
-    const [localCurrencyReceived, setLocalCurrencyReceived] = useState('')
-    const [coveredParticipants, setCoveredParticipants] = useState<string[]>([])
-    const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(null)
+    const isEdit = mode === 'edit'
+
+    const [name, setName] = useState(expense?.name ?? '')
+    const [date, setDate] = useState(expense?.date ?? isoDaysAgo(0))
+    const [cost, setCost] = useState(expense?.costOriginal.toFixed(2) ?? '')
+    const [currency, setCurrency] = useState<string>(expense?.currency ?? 'USD')
+    const [categoryId, setCategoryId] = useState<number | ''>(
+        expense?.categoryId ?? ''
+    )
+    const [paidBy, setPaidBy] = useState(
+        expense?.paidBy.firstName ?? currentUserName
+    )
+    const [splitBetween, setSplitBetween] = useState<string[]>(
+        expense
+            ? expense.isEveryone
+                ? ['Everyone']
+                : expense.splitBetween.map((u) => u.firstName)
+            : ['Everyone']
+    )
+    const [location, setLocation] = useState(expense?.locationName ?? '')
+    const [notes, setNotes] = useState(expense?.notes ?? '')
+    const [localCurrencyReceived, setLocalCurrencyReceived] = useState(
+        expense?.localCurrencyReceived?.toFixed(2) ?? ''
+    )
+    const [coveredParticipants, setCoveredParticipants] = useState<string[]>(
+        expense?.coveredParticipants.map((u) => u.firstName) ?? []
+    )
+    const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(() =>
+        toPlaceDetails(expense)
+    )
+    // First day of the week shown in the date strip
+    const [weekAnchor, setWeekAnchor] = useState(() => {
+        const selected = dayjs((expense?.date ?? isoDaysAgo(0)) + 'T00:00:00')
+        return (selected.isValid() ? selected : dayjs()).startOf('week')
+    })
+    const dateInputRef = useRef<HTMLInputElement>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
-    const nameInputRef = useRef<HTMLInputElement>(null)
 
     const isLegacyTrip = LEGACY_TRIP_IDS.has(trip.id)
 
@@ -306,11 +346,16 @@ export default function ExpenseFormDialog({
     const selectedCategoryObj =
         sortedCategories.find((c) => c.id === categoryId) ?? null
 
-
+    // Repopulate when the expense refreshes under us (e.g. after an OCC
+    // conflict invalidates the expenses query) so the form shows the latest
+    // saved values — mirrors the old drawer behavior.
     useEffect(() => {
-        if (open && mode === 'edit' && expense) {
+        if (mode === 'edit' && expense) {
             setName(expense.name)
             setDate(expense.date)
+            setWeekAnchor(
+                dayjs(expense.date + 'T00:00:00').startOf('week')
+            )
             setCost(expense.costOriginal.toFixed(2))
             setCurrency(expense.currency)
             setCategoryId(expense.categoryId ?? '')
@@ -324,35 +369,14 @@ export default function ExpenseFormDialog({
                 expense.coveredParticipants.map((u) => u.firstName)
             )
             setLocation(expense.locationName ?? '')
-            setGooglePlace(
-                expense.place
-                    ? {
-                          placeId: expense.place.googlePlaceId,
-                          name: expense.place.name,
-                          address: expense.place.address ?? '',
-                          lat: expense.place.lat ?? 0,
-                          lng: expense.place.lng ?? 0,
-                          addressComponents: [], // Not needed for display
-                          types: expense.place.types ?? [],
-                          primaryType: expense.place.primaryType ?? null,
-                          priceLevel: expense.place.priceLevel ?? null,
-                          rating: expense.place.rating ?? null,
-                          website: expense.place.website ?? null,
-                          hoursJson: expense.place.hoursJson ?? null,
-                          photoRefs: expense.place.photoRefs ?? null,
-                      }
-                    : null
-            )
+            setGooglePlace(toPlaceDetails(expense))
             setNotes(expense.notes ?? '')
             setLocalCurrencyReceived(
                 expense.localCurrencyReceived?.toFixed(2) ?? ''
             )
-            setError('')
             setCategoryDropdownOpen(false)
-        } else if (open && mode === 'add') {
-            resetForm()
         }
-    }, [open, mode, expense])
+    }, [mode, expense])
 
     // Trip currencies (USD always included). Falls back to legacy single
     // `currency` field for safety when API hasn't been redeployed yet.
@@ -438,29 +462,6 @@ export default function ExpenseFormDialog({
         )
     }, [trip.participants, splitBetween, isEveryone, paidBy, people])
 
-    const resetForm = () => {
-        setName('')
-        setDate(todayISO())
-        setCost('')
-        setCurrency('USD')
-        setCategoryId('')
-        setPaidBy(currentUserName)
-        setSplitBetween(['Everyone'])
-        setCoveredParticipants([])
-        setLocation('')
-        setGooglePlace(null)
-        setNotes('')
-        setLocalCurrencyReceived('')
-        setError('')
-        setCategoryDropdownOpen(false)
-        setPrefilled({ name: false, category: false })
-    }
-
-    const handleClose = () => {
-        onClose()
-        setTimeout(resetForm, 300)
-    }
-
     const handleSubmit = async () => {
         if (!name.trim() || !date || !cost || !paidBy) {
             setError('Please fill in all required fields.')
@@ -527,8 +528,6 @@ export default function ExpenseFormDialog({
             } else {
                 await addExpense(trip.id, payload)
             }
-            resetForm()
-            onClose()
             onSuccess()
         } catch (err) {
             if (err instanceof ConflictError) {
@@ -551,16 +550,67 @@ export default function ExpenseFormDialog({
         }
     }
 
-    const isEdit = mode === 'edit'
+    // ── Date week strip ──────────────────────────────────────────────────
+    const selectedDay = dayjs(date + 'T00:00:00')
+    const today = dayjs()
+    const weekDays = Array.from({ length: 7 }, (_, i) =>
+        weekAnchor.add(i, 'day')
+    )
+
+    // Open the native calendar for dates outside the strip's reach
+    const openNativePicker = () => {
+        const el = dateInputRef.current
+        if (!el) return
+        try {
+            el.showPicker()
+        } catch {
+            el.focus()
+            el.click()
+        }
+    }
+
+    const pickDate = (value: string) => {
+        setDate(value)
+        const day = dayjs(value + 'T00:00:00')
+        if (day.isValid()) setWeekAnchor(day.startOf('week'))
+    }
+
+    // Week paging paddle at either end of the strip
+    const weekPaddle = (direction: -1 | 1) => (
+        <Box
+            onClick={() =>
+                setWeekAnchor((a) => a.add(direction * 7, 'day'))
+            }
+            role="button"
+            aria-label={direction > 0 ? 'Next week' : 'Previous week'}
+            sx={{
+                'display': 'flex',
+                'alignItems': 'center',
+                'justifyContent': 'center',
+                'width': 30,
+                'flexShrink': 0,
+                'cursor': 'pointer',
+                'userSelect': 'none',
+                [direction > 0 ? 'borderLeft' : 'borderRight']: '1px solid',
+                'borderColor': 'divider',
+                '&:active': { backgroundColor: 'rgba(0,0,0,0.06)' },
+            }}>
+            {direction > 0 ? (
+                <IconChevronRight size={16} color={colors.primaryBlack} />
+            ) : (
+                <IconChevronLeft size={16} color={colors.primaryBlack} />
+            )}
+        </Box>
+    )
 
     return (
-        <FormDrawer open={open} onClose={handleClose}>
+        <>
             <Typography
                 variant="h6"
                 sx={{
                     fontWeight: 700,
                     color: colors.primaryBlack,
-                    padding: '16px 24px 0',
+                    padding: '16px 16px 0',
                 }}>
                 {isEdit ? 'Edit Expense' : 'Add Expense'}
             </Typography>
@@ -569,11 +619,141 @@ export default function ExpenseFormDialog({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
-                    padding: '16px 24px',
-                    flex: 1,
-                    overflowY: 'auto',
+                    padding: '16px',
                 }}>
-                {/* 1. Place (Google Places autocomplete) */}
+                {/* 1. Date — week strip: one tap for nearby dates, native
+                    calendar (via the header summary) for anything else */}
+                <Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: 0.5,
+                        }}>
+                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                            Date *
+                        </Typography>
+                        {/* Selected date summary — tap to open the full calendar */}
+                        <Box
+                            onClick={openNativePicker}
+                            sx={{
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                            }}>
+                            <IconCalendarEvent
+                                size={15}
+                                color={colors.primaryBlack}
+                            />
+                            <Typography
+                                sx={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: colors.primaryBlack,
+                                    lineHeight: 1,
+                                }}>
+                                {selectedDay.isValid()
+                                    ? selectedDay.format('ddd, MMM D')
+                                    : 'Pick a date'}
+                            </Typography>
+                            {/* Invisible native input anchors the picker here */}
+                            <input
+                                ref={dateInputRef}
+                                type="date"
+                                value={date}
+                                onChange={(e) => pickDate(e.target.value)}
+                                tabIndex={-1}
+                                style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    opacity: 0,
+                                    pointerEvents: 'none',
+                                    border: 0,
+                                    padding: 0,
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'stretch',
+                            backgroundColor: colors.primaryWhite,
+                            border: `1px solid ${colors.primaryBlack}`,
+                            borderRadius: '4px',
+                            boxShadow: fieldShadow,
+                            overflow: 'hidden',
+                        }}>
+                        {weekPaddle(-1)}
+                        {weekDays.map((d) => {
+                            const isSelected =
+                                selectedDay.isValid() &&
+                                d.isSame(selectedDay, 'day')
+                            const isToday = d.isSame(today, 'day')
+                            return (
+                                <Box
+                                    key={d.format('YYYY-MM-DD')}
+                                    onClick={() =>
+                                        pickDate(d.format('YYYY-MM-DD'))
+                                    }
+                                    sx={{
+                                        flex: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '3px',
+                                        paddingY: 0.75,
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        backgroundColor: isSelected
+                                            ? colors.primaryYellow
+                                            : 'transparent',
+                                        transition:
+                                            'background-color 0.15s',
+                                    }}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 9,
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            color: 'text.secondary',
+                                            lineHeight: 1,
+                                        }}>
+                                        {d.format('dd')}
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 14,
+                                            fontWeight: 700,
+                                            color: colors.primaryBlack,
+                                            lineHeight: 1,
+                                        }}>
+                                        {d.format('D')}
+                                    </Typography>
+                                    {/* Today marker */}
+                                    <Box
+                                        sx={{
+                                            width: 4,
+                                            height: 4,
+                                            borderRadius: '50%',
+                                            backgroundColor: isToday
+                                                ? colors.primaryBrown
+                                                : 'transparent',
+                                        }}
+                                    />
+                                </Box>
+                            )
+                        })}
+                        {weekPaddle(1)}
+                    </Box>
+                </Box>
+
+                {/* 2. Place (Google Places autocomplete) */}
                 <Box>
                     <Typography sx={labelSx}>Place</Typography>
                     <PlaceAutocomplete
@@ -582,11 +762,10 @@ export default function ExpenseFormDialog({
                     />
                 </Box>
 
-                {/* 2. Expense name */}
+                {/* 3. Expense name */}
                 <Box>
                     <Typography sx={labelSx}>Expense name *</Typography>
                     <TextField
-                        inputRef={nameInputRef}
                         placeholder="e.g. Lunch at cafe"
                         value={name}
                         onChange={(e) => {
@@ -601,7 +780,7 @@ export default function ExpenseFormDialog({
                     />
                 </Box>
 
-                {/* 2. Cost + Currency + Paid by */}
+                {/* 4. Cost + Currency + Paid by */}
                 <Box>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Box sx={{ flex: 1 }}>
@@ -756,7 +935,7 @@ export default function ExpenseFormDialog({
                     </Box>
                 </Box>
 
-                {/* 3. Local currency received (currency exchange only) */}
+                {/* 5. Local currency received (currency exchange only) */}
                 {isCurrencyExchange &&
                     (() => {
                         const localMeta = getCurrencyMeta(currency)
@@ -826,7 +1005,7 @@ export default function ExpenseFormDialog({
                     </defs>
                 </svg>
 
-                {/* 5. Split between — multi-select avatar row with gift toggle (Place field follows) */}
+                {/* 6. Split between — multi-select avatar row with gift toggle */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                     <Box
                         sx={{
@@ -965,22 +1144,7 @@ export default function ExpenseFormDialog({
                     </Box>
                 </Box>
 
-                {/* 7. Date (pre-filled to today) */}
-                <Box sx={{ maxWidth: 180 }}>
-                    <Typography sx={labelSx}>Date *</Typography>
-                    <TextField
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        required
-                        fullWidth
-                        size="small"
-                        slotProps={{ inputLabel: { shrink: true } }}
-                        sx={fieldSx}
-                    />
-                </Box>
-
-                {/* 8. Category */}
+                {/* 7. Category */}
                 <Box>
                     <Typography sx={labelSx}>Category</Typography>
                     <Autocomplete
@@ -1057,7 +1221,7 @@ export default function ExpenseFormDialog({
                     />
                 </Box>
 
-                {/* 9. Location (legacy trips only) */}
+                {/* 8. Location (legacy trips only) */}
                 {isLegacyTrip && (
                     <Box>
                         <Typography sx={labelSx}>Location</Typography>
@@ -1081,7 +1245,7 @@ export default function ExpenseFormDialog({
                     </Box>
                 )}
 
-                {/* 10. Notes */}
+                {/* 9. Notes */}
                 <Box>
                     <Typography sx={labelSx}>Notes</Typography>
                     <TextField
@@ -1103,34 +1267,29 @@ export default function ExpenseFormDialog({
                     </Typography>
                 )}
             </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '16px 24px',
-                    paddingBottom: `calc(24px + env(safe-area-inset-bottom, 0px))`,
-                }}>
-                <Button
-                    onClick={handleClose}
+
+            <PageActionBar>
+                <PageActionButton
+                    onClick={onCancel}
                     disabled={submitting}
-                    size="large"
-                    sx={secondaryButtonSx}>
-                    Cancel
-                </Button>
-                <Button
+                    icon={<IconX size={22} />}
+                    label="Cancel"
+                />
+                <PageActionButton
                     onClick={handleSubmit}
                     disabled={submitting}
-                    size="large"
-                    sx={primaryButtonSx}>
-                    {submitting
-                        ? isEdit
-                            ? 'Saving...'
-                            : 'Adding...'
-                        : isEdit
-                          ? 'Save'
-                          : 'Add'}
-                </Button>
-            </Box>
-        </FormDrawer>
+                    icon={<IconCheck size={22} />}
+                    label={
+                        submitting
+                            ? isEdit
+                                ? 'Saving...'
+                                : 'Adding...'
+                            : isEdit
+                              ? 'Save'
+                              : 'Add'
+                    }
+                />
+            </PageActionBar>
+        </>
     )
 }

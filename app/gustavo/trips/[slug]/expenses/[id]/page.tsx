@@ -1,11 +1,12 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { IconEdit, IconTrash } from '@tabler/icons-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
-import { cardSx, colors } from '@/lib/colors'
+import { colors } from '@/lib/colors'
 import { useRefresh } from 'providers/refresh-provider'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
@@ -24,8 +25,8 @@ import { DrawerPlaceMetadata } from 'components/receipts/drawer/drawer-place-met
 import { DrawerNotes } from 'components/receipts/drawer/drawer-notes'
 import { DrawerMetadataFooter } from 'components/receipts/drawer/drawer-metadata-footer'
 
-import ExpenseFormDialog from 'components/expense-form-dialog'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
+import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 
 import type { Expense } from '@/lib/types'
 
@@ -41,7 +42,6 @@ export default function ExpenseDetailPage() {
     } = useSpendData()
     const { onRefresh } = useRefresh()
 
-    const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
     // Compare as strings: expense ids are BIGINTs that the pg driver returns
@@ -88,6 +88,9 @@ export default function ExpenseDetailPage() {
     const canEdit = canEditExpenseFn(trip.userRole, trip.isAdmin, isReporter)
     const canDelete = canDeleteExpenseFn(trip.userRole, trip.isAdmin, isReporter)
 
+    const goToEdit = () =>
+        router.push(`/gustavo/trips/${trip.slug}/expenses/${expense.id}/edit`)
+
     // Day number calculation
     const tripStart = dayjs(trip.startDate + 'T00:00:00')
     const tripEnd = dayjs(trip.endDate + 'T00:00:00')
@@ -103,110 +106,102 @@ export default function ExpenseDetailPage() {
                 flexDirection: 'column',
                 width: '100%',
                 maxWidth: 450,
-                paddingX: 2,
-                paddingY: 2,
+                paddingTop: 1.5,
+                paddingBottom: 2,
             }}>
-            {/* Detail card */}
-            <Box
-                sx={{
-                    ...cardSx,
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    backgroundColor: colors.primaryWhite,
-                    paddingTop: 1.5,
-                    paddingBottom: 2,
-                }}>
-                {/* Header — name, date/location, edit/delete actions */}
-                <DrawerHeader
-                    expense={expense}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                    onEdit={() => setEditDialogOpen(true)}
-                    onDelete={() => setDeleteDialogOpen(true)}
-                />
+            {/* Header — name, date/location */}
+            <DrawerHeader expense={expense} />
 
-                {/* Cost */}
-                <DrawerCostSection expense={expense} costUsd={costUsd} />
+            {/* Cost */}
+            <DrawerCostSection expense={expense} costUsd={costUsd} />
 
-                {/* Payer profile — uses unfiltered trip expenses for stats */}
-                <DrawerPayerProfile
-                    payer={expense.paidBy}
-                    allExpenses={allTripExpenses}
-                    getUsdValue={getUsdValue}
-                    currentUserId={trip.currentUserId}
-                />
-
-                {/* Split */}
-                <DrawerSplitSection
-                    expense={expense}
-                    costUsd={costUsd}
-                    currentUserId={trip.currentUserId}
-                    tripParticipantCount={trip.participants.length}
-                />
-
-                {/* --- Section divider (only if map follows) --- */}
-                {expense.place && (
-                    <Box
-                        sx={{
-                            mx: 2.5,
-                            mb: 2,
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                        }}
-                    />
-                )}
-
-                {/* Map + place metadata */}
-                {expense.place && (
-                    <DrawerMapSection place={expense.place}>
-                        <DrawerPlaceMetadata
-                            place={expense.place}
-                            allExpenses={navList}
-                            currentExpenseId={expense.id}
-                            onJumpToExpense={goToExpense}
-                        />
-                    </DrawerMapSection>
-                )}
-
-                {/* --- Section divider (only if notes follow) --- */}
-                {expense.notes?.trim() && (
-                    <Box
-                        sx={{
-                            mx: 2.5,
-                            mb: 2,
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                        }}
-                    />
-                )}
-
-                {/* Notes */}
-                <DrawerNotes
-                    notes={expense.notes}
-                    onEdit={canEdit ? () => setEditDialogOpen(true) : undefined}
-                />
-
-                {/* Metadata footer */}
-                <DrawerMetadataFooter
-                    expense={expense}
-                    expenseIndex={currentIndex}
-                    totalExpenses={navList.length}
-                    dayNumber={isWithinTrip ? dayNumber : null}
-                    totalDays={isWithinTrip ? totalDays : null}
-                />
-            </Box>
-
-            {/* Edit dialog */}
-            <ExpenseFormDialog
-                open={editDialogOpen}
-                onClose={() => setEditDialogOpen(false)}
-                onSuccess={() => {
-                    setEditDialogOpen(false)
-                    onRefresh()
-                }}
-                mode="edit"
-                expense={expense}
+            {/* Payer profile — uses unfiltered trip expenses for stats */}
+            <DrawerPayerProfile
+                payer={expense.paidBy}
+                allExpenses={allTripExpenses}
+                getUsdValue={getUsdValue}
+                currentUserId={trip.currentUserId}
             />
+
+            {/* Split */}
+            <DrawerSplitSection
+                expense={expense}
+                costUsd={costUsd}
+                currentUserId={trip.currentUserId}
+                tripParticipantCount={trip.participants.length}
+            />
+
+            {/* --- Section divider (only if map follows) --- */}
+            {expense.place && (
+                <Box
+                    sx={{
+                        mx: 2.5,
+                        mb: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                    }}
+                />
+            )}
+
+            {/* Map + place metadata */}
+            {expense.place && (
+                <DrawerMapSection place={expense.place}>
+                    <DrawerPlaceMetadata
+                        place={expense.place}
+                        allExpenses={navList}
+                        currentExpenseId={expense.id}
+                        onJumpToExpense={goToExpense}
+                    />
+                </DrawerMapSection>
+            )}
+
+            {/* --- Section divider (only if notes follow) --- */}
+            {expense.notes?.trim() && (
+                <Box
+                    sx={{
+                        mx: 2.5,
+                        mb: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                    }}
+                />
+            )}
+
+            {/* Notes */}
+            <DrawerNotes
+                notes={expense.notes}
+                onEdit={canEdit ? goToEdit : undefined}
+            />
+
+            {/* Metadata footer */}
+            <DrawerMetadataFooter
+                expense={expense}
+                expenseIndex={currentIndex}
+                totalExpenses={navList.length}
+                dayNumber={isWithinTrip ? dayNumber : null}
+                totalDays={isWithinTrip ? totalDays : null}
+            />
+
+            {/* Action bar — edit/delete, permission-gated */}
+            {(canEdit || canDelete) && (
+                <PageActionBar>
+                    {canDelete && (
+                        <PageActionButton
+                            onClick={() => setDeleteDialogOpen(true)}
+                            icon={<IconTrash size={22} />}
+                            label="Delete"
+                            color={colors.primaryRed}
+                        />
+                    )}
+                    {canEdit && (
+                        <PageActionButton
+                            onClick={goToEdit}
+                            icon={<IconEdit size={22} />}
+                            label="Edit"
+                        />
+                    )}
+                </PageActionBar>
+            )}
 
             {/* Delete dialog */}
             <DeleteExpenseDialog
