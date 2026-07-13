@@ -21,12 +21,15 @@ const dimensionOptions = [
     { value: 'location', label: 'Location' },
 ]
 
-const formatUsd = (n: number) =>
-    n.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-    })
+// Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
+const formatUsd = (n: number | null | undefined) =>
+    Number.isFinite(n)
+        ? n!.toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD',
+              maximumFractionDigits: 0,
+          })
+        : '—'
 
 export default function MySpendPage() {
     const { trip } = useTripData()

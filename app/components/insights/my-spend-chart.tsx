@@ -10,12 +10,15 @@ const CHART_AREA_HEIGHT = 150
 const BAR_MAX_HEIGHT = 118
 const MIN_BAR_WIDTH = 30
 
-const formatUsd = (n: number) =>
-    n.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-    })
+// Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
+const formatUsd = (n: number | null | undefined) =>
+    Number.isFinite(n)
+        ? n!.toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD',
+              maximumFractionDigits: 0,
+          })
+        : '—'
 
 // Bar that animates to its target height on mount and on every change.
 // Mounting from 0 makes tab/person switches "grow in"; later data changes

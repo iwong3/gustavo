@@ -18,8 +18,11 @@ import type {
 import { getColorForCategory, getLocationColor } from 'utils/icons'
 
 import { colors } from '@/lib/colors'
+import MySpendPage from '../../../gustavo/trips/[slug]/graphs/page'
+import { SpendDataProvider } from 'providers/spend-data-provider'
+import { TripDataProvider } from 'providers/trip-data-provider'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
-import { ivan, jenny, makeExpense, marco, participants, priya } from '../fixtures'
+import { ivan, jenny, makeExpense, marco, participants, priya, trip } from '../fixtures'
 
 // A multi-day, multi-location spread so every dimension has shape
 const galleryExpenses: Expense[] = [
@@ -33,6 +36,12 @@ const galleryExpenses: Expense[] = [
     makeExpense({ name: 'Tea ceremony (treat)', date: '2026-07-06', categoryName: 'Attraction', locationName: 'Kyoto', costConvertedUsd: 72, costOriginal: 72, splitBetween: [ivan, jenny], coveredParticipants: [jenny] }),
     makeExpense({ name: 'Dotonbori crawl', date: '2026-07-08', categoryName: 'Food', locationName: 'Osaka', costConvertedUsd: 96, costOriginal: 96, isEveryone: true, splitBetween: participants, paidBy: marco }),
     makeExpense({ name: 'Omiyage haul', date: '2026-07-09', categoryName: 'Shopping', locationName: 'Osaka', costConvertedUsd: 85, costOriginal: 85, splitBetween: [ivan] }),
+    // Blended-rate source so the conversion-error row below gets a USD value
+    makeExpense({ name: 'Yen exchange', date: '2026-07-04', categoryName: 'Currency Exchange', categorySlug: 'currency_exchange', currency: 'JPY', costOriginal: 100, costConvertedUsd: 100, localCurrencyReceived: 15000, splitBetween: [ivan] }),
+    // Conversion-error row: costConvertedUsd is null AT RUNTIME despite the
+    // number type (API parseFloat → NaN → JSON.stringify → null). Crashed the
+    // prod insights page on 2026-07-13 — keep this specimen to guard it.
+    makeExpense({ name: 'Kaiten sushi (conv error)', date: '2026-07-04', categoryName: 'Food', currency: 'JPY', costOriginal: 3000, costConvertedUsd: null as unknown as number, conversionError: true, isEveryone: true, splitBetween: participants }),
 ]
 
 const dimensionOptions = [
@@ -52,6 +61,7 @@ function InteractiveMySpend() {
         return galleryExpenses
             .map((expense) => ({
                 expense,
+                usdTotal: expense.costConvertedUsd,
                 share: expenseShareForUser(
                     expense,
                     ivan.id,
@@ -143,6 +153,17 @@ function InteractiveMySpend() {
 export default function InsightsGalleryPage() {
     return (
         <GalleryPage title="Insights">
+            <SpecimenGroup title="Full page (real providers + hook, fixture data)">
+                <Specimen label="MySpendPage under Trip/SpendDataProvider">
+                    <TripDataProvider
+                        expenses={galleryExpenses}
+                        trip={trip}>
+                        <SpendDataProvider>
+                            <MySpendPage />
+                        </SpendDataProvider>
+                    </TripDataProvider>
+                </Specimen>
+            </SpecimenGroup>
             <SpecimenGroup title="My Spend (interactive — switch tabs, tap bars, search, sort)">
                 <Specimen label="chart + list, Ivan's shares">
                     <InteractiveMySpend />

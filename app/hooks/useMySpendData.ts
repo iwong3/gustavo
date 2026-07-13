@@ -26,6 +26,9 @@ export type MySpendChartDatum = {
 export type MySpendRow = {
     expense: Expense
     share: number
+    /** Group total in USD via getUsdValue — NOT costConvertedUsd, which is
+     *  null at runtime for conversion-error rows (API NaN → JSON null). */
+    usdTotal: number
 }
 
 export type MySpendFilters = {
@@ -92,13 +95,14 @@ export function useMySpendData() {
     const shareRows = useMemo((): MySpendRow[] => {
         const rows: MySpendRow[] = []
         for (const expense of expenses) {
+            const usdTotal = getUsdValue(expense)
             const share = expenseShareForUser(
                 expense,
                 personId,
-                getUsdValue(expense),
+                usdTotal,
                 participants.length
             )
-            if (share > 0.005) rows.push({ expense, share })
+            if (share > 0.005) rows.push({ expense, share, usdTotal })
         }
         return rows
     }, [expenses, personId, getUsdValue, participants.length])

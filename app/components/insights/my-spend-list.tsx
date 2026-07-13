@@ -24,13 +24,16 @@ const SORT_OPTIONS: { id: MySpendSort; label: string; menuLabel: string }[] = [
     { id: 'amount-asc', label: '$ low', menuLabel: 'Amount · lowest first' },
 ]
 
-const formatUsd = (n: number, maxDigits = 0) =>
-    n.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: maxDigits,
-    })
+// Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
+const formatUsd = (n: number | null | undefined, maxDigits = 0) =>
+    Number.isFinite(n)
+        ? n!.toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: maxDigits,
+          })
+        : '—'
 
 function ShareExpenseRow({
     row,
@@ -111,7 +114,7 @@ function ShareExpenseRow({
                         color: 'text.secondary',
                         fontVariantNumeric: 'tabular-nums',
                     }}>
-                    of {formatUsd(row.expense.costConvertedUsd)}
+                    of {formatUsd(row.usdTotal)}
                 </Typography>
             </Box>
         </Box>
