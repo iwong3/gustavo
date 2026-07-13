@@ -36,6 +36,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **New migration ⇒ update `.claude/docs/schema.md`** in the same change.
 - **UI**: neo-brutalist design system — read the `lib/colors.ts` header before styling; shared form styles in `lib/form-styles.ts`.
 - **Custom touch gestures** (swipe, pull, drag) → follow `.claude/docs/code-guide.md` § Touch Gesture Conventions (axis-lock, `touch-action`, yield on `defaultPrevented`).
+- **No `position: fixed` UI inside `#main-scroll`** (the layout's overflow scroller) — iOS clips fixed elements to the scroller's bounds, so bottom bars render invisible on phones while looking fine on desktop. Portal to `document.body` instead (see `components/page-action-bar.tsx`).
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying

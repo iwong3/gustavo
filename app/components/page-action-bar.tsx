@@ -1,6 +1,14 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    useSyncExternalStore,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { Box, Typography } from '@mui/material'
 
 import { colors } from '@/lib/colors'
@@ -14,6 +22,8 @@ const ActionBarContext = createContext<ActionBarContextValue>({
     active: false,
     setActive: () => {},
 })
+
+const emptySubscribe = () => () => {}
 
 /**
  * Wraps the app shell so leaf pages can swap the bottom tab bar for their
@@ -51,7 +61,20 @@ export function PageActionBar({ children }: { children: React.ReactNode }) {
         return () => setActive(false)
     }, [setActive])
 
-    return (
+    // Portal target is only available client-side (guards SSR/hydration:
+    // server snapshot is false, so the first client render matches)
+    const mounted = useSyncExternalStore(
+        emptySubscribe,
+        () => true,
+        () => false
+    )
+    if (!mounted) return null
+
+    // Portaled to <body>: iOS clips position-fixed elements that live inside
+    // an overflow scroller (#main-scroll) to the scroller's bounds, which put
+    // this bar entirely outside its clip — invisible on the phone. Rendering
+    // it beside the tab bar it replaces keeps it viewport-anchored everywhere.
+    return createPortal(
         <Box
             sx={{
                 display: 'flex',
@@ -68,7 +91,8 @@ export function PageActionBar({ children }: { children: React.ReactNode }) {
                 zIndex: 10,
             }}>
             {children}
-        </Box>
+        </Box>,
+        document.body
     )
 }
 
