@@ -34,7 +34,6 @@ import {
     IconCheck,
     IconChevronLeft,
     IconChevronRight,
-    IconGift,
     IconX,
 } from '@tabler/icons-react'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
@@ -414,6 +413,7 @@ export default function ExpenseForm({
             if (paidBy) {
                 setSplitBetween([paidBy])
             }
+            setCoveredParticipants([])
         }
     }, [isCurrencyExchange, paidBy, foreignCurrencies])
 
@@ -422,27 +422,28 @@ export default function ExpenseForm({
         setCoveredParticipants((prev) => prev.filter((p) => p !== paidBy))
     }, [paidBy])
 
-    const togglePerson = (person: string) => {
-        if (person === 'Everyone') {
-            setSplitBetween(['Everyone'])
-            setCoveredParticipants([])
-            return
-        }
-        let next = splitBetween.filter((p) => p !== 'Everyone')
-        if (next.includes(person)) {
-            next = next.filter((p) => p !== person)
+    const toggleRow = (person: string) => {
+        const current = isEveryone ? people : splitBetween
+        let next: string[]
+        if (current.includes(person)) {
+            // A split needs at least one person
+            if (current.length === 1) return
+            next = current.filter((p) => p !== person)
             // Remove from covered if no longer in split
             setCoveredParticipants((prev) => prev.filter((p) => p !== person))
         } else {
-            next.push(person)
+            next = [...current, person]
         }
-        if (next.length === people.length) {
-            setSplitBetween(['Everyone'])
-        } else if (next.length === 0) {
-            setSplitBetween(['Everyone'])
+        setSplitBetween(next.length === people.length ? ['Everyone'] : next)
+    }
+
+    // Header toggle: on = everyone, off = collapse to just the payer
+    const toggleEveryone = () => {
+        if (isEveryone) {
+            setSplitBetween([paidBy || people[0]])
             setCoveredParticipants([])
         } else {
-            setSplitBetween(next)
+            setSplitBetween(['Everyone'])
         }
     }
 
@@ -461,6 +462,29 @@ export default function ExpenseForm({
             (p) => p.firstName !== paidBy && splitSet.has(p.firstName)
         )
     }, [trip.participants, splitBetween, isEveryone, paidBy, people])
+
+    const allCovered =
+        coverableParticipants.length > 0 &&
+        coverableParticipants.every((p) =>
+            coveredParticipants.includes(p.firstName)
+        )
+
+    const toggleTreatAll = () => {
+        setCoveredParticipants(
+            allCovered ? [] : coverableParticipants.map((p) => p.firstName)
+        )
+    }
+
+    // Header summary: headcount + per-person share (shown once, not per row)
+    const includedCount = isEveryone ? people.length : splitBetween.length
+    const costNum = parseFloat(cost)
+    const currencyMeta = getCurrencyMeta(currency)
+    const splitSummary =
+        `${includedCount} ${includedCount === 1 ? 'person' : 'people'}` +
+        (!isNaN(costNum) && costNum > 0 && includedCount > 0
+            ? ` · ${currencyMeta.symbol}${(costNum / includedCount).toFixed(currencyMeta.decimals)}${includedCount > 1 ? ' each' : ''}`
+            : '')
+
 
     const handleSubmit = async () => {
         if (!name.trim() || !date || !cost || !paidBy) {
@@ -599,6 +623,61 @@ export default function ExpenseForm({
             ) : (
                 <IconChevronLeft size={16} color={colors.primaryBlack} />
             )}
+        </Box>
+    )
+
+    // Include-checkbox for the split rows
+    const includeCheckbox = (on: boolean) => (
+        <Box
+            sx={{
+                width: 18,
+                height: 18,
+                flexShrink: 0,
+                border: `1px solid ${colors.primaryBlack}`,
+                borderRadius: '4px',
+                backgroundColor: on
+                    ? colors.primaryYellow
+                    : colors.primaryWhite,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
+            {on && <IconCheck size={13} color={colors.primaryBlack} />}
+        </Box>
+    )
+
+    // "Treat" toggle pill — marks a share as covered by the payer. State is
+    // signalled by fill only (no icon, constant weight) so the width and the
+    // row height never shift when toggled.
+    const treatPill = (on: boolean, label: string, onToggle: () => void) => (
+        <Box
+            onClick={(e) => {
+                e.stopPropagation()
+                onToggle()
+            }}
+            role="button"
+            aria-pressed={on}
+            sx={{
+                marginLeft: 'auto',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                height: 26,
+                fontSize: 11,
+                fontWeight: 600,
+                lineHeight: 1,
+                paddingX: '10px',
+                borderRadius: '13px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                border: `1px solid ${on ? colors.primaryBlack : `${colors.primaryBlack}55`}`,
+                backgroundColor: on
+                    ? colors.primaryYellow
+                    : colors.primaryWhite,
+                boxShadow: on ? `1px 1px 0px ${colors.primaryBlack}` : 'none',
+                color: on ? colors.primaryBlack : `${colors.primaryBlack}80`,
+            }}>
+            {label}
         </Box>
     )
 
@@ -1012,154 +1091,142 @@ export default function ExpenseForm({
                         )
                     })()}
 
-                {/* SVG gradient definition for gift icons */}
-                <svg width={0} height={0} style={{ position: 'absolute' }}>
-                    <defs>
-                        <linearGradient
-                            id="giftGradient"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="100%">
-                            <stop offset="0%" stopColor="#e67e22" />
-                            <stop offset="100%" stopColor="#c0392b" />
-                        </linearGradient>
-                    </defs>
-                </svg>
-
-                {/* 6. Split between — multi-select avatar row with gift toggle */}
+                {/* 6. Split between — one row per participant: tap the row to
+                    include, "Treat" pill to have the payer cover that share */}
                 <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                     <Box
                         sx={{
                             display: 'flex',
                             alignItems: 'baseline',
-                            gap: 1,
+                            justifyContent: 'space-between',
+                            marginBottom: 1,
                         }}>
-                        <Typography sx={labelSx}>Split between *</Typography>
-                        {!isCurrencyExchange &&
-                            coverableParticipants.length > 0 && (
-                                <Typography
-                                    sx={{
-                                        fontSize: 11,
-                                        color: 'text.secondary',
-                                        fontStyle: 'italic',
-                                        lineHeight: 1,
-                                    }}>
-                                    tap{' '}
-                                    <IconGift
-                                        size={10}
-                                        color={colors.primaryBlack}
-                                        style={{
-                                            verticalAlign: '-1px',
-                                        }}
-                                    />{' '}
-                                    to cover
-                                </Typography>
-                            )}
+                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                            Split between *
+                        </Typography>
+                        <Typography
+                            sx={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: colors.primaryBlack,
+                                lineHeight: 1,
+                            }}>
+                            {splitSummary}
+                        </Typography>
                     </Box>
                     <Box
                         sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 1.5,
-                            alignItems: 'flex-start',
+                            backgroundColor: colors.primaryWhite,
+                            border: `1px solid ${colors.primaryBlack}`,
+                            borderRadius: '4px',
+                            boxShadow: fieldShadow,
+                            overflow: 'hidden',
                             pointerEvents: isCurrencyExchange ? 'none' : 'auto',
                         }}>
+                        {/* Header row: Everyone toggle + Treat all */}
                         <Box
-                            onClick={() => togglePerson('Everyone')}
+                            onClick={toggleEveryone}
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
                                 alignItems: 'center',
+                                gap: 1,
+                                height: 42,
+                                paddingX: '10px',
                                 cursor: 'pointer',
-                                opacity: isEveryone ? 1 : 0.4,
-                                transition: 'opacity 0.15s',
-                                // Reserve space for gift icon row below
-                                paddingBottom: !isCurrencyExchange ? '24px' : 0,
+                                userSelect: 'none',
+                                backgroundColor: colors.secondaryYellow,
+                                borderBottom: `1px solid ${colors.primaryBlack}`,
                             }}>
-                            <InitialsIcon
-                                name="All"
-                                initials="All"
+                            {includeCheckbox(isEveryone)}
+                            <Typography
                                 sx={{
-                                    width: 28,
-                                    height: 28,
-                                    fontSize: 10,
-                                }}
-                            />
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: colors.primaryBlack,
+                                }}>
+                                Everyone
+                            </Typography>
+                            {coverableParticipants.length > 1 &&
+                                treatPill(
+                                    allCovered,
+                                    'Treat all',
+                                    toggleTreatAll
+                                )}
                         </Box>
-                        {trip.participants.map((p) => {
-                            const selected =
+                        {trip.participants.map((p, i) => {
+                            const included =
                                 isEveryone || splitBetween.includes(p.firstName)
-                            const isCoverable =
-                                selected &&
-                                p.firstName !== paidBy &&
-                                !isCurrencyExchange
+                            const isPayer = p.firstName === paidBy
                             const isCovered = coveredParticipants.includes(
                                 p.firstName
                             )
                             return (
                                 <Box
                                     key={p.id}
+                                    onClick={() => toggleRow(p.firstName)}
                                     sx={{
                                         display: 'flex',
-                                        flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: 0.25,
+                                        gap: 1,
+                                        height: 42,
+                                        paddingX: '10px',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        backgroundColor: included
+                                            ? colors.primaryWhite
+                                            : `${colors.primaryBlack}08`,
+                                        borderBottom:
+                                            i < trip.participants.length - 1
+                                                ? `1px solid ${colors.primaryBlack}15`
+                                                : 'none',
+                                        transition: 'background-color 0.15s',
                                     }}>
+                                    {includeCheckbox(included)}
                                     <Box
-                                        onClick={() =>
-                                            togglePerson(p.firstName)
-                                        }
                                         sx={{
-                                            cursor: 'pointer',
-                                            opacity: selected ? 1 : 0.4,
-                                            transition: 'opacity 0.15s',
+                                            opacity: included ? 1 : 0.4,
+                                            display: 'flex',
                                         }}>
                                         <InitialsIcon
                                             name={p.firstName}
                                             initials={p.initials}
                                             iconColor={p.iconColor}
                                             sx={{
-                                                width: 28,
-                                                height: 28,
-                                                fontSize: 11,
+                                                width: 24,
+                                                height: 24,
+                                                fontSize: 10,
                                             }}
                                         />
                                     </Box>
-                                    {isCoverable ? (
+                                    <Typography
+                                        sx={{
+                                            fontSize: 13,
+                                            color: included
+                                                ? colors.primaryBlack
+                                                : 'text.secondary',
+                                        }}>
+                                        {p.firstName}
+                                    </Typography>
+                                    {isPayer && (
                                         <Box
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                toggleCovered(p.firstName)
-                                            }}
                                             sx={{
-                                                cursor: 'pointer',
-                                                opacity: isCovered ? 1 : 0.3,
-                                                transition: 'opacity 0.15s',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                height: 22,
+                                                fontSize: 10,
+                                                lineHeight: 1,
+                                                padding: '3px 7px',
+                                                borderRadius: '10px',
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                backgroundColor:
+                                                    colors.primaryYellow,
+                                                color: colors.primaryBlack,
                                             }}>
-                                            <IconGift
-                                                size={20}
-                                                color={colors.primaryBlack}
-                                                fill={
-                                                    isCovered
-                                                        ? 'url(#giftGradient)'
-                                                        : 'none'
-                                                }
-                                                fillOpacity={
-                                                    isCovered ? 0.6 : undefined
-                                                }
-                                            />
+                                            paid
                                         </Box>
-                                    ) : (
-                                        // Spacer to keep alignment
-                                        !isCurrencyExchange && (
-                                            <Box sx={{ height: 22 }} />
-                                        )
                                     )}
+                                    {included &&
+                                        !isPayer &&
+                                        treatPill(isCovered, 'Treat', () =>
+                                            toggleCovered(p.firstName)
+                                        )}
                                 </Box>
                             )
                         })}

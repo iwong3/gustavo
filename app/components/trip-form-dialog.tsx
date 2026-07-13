@@ -92,6 +92,7 @@ export default function TripFormDialog({
     const [visibility, setVisibility] = useState<'participants' | 'all_users'>(
         'participants'
     )
+    const [participantQuery, setParticipantQuery] = useState('')
     const [participantRoles, setParticipantRoles] = useState<
         Map<number, TripRole>
     >(new Map())
@@ -185,6 +186,7 @@ export default function TripFormDialog({
         setCountryCodes([])
         setCountriesOpen(false)
         setSelectedUserIds([])
+        setParticipantQuery('')
         setVisibility('participants')
         setParticipantRoles(new Map())
         setError('')
@@ -471,6 +473,15 @@ export default function TripFormDialog({
         []
     )
 
+    // Users not yet on the trip, offered by the add-participant search.
+    const addableUsers = useMemo(
+        () =>
+            allUsers
+                .filter((u) => !selectedUserIds.includes(u.id))
+                .sort((a, b) => a.firstName.localeCompare(b.firstName)),
+        [allUsers, selectedUserIds]
+    )
+
     const isEdit = mode === 'edit'
     const showRoleManagement =
         isEdit && trip && canManageRoles(trip.userRole, trip.isAdmin)
@@ -717,46 +728,121 @@ export default function TripFormDialog({
                     />
                 </Box>
 
-                {/* Participants — avatar grid + inline role list */}
+                {/* Participants — search to add; the role list below is the
+                    roster (remove via the ✕ on each row) */}
                 <Box>
                     <Typography sx={labelSx}>Participants</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                        {allUsers.length === 0
-                            ? Array.from({ length: 5 }, (_, i) => (
-                                  <Skeleton
-                                      key={i}
-                                      variant="circular"
-                                      width={32}
-                                      height={32}
-                                  />
-                              ))
-                            : allUsers.map((u) => {
-                                  const selected = selectedUserIds.includes(
-                                      u.id
-                                  )
-                                  return (
-                                      <Box
-                                          key={u.id}
-                                          onClick={() => toggleUser(u.id)}
-                                          sx={{
-                                              cursor: 'pointer',
-                                              opacity: selected ? 1 : 0.4,
-                                              transition: 'opacity 0.15s',
-                                          }}>
-                                          <InitialsIcon
-                                              name={u.firstName}
-                                              initials={u.initials}
-                                              iconColor={u.iconColor}
-                                              sx={{
-                                                  width: 32,
-                                                  height: 32,
-                                                  fontSize: 12,
-                                              }}
-                                          />
-                                      </Box>
-                                  )
-                              })}
-                    </Box>
+                    <Autocomplete
+                        fullWidth
+                        size="small"
+                        options={addableUsers}
+                        value={null}
+                        inputValue={participantQuery}
+                        onInputChange={(_e, val, reason) => {
+                            if (reason !== 'reset') setParticipantQuery(val)
+                        }}
+                        onChange={(_e, val) => {
+                            if (val) {
+                                setSelectedUserIds((prev) =>
+                                    prev.includes(val.id)
+                                        ? prev
+                                        : [...prev, val.id]
+                                )
+                            }
+                            setParticipantQuery('')
+                        }}
+                        getOptionLabel={(u) => u.name}
+                        isOptionEqualToValue={(a, b) => a.id === b.id}
+                        blurOnSelect
+                        autoHighlight
+                        noOptionsText={
+                            allUsers.length === 0
+                                ? 'Loading people…'
+                                : 'No one left to add'
+                        }
+                        slotProps={{
+                            // Portal to body above FormDrawer (1500), same as
+                            // the Countries picker above.
+                            popper: { sx: { zIndex: 1600 } },
+                            listbox: {
+                                sx: {
+                                    'maxHeight': 240,
+                                    'padding': 0,
+                                    '& .MuiAutocomplete-option':
+                                        dropdownMenuItemSx,
+                                },
+                            },
+                            paper: { sx: dropdownPaperSx },
+                        }}
+                        renderOption={(props, u) => {
+                            const { key: _key, ...rest } = props
+                            return (
+                                <li key={u.id} {...rest}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                        }}>
+                                        <InitialsIcon
+                                            name={u.firstName}
+                                            initials={u.initials}
+                                            iconColor={u.iconColor}
+                                            sx={{
+                                                width: 24,
+                                                height: 24,
+                                                fontSize: 10,
+                                            }}
+                                        />
+                                        <Typography sx={{ fontSize: 14 }}>
+                                            {u.name}
+                                        </Typography>
+                                    </Box>
+                                </li>
+                            )
+                        }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                size="small"
+                                placeholder="Search people to add"
+                                sx={fieldSx}
+                            />
+                        )}
+                    />
+
+                    {/* Loading placeholder while users resolve (edit mode
+                        knows the roster ids before names arrive) */}
+                    {allUsers.length === 0 && selectedUserIds.length > 0 && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                mt: 1.5,
+                            }}>
+                            {Array.from(
+                                { length: Math.min(selectedUserIds.length, 5) },
+                                (_, i) => (
+                                    <Box
+                                        key={i}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            paddingY: 0.25,
+                                        }}>
+                                        <Skeleton
+                                            variant="circular"
+                                            width={24}
+                                            height={24}
+                                        />
+                                        <Skeleton variant="text" width={90} />
+                                    </Box>
+                                )
+                            )}
+                        </Box>
+                    )}
 
                     {/* Inline role list for selected participants */}
                     {selectedParticipants.length > 0 && (
@@ -805,6 +891,12 @@ export default function TripFormDialog({
                                                 {u.firstName}
                                             </Typography>
                                         </Box>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.5,
+                                            }}>
                                         {isOwner ? (
                                             <Chip
                                                 label="Owner"
@@ -934,6 +1026,31 @@ export default function TripFormDialog({
                                                 }}
                                             />
                                         )}
+                                        {isOwner ? (
+                                            // Spacer matching the ✕ button so
+                                            // role pills align across rows
+                                            <Box sx={{ width: 23 }} />
+                                        ) : (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                    toggleUser(u.id)
+                                                }
+                                                aria-label={`Remove ${u.firstName}`}
+                                                sx={{
+                                                    'color':
+                                                        colors.primaryBlack,
+                                                    'padding': '4px',
+                                                    'opacity': 0.4,
+                                                    '&:hover': {
+                                                        opacity: 1,
+                                                        color: colors.primaryRed,
+                                                    },
+                                                }}>
+                                                <IconX size={15} />
+                                            </IconButton>
+                                        )}
+                                        </Box>
                                     </Box>
                                 )
                             })}
