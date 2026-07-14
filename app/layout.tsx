@@ -26,10 +26,12 @@ export const metadata: Metadata = {
     manifest: '/manifest.json',
     appleWebApp: {
         capable: true,
-        // 'default' (not 'black-translucent'): iOS 26+ broke the translucent
-        // compositing (gray bar on iOS 27); default gets an opaque bar that
-        // iOS colors by sampling the body/fixed-element background (yellow).
-        statusBarStyle: 'default',
+        // black-translucent renders the status bar over the app's own yellow
+        // bg — proven good through stable iOS 26. The iOS 27 BETA draws it
+        // gray no matter what (tried: 'default', SSR'd fixed yellow strip,
+        // opaque #main-scroll, reinstalls — July 2026). OS bug; recheck on
+        // future betas rather than churning config here.
+        statusBarStyle: 'black-translucent',
         title: 'Gustavo',
     },
     formatDetection: {
@@ -67,7 +69,7 @@ export default function RootLayout({
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta
                     name="apple-mobile-web-app-status-bar-style"
-                    content="default"
+                    content="black-translucent"
                 />
                 <meta name="apple-mobile-web-app-title" content="Gustavo" />
                 <meta name="msapplication-TileColor" content="#fefae0" />
