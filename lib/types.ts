@@ -117,6 +117,7 @@ export type ActivityEntry = {
     } | null
     changedAt: string // ISO timestamp
     summary: string   // human-readable description
+    intent: 'create' | 'update' | 'delete' | 'restore' // semantic action (soft-deletes/left_at folded in)
 }
 
 // Google Places API types

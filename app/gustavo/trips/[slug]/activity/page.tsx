@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { colors } from '@/lib/colors'
 import type { ActivityEntry } from '@/lib/types'
 import {
     Box,
@@ -17,99 +17,13 @@ import {
     IconChevronDown,
     IconChevronRight,
     IconFilter,
-    IconHistory,
-    IconPencil,
-    IconPlus,
-    IconTrash,
 } from '@tabler/icons-react'
 import { useTripData } from 'providers/trip-data-provider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchActivity } from 'utils/api'
 import type { ActivityResponse } from 'utils/api'
 import { InitialsIcon } from 'utils/icons'
-
-// ── Helpers ──
-
-function formatTimestamp(iso: string): { date: string; time: string } {
-    const d = new Date(iso)
-    const date = d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    })
-    const time = d.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-    })
-    return { date, time }
-}
-
-function getActionIcon(entry: ActivityEntry) {
-    // Soft delete detection
-    if (
-        entry.action === 'UPDATE' &&
-        entry.newData?.deleted_at &&
-        !entry.oldData?.deleted_at
-    ) {
-        return <IconTrash size={16} color={colors.primaryRed} />
-    }
-    switch (entry.action) {
-        case 'INSERT':
-            return <IconPlus size={16} color={colors.primaryGreen} />
-        case 'DELETE':
-            return <IconTrash size={16} color={colors.primaryRed} />
-        case 'UPDATE':
-            return <IconPencil size={16} color={colors.primaryBlue} />
-        default:
-            return <IconHistory size={16} color={colors.primaryBlack} />
-    }
-}
-
-function getActionColor(entry: ActivityEntry): string {
-    if (
-        entry.action === 'UPDATE' &&
-        entry.newData?.deleted_at &&
-        !entry.oldData?.deleted_at
-    ) {
-        return colors.primaryRed
-    }
-    switch (entry.action) {
-        case 'INSERT':
-            return colors.primaryGreen
-        case 'DELETE':
-            return colors.primaryRed
-        case 'UPDATE':
-            return colors.primaryBlue
-        default:
-            return colors.primaryBlack
-    }
-}
-
-function computeChangedFields(
-    oldData: Record<string, unknown> | null,
-    newData: Record<string, unknown> | null,
-    ignoredFields: Set<string>
-): { field: string; from: unknown; to: unknown }[] {
-    if (!oldData || !newData) return []
-    const changes: { field: string; from: unknown; to: unknown }[] = []
-
-    for (const key of Object.keys(newData)) {
-        if (ignoredFields.has(key)) continue
-        const oldVal = oldData[key]
-        const newVal = newData[key]
-        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-            changes.push({ field: key, from: oldVal, to: newVal })
-        }
-    }
-    return changes
-}
-
-function formatFieldValue(value: unknown): string {
-    if (value === null || value === undefined || value === '') return '\u2014'
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-    if (typeof value === 'number') return String(value)
-    return String(value)
-}
+import { ActivityCard, buildActivityCards, formatTimestamp } from './activity-card'
 
 // ── Component ──
 
@@ -461,12 +375,14 @@ export default function ActivityPage() {
                                         gap: 1,
                                         paddingTop: 1,
                                     }}>
-                                    {group.entries.map((entry) => (
+                                    {buildActivityCards(
+                                        group.entries,
+                                        ignoredFields
+                                    ).map((model) => (
                                         <ActivityCard
-                                            key={entry.id}
-                                            entry={entry}
+                                            key={model.key}
+                                            model={model}
                                             fieldLabels={fieldLabels}
-                                            ignoredFields={ignoredFields}
                                         />
                                     ))}
                                 </Box>
@@ -474,202 +390,6 @@ export default function ActivityPage() {
                         </Box>
                     )
                 })}
-            </Box>
-        </Box>
-    )
-}
-
-// ── Activity Card ──
-
-function ActivityCard({
-    entry,
-    fieldLabels,
-    ignoredFields,
-}: {
-    entry: ActivityEntry
-    fieldLabels: Record<string, string>
-    ignoredFields: Set<string>
-}) {
-    const { time } = formatTimestamp(entry.changedAt)
-    const actionColor = getActionColor(entry)
-    const changes = computeChangedFields(
-        entry.oldData,
-        entry.newData,
-        ignoredFields
-    )
-
-    // For soft deletes, don't show the deleted_at field change
-    const isSoftDelete =
-        entry.action === 'UPDATE' &&
-        entry.newData?.deleted_at &&
-        !entry.oldData?.deleted_at
-    const displayChanges = isSoftDelete
-        ? changes.filter((c) => c.field !== 'deleted_at')
-        : changes
-
-    return (
-        <Box
-            sx={{
-                ...cardSx,
-                padding: 1.5,
-                display: 'flex',
-                gap: 1.5,
-            }}>
-            {/* Action indicator */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    paddingTop: 0.25,
-                }}>
-                <Box
-                    sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        border: `1.5px solid ${actionColor}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: `${actionColor}15`,
-                        flexShrink: 0,
-                    }}>
-                    {getActionIcon(entry)}
-                </Box>
-            </Box>
-
-            {/* Content */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-                {/* Summary line */}
-                <Typography
-                    sx={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: colors.primaryBlack,
-                        lineHeight: 1.3,
-                    }}>
-                    {entry.summary}
-                </Typography>
-
-                {/* Meta: who + when */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.75,
-                        marginTop: 0.25,
-                        marginBottom:
-                            displayChanges.length > 0 ? 0.75 : 0,
-                    }}>
-                    {entry.changedBy && (
-                        <InitialsIcon
-                            name={entry.changedBy.name}
-                            initials={entry.changedBy.initials}
-                            iconColor={entry.changedBy.iconColor}
-                            sx={{
-                                width: 16,
-                                height: 16,
-                                fontSize: 7,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                boxShadow: 'none',
-                            }}
-                        />
-                    )}
-                    <Typography
-                        sx={{
-                            fontSize: 11,
-                            color: 'text.secondary',
-                            lineHeight: '16px',
-                        }}>
-                        {entry.changedBy?.name.split(' ')[0] ?? 'System'}
-                        {' \u00B7 '}
-                        {time}
-                    </Typography>
-                </Box>
-
-                {/* Before/after diff for UPDATEs */}
-                {entry.action === 'UPDATE' &&
-                    displayChanges.length > 0 && (
-                        <Box
-                            sx={{
-                                backgroundColor: `${colors.primaryBlack}06`,
-                                border: `1px solid ${colors.primaryBlack}18`,
-                                borderRadius: '3px',
-                                padding: 1,
-                            }}>
-                            {displayChanges.map((change) => (
-                                <Box
-                                    key={change.field}
-                                    sx={{
-                                        'display': 'flex',
-                                        'flexDirection': 'column',
-                                        'fontSize': 11,
-                                        '&:not(:last-child)': {
-                                            marginBottom: 0.75,
-                                            paddingBottom: 0.75,
-                                            borderBottom: `1px dashed ${colors.primaryBlack}15`,
-                                        },
-                                    }}>
-                                    <Typography
-                                        component="span"
-                                        sx={{
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            color: 'text.secondary',
-                                            marginBottom: 0.25,
-                                        }}>
-                                        {fieldLabels[change.field] ??
-                                            change.field.replace(
-                                                /_/g,
-                                                ' '
-                                            )}
-                                    </Typography>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'baseline',
-                                            gap: 0.5,
-                                            flexWrap: 'wrap',
-                                        }}>
-                                        <Typography
-                                            component="span"
-                                            sx={{
-                                                fontSize: 11,
-                                                color: colors.primaryRed,
-                                                textDecoration:
-                                                    formatFieldValue(change.from) === '\u2014'
-                                                        ? 'none'
-                                                        : 'line-through',
-                                                wordBreak: 'break-word',
-                                            }}>
-                                            {formatFieldValue(
-                                                change.from
-                                            )}
-                                        </Typography>
-                                        <Typography
-                                            component="span"
-                                            sx={{
-                                                fontSize: 11,
-                                                color: 'text.secondary',
-                                            }}>
-                                            {'\u2192'}
-                                        </Typography>
-                                        <Typography
-                                            component="span"
-                                            sx={{
-                                                fontSize: 11,
-                                                color: colors.primaryGreen,
-                                                fontWeight: 600,
-                                                wordBreak: 'break-word',
-                                            }}>
-                                            {formatFieldValue(change.to)}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            ))}
-                        </Box>
-                    )}
             </Box>
         </Box>
     )

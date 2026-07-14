@@ -67,6 +67,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **DB work (schema, migrations, queries)** → `.claude/docs/schema.md`
 - **Repo structure, build, deployment detail** → `.claude/docs/repo-overview.md`
 - **How the code is organized (App Router, patterns)** → `.claude/docs/code-guide.md`
+- **Activity feed (audit timeline, intent, card merging)** → `.claude/docs/activity-feed.md`
 - **Permissions model** → schema.md § Permissions + `lib/permissions.ts` / `app/utils/permissions.ts`
 - **Historical design plans** (point-in-time, may be stale) → `.claude/docs/plans/`
 - **Idea/todo lists** → `.claude/docs/todos/`

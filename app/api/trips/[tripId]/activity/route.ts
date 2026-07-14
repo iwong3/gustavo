@@ -25,40 +25,51 @@ const FIELD_LABELS: Record<string, string> = {
     notes: 'Notes',
     receipt_image_url: 'Receipt',
     role: 'Role',
-    deleted_at: 'Status',
+    covered_by: 'Covered by',
     local_currency_received: 'Local currency received',
 }
 
-// Fields to exclude from diffs (internal/noisy)
+// Fields to exclude from diffs (internal/noisy).
+// deleted_at/left_at are folded into `intent` + the summary, so their raw
+// timestamps never surface as a diff row.
 const IGNORED_FIELDS = new Set([
     'id', 'created_at', 'updated_at', 'trip_id', 'expense_id', 'user_id',
-    'conversion_error',
+    'conversion_error', 'deleted_at', 'left_at', 'joined_at',
 ])
 
-function describeAction(tableName: string, action: string, newData: Record<string, unknown> | null, oldData: Record<string, unknown> | null): string {
-    const entityName = getEntityName(tableName, newData || oldData)
+type Intent = 'create' | 'update' | 'delete' | 'restore'
 
-    switch (action) {
-        case 'INSERT':
-            return `Added ${entityName}`
-        case 'DELETE':
-            return `Deleted ${entityName}`
-        case 'UPDATE': {
-            // Check for soft delete
-            if (newData?.deleted_at && !oldData?.deleted_at) {
-                return `Deleted ${entityName}`
-            }
-            // Check for restore (undo soft delete)
-            if (!newData?.deleted_at && oldData?.deleted_at) {
-                return `Restored ${entityName}`
-            }
-            return `Updated ${entityName}`
-        }
-        default:
-            return `Changed ${entityName}`
-    }
+/** Was a timestamp column (deleted_at / left_at) just set? just cleared? */
+function transition(
+    field: string,
+    newData: Record<string, unknown> | null,
+    oldData: Record<string, unknown> | null
+): 'set' | 'cleared' | null {
+    const nowSet = Boolean(newData?.[field])
+    const wasSet = Boolean(oldData?.[field])
+    if (nowSet && !wasSet) return 'set'
+    if (!nowSet && wasSet) return 'cleared'
+    return null
 }
 
+/** Semantic action, folding soft-delete (deleted_at) and participant removal (left_at) into intent. */
+function computeIntent(
+    tableName: string,
+    action: string,
+    newData: Record<string, unknown> | null,
+    oldData: Record<string, unknown> | null
+): Intent {
+    if (action === 'INSERT') return 'create'
+    if (action === 'DELETE') return 'delete'
+    // UPDATE — check the lifecycle columns
+    const lifecycleField = tableName === 'trip_participants' ? 'left_at' : 'deleted_at'
+    const t = transition(lifecycleField, newData, oldData)
+    if (t === 'set') return 'delete'
+    if (t === 'cleared') return 'restore'
+    return 'update'
+}
+
+/** Human-readable name of the thing an audit row is about (user_id already resolved to a name upstream). */
 function getEntityName(tableName: string, data: Record<string, unknown> | null): string {
     switch (tableName) {
         case 'trips':
@@ -68,13 +79,67 @@ function getEntityName(tableName: string, data: Record<string, unknown> | null):
         case 'locations':
             return `location "${data?.name || 'Unknown'}"`
         case 'trip_participants':
-            return 'a participant'
-        case 'expense_participants':
-            return 'expense split'
+            return String(data?.user_id || 'a participant')
+        case 'expense_participants': {
+            const who = String(data?.user_id || 'someone')
+            const expense = data?.expense_id ? ` in "${data.expense_id}"` : ''
+            return `${who}${expense}`
+        }
         case 'expense_categories':
             return `category "${data?.name || 'Unknown'}"`
         default:
             return tableName.replace(/_/g, ' ')
+    }
+}
+
+function describeAction(
+    tableName: string,
+    intent: Intent,
+    newData: Record<string, unknown> | null,
+    oldData: Record<string, unknown> | null
+): string {
+    const data = newData || oldData
+    const entityName = getEntityName(tableName, data)
+
+    // ── Participant lifecycle: name the person and the action ──
+    if (tableName === 'trip_participants') {
+        switch (intent) {
+            case 'create':
+                return `Added ${entityName} to the trip`
+            case 'restore':
+                return `Re-added ${entityName} to the trip`
+            case 'delete':
+                return `Removed ${entityName} from the trip`
+            case 'update':
+                if (oldData?.role !== newData?.role) {
+                    return `Changed ${entityName}'s role`
+                }
+                return `Updated ${entityName}`
+        }
+    }
+
+    if (tableName === 'expense_participants') {
+        switch (intent) {
+            case 'create':
+                return `Added ${entityName} to split`
+            case 'restore':
+            case 'update':
+                return `Updated ${entityName}'s split`
+            case 'delete':
+                return `Removed ${entityName} from split`
+        }
+    }
+
+    // ── Everything else ──
+    switch (intent) {
+        case 'create':
+            return `Added ${entityName}`
+        case 'delete':
+            return `Deleted ${entityName}`
+        case 'restore':
+            return `Restored ${entityName}`
+        case 'update':
+            return `Updated ${entityName}`
     }
 }
 
@@ -97,10 +162,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     try {
         // Build lookup maps for readable diffs
-        const [usersRes, categoriesRes, locationsRes] = await Promise.all([
+        const [usersRes, categoriesRes, locationsRes, expensesRes] = await Promise.all([
             pool.query('SELECT id, name FROM users'),
             pool.query('SELECT id, name FROM expense_categories'),
             pool.query('SELECT id, name FROM locations WHERE trip_id = $1', [id]),
+            pool.query('SELECT id, name FROM expenses WHERE trip_id = $1', [id]),
         ])
 
         const userMap = new Map<number, string>()
@@ -111,6 +177,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
         const locationMap = new Map<number, string>()
         for (const row of locationsRes.rows) locationMap.set(Number(row.id), row.name)
+
+        const expenseMap = new Map<number, string>()
+        for (const row of expensesRes.rows) expenseMap.set(Number(row.id), row.name)
 
         const result = await pool.query(
             `SELECT
@@ -154,8 +223,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             const newData = row.new_data as Record<string, unknown> | null
 
             // Resolve IDs to names in the data for readable diffs
-            const resolvedOld = oldData ? resolveIdFields(oldData, userMap, categoryMap, locationMap) : null
-            const resolvedNew = newData ? resolveIdFields(newData, userMap, categoryMap, locationMap) : null
+            const resolvedOld = oldData ? resolveIdFields(oldData, userMap, categoryMap, locationMap, expenseMap) : null
+            const resolvedNew = newData ? resolveIdFields(newData, userMap, categoryMap, locationMap, expenseMap) : null
+
+            const intent = computeIntent(row.table_name, row.action, resolvedNew, resolvedOld)
 
             return {
                 id: row.id,
@@ -171,7 +242,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
                     iconColor: row.changed_by_icon_color,
                 } : null,
                 changedAt: row.changed_at,
-                summary: describeAction(row.table_name, row.action, resolvedNew, resolvedOld),
+                intent,
+                summary: describeAction(row.table_name, intent, resolvedNew, resolvedOld),
             }
         })
 
@@ -201,11 +273,12 @@ function resolveIdFields(
     userMap: Map<number, string>,
     categoryMap: Map<number, string>,
     locationMap: Map<number, string>,
+    expenseMap: Map<number, string>,
 ): Record<string, unknown> {
     const resolved = { ...data }
 
     // Resolve user IDs (BIGINT may arrive as number or string from JSONB)
-    const userIdFields = ['paid_by_user_id', 'reported_by_user_id', 'user_id', 'changed_by']
+    const userIdFields = ['paid_by_user_id', 'reported_by_user_id', 'user_id', 'covered_by', 'changed_by']
     for (const field of userIdFields) {
         const key = toNumericKey(resolved[field])
         if (key !== null) {
@@ -228,6 +301,13 @@ function resolveIdFields(
         if (name) resolved.location_id = name
     }
 
+    // Resolve expense_id (used for expense_participants context, not shown as a diff row)
+    const expKey = toNumericKey(resolved.expense_id)
+    if (expKey !== null) {
+        const name = expenseMap.get(expKey)
+        if (name) resolved.expense_id = name
+    }
+
     return resolved
 }
 
@@ -240,25 +320,33 @@ type Entry = {
     newData: Record<string, unknown> | null
     changedBy: { id: number; name: string; initials: string | null; iconColor: string | null } | null
     changedAt: string
+    intent: Intent
     summary: string
 }
 
 function filterNoise(entries: Entry[]): Entry[] {
-    // Group expense_participants INSERTs that happen at the same second as an expense INSERT
-    // These are part of expense creation and don't need separate entries
-    const expenseInsertTimes = new Set<string>()
+    // Creating or editing an expense runs in one transaction that also churns the
+    // whole split (DELETE every expense_participants row, then re-INSERT them).
+    // Fold that churn into the parent expense row instead of emitting ~2N
+    // "Added/Removed X from split" rows per edit. Key on expense name + second so
+    // a genuinely standalone split change (different second) still surfaces.
+    const expenseMutationKeys = new Set<string>()
     for (const e of entries) {
-        if (e.tableName === 'expenses' && e.action === 'INSERT') {
-            // Round to second for matching
-            expenseInsertTimes.add(new Date(e.changedAt).toISOString().slice(0, 19))
+        if (e.tableName === 'expenses' && (e.action === 'INSERT' || e.action === 'UPDATE')) {
+            const name = (e.newData?.name ?? e.oldData?.name) as string | undefined
+            expenseMutationKeys.add(`${name ?? ''}@${new Date(e.changedAt).toISOString().slice(0, 19)}`)
         }
     }
 
     return entries.filter((e) => {
-        // Filter out expense_participants INSERTs that coincide with expense creation
-        if (e.tableName === 'expense_participants' && e.action === 'INSERT') {
-            const ts = new Date(e.changedAt).toISOString().slice(0, 19)
-            if (expenseInsertTimes.has(ts)) return false
+        if (
+            e.tableName === 'expense_participants' &&
+            (e.action === 'INSERT' || e.action === 'DELETE')
+        ) {
+            // expense_id was resolved to the expense name upstream
+            const name = (e.newData?.expense_id ?? e.oldData?.expense_id) as string | undefined
+            const key = `${name ?? ''}@${new Date(e.changedAt).toISOString().slice(0, 19)}`
+            if (expenseMutationKeys.has(key)) return false
         }
         return true
     })
