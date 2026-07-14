@@ -26,7 +26,10 @@ export const metadata: Metadata = {
     manifest: '/manifest.json',
     appleWebApp: {
         capable: true,
-        statusBarStyle: 'black-translucent',
+        // 'default' (not 'black-translucent'): iOS 26+ broke the translucent
+        // compositing (gray bar on iOS 27); default gets an opaque bar that
+        // iOS colors by sampling the body/fixed-element background (yellow).
+        statusBarStyle: 'default',
         title: 'Gustavo',
     },
     formatDetection: {
@@ -64,7 +67,7 @@ export default function RootLayout({
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta
                     name="apple-mobile-web-app-status-bar-style"
-                    content="black-translucent"
+                    content="default"
                 />
                 <meta name="apple-mobile-web-app-title" content="Gustavo" />
                 <meta name="msapplication-TileColor" content="#fefae0" />
