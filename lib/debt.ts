@@ -178,6 +178,40 @@ export function simplifyDebts(
     return settlements
 }
 
+/**
+ * Direct pairwise net settlements: for every pair, the single net of what each
+ * owes the other, with NO cross-person simplification. Produces more payments
+ * than {@link simplifyDebts} but each is exactly what one person owes another —
+ * nothing is rerouted through a third party, so the numbers match what users
+ * expect ("I owe Ana $12, I owe Bo $5").
+ *
+ * Looks debts up by participant id via Map.get (never Math/`===` on ids) so it
+ * is correct for the BIGINT-string ids that arrive at runtime.
+ */
+export function directPairwiseSettlements(
+    debtMap: Map<number, Map<number, number>>,
+    participants: UserSummary[]
+): Settlement[] {
+    const settlements: Settlement[] = []
+    for (let i = 0; i < participants.length; i++) {
+        for (let j = i + 1; j < participants.length; j++) {
+            const a = participants[i].id
+            const b = participants[j].id
+            const aOwesB = debtMap.get(a)?.get(b) ?? 0
+            const bOwesA = debtMap.get(b)?.get(a) ?? 0
+            const net = aOwesB - bOwesA
+            if (Math.abs(net) < 0.005) continue
+            const amount = Math.round(Math.abs(net) * 100) / 100
+            settlements.push(
+                net > 0
+                    ? { debtorId: a, creditorId: b, amount }
+                    : { debtorId: b, creditorId: a, amount }
+            )
+        }
+    }
+    return settlements
+}
+
 // --- Sort settlements by current user ---
 
 /**

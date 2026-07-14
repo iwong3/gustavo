@@ -8,10 +8,11 @@ import { InitialsIcon } from 'utils/icons'
 
 /**
  * Row of participant avatars for anchoring a page to one person (insights,
- * debts). Only the selected person keeps their color — the rest go white so
- * it's obvious whose page it is. Big groups (7+) get smaller avatars and the
- * row swipes sideways, bleeding to the screen edge while the content keeps
- * the page's 16px inset (both consumer pages use paddingX: 2).
+ * debts). Everyone keeps their icon color for quick recognition; unselected
+ * avatars just fade back while the selected one sits at full strength with a
+ * yellow ring. Big groups (7+) get smaller avatars and the row swipes
+ * sideways, bleeding to the screen edge while the content keeps the page's
+ * 16px inset (both consumer pages use paddingX: 2).
  */
 export function PersonSwitcher({
     participants,
@@ -71,7 +72,8 @@ export function PersonSwitcher({
                                 ? `3px solid ${colors.primaryYellow}`
                                 : '3px solid transparent',
                             'outlineOffset': '1px',
-                            'transition': 'outline-color 0.15s',
+                            'opacity': selected ? 1 : 0.4,
+                            'transition': 'outline-color 0.15s, opacity 0.15s',
                             '&:active': {
                                 transform: 'translate(1px, 1px)',
                             },
@@ -79,15 +81,12 @@ export function PersonSwitcher({
                         <InitialsIcon
                             name={p.firstName}
                             initials={p.initials}
-                            iconColor={
-                                selected ? p.iconColor : colors.primaryWhite
-                            }
+                            iconColor={p.iconColor}
                             sx={{
                                 width: size,
                                 height: size,
                                 fontSize: compact ? 11 : 13,
                                 boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                transition: 'background-color 0.15s',
                             }}
                         />
                     </Box>

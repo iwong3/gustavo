@@ -5,13 +5,24 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { cardSx, colors } from '@/lib/colors'
-import { simplifyDebts, sortSettlements, type Settlement } from '@/lib/debt'
+import {
+    directPairwiseSettlements,
+    simplifyDebts,
+    sortSettlements,
+    type Settlement,
+} from '@/lib/debt'
 import type { UserSummary } from '@/lib/types'
 import { MoneyMap } from 'components/debt/money-map'
 import { PersonSwitcher } from 'components/person-switcher'
+import { SlidingToggle } from 'components/sliding-toggle'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { InitialsIcon } from 'utils/icons'
+
+const planOptions = [
+    { value: 'simplified', label: 'Simplified' },
+    { value: 'direct', label: 'Every debt' },
+]
 
 const OWE_RED = '#c0392b'
 const OWED_GREEN = '#2e7d32'
@@ -125,15 +136,20 @@ export default function DebtsPage() {
         return map
     }, [participants])
 
-    // Simplified settle-up plan, viewer's payments first
+    // 'simplified' = fewest transactions (may reroute through a third person);
+    // 'direct' = every pair's actual net, nothing rerouted.
+    const [plan, setPlan] = useState<'simplified' | 'direct'>('simplified')
+
     const settlements = useMemo(
         () =>
             sortSettlements(
-                simplifyDebts(debtMap, participants),
+                plan === 'direct'
+                    ? directPairwiseSettlements(debtMap, participants)
+                    : simplifyDebts(debtMap, participants),
                 personId,
                 participantById
             ),
-        [debtMap, participants, personId, participantById]
+        [plan, debtMap, participants, personId, participantById]
     )
 
     const youOwe = settlements.filter((s) => s.debtorId === personId)
@@ -161,12 +177,30 @@ export default function DebtsPage() {
                 paddingY: 2,
                 gap: 1.5,
             }}>
-            <PersonSwitcher
-                participants={participants}
-                selectedId={personId}
-                onSelect={setPersonId}
-                label="View as"
-            />
+            {/* Whose-view selector */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.75,
+                }}>
+                <Typography
+                    sx={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: colors.primaryBlack,
+                        paddingX: 0.25,
+                    }}>
+                    {personId === trip.currentUserId
+                        ? 'My Debts'
+                        : `${nameOf(personId)}'s Debts`}
+                </Typography>
+                <PersonSwitcher
+                    participants={participants}
+                    selectedId={personId}
+                    onSelect={setPersonId}
+                />
+            </Box>
 
             {/* Owe / owed stats */}
             <Box sx={{ display: 'flex', gap: 1 }}>
@@ -200,6 +234,17 @@ export default function DebtsPage() {
                 </Box>
             ) : (
                 <>
+                    {/* Simplified vs. every-debt plan */}
+                    <SlidingToggle
+                        value={plan}
+                        options={planOptions}
+                        onChange={(val) =>
+                            setPlan(val as 'simplified' | 'direct')
+                        }
+                        fontSize={13}
+                        borderWidth={1}
+                    />
+
                     {/* Money map */}
                     <Box
                         sx={{
@@ -226,14 +271,13 @@ export default function DebtsPage() {
                                 letterSpacing: '0.5px',
                                 color: colors.primaryBrown,
                             }}>
-                            tap a ribbon for the receipts
+                            tap a ribbon or person to highlight
                         </Typography>
                     </Box>
                     <MoneyMap
                         settlements={settlements}
                         participantById={participantById}
                         youId={personId}
-                        onFlowTap={openDetail}
                     />
 
                     {/* Settle-up rows */}
@@ -247,7 +291,8 @@ export default function DebtsPage() {
                             marginTop: 0.5,
                             paddingX: 0.25,
                         }}>
-                        Settle up ({settlements.length}{' '}
+                        {plan === 'direct' ? 'Every debt' : 'Settle up'} (
+                        {settlements.length}{' '}
                         {settlements.length === 1 ? 'payment' : 'payments'})
                     </Typography>
                     {settlements.map((s) => {

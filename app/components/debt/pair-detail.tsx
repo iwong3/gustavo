@@ -2,6 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
+import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { cardSx, colors } from '@/lib/colors'
@@ -10,6 +11,7 @@ import type { Expense, UserSummary } from '@/lib/types'
 import { ListControls, type ListSort } from 'components/list-controls'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useSpendData } from 'providers/spend-data-provider'
+import { useTripData } from 'providers/trip-data-provider'
 import { InitialsIcon } from 'utils/icons'
 
 const OWE_RED = '#c0392b'
@@ -40,45 +42,44 @@ const viewOptions = [
     { value: 'direction', label: 'By direction' },
 ]
 
-function miniAvatar(p: UserSummary) {
-    return (
-        <InitialsIcon
-            name={p.firstName}
-            initials={p.initials}
-            iconColor={p.iconColor}
-            sx={{ width: 16, height: 16, fontSize: 7, boxShadow: 'none' }}
-        />
-    )
-}
-
-function DebtExpenseRow({ row, signed }: { row: DebtRow; signed: boolean }) {
+/**
+ * One expense in the pair drill-down. In the flat "all" view (`showDirection`)
+ * the payer's avatar and a signed/coloured amount encode which way the debt
+ * moves; in the grouped "by direction" view the group header already says so,
+ * so the row drops both and just lists the expense.
+ */
+function DebtExpenseRow({
+    row,
+    showDirection,
+    onTap,
+}: {
+    row: DebtRow
+    showDirection: boolean
+    onTap: () => void
+}) {
     return (
         <Box
+            onClick={onTap}
             sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.25,
-                paddingX: 1.25,
-                paddingY: 1,
-                borderBottom: `1px solid ${colors.primaryBlack}20`,
+                'display': 'flex',
+                'alignItems': 'center',
+                'gap': 1.25,
+                'paddingX': 1.25,
+                'paddingY': 1,
+                'cursor': 'pointer',
+                'borderBottom': `1px solid ${colors.primaryBlack}20`,
                 '&:last-of-type': { borderBottom: 'none' },
+                '&:active': { backgroundColor: `${colors.primaryBlack}0a` },
+                'transition': 'background-color 0.1s',
             }}>
-            {/* Direction pill: payer → beneficiary */}
-            <Box
-                sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.4,
-                    flexShrink: 0,
-                    border: `1px solid ${colors.primaryBlack}`,
-                    borderRadius: '12px',
-                    padding: '2px 6px 2px 3px',
-                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                    fontSize: 9,
-                    fontWeight: 800,
-                }}>
-                {miniAvatar(row.payer)}→{miniAvatar(row.beneficiary)}
-            </Box>
+            {showDirection && (
+                <InitialsIcon
+                    name={row.payer.firstName}
+                    initials={row.payer.initials}
+                    iconColor={row.payer.iconColor}
+                    sx={{ width: 28, height: 28, fontSize: 10, flexShrink: 0 }}
+                />
+            )}
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
                     sx={{
@@ -101,8 +102,9 @@ function DebtExpenseRow({ row, signed }: { row: DebtRow; signed: boolean }) {
                         whiteSpace: 'nowrap',
                     }}>
                     {dayjs(row.expense.date + 'T00:00:00').format('M/D')} ·{' '}
-                    {row.expense.categoryName ?? 'Other'} ·{' '}
-                    {row.payer.firstName} covered {row.beneficiary.firstName}
+                    {row.expense.categoryName ?? 'Other'}
+                    {showDirection &&
+                        ` · ${row.payer.firstName} covered ${row.beneficiary.firstName}`}
                 </Typography>
             </Box>
             <Typography
@@ -110,9 +112,13 @@ function DebtExpenseRow({ row, signed }: { row: DebtRow; signed: boolean }) {
                     fontSize: 13.5,
                     fontWeight: 800,
                     fontVariantNumeric: 'tabular-nums',
-                    color: signed && row.reduces ? OWED_GREEN : colors.primaryBlack,
+                    color: showDirection
+                        ? row.reduces
+                            ? OWED_GREEN
+                            : OWE_RED
+                        : colors.primaryBlack,
                 }}>
-                {signed && row.reduces ? '−' : ''}
+                {showDirection ? (row.reduces ? '−' : '+') : ''}
                 {formatUsd(row.amount)}
             </Typography>
         </Box>
@@ -120,9 +126,10 @@ function DebtExpenseRow({ row, signed }: { row: DebtRow; signed: boolean }) {
 }
 
 /**
- * The debt drill-down between two people: every shared expense with a
- * direction pill, searchable and sortable, flat or grouped by direction.
- * Rendered by the /debts/[pair] page and the dev gallery.
+ * The debt drill-down between two people: every shared expense that moves the
+ * debt between them, searchable and sortable, flat or grouped by direction.
+ * The hero shows the direct pairwise net (what one owes the other), not a
+ * group-simplified figure. Rendered by the /debts/[pair] page and the gallery.
  */
 export function PairDetail({
     debtorId,
@@ -133,6 +140,8 @@ export function PairDetail({
     creditorId: number | string
 }) {
     const { expenses, participants, getUsdValue, debtMap } = useSpendData()
+    const { trip } = useTripData()
+    const router = useRouter()
 
     const [search, setSearch] = useState('')
     const [sort, setSort] = useState<ListSort>('date-asc')
@@ -171,17 +180,6 @@ export function PairDetail({
         return rows
     }, [expenses, debtor, creditor, getUsdValue, participants.length])
 
-    // The group-optimal payment for this pair (may differ from the direct
-    // pairwise net when the simplifier chains debts through a third person)
-    const settlementAmount = useMemo(() => {
-        const settlements = simplifyDebts(debtMap, participants)
-        return settlements.find(
-            (s) =>
-                String(s.debtorId) === String(debtorId) &&
-                String(s.creditorId) === String(creditorId)
-        )?.amount ?? null
-    }, [debtMap, participants, debtorId, creditorId])
-
     const pairNet = useMemo(
         () =>
             allRows.reduce(
@@ -190,6 +188,19 @@ export function PairDetail({
             ),
         [allRows]
     )
+
+    // What the group-simplified plan asks THIS debtor to pay THIS creditor
+    // (may be absent or a different amount, since the simplifier reroutes
+    // debts through third parties to cut the number of payments).
+    const simplifiedAmount = useMemo(() => {
+        return (
+            simplifyDebts(debtMap, participants).find(
+                (s) =>
+                    String(s.debtorId) === String(debtorId) &&
+                    String(s.creditorId) === String(creditorId)
+            )?.amount ?? null
+        )
+    }, [debtMap, participants, debtorId, creditorId])
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim()
@@ -225,10 +236,29 @@ export function PairDetail({
         )
     }
 
-    const heroAmount = settlementAmount ?? Math.abs(pairNet)
-    const showMismatch =
-        settlementAmount !== null &&
-        Math.abs(settlementAmount - pairNet) > 0.5
+    // Lead with the simplified settle-up amount (the headline the debts page
+    // shows); the true pairwise net is a secondary FYI. Fall back to the
+    // direct net only when this pair isn't in the simplified plan at all.
+    const directAmount = Math.abs(pairNet)
+    const heroAmount = simplifiedAmount ?? directAmount
+    // Distinct expenses (one expense can contribute in both directions)
+    const expenseCount = new Set(allRows.map((r) => r.expense.id)).size
+
+    // Inline FYI beside the expense count: the true pairwise net, shown only
+    // when it differs from the simplified headline (the simplifier rerouted
+    // part of this debt through a third person).
+    const showTrueNet =
+        simplifiedAmount !== null &&
+        directAmount > 0.005 &&
+        Math.abs(simplifiedAmount - directAmount) > 0.5
+
+    // Open an expense's detail; ?from=debts&pair sends the back button here
+    const openExpense = (expense: Expense) => {
+        router.push(
+            `/gustavo/trips/${trip.slug}/expenses/${expense.id}` +
+                `?from=debts&pair=${debtor.id}-${creditor.id}`
+        )
+    }
 
     const creditorRows = filtered.filter((r) => !r.reduces)
     const debtorRows = filtered.filter((r) => r.reduces)
@@ -272,14 +302,15 @@ export function PairDetail({
         </Box>
     )
 
-    const rowCard = (rows: DebtRow[], signed: boolean) =>
+    const rowCard = (rows: DebtRow[], showDirection: boolean) =>
         rows.length ? (
             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                 {rows.map((r, i) => (
                     <DebtExpenseRow
                         key={`${r.expense.id}-${r.payer.id}-${i}`}
                         row={r}
-                        signed={signed}
+                        showDirection={showDirection}
+                        onTap={() => openExpense(r.expense)}
                     />
                 ))}
             </Box>
@@ -291,62 +322,90 @@ export function PairDetail({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {/* Pair hero */}
+            {/* Pair hero — sleek stat: who pays whom + amount + count */}
             <Box
                 sx={{
                     ...cardSx,
                     border: `1.5px solid ${colors.primaryBlack}`,
                     boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
-                    backgroundColor: colors.secondaryYellow,
+                    backgroundColor: colors.primaryWhite,
                     padding: 1.75,
-                    textAlign: 'center',
                 }}>
                 <Box
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 1.25,
-                        marginBottom: 0.75,
+                        justifyContent: 'space-between',
+                        gap: 1.5,
                     }}>
-                    <InitialsIcon
-                        name={debtor.firstName}
-                        initials={debtor.initials}
-                        iconColor={debtor.iconColor}
-                        sx={{ width: 34, height: 34, fontSize: 12 }}
-                    />
-                    <Typography sx={{ fontSize: 14, fontWeight: 800 }}>
-                        {debtor.firstName}
-                    </Typography>
-                    <Typography sx={{ fontSize: 18, fontWeight: 800 }}>
-                        →
-                    </Typography>
-                    <InitialsIcon
-                        name={creditor.firstName}
-                        initials={creditor.initials}
-                        iconColor={creditor.iconColor}
-                        sx={{ width: 34, height: 34, fontSize: 12 }}
-                    />
-                    <Typography sx={{ fontSize: 14, fontWeight: 800 }}>
-                        {creditor.firstName}
-                    </Typography>
+                    {/* Direction: debtor → creditor */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                            minWidth: 0,
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                            }}>
+                            <InitialsIcon
+                                name={debtor.firstName}
+                                initials={debtor.initials}
+                                iconColor={debtor.iconColor}
+                                sx={{ width: 32, height: 32, fontSize: 11 }}
+                            />
+                            <Typography sx={{ fontSize: 16, fontWeight: 800 }}>
+                                →
+                            </Typography>
+                            <InitialsIcon
+                                name={creditor.firstName}
+                                initials={creditor.initials}
+                                iconColor={creditor.iconColor}
+                                sx={{ width: 32, height: 32, fontSize: 11 }}
+                            />
+                        </Box>
+                        <Typography
+                            sx={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: colors.primaryBrown,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}>
+                            {debtor.firstName} pays {creditor.firstName}
+                        </Typography>
+                    </Box>
+
+                    {/* The number */}
+                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                        <Typography
+                            sx={{
+                                fontSize: 30,
+                                fontWeight: 800,
+                                lineHeight: 1,
+                                fontVariantNumeric: 'tabular-nums',
+                            }}>
+                            {formatUsd(heroAmount)}
+                        </Typography>
+                        <Typography
+                            sx={{
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                color: colors.primaryBrown,
+                                marginTop: 0.25,
+                            }}>
+                            {expenseCount} expense
+                            {expenseCount === 1 ? '' : 's'}
+                            {showTrueNet &&
+                                ` · direct debt ${formatUsd(directAmount)}`}
+                        </Typography>
+                    </Box>
                 </Box>
-                <Typography
-                    sx={{
-                        fontSize: 30,
-                        fontWeight: 800,
-                        lineHeight: 1.1,
-                        fontVariantNumeric: 'tabular-nums',
-                    }}>
-                    {formatUsd(heroAmount)}
-                </Typography>
-                <Typography
-                    sx={{ fontSize: 11.5, color: colors.primaryBrown, marginTop: 0.5 }}>
-                    net of {allRows.length} shared expense
-                    {allRows.length === 1 ? '' : 's'}
-                    {showMismatch &&
-                        ` — group-optimal payment; their direct expenses net to ${formatUsd(Math.abs(pairNet))}`}
-                </Typography>
             </Box>
 
             <ListControls

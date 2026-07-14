@@ -1134,7 +1134,7 @@ export default function ExpenseForm({
                                 paddingX: '10px',
                                 cursor: 'pointer',
                                 userSelect: 'none',
-                                backgroundColor: colors.secondaryYellow,
+                                backgroundColor: colors.primaryWhite,
                                 borderBottom: `1px solid ${colors.primaryBlack}`,
                             }}>
                             {includeCheckbox(isEveryone)}

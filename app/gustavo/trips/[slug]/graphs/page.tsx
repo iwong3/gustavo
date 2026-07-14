@@ -95,11 +95,27 @@ export default function MySpendPage() {
                 gap: 1.5,
             }}>
             {/* Person switcher */}
-            <PersonSwitcher
-                participants={participants}
-                selectedId={personId}
-                onSelect={setPersonId}
-            />
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.75,
+                }}>
+                <Typography
+                    sx={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: colors.primaryBlack,
+                        paddingX: 0.25,
+                    }}>
+                    {isMe ? 'My Expenses' : `${person?.firstName ?? 'Their'}'s Expenses`}
+                </Typography>
+                <PersonSwitcher
+                    participants={participants}
+                    selectedId={personId}
+                    onSelect={setPersonId}
+                />
+            </Box>
 
             {/* Filter chips */}
             <Box

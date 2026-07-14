@@ -153,11 +153,20 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
         backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
     } else if (expenseDetailMatch) {
         const from = searchParams.get('from')
-        const fromTool =
-            from && from !== 'expenses' && tripTools.some((t) => t.path === from)
-                ? from
-                : null
-        backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
+        // A pair drill-down links its expenses with ?from=debts&pair=<d>-<c>
+        // so back returns to that specific pair, not the debts overview.
+        const pair = searchParams.get('pair')
+        if (from === 'debts' && pair && /^\d+-\d+$/.test(pair)) {
+            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/debts/${pair}`
+        } else {
+            const fromTool =
+                from &&
+                from !== 'expenses' &&
+                tripTools.some((t) => t.path === from)
+                    ? from
+                    : null
+            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
+        }
     } else if (debtPairMatch) {
         backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
     }
