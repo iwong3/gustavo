@@ -65,6 +65,11 @@ export default function RootLayout({
                     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
                 />
                 <meta name="theme-color" content="#fefae0" />
+                {/* Light-only app. Without this, iOS treats the app as
+                    supporting both schemes and may paint its standalone
+                    chrome (status bar area) with dark/gray material when the
+                    phone is in dark mode. */}
+                <meta name="color-scheme" content="light" />
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta

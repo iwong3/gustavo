@@ -20,6 +20,8 @@ body {
     min-height: 100dvh;
     /* Prevent rubber-band overscroll — the main "this feels like a website" tell */
     overscroll-behavior: none;
+    /* Light-only: keeps iOS from applying dark-mode chrome to the PWA */
+    color-scheme: light;
 }
 
 a {
