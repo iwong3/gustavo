@@ -27,6 +27,10 @@ const FIELD_LABELS: Record<string, string> = {
     role: 'Role',
     covered_by: 'Covered by',
     local_currency_received: 'Local currency received',
+    from_user_id: 'Paid by',
+    to_user_id: 'Paid to',
+    amount_usd: 'Amount (USD)',
+    settled_on: 'Settled on',
 }
 
 // Fields to exclude from diffs (internal/noisy).
@@ -34,7 +38,7 @@ const FIELD_LABELS: Record<string, string> = {
 // timestamps never surface as a diff row.
 const IGNORED_FIELDS = new Set([
     'id', 'created_at', 'updated_at', 'trip_id', 'expense_id', 'user_id',
-    'conversion_error', 'deleted_at', 'left_at', 'joined_at',
+    'conversion_error', 'deleted_at', 'left_at', 'joined_at', 'created_by',
 ])
 
 type Intent = 'create' | 'update' | 'delete' | 'restore'
@@ -87,6 +91,12 @@ function getEntityName(tableName: string, data: Record<string, unknown> | null):
         }
         case 'expense_categories':
             return `category "${data?.name || 'Unknown'}"`
+        case 'settlements': {
+            // from/to already resolved to names; amount_usd is a numeric string
+            const amount = Number(data?.amount_usd)
+            const amountStr = Number.isFinite(amount) ? `$${Math.round(amount)}` : ''
+            return `payment ${data?.from_user_id || '?'} → ${data?.to_user_id || '?'}${amountStr ? ` (${amountStr})` : ''}`
+        }
         default:
             return tableName.replace(/_/g, ' ')
     }
@@ -127,6 +137,19 @@ function describeAction(
                 return `Updated ${entityName}'s split`
             case 'delete':
                 return `Removed ${entityName} from split`
+        }
+    }
+
+    if (tableName === 'settlements') {
+        switch (intent) {
+            case 'create':
+                return `Recorded ${entityName}`
+            case 'delete':
+                return `Removed ${entityName}`
+            case 'restore':
+                return `Restored ${entityName}`
+            case 'update':
+                return `Updated ${entityName}`
         }
     }
 
@@ -212,6 +235,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
                     JOIN expenses e ON e.id = ep.expense_id
                     WHERE e.trip_id = $1
                 ))
+                OR (al.table_name = 'settlements' AND al.record_id IN (
+                    SELECT id FROM settlements WHERE trip_id = $1
+                ))
             )
             ORDER BY al.changed_at DESC
             LIMIT 200`,
@@ -278,7 +304,7 @@ function resolveIdFields(
     const resolved = { ...data }
 
     // Resolve user IDs (BIGINT may arrive as number or string from JSONB)
-    const userIdFields = ['paid_by_user_id', 'reported_by_user_id', 'user_id', 'covered_by', 'changed_by']
+    const userIdFields = ['paid_by_user_id', 'reported_by_user_id', 'user_id', 'covered_by', 'changed_by', 'from_user_id', 'to_user_id', 'created_by']
     for (const field of userIdFields) {
         const key = toNumericKey(resolved[field])
         if (key !== null) {

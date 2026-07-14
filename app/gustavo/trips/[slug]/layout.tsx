@@ -10,7 +10,7 @@ import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchExpenses, fetchTripBySlug } from 'utils/api'
+import { fetchExpenses, fetchSettlements, fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -35,11 +35,19 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     })
     const expenses = expensesQuery.data ?? []
 
+    const settlementsQuery = useQuery({
+        queryKey: trip ? queryKeys.trips.settlements(trip.id) : ['trip-settlements', 'pending'],
+        queryFn: () => fetchSettlements(trip!.id),
+        enabled: Boolean(trip),
+    })
+    const settlements = settlementsQuery.data ?? []
+
     const loading =
         tripQuery.isLoading ||
         (Boolean(trip) && expensesQuery.isLoading) ||
-        (Boolean(trip) && !expensesQuery.data && !expensesQuery.isError)
-    const error = tripQuery.isError || expensesQuery.isError
+        (Boolean(trip) && !expensesQuery.data && !expensesQuery.isError) ||
+        (Boolean(trip) && !settlementsQuery.data && !settlementsQuery.isError)
+    const error = tripQuery.isError || expensesQuery.isError || settlementsQuery.isError
 
     // Reset menu/search stores once per loaded (trip, expenses) pair so
     // sub-pages mount into clean filter state. Keyed by trip.id + expenses
@@ -71,8 +79,9 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
 
     const refreshData = useCallback(async () => {
         if (!trip) return
+        // Parent key: refreshes expenses, settlements, locations together
         await queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.expenses(trip.id),
+            queryKey: queryKeys.trips.detail(trip.id),
         })
     }, [trip, queryClient])
 
@@ -139,7 +148,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     }
 
     return (
-        <TripDataProvider expenses={expenses} trip={trip}>
+        <TripDataProvider expenses={expenses} settlements={settlements} trip={trip}>
             <SpendDataProvider>
                 <RefreshProvider onRefresh={refreshData}>
                     {children}

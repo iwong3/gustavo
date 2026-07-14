@@ -8,7 +8,7 @@
  *   3. Provides per-person breakdowns for the detail drawer
  */
 
-import type { Expense, UserSummary } from './types'
+import type { Expense, SettlementRecord, UserSummary } from './types'
 
 // --- Types ---
 
@@ -41,6 +41,34 @@ export type GroupedExpenses = {
     usdExpenses: Expense[]
     foreignExpenses: Expense[]
     currencyExchangeExpenses: Expense[]
+}
+
+// --- Recorded settlements ---
+
+/**
+ * Fold recorded payments into the debt map. A settlement fromUser → toUser of
+ * $X means the payer handed over real money, which is modelled as a
+ * reverse-direction gross debt (toUser now "owes" fromUser $X) so it nets out
+ * against the original debt everywhere downstream — pairwise nets, the
+ * simplified plan, and the money map all see the reduced amounts.
+ *
+ * Returns a new map; the input is never mutated. Ids are used as opaque map
+ * keys (BIGINT strings at runtime) — no arithmetic or `===` casts.
+ */
+export function applySettlements(
+    debtMap: Map<number, Map<number, number>>,
+    settlements: SettlementRecord[]
+): Map<number, Map<number, number>> {
+    if (settlements.length === 0) return debtMap
+    const out = new Map<number, Map<number, number>>()
+    debtMap.forEach((creditors, debtorId) => out.set(debtorId, new Map(creditors)))
+    for (const s of settlements) {
+        if (!Number.isFinite(s.amountUsd) || s.amountUsd <= 0) continue
+        const owes = out.get(s.toUserId) ?? new Map<number, number>()
+        owes.set(s.fromUserId, (owes.get(s.fromUserId) ?? 0) + s.amountUsd)
+        out.set(s.toUserId, owes)
+    }
+    return out
 }
 
 // --- Net pairwise debts ---

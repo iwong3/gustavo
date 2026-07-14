@@ -69,6 +69,19 @@ export type Expense = {
     updatedAt: string
 }
 
+/** A recorded debt payment between two trip participants ("mark as paid").
+ *  Offsets the debt map: fromUser paid toUser this much outside the app. */
+export type SettlementRecord = {
+    id: number
+    fromUserId: number
+    toUserId: number
+    amountUsd: number
+    note: string | null
+    settledOn: string   // ISO YYYY-MM-DD
+    createdBy: number
+    createdAt: string
+}
+
 /** Place data from the place_details table, returned via JOIN on expenses. */
 export type PlaceInfo = {
     googlePlaceId: string

@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { directPairwiseSettlements, simplifyDebts } from '../lib/debt'
-import type { UserSummary } from '../lib/types'
+import { applySettlements, directPairwiseSettlements, simplifyDebts } from '../lib/debt'
+import type { SettlementRecord, UserSummary } from '../lib/types'
 
 const user = (id: number | string, firstName: string): UserSummary => ({
     // Cast to satisfy the number-typed field; runtime ids are strings (BIGINT).
@@ -33,6 +33,91 @@ function makeDebtMap(
     }
     return map
 }
+
+/** A recorded payment fixture with runtime-truth string ids. */
+function payment(
+    fromUserId: string,
+    toUserId: string,
+    amountUsd: number
+): SettlementRecord {
+    return {
+        id: 99 as unknown as number,
+        fromUserId: fromUserId as unknown as number,
+        toUserId: toUserId as unknown as number,
+        amountUsd,
+        note: null,
+        settledOn: '2026-07-14',
+        createdBy: fromUserId as unknown as number,
+        createdAt: '2026-07-14T00:00:00Z',
+    }
+}
+
+describe('applySettlements', () => {
+    it('offsets the debt without mutating the input map', () => {
+        const original = makeDebtMap([['1', '2', 50]])
+        const adjusted = applySettlements(original, [payment('1', '2', 20)])
+
+        // Original untouched
+        expect(original.get('1' as never)?.get('2' as never)).toBe(50)
+        expect(original.get('2' as never)).toBeUndefined()
+        // Adjusted map carries the reverse-direction offset
+        expect(adjusted.get('2' as never)?.get('1' as never)).toBe(20)
+    })
+
+    it('a full payment settles the pair to zero', () => {
+        const a = user('1', 'Ana')
+        const b = user('2', 'Bo')
+        const debtMap = applySettlements(makeDebtMap([['1', '2', 50]]), [
+            payment('1', '2', 50),
+        ])
+        expect(directPairwiseSettlements(debtMap, [a, b])).toHaveLength(0)
+        expect(simplifyDebts(debtMap, [a, b])).toHaveLength(0)
+    })
+
+    it('an overpayment flips the direction of the debt', () => {
+        const a = user('1', 'Ana')
+        const b = user('2', 'Bo')
+        const debtMap = applySettlements(makeDebtMap([['1', '2', 50]]), [
+            payment('1', '2', 80),
+        ])
+        const s = directPairwiseSettlements(debtMap, [a, b])
+        expect(s).toHaveLength(1)
+        expect(s[0]).toEqual({ debtorId: '2', creditorId: '1', amount: 30 })
+    })
+
+    it('multiple payments accumulate; the simplified plan sees them too', () => {
+        const a = user('1', 'Ana')
+        const b = user('2', 'Bo')
+        const c = user('3', 'Cy')
+        // Ana owes Bo 20, Bo owes Cy 20. Ana pays Cy 20 directly (per the
+        // simplified plan) in two installments → everyone settled.
+        const debtMap = applySettlements(
+            makeDebtMap([
+                ['1', '2', 20],
+                ['2', '3', 20],
+            ]),
+            [payment('1', '3', 10), payment('1', '3', 10)]
+        )
+        expect(simplifyDebts(debtMap, [a, b, c])).toHaveLength(0)
+    })
+
+    it('ignores payments with non-finite amounts (runtime NUMERIC-null truth)', () => {
+        const a = user('1', 'Ana')
+        const b = user('2', 'Bo')
+        const debtMap = applySettlements(makeDebtMap([['1', '2', 50]]), [
+            payment('1', '2', NaN),
+            payment('1', '2', null as unknown as number),
+        ])
+        const s = directPairwiseSettlements(debtMap, [a, b])
+        expect(s).toHaveLength(1)
+        expect(s[0].amount).toBe(50)
+    })
+
+    it('returns the same map instance when there is nothing to apply', () => {
+        const original = makeDebtMap([['1', '2', 50]])
+        expect(applySettlements(original, [])).toBe(original)
+    })
+})
 
 describe('directPairwiseSettlements', () => {
     it('nets the two directions within a pair', () => {
@@ -77,6 +162,18 @@ describe('directPairwiseSettlements', () => {
             ['2', '1', 15],
         ])
         expect(directPairwiseSettlements(debtMap, [a, b])).toHaveLength(0)
+    })
+
+    it('reflects recorded payments folded in via applySettlements', () => {
+        const a = user('1', 'Ana')
+        const b = user('2', 'Bo')
+        // Ana owes Bo 50; Ana already paid back 20
+        const debtMap = applySettlements(makeDebtMap([['1', '2', 50]]), [
+            payment('1', '2', 20),
+        ])
+        const s = directPairwiseSettlements(debtMap, [a, b])
+        expect(s).toHaveLength(1)
+        expect(s[0]).toEqual({ debtorId: '1', creditorId: '2', amount: 30 })
     })
 
     it('derives direction from the net, not from id ordering', () => {

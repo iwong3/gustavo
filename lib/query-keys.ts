@@ -19,6 +19,8 @@ export const queryKeys = {
             [...queryKeys.trips.detail(tripId), 'expenses'] as const,
         locations: (tripId: string | number) =>
             [...queryKeys.trips.detail(tripId), 'locations'] as const,
+        settlements: (tripId: string | number) =>
+            [...queryKeys.trips.detail(tripId), 'settlements'] as const,
         participants: (tripId: string | number) =>
             [...queryKeys.trips.detail(tripId), 'participants'] as const,
     },

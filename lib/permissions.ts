@@ -22,6 +22,22 @@ export function canDeleteExpense(role: TripRole | null, isAdmin: boolean, isRepo
     return canEditExpense(role, isAdmin, isReporter)
 }
 
+/** Any trip participant can record a settlement (same spirit as canAddExpense). */
+export function canAddSettlement(role: TripRole | null): boolean {
+    return canAddExpense(role)
+}
+
+/** Undo a recorded settlement: trip staff, whoever recorded it, or either
+ *  party involved in the payment (they know best whether it happened). */
+export function canDeleteSettlement(
+    role: TripRole | null,
+    isAdmin: boolean,
+    isCreator: boolean,
+    isInvolved: boolean
+): boolean {
+    return isAdmin || role === 'owner' || role === 'admin' || role === 'editor' || isCreator || isInvolved
+}
+
 export function canManageRoles(role: TripRole | null, isAdmin: boolean): boolean {
     return isAdmin || role === 'owner' || role === 'admin'
 }

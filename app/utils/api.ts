@@ -3,7 +3,7 @@
  * All types are DB-driven — no enum mappings.
  */
 
-import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails } from '@/lib/types'
+import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails, SettlementRecord } from '@/lib/types'
 
 /** Thrown when a PUT/DELETE fails because the row's updated_at no longer
  *  matches the version the client read. Caller should refresh and retry. */
@@ -182,6 +182,51 @@ export const deleteExpense = async (
             throw new ConflictError(err.message || 'This expense was changed by someone else.')
         }
         throw new Error(err.error || 'Failed to delete expense')
+    }
+}
+
+// ── Settlements (recorded debt payments) ──
+
+export const fetchSettlements = async (tripId: number): Promise<SettlementRecord[]> => {
+    const res = await fetch(`/api/trips/${tripId}/settlements`)
+    if (!res.ok) throw new Error(`Failed to fetch settlements: ${res.status}`)
+    return res.json()
+}
+
+export type AddSettlementData = {
+    fromUserId: number
+    toUserId: number
+    amountUsd: number
+    note?: string
+    settledOn?: string // YYYY-MM-DD, defaults to today server-side
+}
+
+export const addSettlement = async (
+    tripId: number,
+    data: AddSettlementData
+): Promise<{ id: number }> => {
+    const res = await fetch(`/api/trips/${tripId}/settlements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to record payment')
+    }
+    return res.json()
+}
+
+export const deleteSettlement = async (
+    tripId: number,
+    settlementId: number
+): Promise<void> => {
+    const res = await fetch(`/api/trips/${tripId}/settlements/${settlementId}`, {
+        method: 'DELETE',
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to remove payment')
     }
 }
 

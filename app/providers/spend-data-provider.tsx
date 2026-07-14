@@ -13,15 +13,19 @@ import { useSortDateStore } from 'components/menu/sort/sort-date'
 import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { useTripData } from 'providers/trip-data-provider'
 
-import type { Expense, UserSummary } from '@/lib/types'
+import { applySettlements } from '@/lib/debt'
+import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 
 type SpendDataValue = {
     expenses: Expense[]
+    /** Recorded debt payments ("mark as paid"). Already folded into debtMap. */
+    settlementRecords: SettlementRecord[]
     filteredExpenses: Expense[]
     isSearching: boolean
     searchInput: string
     totalSpend: number
-    debtMap: Map<number, Map<number, number>> // userId → userId → amount
+    /** userId → userId → gross amount owed, net of recorded settlements. */
+    debtMap: Map<number, Map<number, number>>
     filteredTotalSpend: number
     filteredPeopleTotalSpend: number
     totalSpendByPerson: Map<number, number>     // userId → total paid amount
@@ -319,7 +323,7 @@ function computeSummaries(
 // --- Provider component: computes once, shares via context ---
 
 export function SpendDataProvider({ children }: { children: React.ReactNode }) {
-    const { expenses, trip } = useTripData()
+    const { expenses, settlements: settlementRecords, trip } = useTripData()
     const participants = trip.participants
 
     // UI state from Zustand stores — deferred so filter/sort/search chip visuals
@@ -356,10 +360,14 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
         locationFilters, costOrder, dateOrder, nameOrder, searchInput, blendedRates,
     ])
 
-    const { totalSpend, debtMap } = useMemo(
-        () => computeDebtMap(expenses, participants.length),
-        [expenses, participants.length]
-    )
+    const { totalSpend, debtMap } = useMemo(() => {
+        const computed = computeDebtMap(expenses, participants.length)
+        return {
+            totalSpend: computed.totalSpend,
+            // Recorded payments offset debts everywhere debts are shown
+            debtMap: applySettlements(computed.debtMap, settlementRecords),
+        }
+    }, [expenses, participants.length, settlementRecords])
 
     const summaries = useMemo(
         () => computeSummaries(filteredExpenses, expenses, splitBetweenFilters, participants.length),
@@ -371,6 +379,7 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
     const value = useMemo<SpendDataValue>(
         () => ({
             expenses,
+            settlementRecords,
             filteredExpenses,
             isSearching,
             searchInput,
@@ -380,7 +389,7 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
             getUsdValue,
             ...summaries,
         }),
-        [expenses, filteredExpenses, isSearching, searchInput, totalSpend, debtMap, participants, getUsdValue, summaries]
+        [expenses, settlementRecords, filteredExpenses, isSearching, searchInput, totalSpend, debtMap, participants, getUsdValue, summaries]
     )
 
     return (

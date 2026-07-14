@@ -33,18 +33,26 @@ const NODE_GAP = 36 // ribbon stack gap + label clearance
 const MIN_RIBBON = 13
 const TOP_PAD = 44 // clearance below the PAYS / GETS headers
 
+/** A flow drawn on the map: an outstanding payment or an already-settled one. */
+type Flow = Settlement & { settled: boolean }
+
 /**
  * The settle-up plan drawn as a flow: debtors on the left, creditors on the
  * right, ribbon thickness proportional to the amount moving. Ribbons that
- * don't involve `youId` render at half strength. Tapping a ribbon highlights
- * it (tap again to clear); the settle-up rows below are the way into detail.
+ * don't involve `youId` render at half strength. Settled flows stay on the
+ * map — faded, dash-outlined, with a green ✓ pill — so paying a debt never
+ * makes its ribbon vanish. Tapping a ribbon highlights it (tap again to
+ * clear); the settle-up rows below are the way into detail.
  */
 export function MoneyMap({
     settlements,
+    settledFlows = [],
     participantById,
     youId,
 }: {
     settlements: Settlement[]
+    /** Recorded payments, pre-aggregated per debtor→creditor pair. */
+    settledFlows?: Settlement[]
     participantById: Map<number, UserSummary>
     youId: number
 }) {
@@ -52,20 +60,27 @@ export function MoneyMap({
     const [selection, setSelection] = useState<
         { kind: 'ribbon'; key: string } | { kind: 'user'; id: number } | null
     >(null)
-    const ribbonKey = (s: Settlement) => `${s.debtorId}-${s.creditorId}`
-    const isHighlighted = (s: Settlement) =>
+    // Outstanding first, then settled, so paid flows stack below live ones
+    const allFlows: Flow[] = [
+        ...settlements.map((s) => ({ ...s, settled: false })),
+        ...settledFlows.map((s) => ({ ...s, settled: true })),
+    ]
+    const ribbonKey = (s: Flow) =>
+        `${s.settled ? 'settled-' : ''}${s.debtorId}-${s.creditorId}`
+    const isHighlighted = (s: Flow) =>
         selection === null
             ? null // no active selection → default (you-based) styling
             : selection.kind === 'ribbon'
               ? ribbonKey(s) === selection.key
               : s.debtorId === selection.id || s.creditorId === selection.id
-    const totalAmount = settlements.reduce((t, s) => t + s.amount, 0)
+    const totalAmount = allFlows.reduce((t, s) => t + s.amount, 0)
     const pxPerDollar = totalAmount > 0 ? RIBBON_BUDGET / totalAmount : 0
     const ribbonH = (amount: number) =>
         Math.max(amount * pxPerDollar, MIN_RIBBON)
 
-    const debtors = Array.from(new Set(settlements.map((s) => s.debtorId)))
-    const creditors = Array.from(new Set(settlements.map((s) => s.creditorId)))
+    const debtors = Array.from(new Set(allFlows.map((s) => s.debtorId)))
+    const creditors = Array.from(new Set(allFlows.map((s) => s.creditorId)))
+    // Node totals only count what's still owed — settled ribbons are history
     const owesTotal = (id: number) =>
         settlements
             .filter((s) => s.debtorId === id)
@@ -77,7 +92,7 @@ export function MoneyMap({
 
     // Stack each side's ribbons top-to-bottom
     type NodePos = { y0: number; h: number }
-    const layoutSide = (ids: number[], flowsOf: (id: number) => Settlement[]) => {
+    const layoutSide = (ids: number[], flowsOf: (id: number) => Flow[]) => {
         const pos = new Map<number, NodePos>()
         const cursor = new Map<number, number>()
         let y = TOP_PAD
@@ -90,17 +105,17 @@ export function MoneyMap({
         return { pos, cursor, end: y }
     }
     const left = layoutSide(debtors, (id) =>
-        settlements.filter((s) => s.debtorId === id)
+        allFlows.filter((s) => s.debtorId === id)
     )
     const right = layoutSide(creditors, (id) =>
-        settlements.filter((s) => s.creditorId === id)
+        allFlows.filter((s) => s.creditorId === id)
     )
     const H = Math.max(left.end, right.end) - NODE_GAP + 32
 
     // Users touched by a highlighted ribbon — used to keep their nodes lit
     const activeUserIds = new Set<number>()
     if (selection) {
-        for (const s of settlements) {
+        for (const s of allFlows) {
             if (isHighlighted(s)) {
                 activeUserIds.add(s.debtorId)
                 activeUserIds.add(s.creditorId)
@@ -118,7 +133,7 @@ export function MoneyMap({
     // Precompute geometry so ribbon fills and amount pills can render in
     // separate layers — pills sit on top so their values stay legible even
     // over a neighbouring ribbon.
-    const flows = settlements.map((s) => {
+    const flows = allFlows.map((s) => {
         const key = ribbonKey(s)
         const highlighted = isHighlighted(s)
         const th = ribbonH(s.amount)
@@ -136,13 +151,24 @@ export function MoneyMap({
         const midY = (y1 + y2 + th) / 2
         // Ribbon fill fades when it's not the focus; the amount pill stays
         // readable at rest and only dims when another flow is selected.
-        const pathOpacity =
-            highlighted === null ? (involvesYou ? 1 : 0.45) : highlighted ? 1 : 0.15
+        // Settled ribbons are always ghosted — they're history, not a todo.
+        const pathOpacity = s.settled
+            ? highlighted
+                ? 0.5
+                : 0.18
+            : highlighted === null
+              ? involvesYou
+                  ? 1
+                  : 0.45
+              : highlighted
+                ? 1
+                : 0.15
         const pillOpacity =
             highlighted === null ? 1 : highlighted ? 1 : 0.3
         return {
             key,
             highlighted,
+            settled: s.settled,
             path,
             cx,
             midY,
@@ -163,8 +189,9 @@ export function MoneyMap({
             key={f.key}
             d={f.path}
             fill={f.color}
-            stroke={colors.primaryBlack}
+            stroke={f.settled ? '#2e7d32' : colors.primaryBlack}
             strokeWidth={f.highlighted ? 2.5 : 1.5}
+            strokeDasharray={f.settled ? '5 4' : undefined}
             opacity={f.pathOpacity}
             onClick={(e) => {
                 e.stopPropagation()
@@ -184,13 +211,13 @@ export function MoneyMap({
             }}
             style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}>
             <rect
-                x={f.cx - 27}
+                x={f.cx - (f.settled ? 32 : 27)}
                 y={f.midY - 10}
-                width={54}
+                width={f.settled ? 64 : 54}
                 height={20}
                 rx={10}
                 fill={f.highlighted ? colors.primaryYellow : colors.primaryWhite}
-                stroke={colors.primaryBlack}
+                stroke={f.settled ? '#2e7d32' : colors.primaryBlack}
                 strokeWidth={f.highlighted ? 1.5 : 1}
             />
             <text
@@ -198,8 +225,9 @@ export function MoneyMap({
                 y={f.midY + 4}
                 textAnchor="middle"
                 fontSize={11}
-                fontWeight={800}>
-                {formatUsd(f.amount)}
+                fontWeight={800}
+                fill={f.settled ? '#2e7d32' : colors.primaryBlack}>
+                {f.settled ? `✓ ${formatUsd(f.amount)}` : formatUsd(f.amount)}
             </text>
         </g>
     ))
@@ -260,16 +288,29 @@ export function MoneyMap({
                     fontWeight={700}>
                     {initialsOf(p)}
                 </text>
-                <text
-                    x={cx}
-                    y={pos.y0 + pos.h / 2 + 22}
-                    textAnchor="middle"
-                    fontSize={10.5}
-                    fontWeight={800}
-                    fill={side === 'left' ? '#c0392b' : '#2e7d32'}>
-                    {side === 'left' ? '−' : '+'}
-                    {formatUsd(amount)}
-                </text>
+                {amount > 0.005 ? (
+                    <text
+                        x={cx}
+                        y={pos.y0 + pos.h / 2 + 22}
+                        textAnchor="middle"
+                        fontSize={10.5}
+                        fontWeight={800}
+                        fill={side === 'left' ? '#c0392b' : '#2e7d32'}>
+                        {side === 'left' ? '−' : '+'}
+                        {formatUsd(amount)}
+                    </text>
+                ) : (
+                    // Nothing outstanding on this side — only settled history
+                    <text
+                        x={cx}
+                        y={pos.y0 + pos.h / 2 + 22}
+                        textAnchor="middle"
+                        fontSize={9.5}
+                        fontWeight={800}
+                        fill="#2e7d32">
+                        ✓ settled
+                    </text>
+                )}
             </g>
         )
     }

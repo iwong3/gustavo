@@ -2,7 +2,7 @@
  * Mock data for the dev component gallery (/dev/gallery).
  * Pure fixtures — never imported by production code.
  */
-import type { Expense, TripSummary, UserSummary } from '@/lib/types'
+import type { Expense, SettlementRecord, TripSummary, UserSummary } from '@/lib/types'
 
 /** users.id is BIGINT — the API returns it as a STRING at runtime even though
  *  lib/types.ts says number. Fixtures model the runtime truth so id-comparison
@@ -39,7 +39,7 @@ export const marco: UserSummary = {
     avatarUrl: null,
     initials: 'MR',
     iconColor: '#393a10',
-    venmoUrl: null,
+    venmoUrl: 'https://venmo.com/u/marco-fixture',
 }
 
 export const priya: UserSummary = {
@@ -171,3 +171,28 @@ export const debtMap: Map<number, Map<number, number>> = new Map([
     [ivan.id, new Map([[marco.id, 12.25]])],
     [priya.id, new Map([[jenny.id, 30]])],
 ])
+
+/** Recorded debt payments (string ids = runtime truth). Directions match the
+ *  fixture expenses: Jenny owes Ivan (sushi), Ivan owes Marco (hotel). */
+export const settlementRecords: SettlementRecord[] = [
+    {
+        id: asId('9001'),
+        fromUserId: jenny.id,
+        toUserId: ivan.id,
+        amountUsd: 20,
+        note: null,
+        settledOn: '2026-07-10',
+        createdBy: jenny.id,
+        createdAt: '2026-07-10T09:00:00Z',
+    },
+    {
+        id: asId('9002'),
+        fromUserId: ivan.id,
+        toUserId: marco.id,
+        amountUsd: 50,
+        note: null,
+        settledOn: '2026-07-12',
+        createdBy: ivan.id,
+        createdAt: '2026-07-12T18:30:00Z',
+    },
+]

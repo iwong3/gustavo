@@ -2,10 +2,11 @@
 
 import { createContext, useContext } from 'react'
 
-import type { TripSummary, Expense } from '@/lib/types'
+import type { TripSummary, Expense, SettlementRecord } from '@/lib/types'
 
 type TripData = {
     expenses: Expense[]
+    settlements: SettlementRecord[]
     trip: TripSummary
 }
 
@@ -13,15 +14,18 @@ const TripDataContext = createContext<TripData | null>(null)
 
 export function TripDataProvider({
     expenses,
+    settlements = [],
     trip,
     children,
 }: {
     expenses: Expense[]
+    /** Recorded debt payments; optional so gallery fixtures can omit it. */
+    settlements?: SettlementRecord[]
     trip: TripSummary
     children: React.ReactNode
 }) {
     return (
-        <TripDataContext.Provider value={{ expenses, trip }}>
+        <TripDataContext.Provider value={{ expenses, settlements, trip }}>
             {children}
         </TripDataContext.Provider>
     )

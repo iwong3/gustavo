@@ -11,7 +11,8 @@ it never reads the live tables for content (only for id→name lookups).
 
 ## API — `app/api/trips/[tripId]/activity/route.ts`
 Fetches the trip's audit rows (trips, expenses, locations, trip_participants,
-expense_participants) and shapes each into an `ActivityEntry` (`lib/types.ts`):
+expense_participants, settlements) and shapes each into an `ActivityEntry`
+(`lib/types.ts`):
 
 - **id→name resolution** (`resolveIdFields`): user/category/location/expense ids
   inside `old_data`/`new_data` are replaced with names, so diffs and summaries

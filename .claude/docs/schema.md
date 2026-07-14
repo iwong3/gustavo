@@ -1,6 +1,6 @@
 # Database Schema
 
-> Current through migration **00037**. When you add a migration, update this doc in the same change.
+> Current through migration **00038**. When you add a migration, update this doc in the same change.
 
 ## ER Diagram
 
@@ -90,6 +90,17 @@ expense_participants
   user_id BIGINT FK -> users
   covered_by BIGINT FK -> users (nullable) -- set = share absorbed by coverer, no debt accrued
   UNIQUE(expense_id, user_id)
+
+settlements -- recorded debt payments between trip participants (00038)
+  id BIGINT PK
+  trip_id BIGINT FK -> trips
+  from_user_id BIGINT FK -> users -- the payer (debtor)
+  to_user_id BIGINT FK -> users   -- the receiver (creditor); CHECK <> from_user_id
+  amount_usd NUMERIC(12,2) -- CHECK > 0; debts are USD-only
+  note TEXT
+  settled_on DATE (default CURRENT_DATE)
+  created_by BIGINT FK -> users
+  created_at, updated_at, deleted_at
 
 place_details -- cached Google Places metadata (00020)
   google_place_id TEXT PK
@@ -301,6 +312,8 @@ locations 1──* expenses
 place_details 1──* expenses (google_place_id)
 expenses 1──* expense_participants
 users 1──* expense_participants (user_id, covered_by)
+trips 1──* settlements
+users 1──* settlements (from_user_id, to_user_id, created_by)
 ```
 
 ## Permissions Model
@@ -348,6 +361,10 @@ users 1──* expense_participants (user_id, covered_by)
 - **Google Places (00019–00020)** — expenses store only `google_place_id`; all place metadata is cached in `place_details` (PK = Google's place id, refreshable via `fetched_at`).
 - **Optimistic concurrency (00037)** — `updated_at` is the OCC token. A trigger bumps the parent `expenses.updated_at` whenever its `expense_participants` change, so an expense + its participants behave as one aggregate. **The token is millisecond-precision**: Postgres stores microseconds but clients only ever see milliseconds (serialization goes through a JS `Date`), so ALL comparisons must go through `lib/occ.ts` (`occMatchSql` for SQL predicates, `occTokensMatch` for JS). Raw `updated_at = $n` against a client token never matches — this broke all deletes (fixed July 2026; regression test in `tests/occ.test.ts`).
 - **Home currency** — always USD for debt calculation.
+- **Settlements (00038)** — a recorded payment from_user → to_user offsets the
+  debt map as a reverse-direction gross debt (`applySettlements` in `lib/debt.ts`),
+  so all debt views (settle-up list, money map, pair drill-down) reflect it. Any
+  trip participant can record one; delete is soft (undo on the debts page).
 - **Audit log** — Postgres triggers write to `audit_log`; user attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`). Join tables with composite PKs (trip_countries, trip_currencies, food_group_members) have NO audit triggers — `audit_trigger_func()` reads `NEW.id` and blows up without an `id` column (00036).
 - **Workout weight (00024)** — `weight_lbs` lives on `workout_exercises` (one weight per exercise per session); sets track reps only.
 - **Muscle groups (00026)** — "Back" split into "Upper Back" (targets: Lats, Rhomboids, Traps, Rear Delts) and standalone "Lower Back". Group vs. target is implicit via `muscle_group_parents`.

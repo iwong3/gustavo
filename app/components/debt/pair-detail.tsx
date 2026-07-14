@@ -5,9 +5,11 @@ import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
+import { IconCheck } from '@tabler/icons-react'
+
 import { cardSx, colors } from '@/lib/colors'
 import { expenseDebtContribution, simplifyDebts } from '@/lib/debt'
-import type { Expense, UserSummary } from '@/lib/types'
+import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 import { ListControls, type ListSort } from 'components/list-controls'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useSpendData } from 'providers/spend-data-provider'
@@ -126,6 +128,66 @@ function DebtExpenseRow({
 }
 
 /**
+ * One recorded payment between the pair. `reduces` = the debtor paid, so the
+ * debt shrinks (mirrors DebtExpenseRow's sign convention).
+ */
+function PaymentRow({
+    record,
+    label,
+    reduces,
+}: {
+    record: SettlementRecord
+    label: string
+    reduces: boolean
+}) {
+    return (
+        <Box
+            sx={{
+                'display': 'flex',
+                'alignItems': 'center',
+                'gap': 1.25,
+                'paddingX': 1.25,
+                'paddingY': 1,
+                'borderBottom': `1px solid ${colors.primaryBlack}20`,
+                '&:last-of-type': { borderBottom: 'none' },
+            }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    flexShrink: 0,
+                    borderRadius: '50%',
+                    border: `1.5px solid ${OWED_GREEN}`,
+                    backgroundColor: '#eef5ee',
+                }}>
+                <IconCheck size={15} stroke={2.5} color={OWED_GREEN} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3 }}>
+                    Payment
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', lineHeight: 1.3 }}>
+                    {dayjs(record.settledOn + 'T00:00:00').format('M/D')} · {label}
+                </Typography>
+            </Box>
+            <Typography
+                sx={{
+                    fontSize: 13.5,
+                    fontWeight: 800,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: reduces ? OWED_GREEN : OWE_RED,
+                }}>
+                {reduces ? '−' : '+'}
+                {formatUsd(record.amountUsd)}
+            </Typography>
+        </Box>
+    )
+}
+
+/**
  * The debt drill-down between two people: every shared expense that moves the
  * debt between them, searchable and sortable, flat or grouped by direction.
  * The hero shows the direct pairwise net (what one owes the other), not a
@@ -139,7 +201,7 @@ export function PairDetail({
     debtorId: number | string
     creditorId: number | string
 }) {
-    const { expenses, participants, getUsdValue, debtMap } = useSpendData()
+    const { expenses, participants, getUsdValue, debtMap, settlementRecords } = useSpendData()
     const { trip } = useTripData()
     const router = useRouter()
 
@@ -180,14 +242,33 @@ export function PairDetail({
         return rows
     }, [expenses, debtor, creditor, getUsdValue, participants.length])
 
-    const pairNet = useMemo(
-        () =>
-            allRows.reduce(
-                (t, r) => t + (r.reduces ? -r.amount : r.amount),
-                0
-            ),
-        [allRows]
-    )
+    // Recorded payments between this pair (either direction)
+    const pairPayments = useMemo(() => {
+        if (!debtor || !creditor) return []
+        return settlementRecords.filter(
+            (r) =>
+                (String(r.fromUserId) === String(debtor.id) &&
+                    String(r.toUserId) === String(creditor.id)) ||
+                (String(r.fromUserId) === String(creditor.id) &&
+                    String(r.toUserId) === String(debtor.id))
+        )
+    }, [settlementRecords, debtor, creditor])
+
+    const pairNet = useMemo(() => {
+        const fromExpenses = allRows.reduce(
+            (t, r) => t + (r.reduces ? -r.amount : r.amount),
+            0
+        )
+        // A payment debtor → creditor shrinks the debt, same sign as a
+        // debtor-covered expense; the reverse direction grows it
+        const fromPayments = pairPayments.reduce((t, r) => {
+            if (!Number.isFinite(r.amountUsd)) return t
+            return String(r.fromUserId) === String(debtor?.id)
+                ? t - r.amountUsd
+                : t + r.amountUsd
+        }, 0)
+        return fromExpenses + fromPayments
+    }, [allRows, pairPayments, debtor])
 
     // What the group-simplified plan asks THIS debtor to pay THIS creditor
     // (may be absent or a different amount, since the simplifier reroutes
@@ -276,8 +357,10 @@ export function PairDetail({
                 fontSize: 13.5,
                 fontWeight: 800,
             }}>
+            {/* Payments can overshoot and flip the direction — follow the sign */}
             <span>
-                Net: {debtor.firstName} pays {creditor.firstName}
+                Net: {(pairNet >= 0 ? debtor : creditor).firstName} pays{' '}
+                {(pairNet >= 0 ? creditor : debtor).firstName}
             </span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {formatUsd(Math.abs(pairNet))}
@@ -301,6 +384,39 @@ export function PairDetail({
             <span>{amount}</span>
         </Box>
     )
+
+    // Payments card, shown in both views right above the net line
+    const paymentsNet = pairPayments.reduce((t, r) => {
+        if (!Number.isFinite(r.amountUsd)) return t
+        return String(r.fromUserId) === String(debtor.id)
+            ? t - r.amountUsd
+            : t + r.amountUsd
+    }, 0)
+    const paymentsBlock =
+        pairPayments.length > 0 ? (
+            <>
+                {groupHead(
+                    'Payments',
+                    `${paymentsNet <= 0 ? '−' : '+'}${formatUsd(Math.abs(paymentsNet))}`
+                )}
+                <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                    {pairPayments.map((r) => {
+                        const reduces =
+                            String(r.fromUserId) === String(debtor.id)
+                        const from = reduces ? debtor : creditor
+                        const to = reduces ? creditor : debtor
+                        return (
+                            <PaymentRow
+                                key={r.id}
+                                record={r}
+                                label={`${from.firstName} paid ${to.firstName}`}
+                                reduces={reduces}
+                            />
+                        )
+                    })}
+                </Box>
+            </>
+        ) : null
 
     const rowCard = (rows: DebtRow[], showDirection: boolean) =>
         rows.length ? (
@@ -427,6 +543,7 @@ export function PairDetail({
             {view === 'all' ? (
                 <Box>
                     {rowCard(filtered, true)}
+                    {paymentsBlock}
                     {netLine}
                 </Box>
             ) : (
@@ -441,6 +558,7 @@ export function PairDetail({
                         `−${formatUsd(sum(debtorRows))}`
                     )}
                     {rowCard(debtorRows, false)}
+                    {paymentsBlock}
                     {netLine}
                 </Box>
             )}
