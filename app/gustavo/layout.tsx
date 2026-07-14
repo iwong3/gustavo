@@ -263,6 +263,24 @@ export default function GustavoLayout({
     const activeTab = getActiveTab()
 
     return (
+        <>
+            {/* Status-bar backdrop — deliberately OUTSIDE ClientOnly so it's in
+                the SSR HTML: iOS 26+ no longer composites black-translucent
+                live, it samples a fixed top element's background at render
+                time. The real header below is client-gated and misses that
+                sample (→ gray bar on iOS 26/27); this strip is present from
+                first paint and always matches the header color. */}
+            <Box
+                sx={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                    backgroundColor: colors.secondaryYellow,
+                    zIndex: 1,
+                }}
+            />
         <ClientOnly>
             <FabProvider>
                 <PageActionBarProvider>
@@ -364,6 +382,11 @@ export default function GustavoLayout({
                                 // the whole page sideways. Wide content gets
                                 // its own overflowX container instead.
                                 overflowX: 'hidden',
+                                // Opaque, matching the body: iOS 26+ samples
+                                // fixed elements to tint its bars, and a big
+                                // transparent fixed scroller invites a wrong
+                                // (gray) sample. Same color → no visual change.
+                                backgroundColor: colors.secondaryYellow,
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'flex-start',
@@ -393,5 +416,6 @@ export default function GustavoLayout({
                 </PageActionBarProvider>
             </FabProvider>
         </ClientOnly>
+        </>
     )
 }
