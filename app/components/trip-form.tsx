@@ -3,7 +3,6 @@
 import {
     Autocomplete,
     Box,
-    IconButton,
     MenuItem,
     Select,
     Skeleton,
@@ -91,8 +90,10 @@ const selectedCardSx = {
 const topRowInputSx = {
     '& .MuiOutlinedInput-root': {
         minHeight: 44,
-        padding: '0 10px',
-        gap: '8px',
+        // A touch more left inset than the item rows' content so the leading
+        // search icon doesn't read as cramped against the card edge.
+        padding: '0 14px',
+        gap: '10px',
         boxShadow: 'none',
         backgroundColor: 'transparent',
     },
@@ -118,7 +119,10 @@ const selectedRowSx = (isLast: boolean) =>
         alignItems: 'center',
         gap: 1,
         minHeight: 44,
-        paddingX: '10px',
+        // Content lines up under the search icon (14px); the right pad is
+        // smaller because the ✕ tap box carries its own inner whitespace.
+        paddingLeft: '14px',
+        paddingRight: '8px',
         paddingY: 0.5,
         borderBottom: isLast
             ? 'none'
@@ -546,6 +550,11 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 <Box
                     sx={{
                         minWidth: 62,
+                        boxSizing: 'border-box',
+                        // Reserve the same right gutter the editable Select
+                        // gives its dropdown arrow, so read-only roles (Owner)
+                        // end at the same x as the tappable ones.
+                        paddingRight: '18px',
                         textAlign: 'right',
                         fontSize: 12,
                         fontWeight: 700,
@@ -1057,13 +1066,13 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                 </Typography>
                                 <Typography
                                     sx={{
-                                        marginLeft: 'auto',
                                         fontSize: 11.5,
                                         fontWeight: 600,
                                         color: colors.primaryBrown,
                                     }}>
                                     {c.currency}
                                 </Typography>
+                                <Box sx={{ marginLeft: 'auto' }} />
                                 <RowRemove
                                     onClick={() =>
                                         setCountryCodes((prev) =>
@@ -1117,41 +1126,32 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                     htmlInput: { maxLength: 200 },
                                     input: {
                                         endAdornment: (
-                                            <IconButton
-                                                onClick={addLocation}
-                                                disabled={!newLocName.trim()}
+                                            <Box
+                                                onClick={() => {
+                                                    if (newLocName.trim())
+                                                        addLocation()
+                                                }}
+                                                role="button"
                                                 aria-label="Add location"
-                                                edge="end"
                                                 sx={{
-                                                    'width': 30,
-                                                    'height': 30,
+                                                    'display': 'flex',
+                                                    'alignItems': 'center',
+                                                    'justifyContent': 'center',
                                                     'flexShrink': 0,
-                                                    'borderRadius': '6px',
-                                                    'color': colors.primaryBlack,
-                                                    'backgroundColor':
-                                                        newLocName.trim()
-                                                            ? colors.primaryYellow
-                                                            : 'transparent',
-                                                    'border': newLocName.trim()
-                                                        ? `1px solid ${colors.primaryBlack}`
-                                                        : '1px solid transparent',
-                                                    'boxShadow':
-                                                        newLocName.trim()
-                                                            ? `1px 1px 0px ${colors.primaryBlack}`
-                                                            : 'none',
-                                                    '&.Mui-disabled': {
-                                                        color: `${colors.primaryBlack}35`,
-                                                    },
-                                                    '&:active': {
-                                                        boxShadow: 'none',
-                                                        transform:
-                                                            'translate(1px, 1px)',
-                                                    },
+                                                    'color': newLocName.trim()
+                                                        ? colors.primaryBlack
+                                                        : `${colors.primaryBlack}30`,
+                                                    'cursor': newLocName.trim()
+                                                        ? 'pointer'
+                                                        : 'default',
+                                                    '&:active': newLocName.trim()
+                                                        ? { transform: 'scale(0.85)' }
+                                                        : {},
                                                     'transition':
-                                                        'transform 0.1s, box-shadow 0.1s',
+                                                        'transform 0.1s',
                                                 }}>
-                                                <IconPlus size={18} />
-                                            </IconButton>
+                                                <IconPlus size={20} />
+                                            </Box>
                                         ),
                                     },
                                 }}
