@@ -3,7 +3,7 @@
 // spend-data-provider and the trips-list API route (boarding-pass stats), so
 // the two can never disagree on the math.
 
-import { applySettlements, directPairwiseSettlements } from './debt'
+import { applySettlements, computeNetBalances, simplifyDebts } from './debt'
 import type { SettlementRecord, TripStats } from './types'
 
 /** The minimal expense shape the spend math needs. `Expense` satisfies it;
@@ -207,23 +207,23 @@ export function computeTripStats(input: {
 
     const { debtMap } = computeDebtMap(expenses, participantIds.length)
     const settled = applySettlements(debtMap, settlements)
-    const pairwise = directPairwiseSettlements(
-        settled,
-        participantIds.map((id) => ({ id }))
-    )
+    const idObjs = participantIds.map((id) => ({ id }))
 
-    let yourNetUsd = 0
-    for (const s of pairwise) {
-        if (String(s.creditorId) === me) yourNetUsd += s.amount
-        if (String(s.debtorId) === me) yourNetUsd -= s.amount
-    }
+    // MUST match the debts page's "All settled" check (simplifyDebts, its
+    // default plan) — recorded settlements can leave sub-cent float residue
+    // that a different netting method would surface as a phantom "$0.01".
+    const isSettled = simplifyDebts(settled, idObjs).length === 0
+
+    const mine = computeNetBalances(settled, idObjs).find((b) => String(b.userId) === me)
+    const rawNet = mine?.netBalance ?? 0
+    const yourNetUsd = isSettled || Math.abs(rawNet) < 0.005 ? 0 : round2(rawNet)
 
     return {
         expenseCount: expenses.length,
         totalSpendUsd: round2(totalSpendUsd),
         todaySpendUsd: round2(todaySpendUsd),
         yourShareUsd: round2(yourShareUsd),
-        yourNetUsd: round2(yourNetUsd),
-        isSettled: pairwise.length === 0,
+        yourNetUsd,
+        isSettled,
     }
 }

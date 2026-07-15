@@ -209,6 +209,29 @@ describe('computeTripStats', () => {
         expect(Number.isFinite(stats.yourNetUsd)).toBe(true)
     })
 
+    it('agrees with the debts page when settlements leave sub-cent residue', () => {
+        // $200.01 split two ways → Jenny owes Ivan $100.005; she pays the
+        // $100.00 the debts page displays. The residual half-cent must not
+        // surface as a phantom "You owe $0.01" stamp (prod bug, July 2026).
+        const stats = computeTripStats(
+            statsInput(
+                [
+                    leanExpense({
+                        costOriginal: 200.01,
+                        costConvertedUsd: 200.01,
+                        splitBetween: [{ id: IVAN }, { id: JENNY }],
+                    }),
+                ],
+                {
+                    participantIds: [IVAN, JENNY],
+                    settlements: [{ fromUserId: JENNY, toUserId: IVAN, amountUsd: 100 }],
+                }
+            )
+        )
+        expect(stats.isSettled).toBe(true)
+        expect(stats.yourNetUsd).toBe(0)
+    })
+
     it('is settled and all-zero for a trip with no expenses', () => {
         const stats = computeTripStats(statsInput([]))
         expect(stats).toMatchObject({

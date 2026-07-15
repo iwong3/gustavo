@@ -128,7 +128,7 @@ export function netPairwiseDebts(
  */
 export function computeNetBalances(
     debtMap: Map<number, Map<number, number>>,
-    participants: UserSummary[]
+    participants: Pick<UserSummary, 'id'>[]
 ): PersonBalance[] {
     // Track totals for each person
     const totalPaid = new Map<number, number>() // what others owe this person
@@ -159,7 +159,7 @@ export function computeNetBalances(
  */
 export function simplifyDebts(
     debtMap: Map<number, Map<number, number>>,
-    participants: UserSummary[]
+    participants: Pick<UserSummary, 'id'>[]
 ): Settlement[] {
     const balances = computeNetBalances(debtMap, participants)
 
