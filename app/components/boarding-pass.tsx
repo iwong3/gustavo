@@ -44,11 +44,13 @@ const MS_PER_DAY = 86400000
 const diffDays = (fromIso: string, toIso: string) =>
     Math.round((parseDay(toIso).getTime() - parseDay(fromIso).getTime()) / MS_PER_DAY)
 
-const formatDateRange = (start: string, end: string, tripName?: string) => {
+// Year shows only when the trip isn't in the current year — predictable,
+// unlike the old "name contains the year" heuristic.
+const formatDateRange = (start: string, end: string, currentYear: number) => {
     const s = parseDay(start)
     const e = parseDay(end)
     const mo = (d: Date) => d.toLocaleString('en-US', { month: 'short' })
-    const showYear = (d: Date) => !tripName || !tripName.includes(String(d.getFullYear()))
+    const showYear = (d: Date) => d.getFullYear() !== currentYear
     if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
         const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
         return `${mo(s)} ${s.getDate()} – ${e.getDate()}${suffix}`
@@ -366,6 +368,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
         color: colors.primaryBlack,
         textDecoration: 'none',
         borderRadius: '0 0 7px 7px',
+        backgroundColor: colors.secondaryYellow,
     } as const
 
     return (
@@ -471,7 +474,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 {/* Fields */}
                 <Box sx={{ display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-start' }}>
                     <Field label="Dates">
-                        {formatDateRange(trip.startDate, trip.endDate, trip.name)}
+                        {formatDateRange(trip.startDate, trip.endDate, parseDay(today).getFullYear())}
                     </Field>
                     <Field label="Passengers">
                         <Box sx={{ display: 'flex' }}>
@@ -564,10 +567,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                         <Box
                             component={Link}
                             href={latest ? activityHref : expensesHref}
-                            sx={{
-                                ...stubSx,
-                                backgroundColor: state === 'travelling' ? colors.secondaryYellow : 'transparent',
-                            }}>
+                            sx={stubSx}>
                             <Typography sx={{ fontSize: 12, fontWeight: 600, opacity: latest ? 1 : 0.7 }}>
                                 {activityText}
                             </Typography>
