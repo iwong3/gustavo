@@ -104,6 +104,7 @@ export function useScrollFocusedInput() {
     const haveMeasuredRef = useRef(false)
     const passTimers = useRef<number[]>([])
     const blurTimer = useRef<number | null>(null)
+    const growTimer = useRef<number | null>(null)
 
     const sync = useCallback((initial: boolean) => {
         const target = targetRef.current
@@ -118,33 +119,61 @@ export function useScrollFocusedInput() {
         if (isElementScroller && window.scrollY > 0) window.scrollTo(0, 0)
 
         const measured = measureKeyboard()
+        // Sanity cap: a viewport push inflates the measurement (it includes
+        // the pushed-off region, not just the keyboard).
+        const kbCap = Math.round(
+            document.documentElement.clientHeight * 0.7
+        )
         if (measured > MIN_KEYBOARD) {
-            lastKeyboardHeight = measured
+            // Remember the height for future first-frames — but only when
+            // there's no viewport push mixed into the reading.
+            if ((window.visualViewport?.offsetTop ?? 0) === 0) {
+                lastKeyboardHeight = Math.min(measured, kbCap)
+            }
             haveMeasuredRef.current = true
         }
         // Until the keyboard has actually opened this focus session, assume
         // the remembered height; after that, trust live measurements (so a
         // dismissed keyboard restores the scroller).
-        const kb = haveMeasuredRef.current
-            ? measured
-            : Math.max(measured, lastKeyboardHeight)
+        const kb = Math.min(
+            haveMeasuredRef.current
+                ? measured
+                : Math.max(measured, lastKeyboardHeight),
+            kbCap
+        )
 
-        // End the scroller at the keyboard top. The scroller may only SHRINK
-        // while typing continues: growing it back reduces the max scroll and
-        // clamps scrollTop, yanking the view toward the form top (the "reset
-        // then move down" flicker on field switches). It grows back only on a
-        // real keyboard dismissal — or in detach().
+        // End the scroller at the keyboard top. Shrinking further is always
+        // safe and applies immediately. Growing back reduces the max scroll
+        // and can clamp scrollTop (a visible yank toward the form top), so it
+        // is debounced: transient dips — mid-animation readings, brief
+        // viewport pushes — get filtered out, and only a keyboard that is
+        // STILL smaller 150ms later (numeric pad, collapsed accessory bar,
+        // dismissal) is applied.
         if (isElementScroller && expectsKeyboard()) {
             if (baseBottomRef.current === null) {
                 baseBottomRef.current =
                     parseFloat(getComputedStyle(scroller).bottom) || 0
             }
+            const base = baseBottomRef.current
             const applied = parseFloat(scroller.style.bottom) || 0
-            const dismissed =
-                haveMeasuredRef.current && measured < MIN_KEYBOARD
-            const next = dismissed ? 0 : Math.max(applied, kb)
-            scroller.style.bottom =
-                next > baseBottomRef.current ? `${next}px` : ''
+            if (kb >= applied) {
+                if (growTimer.current !== null) {
+                    window.clearTimeout(growTimer.current)
+                    growTimer.current = null
+                }
+                scroller.style.bottom = kb > base ? `${kb}px` : ''
+            } else if (growTimer.current === null) {
+                growTimer.current = window.setTimeout(() => {
+                    growTimer.current = null
+                    const now = Math.min(measureKeyboard(), kbCap)
+                    const nowApplied =
+                        parseFloat(scroller.style.bottom) || 0
+                    if (now < nowApplied) {
+                        scroller.style.bottom =
+                            now > base ? `${now}px` : ''
+                    }
+                }, 150)
+            }
         }
 
         // vv.offsetTop covers any viewport push that survived the pin above.
@@ -185,6 +214,10 @@ export function useScrollFocusedInput() {
     const detach = useCallback(() => {
         for (const t of passTimers.current) window.clearTimeout(t)
         passTimers.current = []
+        if (growTimer.current !== null) {
+            window.clearTimeout(growTimer.current)
+            growTimer.current = null
+        }
         window.visualViewport?.removeEventListener('resize', correct)
         window.visualViewport?.removeEventListener('scroll', correct)
         targetRef.current = null
