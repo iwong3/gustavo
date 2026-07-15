@@ -11,8 +11,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPencil, IconPlus, IconCheck, IconX } from '@tabler/icons-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { IconPlus, IconCheck, IconX } from '@tabler/icons-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
 import {
@@ -28,6 +28,11 @@ import {
 } from '@/lib/form-styles'
 import type { TripRole, TripSummary, UserSummary } from '@/lib/types'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
+import {
+    PageInfo,
+    PageInfoNote,
+    PageInfoSection,
+} from 'components/page-info'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useCurrentUser } from 'hooks/useCurrentUser'
 import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
@@ -55,14 +60,72 @@ type LocalLocation = {
     /** Negative IDs = new (unsaved), positive IDs = existing from DB */
     id: number
     name: string
-    /** Original name for rename tracking (edit mode only) */
-    originalName?: string
 }
 
 let nextLocalId = -1
 
 // MUI small TextField rendered height (with size="small") is 40px
 const INPUT_HEIGHT = 40
+
+// Removable pill for a selected country / location — clean neo-brutalist chip
+// with an ✕ to remove. Shared by the Countries and Locations fields so both
+// read as the same "search/add above, chips below" pattern.
+function RemovableTag({
+    label,
+    onRemove,
+}: {
+    label: string
+    onRemove: () => void
+}) {
+    return (
+        <Box
+            sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                height: 28,
+                paddingLeft: '10px',
+                paddingRight: '5px',
+                borderRadius: '14px',
+                border: `1px solid ${colors.primaryBlack}`,
+                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                backgroundColor: colors.primaryYellow,
+                fontSize: 13,
+                fontWeight: 600,
+                color: colors.primaryBlack,
+                userSelect: 'none',
+                maxWidth: '100%',
+            }}>
+            <Box
+                component="span"
+                sx={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                }}>
+                {label}
+            </Box>
+            <Box
+                onClick={onRemove}
+                role="button"
+                aria-label={`Remove ${label}`}
+                sx={{
+                    'display': 'flex',
+                    'alignItems': 'center',
+                    'justifyContent': 'center',
+                    'flexShrink': 0,
+                    'width': 18,
+                    'height': 18,
+                    'borderRadius': '50%',
+                    'cursor': 'pointer',
+                    '&:active': { transform: 'scale(0.88)' },
+                    'transition': 'transform 0.1s',
+                }}>
+                <IconX size={13} stroke={2.5} />
+            </Box>
+        </Box>
+    )
+}
 
 type Props = {
     mode: 'create' | 'edit'
@@ -83,7 +146,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const [description, setDescription] = useState('')
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
     const [countryCodes, setCountryCodes] = useState<string[]>([])
-    const [countriesOpen, setCountriesOpen] = useState(false)
     const [visibility, setVisibility] = useState<'participants' | 'all_users'>(
         'participants'
     )
@@ -99,9 +161,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const [locations, setLocations] = useState<LocalLocation[]>([])
     const [deletedLocationIds, setDeletedLocationIds] = useState<number[]>([])
     const [newLocName, setNewLocName] = useState('')
-    const [editingLocId, setEditingLocId] = useState<number | null>(null)
-    const [editLocName, setEditLocName] = useState('')
-    const editLocRef = useRef<HTMLInputElement>(null)
 
     // Scroll the focused input near the top so the mobile keyboard can't hide it
     const focusScroll = useScrollFocusedInput()
@@ -141,11 +200,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
             fetchLocations(trip.id)
                 .then((locs) =>
                     setLocations(
-                        locs.map((l) => ({
-                            id: l.id,
-                            name: l.name,
-                            originalName: l.name,
-                        }))
+                        locs.map((l) => ({ id: l.id, name: l.name }))
                     )
                 )
                 .catch(() => {})
@@ -157,13 +212,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 .catch(() => {})
         }
     }, [mode, trip])
-
-    useEffect(() => {
-        if (editingLocId !== null && editLocRef.current) {
-            editLocRef.current.focus()
-            editLocRef.current.select()
-        }
-    }, [editingLocId])
 
     const toggleUser = (userId: number) => {
         setSelectedUserIds((prev) =>
@@ -193,44 +241,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
         if (locId > 0) {
             setDeletedLocationIds((prev) => [...prev, locId])
         }
-        if (editingLocId === locId) {
-            setEditingLocId(null)
-        }
-    }
-
-    const startEditLocation = (loc: LocalLocation) => {
-        setEditingLocId(loc.id)
-        setEditLocName(loc.name)
-    }
-
-    const confirmEditLocation = () => {
-        if (editingLocId === null) return
-        const trimmed = editLocName.trim()
-        if (!trimmed) {
-            setEditingLocId(null)
-            return
-        }
-        // Check for duplicates (excluding current)
-        const isDuplicate = locations.some(
-            (l) =>
-                l.id !== editingLocId &&
-                l.name.toLowerCase() === trimmed.toLowerCase()
-        )
-        if (isDuplicate) {
-            setEditingLocId(null)
-            return
-        }
-        setLocations((prev) =>
-            prev.map((l) =>
-                l.id === editingLocId ? { ...l, name: trimmed } : l
-            )
-        )
-        setEditingLocId(null)
-    }
-
-    const cancelEditLocation = () => {
-        setEditingLocId(null)
-        setEditLocName('')
     }
 
     // ── Save locations to API ───────────────────────────────────────────────
@@ -253,23 +263,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 promises.push(
                     fetch(`/api/trips/${tripId}/locations`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: loc.name }),
-                    })
-                )
-            }
-        }
-
-        // Rename existing locations that changed
-        for (const loc of locations) {
-            if (
-                loc.id > 0 &&
-                loc.originalName &&
-                loc.name !== loc.originalName
-            ) {
-                promises.push(
-                    fetch(`/api/trips/${tripId}/locations/${loc.id}`, {
-                        method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: loc.name }),
                     })
@@ -440,6 +433,12 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
         []
     )
 
+    // Selected countries, in the picker's display order, for the chip row.
+    const selectedCountries = useMemo(
+        () => countryOptions.filter((c) => countryCodes.includes(c.code)),
+        [countryOptions, countryCodes]
+    )
+
     // Users not yet on the trip, offered by the add-participant search.
     const addableUsers = useMemo(
         () =>
@@ -473,15 +472,48 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
 
     return (
         <>
-            <Typography
-                variant="h6"
+            <Box
                 sx={{
-                    fontWeight: 700,
-                    color: colors.primaryBlack,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
                     padding: '16px 16px 0',
                 }}>
-                {isEdit ? 'Edit Trip' : 'Create Trip'}
-            </Typography>
+                <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, color: colors.primaryBlack }}>
+                    {isEdit ? 'Edit Trip' : 'Create Trip'}
+                </Typography>
+                <PageInfo title="About trips">
+                    <PageInfoSection title="Countries">
+                        Which countries this trip visits. Picking them sets the
+                        trip&apos;s available currencies (USD is always
+                        included) so you can log expenses in local money.
+                    </PageInfoSection>
+                    <PageInfoSection title="Locations">
+                        Specific places within the trip — cities,
+                        neighborhoods, or spots. They tag and group expenses,
+                        and you can also add one on the fly while logging an
+                        expense.
+                    </PageInfoSection>
+                    <PageInfoSection title="Participants & roles">
+                        Everyone splitting costs. Each person has a role:{' '}
+                        <b>Admin</b> manages the trip and roles, <b>Editor</b>{' '}
+                        adds and edits expenses, <b>Viewer</b> can only look.
+                    </PageInfoSection>
+                    <PageInfoSection title="Trip visibility">
+                        <b>Participants only</b> — just the people on the trip
+                        can see it. <b>All users</b> — anyone signed in can find
+                        it (they still can&apos;t edit unless you add them).
+                    </PageInfoSection>
+                    <PageInfoNote>
+                        Countries drive currencies; locations organize your
+                        expenses. You can change any of this later from Trip
+                        Details.
+                    </PageInfoNote>
+                </PageInfo>
+            </Box>
             <Box
                 {...focusScroll}
                 sx={{
@@ -490,6 +522,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                     gap: 2,
                     padding: '16px',
                 }}>
+                {/* 1. Trip name */}
                 <Box>
                     <Typography sx={nameError ? errorLabelSx : labelSx}>
                         Trip name *
@@ -506,6 +539,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                     />
                 </Box>
 
+                {/* 2. Dates */}
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
                     <Box sx={{ flex: 1 }}>
                         <Typography
@@ -534,46 +568,35 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                             required
                             fullWidth
                             size="small"
-                            slotProps={{ inputLabel: { shrink: true } }}
+                            slotProps={{
+                                inputLabel: { shrink: true },
+                                // Opens the picker at the start date (and blocks
+                                // choosing a day before it) instead of today.
+                                htmlInput: { min: startDate || undefined },
+                            }}
                             sx={endDateError ? errorFieldSx : fieldSx}
                         />
                     </Box>
                 </Box>
 
-                <Box>
-                    <Typography sx={labelSx}>Description</Typography>
-                    <TextField
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Optional"
-                        multiline
-                        rows={2}
-                        fullWidth
-                        size="small"
-                        slotProps={{ htmlInput: { maxLength: 2000 } }}
-                        sx={fieldSx}
-                    />
-                </Box>
-
+                {/* 3. Countries — search above, selected shown as chips below */}
                 <Box>
                     <Typography sx={labelSx}>Countries</Typography>
                     <Autocomplete
                         multiple
                         fullWidth
                         size="small"
-                        open={countriesOpen}
-                        onOpen={() => setCountriesOpen(true)}
-                        onClose={() => setCountriesOpen(false)}
+                        disableCloseOnSelect
                         options={countryOptions}
-                        value={countryOptions.filter((c) =>
-                            countryCodes.includes(c.code)
-                        )}
+                        value={selectedCountries}
                         onChange={(_e, val) =>
                             setCountryCodes(val.map((c) => c.code))
                         }
                         getOptionLabel={(c) => c.name}
                         isOptionEqualToValue={(a, b) => a.code === b.code}
                         disablePortal
+                        // Chips render in their own row below, not in the box
+                        renderTags={() => null}
                         slotProps={{
                             popper: dropdownPopperProps,
                             listbox: {
@@ -584,22 +607,9 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                         dropdownMenuItemSx,
                                 },
                             },
-                            paper: {
-                                sx: {
-                                    ...dropdownPaperSx,
-                                    overflow: 'hidden',
-                                    boxSizing: 'border-box',
-                                    // When open, paper joins flush with the
-                                    // input above: square top corners, zero
-                                    // margin, no top border (input border
-                                    // serves as the seam).
-                                    borderRadius: '0 0 4px 4px',
-                                    borderTop: 'none',
-                                    marginTop: 0,
-                                },
-                            },
+                            paper: { sx: dropdownPaperSx },
                         }}
-                        renderOption={(props, option) => {
+                        renderOption={(props, option, { selected }) => {
                             const { key: _key, ...rest } = props
                             return (
                                 <li key={option.code} {...rest}>
@@ -608,90 +618,67 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 1,
+                                            width: '100%',
                                         }}>
                                         <Box
                                             component="span"
                                             sx={{ fontSize: 16 }}>
                                             {option.flag}
                                         </Box>
-                                        <Typography sx={{ fontSize: 14 }}>
+                                        <Typography
+                                            sx={{
+                                                fontSize: 14,
+                                                fontWeight: selected ? 700 : 400,
+                                            }}>
                                             {option.name}
                                         </Typography>
+                                        {selected && (
+                                            <IconCheck
+                                                size={16}
+                                                stroke={2.5}
+                                                color={colors.primaryBlack}
+                                                style={{ marginLeft: 'auto' }}
+                                            />
+                                        )}
                                     </Box>
                                 </li>
                             )
                         }}
-                        renderTags={(value, getTagProps) =>
-                            value.map((c, index) => {
-                                const { key, ...tagProps } = getTagProps({
-                                    index,
-                                })
-                                return (
-                                    <Chip
-                                        key={key}
-                                        label={`${c.flag} ${c.name}`}
-                                        size="small"
-                                        {...tagProps}
-                                        sx={{
-                                            fontSize: 13,
-                                            height: 26,
-                                            border: `1px solid ${colors.primaryBlack}`,
-                                            boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                            backgroundColor:
-                                                colors.primaryYellow,
-                                        }}
-                                    />
-                                )
-                            })
-                        }
                         renderInput={(params) => (
                             <TextField
                                 {...params}
                                 size="small"
-                                placeholder={
-                                    countryCodes.length === 0
-                                        ? 'Add countries'
-                                        : ''
-                                }
-                                sx={
-                                    countriesOpen
-                                        ? {
-                                              ...fieldSx,
-                                              // Keep the field's 2px black
-                                              // shadow (override focused
-                                              // yellow → black) so the right
-                                              // edge of input + paper has one
-                                              // continuous black shadow.
-                                              '& .MuiOutlinedInput-root': {
-                                                  borderRadius: '4px 4px 0 0',
-                                                  boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                              },
-                                              '& .MuiOutlinedInput-root.Mui-focused':
-                                                  {
-                                                      boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                                  },
-                                              '& .MuiOutlinedInput-notchedOutline':
-                                                  {
-                                                      borderColor: `${colors.primaryBlack} !important`,
-                                                      borderWidth: '1px !important',
-                                                      borderBottom: 'none',
-                                                      borderRadius:
-                                                          '4px 4px 0 0',
-                                                  },
-                                              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline':
-                                                  {
-                                                      borderColor: `${colors.primaryBlack} !important`,
-                                                      borderWidth: '1px !important',
-                                                  },
-                                          }
-                                        : fieldSx
-                                }
+                                placeholder="Add countries"
+                                sx={fieldSx}
                             />
                         )}
                     />
+                    {selectedCountries.length > 0 && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 0.75,
+                                marginTop: 1,
+                            }}>
+                            {selectedCountries.map((c) => (
+                                <RemovableTag
+                                    key={c.code}
+                                    label={`${c.flag} ${c.name}`}
+                                    onRemove={() =>
+                                        setCountryCodes((prev) =>
+                                            prev.filter(
+                                                (code) => code !== c.code
+                                            )
+                                        )
+                                    }
+                                />
+                            ))}
+                        </Box>
+                    )}
                 </Box>
 
-                {/* Participants — search to add; the role list below is the
+                {/* 4. Participants — search to add; the role list below is the
                     roster (remove via the ✕ on each row) */}
                 <Box>
                     <Typography sx={labelSx}>Participants</Typography>
@@ -988,21 +975,23 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                     )}
                 </Box>
 
+                {/* 5. Description */}
                 <Box>
-                    <Typography sx={labelSx}>Trip visibility</Typography>
-                    <SlidingToggle
-                        value={visibility}
-                        options={[
-                            { value: 'participants', label: 'Participants only' },
-                            { value: 'all_users', label: 'All users' },
-                        ]}
-                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
-                        fontSize={13}
-                        borderWidth={1}
+                    <Typography sx={labelSx}>Description</Typography>
+                    <TextField
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Optional"
+                        multiline
+                        rows={2}
+                        fullWidth
+                        size="small"
+                        slotProps={{ htmlInput: { maxLength: 2000 } }}
+                        sx={fieldSx}
                     />
                 </Box>
 
-                {/* Locations — inline list */}
+                {/* 6. Locations — add above, selected shown as chips below */}
                 <Box>
                     <Typography sx={labelSx}>Locations</Typography>
                     <Box
@@ -1029,6 +1018,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                         <IconButton
                             onClick={addLocation}
                             disabled={!newLocName.trim()}
+                            aria-label="Add location"
                             sx={{
                                 'color': colors.primaryBlack,
                                 'backgroundColor': colors.primaryYellow,
@@ -1060,145 +1050,34 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                         <Box
                             sx={{
                                 display: 'flex',
-                                flexDirection: 'column',
-                                gap: 0.5,
+                                flexWrap: 'wrap',
+                                gap: 0.75,
                                 marginTop: 1,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                borderRadius: '4px',
-                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                backgroundColor: colors.primaryWhite,
-                                overflow: 'hidden',
                             }}>
-                            {locations.map((loc, i) => (
-                                <Box
+                            {locations.map((loc) => (
+                                <RemovableTag
                                     key={loc.id}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        paddingY: 0.5,
-                                        paddingX: 1,
-                                        borderBottom:
-                                            i < locations.length - 1
-                                                ? `1px solid ${colors.primaryBlack}15`
-                                                : 'none',
-                                    }}>
-                                    {editingLocId === loc.id ? (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                flex: 1,
-                                                gap: 0.5,
-                                            }}>
-                                            <input
-                                                ref={editLocRef}
-                                                value={editLocName}
-                                                onChange={(e) =>
-                                                    setEditLocName(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter')
-                                                        confirmEditLocation()
-                                                    if (e.key === 'Escape')
-                                                        cancelEditLocation()
-                                                }}
-                                                onBlur={confirmEditLocation}
-                                                style={{
-                                                    border: `1px solid ${colors.primaryYellow}`,
-                                                    boxShadow: `1px 1px 0px ${colors.primaryYellow}`,
-                                                    outline: 'none',
-                                                    background:
-                                                        colors.primaryWhite,
-                                                    fontSize: 14,
-                                                    padding: '4px 8px',
-                                                    borderRadius: 4,
-                                                    flex: 1,
-                                                    fontFamily: 'inherit',
-                                                }}
-                                            />
-                                            <IconButton
-                                                size="small"
-                                                onMouseDown={(e) =>
-                                                    e.preventDefault()
-                                                }
-                                                onClick={confirmEditLocation}
-                                                sx={{
-                                                    color: colors.primaryGreen,
-                                                    padding: '4px',
-                                                }}>
-                                                <IconCheck size={16} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onMouseDown={(e) =>
-                                                    e.preventDefault()
-                                                }
-                                                onClick={cancelEditLocation}
-                                                sx={{
-                                                    color: colors.primaryBlack,
-                                                    padding: '4px',
-                                                    opacity: 0.4,
-                                                }}>
-                                                <IconX size={16} />
-                                            </IconButton>
-                                        </Box>
-                                    ) : (
-                                        <>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: 14,
-                                                    flex: 1,
-                                                }}>
-                                                {loc.name}
-                                            </Typography>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    gap: 0.25,
-                                                }}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() =>
-                                                        startEditLocation(loc)
-                                                    }
-                                                    sx={{
-                                                        'color':
-                                                            colors.primaryBlack,
-                                                        'padding': '4px',
-                                                        'opacity': 0.4,
-                                                        '&:hover': {
-                                                            opacity: 1,
-                                                        },
-                                                    }}>
-                                                    <IconPencil size={15} />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() =>
-                                                        removeLocation(loc.id)
-                                                    }
-                                                    sx={{
-                                                        'color':
-                                                            colors.primaryBlack,
-                                                        'padding': '4px',
-                                                        'opacity': 0.4,
-                                                        '&:hover': {
-                                                            opacity: 1,
-                                                            color: colors.primaryRed,
-                                                        },
-                                                    }}>
-                                                    <IconX size={15} />
-                                                </IconButton>
-                                            </Box>
-                                        </>
-                                    )}
-                                </Box>
+                                    label={loc.name}
+                                    onRemove={() => removeLocation(loc.id)}
+                                />
                             ))}
                         </Box>
                     )}
+                </Box>
+
+                {/* 7. Trip visibility */}
+                <Box>
+                    <Typography sx={labelSx}>Trip visibility</Typography>
+                    <SlidingToggle
+                        value={visibility}
+                        options={[
+                            { value: 'participants', label: 'Participants only' },
+                            { value: 'all_users', label: 'All users' },
+                        ]}
+                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
+                        fontSize={13}
+                        borderWidth={1}
+                    />
                 </Box>
 
                 {error && (
