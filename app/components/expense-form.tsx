@@ -38,6 +38,7 @@ import {
 } from '@tabler/icons-react'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 import PlaceAutocomplete from 'components/place-autocomplete'
+import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, ConflictError, updateExpense } from 'utils/api'
 import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
@@ -232,6 +233,9 @@ export default function ExpenseForm({
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
 
     const isLegacyTrip = LEGACY_TRIP_IDS.has(trip.id)
+
+    // Scroll the focused input near the top so the mobile keyboard can't hide it
+    const focusScroll = useScrollFocusedInput()
 
     // Derive city name from Google Place address components
     const deriveCityFromPlace = (place: PlaceDetails): string | null => {
@@ -693,6 +697,7 @@ export default function ExpenseForm({
                 {isEdit ? 'Edit Expense' : 'Add Expense'}
             </Typography>
             <Box
+                {...focusScroll}
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
