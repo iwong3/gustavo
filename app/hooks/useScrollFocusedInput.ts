@@ -4,9 +4,18 @@ import { useCallback, useEffect, useRef } from 'react'
 
 // Gap between the top of the scroller and the focused input — enough to keep
 // the field's label visible above it.
-const TOP_BUFFER = 72
-// Mobile keyboards animate open; measure/scroll after they settle.
-const KEYBOARD_SETTLE_MS = 300
+const TOP_BUFFER = 48
+// Corrective passes after focus: the keyboard finishes animating somewhere in
+// this window, and iOS's native reveal-on-focus can drag the scroll position
+// around during it. Each pass re-measures and snaps back if we drifted.
+const SETTLE_PASSES_MS = [250, 600]
+// Estimated keyboard height for the very first focus, before we've measured a
+// real one. Overshoot is invisible (the padding hides under the keyboard).
+const KEYBOARD_ESTIMATE = 350
+
+// Last measured keyboard height — remembered across focuses and forms so the
+// bottom padding is exact from the first frame of subsequent focuses.
+let lastKeyboardHeight = KEYBOARD_ESTIMATE
 
 // Inputs that pop a typing keyboard. Pickers (date, select) handle themselves.
 const isTypingTarget = (el: EventTarget | null): el is HTMLElement => {
@@ -29,6 +38,12 @@ const isTypingTarget = (el: EventTarget | null): el is HTMLElement => {
     }
     return false
 }
+
+// Only touch devices get the keyboard padding — desktop has no on-screen
+// keyboard, and adding/removing an estimated padding there causes scroll jumps.
+const expectsKeyboard = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(pointer: coarse)').matches
 
 // Nearest overflow-scrolling ancestor (e.g. #main-scroll in the app layout),
 // falling back to the document scroller (e.g. the dev gallery, which scrolls
@@ -63,26 +78,43 @@ const keyboardOverlap = (scrollerBottom: number) => {
     return Math.max(0, scrollerBottom - visibleBottom)
 }
 
+// Instantly put the input TOP_BUFFER below the scroller's top edge.
+const snapToTop = (scroller: HTMLElement, target: HTMLElement) => {
+    const delta =
+        target.getBoundingClientRect().top -
+        scrollerBounds(scroller).top -
+        TOP_BUFFER
+    if (Math.abs(delta) < 8) return
+    scroller.scrollBy({ top: delta, behavior: 'auto' })
+}
+
 /**
  * Keeps the focused text input near the top of the scroll container so the
  * mobile keyboard never hides it. The browser's default reveal-on-focus
  * behavior is unreliable inside a fixed-position scroller (it often leaves the
- * input behind the keyboard), so this scrolls explicitly after the keyboard
- * settles. While an input is focused, the form container gets bottom padding
- * equal to the keyboard height so even the last field has room to scroll up.
+ * input behind the keyboard), so this scrolls explicitly — instantly on focus
+ * (winning the race against the native reveal), with corrective passes while
+ * the keyboard animates in. While an input is focused, the form container gets
+ * bottom padding matching the keyboard height so even the last field has room
+ * to scroll up.
  *
  * Usage: spread the returned handlers onto the form's container element:
  *   const focusScroll = useScrollFocusedInput()
  *   <Box {...focusScroll}>...fields...</Box>
  */
 export function useScrollFocusedInput() {
-    const focusTimer = useRef<number | null>(null)
+    const passTimers = useRef<number[]>([])
     const blurTimer = useRef<number | null>(null)
     const containerRef = useRef<HTMLElement | null>(null)
 
+    const clearPasses = () => {
+        for (const t of passTimers.current) window.clearTimeout(t)
+        passTimers.current = []
+    }
+
     useEffect(
         () => () => {
-            if (focusTimer.current) window.clearTimeout(focusTimer.current)
+            clearPasses()
             if (blurTimer.current) window.clearTimeout(blurTimer.current)
             if (containerRef.current) {
                 containerRef.current.style.paddingBottom = ''
@@ -98,25 +130,30 @@ export function useScrollFocusedInput() {
 
         containerRef.current = container
         if (blurTimer.current) window.clearTimeout(blurTimer.current)
-        if (focusTimer.current) window.clearTimeout(focusTimer.current)
+        clearPasses()
 
-        focusTimer.current = window.setTimeout(() => {
-            focusTimer.current = null
-            if (document.activeElement !== target) return
+        const scroller = getScroller(container)
 
-            const scroller = getScroller(container)
-            const bounds = scrollerBounds(scroller)
+        // Padding first (so there's room), then snap — all synchronous, before
+        // the browser's own reveal logic runs.
+        if (expectsKeyboard()) {
+            container.style.paddingBottom = `${lastKeyboardHeight}px`
+        }
+        snapToTop(scroller, target)
 
-            // Extra scroll room so fields near the bottom of the form can
-            // still reach the top while the keyboard is up.
-            const kb = keyboardOverlap(bounds.bottom)
-            if (kb > 0) container.style.paddingBottom = `${kb}px`
-
-            const delta =
-                target.getBoundingClientRect().top - bounds.top - TOP_BUFFER
-            if (Math.abs(delta) < 8) return
-            scroller.scrollBy({ top: delta, behavior: 'smooth' })
-        }, KEYBOARD_SETTLE_MS)
+        for (const delay of SETTLE_PASSES_MS) {
+            passTimers.current.push(
+                window.setTimeout(() => {
+                    if (document.activeElement !== target) return
+                    const kb = keyboardOverlap(scrollerBounds(scroller).bottom)
+                    if (kb > 0) {
+                        lastKeyboardHeight = kb
+                        container.style.paddingBottom = `${kb}px`
+                    }
+                    snapToTop(scroller, target)
+                }, delay)
+            )
+        }
     }, [])
 
     const onBlur = useCallback((e: React.FocusEvent<HTMLElement>) => {
@@ -128,6 +165,7 @@ export function useScrollFocusedInput() {
             blurTimer.current = null
             const active = document.activeElement
             if (isTypingTarget(active) && container.contains(active)) return
+            clearPasses()
             container.style.paddingBottom = ''
         }, 100)
     }, [])
