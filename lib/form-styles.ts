@@ -17,6 +17,8 @@
 //   Focus   — yellow border, yellow 2px offset shadow
 //   Error   — red border, red 2px offset shadow (stays red even when focused)
 
+import type { PopperProps } from '@mui/material'
+
 import { colors } from './colors'
 
 // ── Label styles ──────────────────────────────────────────────────────────────
@@ -163,6 +165,17 @@ export const dropdownPaperSx = {
     borderRadius: '12px',
     marginTop: '4px',
 } as const
+
+/**
+ * Popper config for Autocomplete dropdowns — always open BELOW the input.
+ * Popper's default flip behavior moves the list above the input whenever
+ * viewport space below runs out (keyboard open, mid-scroll), making the
+ * dropdown jump around during interaction. Pass as slotProps.popper.
+ */
+export const dropdownPopperProps: Partial<PopperProps> = {
+    placement: 'bottom-start',
+    modifiers: [{ name: 'flip', enabled: false }],
+}
 
 /** MenuItem styles inside dropdown menus — yellow hover + selected states. */
 export const dropdownMenuItemSx = {

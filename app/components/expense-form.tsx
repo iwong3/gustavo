@@ -22,6 +22,7 @@ import {
     adornedFieldSx,
     dropdownMenuItemSx,
     dropdownPaperSx,
+    dropdownPopperProps,
     errorMessageSx,
     fieldShadow,
     fieldSx,
@@ -1257,6 +1258,7 @@ export default function ExpenseForm({
                         disablePortal
                         size="small"
                         slotProps={{
+                            popper: dropdownPopperProps,
                             listbox: {
                                 sx: {
                                     'maxHeight': 200,

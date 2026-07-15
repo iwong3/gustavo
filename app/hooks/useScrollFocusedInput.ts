@@ -105,7 +105,7 @@ export function useScrollFocusedInput() {
     const passTimers = useRef<number[]>([])
     const blurTimer = useRef<number | null>(null)
 
-    const sync = useCallback(() => {
+    const sync = useCallback((initial: boolean) => {
         const target = targetRef.current
         const scroller = scrollerRef.current
         if (!target || !scroller || document.activeElement !== target) return
@@ -139,33 +139,53 @@ export function useScrollFocusedInput() {
                 kb > baseBottomRef.current ? `${kb}px` : ''
         }
 
-        // Snap the input near the visible top. vv.offsetTop covers any
-        // viewport push that survived the pin above.
-        const vvTop = window.visualViewport?.offsetTop ?? 0
-        const scrollerTop = isElementScroller
-            ? scroller.getBoundingClientRect().top
-            : 0
-        const delta =
-            target.getBoundingClientRect().top -
-            Math.max(scrollerTop, vvTop) -
-            TOP_BUFFER
-        if (Math.abs(delta) >= 8) {
+        // vv.offsetTop covers any viewport push that survived the pin above.
+        const vv = window.visualViewport
+        const vvTop = vv?.offsetTop ?? 0
+        const bounds = isElementScroller
+            ? scroller.getBoundingClientRect()
+            : { top: 0, bottom: document.documentElement.clientHeight }
+        const visibleTop = Math.max(bounds.top, vvTop)
+        const rect = target.getBoundingClientRect()
+        const delta = rect.top - visibleTop - TOP_BUFFER
+
+        if (initial) {
+            // Snap the input near the visible top, instantly.
+            if (Math.abs(delta) >= 8) {
+                scroller.scrollBy({ top: delta, behavior: 'auto' })
+            }
+            return
+        }
+        // Corrective passes: only re-scroll if the input actually drifted out
+        // of view (above the top edge, or down behind the keyboard). Constant
+        // re-snapping reads as flicker and fights the user's own scrolling.
+        const visibleBottom = Math.min(
+            bounds.bottom,
+            vv ? vvTop + vv.height : bounds.bottom
+        )
+        const outOfView =
+            rect.top < visibleTop + 8 || rect.bottom > visibleBottom - 8
+        if (outOfView && Math.abs(delta) >= 8) {
             scroller.scrollBy({ top: delta, behavior: 'auto' })
         }
     }, [])
 
+    // Stable zero-arg wrapper for timers and viewport listeners (passing
+    // `sync` directly would make the Event object truthy as `initial`).
+    const correct = useCallback(() => sync(false), [sync])
+
     const detach = useCallback(() => {
         for (const t of passTimers.current) window.clearTimeout(t)
         passTimers.current = []
-        window.visualViewport?.removeEventListener('resize', sync)
-        window.visualViewport?.removeEventListener('scroll', sync)
+        window.visualViewport?.removeEventListener('resize', correct)
+        window.visualViewport?.removeEventListener('scroll', correct)
         targetRef.current = null
         haveMeasuredRef.current = false
         const scroller = scrollerRef.current
         if (scroller && scroller !== document.scrollingElement) {
             scroller.style.bottom = ''
         }
-    }, [sync])
+    }, [correct])
 
     // Restore everything if the form unmounts mid-focus
     useEffect(
@@ -188,15 +208,15 @@ export function useScrollFocusedInput() {
             scrollerRef.current = getScroller(e.currentTarget)
 
             // Same handler reference → duplicate adds are no-ops
-            window.visualViewport?.addEventListener('resize', sync)
-            window.visualViewport?.addEventListener('scroll', sync)
+            window.visualViewport?.addEventListener('resize', correct)
+            window.visualViewport?.addEventListener('scroll', correct)
 
-            sync()
+            sync(true)
             for (const delay of SETTLE_PASSES_MS) {
-                passTimers.current.push(window.setTimeout(sync, delay))
+                passTimers.current.push(window.setTimeout(correct, delay))
             }
         },
-        [sync]
+        [sync, correct]
     )
 
     const onBlur = useCallback(

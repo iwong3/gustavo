@@ -10,6 +10,7 @@ import {
     adornedFieldSx,
     dropdownMenuItemSx,
     dropdownPaperSx,
+    dropdownPopperProps,
 } from '@/lib/form-styles'
 import { searchPlaces, getPlaceDetails } from 'utils/api'
 
@@ -149,6 +150,7 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
             disablePortal
             size="small"
             slotProps={{
+                popper: dropdownPopperProps,
                 listbox: {
                     sx: {
                         'maxHeight': 240,
