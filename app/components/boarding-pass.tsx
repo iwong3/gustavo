@@ -219,10 +219,8 @@ const journeyLabelSx = {
     opacity: 0.55,
 } as const
 
-/** Rubber-stamp debt status: double border, rotated, inked over the middle
- *  of the header strip (static text there leaves the center empty, so it
- *  never fights the participants row). The country stamps are the scattered
- *  ones. */
+/** Rubber-stamp debt status: double border, slight slant, sits in the stub
+ *  where a barcode would be. The country stamps are the scattered ones. */
 function DebtStamp({ stats }: { stats: TripStats }) {
     const net = safeNum(stats.yourNetUsd)
     const settled = stats.isSettled
@@ -237,16 +235,12 @@ function DebtStamp({ stats }: { stats: TripStats }) {
     return (
         <Box
             sx={{
-                position: 'absolute',
-                top: 12,
-                left: '50%',
-                transform: 'translateX(-50%) rotate(6deg)',
+                flexShrink: 0,
+                transform: 'rotate(-5deg)',
                 border: `2px solid ${color}`,
                 borderRadius: '5px',
                 padding: '2px 3px',
                 opacity: 0.9,
-                zIndex: 3,
-                pointerEvents: 'none',
             }}>
             <Box
                 sx={{
@@ -364,7 +358,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
         color: colors.primaryBlack,
         textDecoration: 'none',
         borderRadius: '0 0 7px 7px',
-        backgroundColor: colors.secondaryYellow,
+        backgroundColor: strip.bg, // footer matches the header strip
     } as const
 
     return (
@@ -421,9 +415,6 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                     Gus Air
                 </Typography>
             </Box>
-
-            {/* Debt stamp — inked over the header strip's empty middle */}
-            {state === 'complete' && stats && <DebtStamp stats={stats} />}
 
             {/* Body — taps through to the trip's expenses */}
             <Box
@@ -551,15 +542,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                                 You spent {fmtUsdWhole(stats.yourShareUsd)} · {stats.expenseCount}{' '}
                                 {stats.expenseCount === 1 ? 'expense' : 'expenses'}
                             </Typography>
-                            <Box
-                                sx={{
-                                    height: 22,
-                                    width: 76,
-                                    flexShrink: 0,
-                                    borderRadius: '1px',
-                                    background: `repeating-linear-gradient(90deg, ${colors.primaryBlack} 0 2px, transparent 2px 4px, ${colors.primaryBlack} 4px 7px, transparent 7px 8px, ${colors.primaryBlack} 8px 9px, transparent 9px 13px)`,
-                                }}
-                            />
+                            <DebtStamp stats={stats} />
                         </Box>
                     ) : (
                         <Box
