@@ -112,6 +112,21 @@ const completeOwed = makePassTrip({
     }),
 })
 
+// Three countries incl. Norway — reproduces the "only 2 stamps" cap bug.
+const completeScandinavia = makePassTrip({
+    name: 'Scandinavia ’25',
+    startDate: '2025-06-01',
+    endDate: '2025-06-14',
+    countries: ['SE', 'NO', 'DK'],
+    stats: makeTripStats({
+        expenseCount: 31,
+        totalSpendUsd: 2980,
+        yourShareUsd: 720,
+        yourNetUsd: 18,
+        isSettled: false,
+    }),
+})
+
 const noStats = makePassTrip({
     name: 'No Stats (slug fetch)',
     startDate: '2026-07-11',
@@ -189,6 +204,9 @@ export default function TripsGallery() {
                 </Specimen>
                 <Specimen label="you're owed $45">
                     <BoardingPass trip={completeOwed} todayIso={GALLERY_TODAY} />
+                </Specimen>
+                <Specimen label="three countries incl. Norway · all three stamps">
+                    <BoardingPass trip={completeScandinavia} todayIso={GALLERY_TODAY} />
                 </Specimen>
             </SpecimenGroup>
 

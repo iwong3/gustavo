@@ -25,8 +25,22 @@ import { formatRelativeTime } from 'utils/time'
 // Strip colors per state — same family as the home page app tiles.
 const STRIP_SAGE = '#e8edca'
 const STRIP_SLATE = '#cdd9e3'
-const STAMP_RED = colors.primaryRed
-const STAMP_GREEN = colors.primaryGreen
+// Debt-stamp inks — vivid enough to read as clear green / red (the brand
+// olive-green + maroon go near-black). The green also has to stand off the
+// sage stub background it sits on, so it's kept mid-tone, not pale.
+const STAMP_RED = '#bb2f22'
+const STAMP_GREEN = '#2f7d34'
+
+// Passport-ink palette for the per-country entry stamps. Dedicated saturated
+// inks (not the earthy brand palette, which is too low-chroma to read as colour
+// once faded) — classic rubber-stamp red / blue / green / violet. Assigned by a
+// stable hash of the country code so a country always gets the same ink.
+const STAMP_INKS = ['#b23a2e', '#2f6d8f', '#3f7a3a', '#7a4a86']
+const inkForCountry = (code: string) => {
+    let sum = 0
+    for (let i = 0; i < code.length; i++) sum += code.charCodeAt(i)
+    return STAMP_INKS[sum % STAMP_INKS.length]
+}
 
 export type PassState = 'upcoming' | 'travelling' | 'complete'
 
@@ -224,7 +238,9 @@ const journeyLabelSx = {
 function DebtStamp({ stats }: { stats: TripStats }) {
     const net = safeNum(stats.yourNetUsd)
     const settled = stats.isSettled
-    const color = settled || net > 0 ? STAMP_GREEN : STAMP_RED
+    // Only a fully-settled trip is green; any open balance (you owe, you're owed,
+    // or others square up between themselves) still needs action, so it reads red.
+    const color = settled ? STAMP_GREEN : STAMP_RED
     const text = settled
         ? 'Settled'
         : net < 0
@@ -261,7 +277,12 @@ function DebtStamp({ stats }: { stats: TripStats }) {
 }
 
 /** Faint circular passport entry stamp — one per country visited. */
-function EntryStamp({ code, monthYear, index }: { code: string; monthYear: string; index: number }) {
+function EntryStamp({ code, monthYear, index, color }: {
+    code: string
+    monthYear: string
+    index: number
+    color: string
+}) {
     return (
         <Box
             sx={{
@@ -270,9 +291,10 @@ function EntryStamp({ code, monthYear, index }: { code: string; monthYear: strin
                 top: index % 2 === 0 ? 30 : 22,
                 width: 58,
                 height: 58,
-                border: `2px solid ${colors.primaryBlack}`,
+                border: `2px solid ${color}`,
                 borderRadius: '50%',
-                opacity: 0.14,
+                color,
+                opacity: 0.5,
                 transform: `rotate(${index % 2 === 0 ? 8 : -6}deg)`,
                 display: 'flex',
                 flexDirection: 'column',
@@ -333,7 +355,8 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
     }[state]
 
     const net = safeNum(stats?.yourNetUsd)
-    const entryCountries = state === 'complete' ? trip.countries.slice(0, 2) : []
+    // One entry stamp per country, on every trip card (upcoming/travelling/complete).
+    const entryCountries = trip.countries
     const stampMonthYear = parseDay(trip.endDate)
         .toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
         .toUpperCase()
@@ -429,16 +452,12 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                     color: colors.primaryBlack,
                     textDecoration: 'none',
                 }}>
-                {state === 'complete' && stats && (
-                    <>
-                        {entryCountries.map((code, i) => (
-                            <EntryStamp key={code} code={code} monthYear={stampMonthYear} index={i} />
-                        ))}
-                    </>
-                )}
+                {entryCountries.map((code, i) => (
+                    <EntryStamp key={code} code={code} monthYear={stampMonthYear} index={i} color={inkForCountry(code)} />
+                ))}
 
-                {/* Name + flags */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                {/* Name + flags — kept above the stamp ink for legibility */}
+                <Box sx={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                     <Typography
                         sx={{
                             fontFamily: 'var(--font-serif)',
@@ -461,7 +480,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 </Box>
 
                 {/* Fields */}
-                <Box sx={{ display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-start' }}>
+                <Box sx={{ position: 'relative', zIndex: 2, display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-start' }}>
                     <Field label="Dates">
                         {formatDateRange(trip.startDate, trip.endDate)}
                     </Field>
