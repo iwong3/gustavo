@@ -222,8 +222,10 @@ const journeyLabelSx = {
     opacity: 0.55,
 } as const
 
-/** Rubber-stamp debt status: double border, rotated, inked over the body. */
-function DebtStamp({ stats, entryStampCount }: { stats: TripStats; entryStampCount: number }) {
+/** Rubber-stamp debt status: double border, rotated, inked over the body.
+ *  Always bottom-right, just above the stub — the country stamps are the
+ *  scattered ones. */
+function DebtStamp({ stats }: { stats: TripStats }) {
     const net = safeNum(stats.yourNetUsd)
     const settled = stats.isSettled
     const color = settled || net > 0 ? STAMP_GREEN : STAMP_RED
@@ -238,9 +240,9 @@ function DebtStamp({ stats, entryStampCount }: { stats: TripStats; entryStampCou
         <Box
             sx={{
                 position: 'absolute',
-                right: 12 + entryStampCount * 52 + (entryStampCount > 0 ? 8 : 0),
-                top: 34,
-                transform: 'rotate(-11deg)',
+                right: 14,
+                bottom: 6,
+                transform: 'rotate(-8deg)',
                 border: `2px solid ${color}`,
                 borderRadius: '5px',
                 padding: '2px 3px',
@@ -436,7 +438,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 }}>
                 {state === 'complete' && stats && (
                     <>
-                        <DebtStamp stats={stats} entryStampCount={entryCountries.length} />
+                        <DebtStamp stats={stats} />
                         {entryCountries.map((code, i) => (
                             <EntryStamp key={code} code={code} monthYear={stampMonthYear} index={i} />
                         ))}
@@ -444,7 +446,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 )}
 
                 {/* Name + flags */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                     <Typography
                         sx={{
                             fontFamily: 'var(--font-serif)',
