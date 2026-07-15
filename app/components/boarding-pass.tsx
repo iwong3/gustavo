@@ -238,9 +238,9 @@ function DebtStamp({ stats }: { stats: TripStats }) {
         <Box
             sx={{
                 position: 'absolute',
-                top: 3,
+                top: 12,
                 left: '50%',
-                transform: 'translateX(-50%) rotate(-6deg)',
+                transform: 'translateX(-50%) rotate(6deg)',
                 border: `2px solid ${color}`,
                 borderRadius: '5px',
                 padding: '2px 3px',
