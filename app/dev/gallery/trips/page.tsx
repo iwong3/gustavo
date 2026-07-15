@@ -2,6 +2,7 @@
 
 /** Gallery specimens for the boarding-pass trip cards — every state + edge cases. */
 import BoardingPass from 'components/boarding-pass'
+import DeparturesBoard from 'components/departures-board'
 
 import { GALLERY_TODAY, makePassTrip, makeTripStats } from '../fixtures'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
@@ -118,9 +119,36 @@ const noStats = makePassTrip({
     stats: undefined,
 })
 
+// Departures board (home Trips launcher). Mixed states so the flap cycles through
+// all three statuses; ordering is handled inside the component (current first).
+const boardTrips = [
+    makePassTrip({ name: 'Osaka Detour', startDate: '2026-07-12', endDate: '2026-07-16' }), // travelling
+    makePassTrip({ name: 'SE Asia ’26', startDate: '2026-09-03', endDate: '2026-09-17' }), // upcoming
+    makePassTrip({ name: 'Kyoto ’25', startDate: '2025-11-02', endDate: '2025-11-09' }), // complete
+    makePassTrip({ name: 'Lisbon ’25', startDate: '2025-05-01', endDate: '2025-05-10' }), // complete
+]
+
+// The width the board renders at on the home page (content minus its padding).
+const HOME_WIDTH = 326
+
 export default function TripsGallery() {
     return (
         <GalleryPage title="Trips">
+            <SpecimenGroup title="Departures board — home Trips launcher">
+                <Specimen label="cycles current → upcoming → past (live animation)" width={HOME_WIDTH}>
+                    <DeparturesBoard trips={boardTrips} todayIso={GALLERY_TODAY} />
+                </Specimen>
+                <Specimen label="single trip — no cycle, no dots" width={HOME_WIDTH}>
+                    <DeparturesBoard trips={[boardTrips[1]]} todayIso={GALLERY_TODAY} />
+                </Specimen>
+                <Specimen label="past trips only" width={HOME_WIDTH}>
+                    <DeparturesBoard
+                        trips={[boardTrips[2], boardTrips[3]]}
+                        todayIso={GALLERY_TODAY}
+                    />
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="Now travelling">
                 <Specimen label="day 4 of 9 · you're owed · fresh activity">
                     <BoardingPass trip={travelling} todayIso={GALLERY_TODAY} />
