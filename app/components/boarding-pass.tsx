@@ -44,25 +44,20 @@ const MS_PER_DAY = 86400000
 const diffDays = (fromIso: string, toIso: string) =>
     Math.round((parseDay(toIso).getTime() - parseDay(fromIso).getTime()) / MS_PER_DAY)
 
-// Year shows only when the trip isn't in the current year — predictable,
-// unlike the old "name contains the year" heuristic.
-const formatDateRange = (start: string, end: string, currentYear: number) => {
+// Always shows the year, as 2 digits: "Jul 11 – 19, ’26".
+const formatDateRange = (start: string, end: string) => {
     const s = parseDay(start)
     const e = parseDay(end)
     const mo = (d: Date) => d.toLocaleString('en-US', { month: 'short' })
-    const showYear = (d: Date) => d.getFullYear() !== currentYear
-    if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
-        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
-        return `${mo(s)} ${s.getDate()} – ${e.getDate()}${suffix}`
-    }
+    const yr = (d: Date) => `’${String(d.getFullYear()).slice(-2)}`
     const fmt = (d: Date) => `${mo(d)} ${d.getDate()}`
-    if (s.getFullYear() === e.getFullYear()) {
-        const suffix = showYear(s) ? `, ${s.getFullYear()}` : ''
-        return `${fmt(s)} – ${fmt(e)}${suffix}`
+    if (s.getFullYear() !== e.getFullYear()) {
+        return `${fmt(s)}, ${yr(s)} – ${fmt(e)}, ${yr(e)}`
     }
-    const yrS = showYear(s) ? `, ${s.getFullYear()}` : ''
-    const yrE = showYear(e) ? `, ${e.getFullYear()}` : ''
-    return `${fmt(s)}${yrS} – ${fmt(e)}${yrE}`
+    if (s.getMonth() === e.getMonth()) {
+        return `${mo(s)} ${s.getDate()} – ${e.getDate()}, ${yr(s)}`
+    }
+    return `${fmt(s)} – ${fmt(e)}, ${yr(s)}`
 }
 
 const shortDay = (iso: string) =>
@@ -474,7 +469,7 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 {/* Fields */}
                 <Box sx={{ display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-start' }}>
                     <Field label="Dates">
-                        {formatDateRange(trip.startDate, trip.endDate, parseDay(today).getFullYear())}
+                        {formatDateRange(trip.startDate, trip.endDate)}
                     </Field>
                     <Field label="Passengers">
                         <Box sx={{ display: 'flex' }}>
