@@ -2,7 +2,7 @@
  * Mock data for the dev component gallery (/dev/gallery).
  * Pure fixtures — never imported by production code.
  */
-import type { Expense, SettlementRecord, TripSummary, UserSummary } from '@/lib/types'
+import type { Expense, SettlementRecord, TripStats, TripSummary, UserSummary } from '@/lib/types'
 
 /** users.id is BIGINT — the API returns it as a STRING at runtime even though
  *  lib/types.ts says number. Fixtures model the runtime truth so id-comparison
@@ -196,3 +196,36 @@ export const settlementRecords: SettlementRecord[] = [
         createdAt: '2026-07-12T18:30:00Z',
     },
 ]
+
+// --- Boarding pass fixtures (trips list) ---
+
+/** Pinned "today" for pass-state determinism — pass to BoardingPass. */
+export const GALLERY_TODAY = '2026-07-14'
+
+export function makeTripStats(overrides: Partial<TripStats> = {}): TripStats {
+    return {
+        expenseCount: 12,
+        totalSpendUsd: 1284,
+        todaySpendUsd: 96,
+        yourShareUsd: 512,
+        yourNetUsd: 63,
+        isSettled: false,
+        latestExpense: {
+            name: 'Ramen Yokocho',
+            byFirstName: 'Jenny',
+            reportedAt: '2026-07-14T08:40:00Z',
+        },
+        ...overrides,
+    }
+}
+
+let nextTripId = 200
+
+export function makePassTrip(overrides: Partial<TripSummary> = {}): TripSummary {
+    return {
+        ...trip,
+        id: asId(String(nextTripId++)),
+        stats: makeTripStats(),
+        ...overrides,
+    }
+}

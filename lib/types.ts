@@ -23,6 +23,35 @@ export type TripSummary = {
     participants: ParticipantSummary[]
     /** ISO timestamp of the last update — used for optimistic concurrency on PUT/DELETE. */
     updatedAt: string
+    /** Boarding-pass aggregates — present on the trips LIST response only. */
+    stats?: TripStats
+}
+
+/** Most recent expense added to a trip — the boarding-pass activity footer. */
+export type TripLatestExpense = {
+    name: string
+    /** First name of whoever reported the expense; null for legacy rows. */
+    byFirstName: string | null
+    /** ISO timestamp; null for legacy rows with no reported_at. */
+    reportedAt: string | null
+}
+
+/** Per-trip aggregates for the trips-list boarding passes (computed in
+ *  lib/spend.ts § computeTripStats + the trips API route). USD amounts use
+ *  the same blended-exchange-rate math as the debts page. */
+export type TripStats = {
+    expenseCount: number
+    /** Whole-group total spend. */
+    totalSpendUsd: number
+    /** Whole-group spend dated today (server UTC date). */
+    todaySpendUsd: number
+    /** Current user's share of expenses (covered shares absorbed by payer). */
+    yourShareUsd: number
+    /** Current user's net debt position: + = owed to you, − = you owe. */
+    yourNetUsd: number
+    /** True when no pairwise debts remain after recorded settlements. */
+    isSettled: boolean
+    latestExpense: TripLatestExpense | null
 }
 
 export type UserSummary = {

@@ -14,6 +14,7 @@ import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
 import { useTripData } from 'providers/trip-data-provider'
 
 import { applySettlements } from '@/lib/debt'
+import { computeBlendedRates, computeDebtMap, getExpenseUsdValue } from '@/lib/spend'
 import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 
 type SpendDataValue = {
@@ -137,105 +138,8 @@ function applySearch(data: Expense[], searchInput: string): Expense[] {
     return results.map((r) => r.item)
 }
 
-// --- Blended exchange rate calculation ---
-
-/** Compute per-person blended exchange rates from currency exchange expenses.
- *  Returns a Map: payerId → { currency → rate (local per USD) } */
-function computeBlendedRates(expenses: Expense[]): Map<number, Map<string, number>> {
-    // payerId → currency → { totalUsd, totalLocal }
-    const pools = new Map<number, Map<string, { totalUsd: number; totalLocal: number }>>()
-
-    for (const exp of expenses) {
-        if (exp.categorySlug !== 'currency_exchange') continue
-        if (!exp.localCurrencyReceived || exp.localCurrencyReceived <= 0) continue
-
-        const payerId = exp.paidBy.id
-        const currency = exp.currency !== 'USD' ? exp.currency : 'USD'
-        // For currency exchange: costOriginal is USD paid, localCurrencyReceived is local currency received
-        const usdPaid = exp.costOriginal
-        const localReceived = exp.localCurrencyReceived
-
-        const payerPools = pools.get(payerId) ?? new Map()
-        const pool = payerPools.get(currency) ?? { totalUsd: 0, totalLocal: 0 }
-        pool.totalUsd += usdPaid
-        pool.totalLocal += localReceived
-        payerPools.set(currency, pool)
-        pools.set(payerId, payerPools)
-    }
-
-    // Convert pools to rates: rate = totalLocal / totalUsd
-    const rates = new Map<number, Map<string, number>>()
-    pools.forEach((currencyPools, payerId) => {
-        const payerRates = new Map<string, number>()
-        currencyPools.forEach((pool, currency) => {
-            if (pool.totalUsd > 0) {
-                payerRates.set(currency, pool.totalLocal / pool.totalUsd)
-            }
-        })
-        rates.set(payerId, payerRates)
-    })
-
-    return rates
-}
-
-/** Get the USD value of an expense, using blended rates for non-USD local currency expenses. */
-function getExpenseUsdValue(
-    exp: Expense,
-    blendedRates: Map<number, Map<string, number>>
-): number {
-    // Currency exchange expenses are already in USD (costOriginal = USD paid)
-    if (exp.categorySlug === 'currency_exchange') {
-        return exp.costOriginal
-    }
-
-    // USD expenses — use directly
-    if (exp.currency === 'USD') {
-        return exp.costOriginal
-    }
-
-    // Non-USD expense — try to use payer's blended rate
-    const payerRates = blendedRates.get(exp.paidBy.id)
-    const blendedRate = payerRates?.get(exp.currency)
-    if (blendedRate && blendedRate > 0) {
-        return exp.costOriginal / blendedRate
-    }
-
-    // Fallback: use the pre-computed costConvertedUsd
-    return exp.costConvertedUsd
-}
-
-// --- Debt calculation ---
-
-function computeDebtMap(
-    expenses: Expense[],
-    participantCount: number
-): { totalSpend: number; debtMap: Map<number, Map<number, number>> } {
-    const blendedRates = computeBlendedRates(expenses)
-    let totalSpend = 0
-    const debtMap = new Map<number, Map<number, number>>()
-
-    for (const exp of expenses) {
-        const usdValue = getExpenseUsdValue(exp, blendedRates)
-        totalSpend += usdValue
-        const payerId = exp.paidBy.id
-        const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
-        const splitCost = usdValue / splitCount
-
-        // Build set of covered participant IDs for fast lookup
-        const coveredIds = new Set(exp.coveredParticipants.map((p) => p.id))
-
-        for (const participant of exp.splitBetween) {
-            if (participant.id === payerId) continue
-            if (coveredIds.has(participant.id)) continue // covered — no debt
-            // participant owes payer
-            const owes = debtMap.get(participant.id) ?? new Map()
-            owes.set(payerId, (owes.get(payerId) ?? 0) + splitCost)
-            debtMap.set(participant.id, owes)
-        }
-    }
-
-    return { totalSpend, debtMap }
-}
+// Blended exchange rates + debt-map math live in lib/spend.ts (shared with
+// the trips API route for boarding-pass stats).
 
 // --- Summary computation ---
 

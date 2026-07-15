@@ -57,7 +57,7 @@ export type GroupedExpenses = {
  */
 export function applySettlements(
     debtMap: Map<number, Map<number, number>>,
-    settlements: SettlementRecord[]
+    settlements: Pick<SettlementRecord, 'fromUserId' | 'toUserId' | 'amountUsd'>[]
 ): Map<number, Map<number, number>> {
     if (settlements.length === 0) return debtMap
     const out = new Map<number, Map<number, number>>()
@@ -218,7 +218,7 @@ export function simplifyDebts(
  */
 export function directPairwiseSettlements(
     debtMap: Map<number, Map<number, number>>,
-    participants: UserSummary[]
+    participants: Pick<UserSummary, 'id'>[]
 ): Settlement[] {
     const settlements: Settlement[] = []
     for (let i = 0; i < participants.length; i++) {

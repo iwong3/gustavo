@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { computeTripStats, type SpendExpense } from '@/lib/spend'
 import type { TripRole } from '@/lib/permissions'
+import type { TripStats } from '@/lib/types'
 
 function formatDate(d: string | Date): string {
     return typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)
@@ -115,8 +117,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json([])
     }
 
-    // Fetch all participants, currencies, and countries for all trips in parallel
-    const [participantsRes, currenciesRes, countriesRes] = await Promise.all([
+    // Fetch all participants, currencies, countries, and boarding-pass stat
+    // inputs (lean expenses + splits + settlements) for all trips in parallel
+    const [participantsRes, currenciesRes, countriesRes, expensesRes, epRes, settlementsRes] = await Promise.all([
         pool.query(
             `SELECT tp.trip_id, u.id, u.name, split_part(u.name, ' ', 1) AS first_name,
                     u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url,
@@ -133,6 +136,31 @@ export async function GET(request: NextRequest) {
         ),
         pool.query(
             'SELECT trip_id, country_code FROM trip_countries WHERE trip_id = ANY($1) ORDER BY country_code',
+            [tripIds]
+        ),
+        pool.query(
+            `SELECT e.id, e.trip_id, e.name, e.date, e.cost_original, e.currency,
+                    e.cost_converted_usd, e.local_currency_received, e.paid_by,
+                    ec.slug AS category_slug, e.reported_at,
+                    split_part(reporter.name, ' ', 1) AS reporter_first_name
+             FROM expenses e
+             LEFT JOIN expense_categories ec ON e.category_id = ec.id
+             LEFT JOIN users reporter ON e.reported_by = reporter.id
+             WHERE e.trip_id = ANY($1) AND e.deleted_at IS NULL
+             ORDER BY e.trip_id, e.reported_at DESC NULLS LAST, e.created_at DESC`,
+            [tripIds]
+        ),
+        pool.query(
+            `SELECT ep.expense_id, ep.user_id, ep.covered_by
+             FROM expense_participants ep
+             JOIN expenses e ON e.id = ep.expense_id
+             WHERE e.trip_id = ANY($1) AND e.deleted_at IS NULL`,
+            [tripIds]
+        ),
+        pool.query(
+            `SELECT trip_id, from_user_id, to_user_id, amount_usd
+             FROM settlements
+             WHERE trip_id = ANY($1) AND deleted_at IS NULL`,
             [tripIds]
         ),
     ])
@@ -159,6 +187,82 @@ export async function GET(request: NextRequest) {
         countriesByTrip.set(r.trip_id, list)
     }
 
+    // --- Boarding-pass stats ---
+
+    // Split participants by expense. isEveryone is passed as false below:
+    // when a split really is "everyone", its participant count equals the
+    // trip's, so the per-share division is identical either way.
+    const splitsByExpense = new Map<number, { userId: number; coveredBy: number | null }[]>()
+    for (const r of epRes.rows) {
+        const list = splitsByExpense.get(r.expense_id) ?? []
+        list.push({ userId: r.user_id, coveredBy: r.covered_by })
+        splitsByExpense.set(r.expense_id, list)
+    }
+
+    type LeanExpenseRow = (typeof expensesRes.rows)[number]
+    const expensesByTrip = new Map<number, LeanExpenseRow[]>()
+    for (const r of expensesRes.rows) {
+        const list = expensesByTrip.get(r.trip_id) ?? []
+        list.push(r)
+        expensesByTrip.set(r.trip_id, list)
+    }
+
+    const settlementsByTrip = new Map<number, { fromUserId: number; toUserId: number; amountUsd: number }[]>()
+    for (const r of settlementsRes.rows) {
+        const list = settlementsByTrip.get(r.trip_id) ?? []
+        list.push({
+            fromUserId: r.from_user_id,
+            toUserId: r.to_user_id,
+            amountUsd: parseFloat(r.amount_usd),
+        })
+        settlementsByTrip.set(r.trip_id, list)
+    }
+
+    // Server UTC date — good enough for the "today" spend bucket.
+    const todayIso = new Date().toISOString().slice(0, 10)
+
+    function tripStats(tripId: number): TripStats {
+        const rows = expensesByTrip.get(tripId) ?? []
+        const expenses: (SpendExpense & { date: string })[] = rows.map((e) => {
+            const split = splitsByExpense.get(e.id) ?? []
+            const costConvertedUsd = parseFloat(e.cost_converted_usd)
+            return {
+                date: formatDate(e.date),
+                costOriginal: parseFloat(e.cost_original),
+                currency: e.currency,
+                // Conversion-error rows have NULL here; 0 keeps one broken row
+                // from NaN-ing the whole pass (computeTripStats documents this).
+                costConvertedUsd: Number.isFinite(costConvertedUsd) ? costConvertedUsd : 0,
+                categorySlug: e.category_slug,
+                localCurrencyReceived: e.local_currency_received != null ? parseFloat(e.local_currency_received) : null,
+                paidBy: { id: e.paid_by },
+                isEveryone: false,
+                splitBetween: split.map((s) => ({ id: s.userId })),
+                coveredParticipants: split.filter((s) => s.coveredBy != null).map((s) => ({ id: s.userId })),
+            }
+        })
+
+        // rows are ordered reported_at DESC NULLS LAST within the trip
+        const latest = rows[0]
+        const stats = computeTripStats({
+            expenses,
+            participantIds: (participantsByTrip.get(tripId) ?? []).map((p) => p.id),
+            settlements: settlementsByTrip.get(tripId) ?? [],
+            currentUserId: userId,
+            todayIso,
+        })
+        return {
+            ...stats,
+            latestExpense: latest
+                ? {
+                      name: latest.name,
+                      byFirstName: latest.reporter_first_name ?? null,
+                      reportedAt: latest.reported_at ? new Date(latest.reported_at).toISOString() : null,
+                  }
+                : null,
+        }
+    }
+
     const trips = tripsRes.rows.map((t) => {
         const currencies = currenciesByTrip.get(t.id) ?? []
         if (!currencies.includes('USD')) currencies.unshift('USD')
@@ -182,6 +286,7 @@ export async function GET(request: NextRequest) {
                 ...mapUser(u),
                 role: u.role as TripRole,
             })),
+            stats: tripStats(t.id),
         }
     })
 
