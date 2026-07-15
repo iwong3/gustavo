@@ -13,7 +13,6 @@ import { InitialsIcon } from 'utils/icons'
 import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
 import DeleteTripDialog from 'components/delete-trip-dialog'
-import TripFormDialog from 'components/trip-form-dialog'
 
 import { queryKeys } from '@/lib/query-keys'
 
@@ -43,15 +42,10 @@ export default function TripDetailsPage() {
     const queryClient = useQueryClient()
 
     // Dialog state
-    const [formOpen, setFormOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
 
     const showEdit = canEditTrip(trip.userRole, trip.isAdmin)
     const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
-
-    const handleEditSuccess = () => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
-    }
 
     const deleteMutation = useMutation({
         mutationFn: () => deleteTrip(trip.id, trip.updatedAt),
@@ -187,7 +181,11 @@ export default function TripDetailsPage() {
                     }}>
                     {showEdit && (
                         <IconButton
-                            onClick={() => setFormOpen(true)}
+                            onClick={() =>
+                                router.push(
+                                    `/gustavo/trips/${trip.slug}/edit`
+                                )
+                            }
                             sx={{
                                 'flex': 1,
                                 'backgroundColor': colors.primaryWhite,
@@ -239,15 +237,6 @@ export default function TripDetailsPage() {
                     )}
                 </Box>
             )}
-
-            {/* Edit trip form */}
-            <TripFormDialog
-                open={formOpen}
-                onClose={() => setFormOpen(false)}
-                onSuccess={handleEditSuccess}
-                mode="edit"
-                trip={trip}
-            />
 
             {/* Delete trip confirmation */}
             <DeleteTripDialog

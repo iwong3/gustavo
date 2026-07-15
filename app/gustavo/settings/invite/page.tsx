@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
 import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
+import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import type { AllowedEmail } from 'utils/api'
 import {
     addAllowedEmail,
@@ -27,6 +28,7 @@ import {
 } from 'utils/api'
 
 export default function InviteUsersPage() {
+    const focusScroll = useScrollFocusedInput()
     const [entries, setEntries] = useState<AllowedEmail[]>([])
     const [loading, setLoading] = useState(true)
     const [newEmail, setNewEmail] = useState('')
@@ -83,6 +85,7 @@ export default function InviteUsersPage() {
 
     return (
         <Box
+            {...focusScroll}
             sx={{
                 display: 'flex',
                 flexDirection: 'column',

@@ -21,6 +21,7 @@ import {
     Typography,
 } from '@mui/material'
 import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
+import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import { fetchTrips } from 'utils/api'
 import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
@@ -32,6 +33,7 @@ type LocationItem = {
 
 export default function LocationsPage() {
     const queryClient = useQueryClient()
+    const focusScroll = useScrollFocusedInput()
     const [selectedTripId, setSelectedTripId] = useState<number | ''>('')
     const [newName, setNewName] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
@@ -149,7 +151,9 @@ export default function LocationsPage() {
     }
 
     return (
-        <Box sx={{ paddingX: 2, paddingTop: 3, paddingBottom: 10, maxWidth: 500, margin: '0 auto' }}>
+        <Box
+            {...focusScroll}
+            sx={{ paddingX: 2, paddingTop: 3, paddingBottom: 10, maxWidth: 500, margin: '0 auto' }}>
             <Typography sx={{ fontSize: 20, fontWeight: 600, marginBottom: 2 }}>
                 Manage Locations
             </Typography>

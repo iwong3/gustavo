@@ -2,13 +2,13 @@
 
 import { colors } from '@/lib/colors'
 import { Box, CircularProgress } from '@mui/material'
+import { useRouter } from 'next/navigation'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import BoardingPass from 'components/boarding-pass'
 import { PullToRefresh } from 'components/pull-to-refresh'
-import TripFormDialog from 'components/trip-form-dialog'
 import { fetchTrips } from 'utils/api'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -48,8 +48,7 @@ function TripSection({ title, trips }: { title: string; trips: TripSummary[] }) 
 
 export default function TripsPage() {
     const queryClient = useQueryClient()
-
-    const [formOpen, setFormOpen] = useState(false)
+    const router = useRouter()
 
     const { data: trips = [], isLoading: loading } = useQuery({
         queryKey: queryKeys.trips.list(),
@@ -69,8 +68,8 @@ export default function TripsPage() {
 
     useRegisterFab(
         useCallback(() => {
-            setFormOpen(true)
-        }, [])
+            router.push('/gustavo/trips/new')
+        }, [router])
     )
 
     if (loading) {
@@ -133,13 +132,6 @@ export default function TripsPage() {
             <TripSection title="Upcoming Trips" trips={upcomingTrips} />
             <TripSection title="Past Trips" trips={pastTrips} />
             <TripSection title="Other Trips" trips={otherTrips} />
-
-            <TripFormDialog
-                open={formOpen}
-                onClose={() => setFormOpen(false)}
-                onSuccess={invalidateTrips}
-                mode="create"
-            />
         </Box>
         </PullToRefresh>
     )

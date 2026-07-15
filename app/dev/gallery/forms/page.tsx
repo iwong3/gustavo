@@ -8,7 +8,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import ExpenseForm from 'components/expense-form'
-import TripFormDialog from 'components/trip-form-dialog'
+import TripForm from 'components/trip-form'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { colors, hardShadow } from '@/lib/colors'
 import { GusMenuButton } from '../gallery-ui'
@@ -104,9 +104,14 @@ export default function FormsGallery() {
                 </Box>
             </Box>
 
-            {/* Page body — description when nothing (or a drawer form) is open;
-                expense forms render inline as page bodies, like in the app */}
-            {selected !== 'expense-add' && selected !== 'expense-edit' && (
+            {/* Page body — description when nothing (or a dialog) is open;
+                expense + trip forms render inline as page bodies, like in the app */}
+            {!(
+                selected === 'expense-add' ||
+                selected === 'expense-edit' ||
+                selected === 'trip-create' ||
+                selected === 'trip-edit'
+            ) && (
                 <Box sx={{ pt: `${HEADER_HEIGHT + 16}px`, px: 2, pb: 4 }}>
                     <Typography sx={{ fontSize: 12, color: 'text.secondary', maxWidth: 480 }}>
                         Tap a chip to open that form — the header stays on top, so you can flip
@@ -142,19 +147,26 @@ export default function FormsGallery() {
                 </Box>
             )}
 
-            <TripFormDialog
-                open={selected === 'trip-create'}
-                onClose={close}
-                onSuccess={close}
-                mode="create"
-            />
-            <TripFormDialog
-                open={selected === 'trip-edit'}
-                onClose={close}
-                onSuccess={close}
-                mode="edit"
-                trip={trip}
-            />
+            {(selected === 'trip-create' || selected === 'trip-edit') && (
+                <Box
+                    sx={{
+                        pt: `${HEADER_HEIGHT}px`,
+                        display: 'flex',
+                        justifyContent: 'center',
+                    }}>
+                    <Box sx={{ width: '100%', maxWidth: 450 }}>
+                        <TripForm
+                            key={selected}
+                            mode={
+                                selected === 'trip-create' ? 'create' : 'edit'
+                            }
+                            trip={selected === 'trip-edit' ? trip : undefined}
+                            onCancel={close}
+                            onSuccess={close}
+                        />
+                    </Box>
+                </Box>
+            )}
 
             <DeleteExpenseDialog
                 open={selected === 'delete-expense'}

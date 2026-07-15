@@ -149,6 +149,10 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     const debtPairMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/debts\/.+$/
     )
+    // /gustavo/trips/<slug>/edit → trip details
+    const tripEditMatch = pathname.match(
+        /^\/gustavo\/trips\/([^/]+)\/edit$/
+    )
     if (expenseEditMatch) {
         backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
     } else if (expenseDetailMatch) {
@@ -169,6 +173,8 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
         }
     } else if (debtPairMatch) {
         backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
+    } else if (tripEditMatch) {
+        backHref = `/gustavo/trips/${tripEditMatch[1]}/details`
     }
     // /gustavo/trips/<slug>/<tool> → trips list
     else if (/^\/gustavo\/trips\/[^/]+\/.+$/.test(pathname)) {

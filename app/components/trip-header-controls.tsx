@@ -103,7 +103,9 @@ export const TripHeaderControls = () => {
     const { data: trip } = useQuery({
         queryKey: queryKeys.trips.bySlug(slug ?? ''),
         queryFn: () => fetchTripBySlug(slug!),
-        enabled: Boolean(slug),
+        // activeTool guard: non-tool routes like /trips/new (slug "new") and
+        // /trips/<slug>/edit render no header controls — don't fetch for them
+        enabled: Boolean(slug) && Boolean(activeTool),
     })
 
     const [menuOpen, setMenuOpen] = useState(false)

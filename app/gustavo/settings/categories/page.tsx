@@ -33,6 +33,7 @@ import {
     destructiveButtonSx,
     dialogPaperSx,
 } from '@/lib/form-styles'
+import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import { fetchExpenseCategoriesWithMeta } from 'utils/api'
 import { queryKeys, staleTimes } from '@/lib/query-keys'
 import type { ExpenseCategoryWithMeta } from '@/lib/types'
@@ -54,6 +55,7 @@ const iconButtonSx = {
 
 export default function CategoriesPage() {
     const queryClient = useQueryClient()
+    const focusScroll = useScrollFocusedInput()
 
     const { data: categories = [], isLoading: loading } = useQuery({
         queryKey: queryKeys.expenseCategories.listWithMeta(),
@@ -272,7 +274,9 @@ export default function CategoriesPage() {
     const errorLeftOffset = `${countColWidth + 24}px`
 
     return (
-        <Box sx={{ width: '100%', paddingX: '16px', paddingTop: 3, paddingBottom: 10 }}>
+        <Box
+            {...focusScroll}
+            sx={{ width: '100%', paddingX: '16px', paddingTop: 3, paddingBottom: 10 }}>
             <Typography
                 sx={{
                     fontSize: 22,

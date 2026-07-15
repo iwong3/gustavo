@@ -3,7 +3,6 @@
 import {
     Autocomplete,
     Box,
-    Button,
     Chip,
     IconButton,
     MenuItem,
@@ -16,21 +15,22 @@ import { IconPencil, IconPlus, IconCheck, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
-import { primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
 import {
     dropdownMenuItemSx,
     dropdownPaperSx,
+    dropdownPopperProps,
     errorFieldSx,
     errorLabelSx,
     errorMessageSx,
-    fieldShadow,
     fieldSx,
     labelSx,
+    selectMenuProps,
 } from '@/lib/form-styles'
-import type { Location, TripRole, TripSummary, UserSummary } from '@/lib/types'
-import FormDrawer from 'components/form-drawer'
+import type { TripRole, TripSummary, UserSummary } from '@/lib/types'
+import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useCurrentUser } from 'hooks/useCurrentUser'
+import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import {
     ConflictError,
     createTrip,
@@ -65,20 +65,15 @@ let nextLocalId = -1
 const INPUT_HEIGHT = 40
 
 type Props = {
-    open: boolean
-    onClose: () => void
-    onSuccess: () => void
     mode: 'create' | 'edit'
     trip?: TripSummary
+    onCancel: () => void
+    onSuccess: () => void
 }
 
-export default function TripFormDialog({
-    open,
-    onClose,
-    onSuccess,
-    mode,
-    trip,
-}: Props) {
+// Page-style trip form (create + edit) — same shell as ExpenseForm: title,
+// fields, PageActionBar. Replaces the old FormDrawer-based TripFormDialog.
+export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const currentUser = useCurrentUser()
     const queryClient = useQueryClient()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
@@ -108,26 +103,27 @@ export default function TripFormDialog({
     const [editLocName, setEditLocName] = useState('')
     const editLocRef = useRef<HTMLInputElement>(null)
 
-    useEffect(() => {
-        if (open) {
-            fetchUsers()
-                .then((users) => {
-                    setAllUsers(users)
-                    // Pre-select current user in create mode
-                    if (mode === 'create' && currentUser) {
-                        setSelectedUserIds((prev) =>
-                            prev.includes(currentUser.id)
-                                ? prev
-                                : [currentUser.id]
-                        )
-                    }
-                })
-                .catch(() => {})
-        }
-    }, [open, mode, currentUser])
+    // Scroll the focused input near the top so the mobile keyboard can't hide it
+    const focusScroll = useScrollFocusedInput()
 
     useEffect(() => {
-        if (open && mode === 'edit' && trip) {
+        fetchUsers()
+            .then((users) => {
+                setAllUsers(users)
+                // Pre-select current user in create mode
+                if (mode === 'create' && currentUser) {
+                    setSelectedUserIds((prev) =>
+                        prev.includes(currentUser.id)
+                            ? prev
+                            : [currentUser.id]
+                    )
+                }
+            })
+            .catch(() => {})
+    }, [mode, currentUser])
+
+    useEffect(() => {
+        if (mode === 'edit' && trip) {
             setName(trip.name)
             setStartDate(trip.startDate)
             setEndDate(trip.endDate)
@@ -154,14 +150,13 @@ export default function TripFormDialog({
                 )
                 .catch(() => {})
             setDeletedLocationIds([])
-        } else if (open && mode === 'create') {
-            resetForm()
+        } else if (mode === 'create') {
             // Load user's default visibility preference
             fetchUserPreferences()
                 .then((prefs) => setVisibility(prefs.defaultTripVisibility))
                 .catch(() => {})
         }
-    }, [open, mode, trip])
+    }, [mode, trip])
 
     useEffect(() => {
         if (editingLocId !== null && editLocRef.current) {
@@ -176,32 +171,6 @@ export default function TripFormDialog({
                 ? prev.filter((id) => id !== userId)
                 : [...prev, userId]
         )
-    }
-
-    const resetForm = () => {
-        setName('')
-        setStartDate(todayISO())
-        setEndDate('')
-        setDescription('')
-        setCountryCodes([])
-        setCountriesOpen(false)
-        setSelectedUserIds([])
-        setParticipantQuery('')
-        setVisibility('participants')
-        setParticipantRoles(new Map())
-        setError('')
-        setAttempted(false)
-        setLocations([])
-        setDeletedLocationIds([])
-        setNewLocName('')
-        setEditingLocId(null)
-        setEditLocName('')
-        nextLocalId = -1
-    }
-
-    const handleClose = () => {
-        onClose()
-        setTimeout(resetForm, 300)
     }
 
     // ── Location handlers ───────────────────────────────────────────────────
@@ -438,13 +407,11 @@ export default function TripFormDialog({
                 await saveLocations(created.id)
             }
 
-            resetForm()
-            onClose()
             onSuccess()
         } catch (err) {
             if (err instanceof ConflictError) {
                 queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
-                setError('This trip was changed by someone else. Please close and re-open this dialog to see the latest data.')
+                setError('This trip was changed by someone else. Please go back and re-open this form to see the latest data.')
                 setSubmitting(false)
                 return
             }
@@ -461,7 +428,7 @@ export default function TripFormDialog({
     }
 
     // Currencies the trip will use, derived from selected countries (USD always
-     // included). Sent verbatim to the API on save.
+    // included). Sent verbatim to the API on save.
     const derivedCurrencies = useMemo(
         () => deriveCurrenciesFromCountries(countryCodes),
         [countryCodes]
@@ -505,24 +472,23 @@ export default function TripFormDialog({
         })
 
     return (
-        <FormDrawer open={open} onClose={handleClose}>
+        <>
             <Typography
                 variant="h6"
                 sx={{
                     fontWeight: 700,
                     color: colors.primaryBlack,
-                    padding: '16px 24px 0',
+                    padding: '16px 16px 0',
                 }}>
-                {isEdit ? 'Edit trip' : 'Create trip'}
+                {isEdit ? 'Edit Trip' : 'Create Trip'}
             </Typography>
             <Box
+                {...focusScroll}
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 2,
-                    padding: '16px 24px 0',
-                    flex: 1,
-                    overflowY: 'auto',
+                    padding: '16px',
                 }}>
                 <Box>
                     <Typography sx={nameError ? errorLabelSx : labelSx}>
@@ -607,12 +573,9 @@ export default function TripFormDialog({
                         }
                         getOptionLabel={(c) => c.name}
                         isOptionEqualToValue={(a, b) => a.code === b.code}
+                        disablePortal
                         slotProps={{
-                            // Portal to body and bump z-index above
-                            // FormDrawer (1500). This avoids the popper
-                            // drifting when the form scrolls (Popper anchors
-                            // to viewport, not nested scroll containers).
-                            popper: { sx: { zIndex: 1600 } },
+                            popper: dropdownPopperProps,
                             listbox: {
                                 sx: {
                                     'maxHeight': 240,
@@ -760,10 +723,9 @@ export default function TripFormDialog({
                                 ? 'Loading people…'
                                 : 'No one left to add'
                         }
+                        disablePortal
                         slotProps={{
-                            // Portal to body above FormDrawer (1500), same as
-                            // the Countries picker above.
-                            popper: { sx: { zIndex: 1600 } },
+                            popper: dropdownPopperProps,
                             listbox: {
                                 sx: {
                                     'maxHeight': 240,
@@ -930,39 +892,7 @@ export default function TripFormDialog({
                                                     )
                                                 }}
                                                 size="small"
-                                                MenuProps={{
-                                                    sx: { zIndex: 1600 },
-                                                    PaperProps: {
-                                                        sx: {
-                                                            'backgroundColor':
-                                                                colors.primaryWhite,
-                                                            'border': `1px solid ${colors.primaryBlack}`,
-                                                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                                            'borderRadius':
-                                                                '12px',
-                                                            'marginTop': '4px',
-                                                            '& .MuiMenuItem-root':
-                                                                {
-                                                                    'fontSize': 13,
-                                                                    'minHeight': 32,
-                                                                    '&:hover': {
-                                                                        backgroundColor: `${colors.primaryYellow}40`,
-                                                                    },
-                                                                    '&.Mui-selected':
-                                                                        {
-                                                                            'backgroundColor':
-                                                                                colors.primaryYellow,
-                                                                            'fontWeight': 600,
-                                                                            '&:hover':
-                                                                                {
-                                                                                    backgroundColor:
-                                                                                        colors.primaryYellow,
-                                                                                },
-                                                                        },
-                                                                },
-                                                        },
-                                                    },
-                                                }}
+                                                MenuProps={selectMenuProps}
                                                 sx={{
                                                     'fontSize': 12,
                                                     'height': 26,
@@ -1277,34 +1207,29 @@ export default function TripFormDialog({
                     </Typography>
                 )}
             </Box>
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '24px',
-                    paddingBottom: `calc(24px + env(safe-area-inset-bottom, 0px))`,
-                }}>
-                <Button
-                    onClick={handleClose}
+
+            <PageActionBar>
+                <PageActionButton
+                    onClick={onCancel}
                     disabled={submitting}
-                    size="large"
-                    sx={secondaryButtonSx}>
-                    Cancel
-                </Button>
-                <Button
+                    icon={<IconX size={22} />}
+                    label="Cancel"
+                />
+                <PageActionButton
                     onClick={handleSubmit}
                     disabled={submitting}
-                    size="large"
-                    sx={primaryButtonSx}>
-                    {submitting
-                        ? isEdit
-                            ? 'Saving...'
-                            : 'Creating...'
-                        : isEdit
-                          ? 'Save'
-                          : 'Create'}
-                </Button>
-            </Box>
-        </FormDrawer>
+                    icon={<IconCheck size={22} />}
+                    label={
+                        submitting
+                            ? isEdit
+                                ? 'Saving...'
+                                : 'Creating...'
+                            : isEdit
+                              ? 'Save'
+                              : 'Create'
+                    }
+                />
+            </PageActionBar>
+        </>
     )
 }
