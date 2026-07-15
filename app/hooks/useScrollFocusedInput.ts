@@ -2,19 +2,23 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 
-// Gap between the top of the scroller and the focused input — enough to keep
+// Gap between the visible top of the scroller and the focused input — keeps
 // the field's label visible above it.
 const TOP_BUFFER = 48
-// Corrective passes after focus: the keyboard finishes animating somewhere in
-// this window, and iOS's native reveal-on-focus can drag the scroll position
-// around during it. Each pass re-measures and snaps back if we drifted.
+// Re-sync points after focus: the keyboard finishes animating somewhere in
+// this window. visualViewport events also trigger a sync, but iOS doesn't
+// always fire them (e.g. when focus moves between fields with the keyboard
+// already open).
 const SETTLE_PASSES_MS = [250, 600]
-// Estimated keyboard height for the very first focus, before we've measured a
-// real one. Overshoot is invisible (the padding hides under the keyboard).
+// First-focus estimate before a real keyboard has been measured. Overshooting
+// is harmless — the scroller is just briefly shorter than needed.
 const KEYBOARD_ESTIMATE = 350
+// Ignore small visual-viewport insets (URL bar collapse etc.) — a real
+// on-screen keyboard is big.
+const MIN_KEYBOARD = 100
 
 // Last measured keyboard height — remembered across focuses and forms so the
-// bottom padding is exact from the first frame of subsequent focuses.
+// first frame of a focus is right on devices we've seen a keyboard on.
 let lastKeyboardHeight = KEYBOARD_ESTIMATE
 
 // Inputs that pop a typing keyboard. Pickers (date, select) handle themselves.
@@ -39,16 +43,15 @@ const isTypingTarget = (el: EventTarget | null): el is HTMLElement => {
     return false
 }
 
-// Only touch devices get the keyboard padding — desktop has no on-screen
-// keyboard, and adding/removing an estimated padding there causes scroll jumps.
+// Only touch devices get the keyboard-avoidance resizing — desktop has no
+// on-screen keyboard.
 const expectsKeyboard = () =>
     typeof window !== 'undefined' &&
     window.matchMedia('(pointer: coarse)').matches
 
 // Nearest overflow-scrolling ancestor (e.g. #main-scroll in the app layout),
 // falling back to the document scroller (e.g. the dev gallery, which scrolls
-// the body). Deliberately no scrollHeight check: the ancestor may only become
-// scrollable once the keyboard padding is applied.
+// the body).
 const getScroller = (el: HTMLElement): HTMLElement => {
     let node = el.parentElement
     while (node) {
@@ -59,116 +62,160 @@ const getScroller = (el: HTMLElement): HTMLElement => {
     return (document.scrollingElement as HTMLElement) ?? document.documentElement
 }
 
-// The scroller's visible box in layout-viewport coordinates.
-const scrollerBounds = (scroller: HTMLElement) => {
-    if (scroller === document.scrollingElement) {
-        return { top: 0, bottom: document.documentElement.clientHeight }
-    }
-    const rect = scroller.getBoundingClientRect()
-    return { top: rect.top, bottom: rect.bottom }
-}
-
-// How much of the scroller the on-screen keyboard covers. Measured against
-// the visual viewport (not window.innerHeight, which iOS Safari shrinks along
-// with the keyboard). 0 on desktop and while the keyboard is closed.
-const keyboardOverlap = (scrollerBottom: number) => {
+// Height of the on-screen keyboard overlapping the layout viewport, measured
+// via visualViewport. documentElement.clientHeight is the layout viewport and
+// does NOT shrink with the keyboard (window.innerHeight does on iOS).
+const measureKeyboard = () => {
     const vv = window.visualViewport
     if (!vv) return 0
-    const visibleBottom = vv.offsetTop + vv.height
-    return Math.max(0, scrollerBottom - visibleBottom)
-}
-
-// Instantly put the input TOP_BUFFER below the scroller's top edge.
-const snapToTop = (scroller: HTMLElement, target: HTMLElement) => {
-    const delta =
-        target.getBoundingClientRect().top -
-        scrollerBounds(scroller).top -
-        TOP_BUFFER
-    if (Math.abs(delta) < 8) return
-    scroller.scrollBy({ top: delta, behavior: 'auto' })
+    return Math.max(
+        0,
+        document.documentElement.clientHeight - (vv.offsetTop + vv.height)
+    )
 }
 
 /**
- * Keeps the focused text input near the top of the scroll container so the
- * mobile keyboard never hides it. The browser's default reveal-on-focus
- * behavior is unreliable inside a fixed-position scroller (it often leaves the
- * input behind the keyboard), so this scrolls explicitly — instantly on focus
- * (winning the race against the native reveal), with corrective passes while
- * the keyboard animates in. While an input is focused, the form container gets
- * bottom padding matching the keyboard height so even the last field has room
- * to scroll up.
+ * Native-style keyboard avoidance for forms living inside a fixed-position
+ * scroll container (#main-scroll).
+ *
+ * iOS handles focused inputs inside fixed scrollers badly: instead of
+ * scrolling the scroller, it often shoves the whole visual viewport up —
+ * dragging the fixed header off-screen — and leaves the input wherever it
+ * lands. So while a typing input is focused we take over completely:
+ *
+ * 1. Shrink the scroller so it ends at the keyboard's top edge (synced from
+ *    visualViewport). Nothing is ever hidden behind the keyboard, so iOS has
+ *    no reason to push the viewport — and bottom fields gain the scroll room
+ *    to reach the top.
+ * 2. Instantly snap the focused input TOP_BUFFER below the scroller's top.
+ * 3. Undo any viewport push iOS attempts anyway (window pin + re-snap on
+ *    visualViewport resize/scroll).
+ *
+ * Everything restores on blur.
  *
  * Usage: spread the returned handlers onto the form's container element:
  *   const focusScroll = useScrollFocusedInput()
  *   <Box {...focusScroll}>...fields...</Box>
  */
 export function useScrollFocusedInput() {
+    const targetRef = useRef<HTMLElement | null>(null)
+    const scrollerRef = useRef<HTMLElement | null>(null)
+    const baseBottomRef = useRef<number | null>(null)
+    const haveMeasuredRef = useRef(false)
     const passTimers = useRef<number[]>([])
     const blurTimer = useRef<number | null>(null)
-    const containerRef = useRef<HTMLElement | null>(null)
 
-    const clearPasses = () => {
+    const sync = useCallback(() => {
+        const target = targetRef.current
+        const scroller = scrollerRef.current
+        if (!target || !scroller || document.activeElement !== target) return
+
+        const isElementScroller = scroller !== document.scrollingElement
+
+        // Undo any whole-page push from iOS (it drags the fixed header
+        // off-screen). Never for the document scroller — there window scroll
+        // IS the scroll position we manage.
+        if (isElementScroller && window.scrollY > 0) window.scrollTo(0, 0)
+
+        const measured = measureKeyboard()
+        if (measured > MIN_KEYBOARD) {
+            lastKeyboardHeight = measured
+            haveMeasuredRef.current = true
+        }
+        // Until the keyboard has actually opened this focus session, assume
+        // the remembered height; after that, trust live measurements (so a
+        // dismissed keyboard restores the scroller).
+        const kb = haveMeasuredRef.current
+            ? measured
+            : Math.max(measured, lastKeyboardHeight)
+
+        // End the scroller at the keyboard top.
+        if (isElementScroller && expectsKeyboard()) {
+            if (baseBottomRef.current === null) {
+                baseBottomRef.current =
+                    parseFloat(getComputedStyle(scroller).bottom) || 0
+            }
+            scroller.style.bottom =
+                kb > baseBottomRef.current ? `${kb}px` : ''
+        }
+
+        // Snap the input near the visible top. vv.offsetTop covers any
+        // viewport push that survived the pin above.
+        const vvTop = window.visualViewport?.offsetTop ?? 0
+        const scrollerTop = isElementScroller
+            ? scroller.getBoundingClientRect().top
+            : 0
+        const delta =
+            target.getBoundingClientRect().top -
+            Math.max(scrollerTop, vvTop) -
+            TOP_BUFFER
+        if (Math.abs(delta) >= 8) {
+            scroller.scrollBy({ top: delta, behavior: 'auto' })
+        }
+    }, [])
+
+    const detach = useCallback(() => {
         for (const t of passTimers.current) window.clearTimeout(t)
         passTimers.current = []
-    }
+        window.visualViewport?.removeEventListener('resize', sync)
+        window.visualViewport?.removeEventListener('scroll', sync)
+        targetRef.current = null
+        haveMeasuredRef.current = false
+        const scroller = scrollerRef.current
+        if (scroller && scroller !== document.scrollingElement) {
+            scroller.style.bottom = ''
+        }
+    }, [sync])
 
+    // Restore everything if the form unmounts mid-focus
     useEffect(
         () => () => {
-            clearPasses()
+            detach()
             if (blurTimer.current) window.clearTimeout(blurTimer.current)
-            if (containerRef.current) {
-                containerRef.current.style.paddingBottom = ''
-            }
         },
-        []
+        [detach]
     )
 
-    const onFocus = useCallback((e: React.FocusEvent<HTMLElement>) => {
-        const target = e.target
-        if (!isTypingTarget(target)) return
-        const container = e.currentTarget
+    const onFocus = useCallback(
+        (e: React.FocusEvent<HTMLElement>) => {
+            const target = e.target
+            if (!isTypingTarget(target)) return
+            if (blurTimer.current) window.clearTimeout(blurTimer.current)
+            for (const t of passTimers.current) window.clearTimeout(t)
+            passTimers.current = []
 
-        containerRef.current = container
-        if (blurTimer.current) window.clearTimeout(blurTimer.current)
-        clearPasses()
+            targetRef.current = target
+            scrollerRef.current = getScroller(e.currentTarget)
 
-        const scroller = getScroller(container)
+            // Same handler reference → duplicate adds are no-ops
+            window.visualViewport?.addEventListener('resize', sync)
+            window.visualViewport?.addEventListener('scroll', sync)
 
-        // Padding first (so there's room), then snap — all synchronous, before
-        // the browser's own reveal logic runs.
-        if (expectsKeyboard()) {
-            container.style.paddingBottom = `${lastKeyboardHeight}px`
-        }
-        snapToTop(scroller, target)
+            sync()
+            for (const delay of SETTLE_PASSES_MS) {
+                passTimers.current.push(window.setTimeout(sync, delay))
+            }
+        },
+        [sync]
+    )
 
-        for (const delay of SETTLE_PASSES_MS) {
-            passTimers.current.push(
-                window.setTimeout(() => {
-                    if (document.activeElement !== target) return
-                    const kb = keyboardOverlap(scrollerBounds(scroller).bottom)
-                    if (kb > 0) {
-                        lastKeyboardHeight = kb
-                        container.style.paddingBottom = `${kb}px`
-                    }
-                    snapToTop(scroller, target)
-                }, delay)
-            )
-        }
-    }, [])
-
-    const onBlur = useCallback((e: React.FocusEvent<HTMLElement>) => {
-        if (!isTypingTarget(e.target)) return
-        const container = e.currentTarget
-        if (blurTimer.current) window.clearTimeout(blurTimer.current)
-        // Wait a tick: focus may just be moving to another field in the form.
-        blurTimer.current = window.setTimeout(() => {
-            blurTimer.current = null
-            const active = document.activeElement
-            if (isTypingTarget(active) && container.contains(active)) return
-            clearPasses()
-            container.style.paddingBottom = ''
-        }, 100)
-    }, [])
+    const onBlur = useCallback(
+        (e: React.FocusEvent<HTMLElement>) => {
+            if (!isTypingTarget(e.target)) return
+            const container = e.currentTarget
+            if (blurTimer.current) window.clearTimeout(blurTimer.current)
+            // Wait a tick: focus may just be moving to another field
+            blurTimer.current = window.setTimeout(() => {
+                blurTimer.current = null
+                const active = document.activeElement
+                if (isTypingTarget(active) && container.contains(active)) {
+                    return
+                }
+                detach()
+            }, 100)
+        },
+        [detach]
+    )
 
     return { onFocus, onBlur }
 }
