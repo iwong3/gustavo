@@ -128,6 +128,13 @@ const boardTrips = [
     makePassTrip({ name: 'Lisbon ’25', startDate: '2025-05-01', endDate: '2025-05-10' }), // complete
 ]
 
+// Long name (auto-truncated to "SE ASIA") spanning the new year (cross-year range).
+const boardLongName = makePassTrip({
+    name: 'SE Asia Christmas ’26',
+    startDate: '2026-12-20',
+    endDate: '2027-01-03',
+})
+
 // The width the board renders at on the home page (content minus its padding).
 const HOME_WIDTH = 326
 
@@ -146,6 +153,9 @@ export default function TripsGallery() {
                         trips={[boardTrips[2], boardTrips[3]]}
                         todayIso={GALLERY_TODAY}
                     />
+                </Specimen>
+                <Specimen label="long name truncated · cross-year range" width={HOME_WIDTH}>
+                    <DeparturesBoard trips={[boardLongName]} todayIso={GALLERY_TODAY} />
                 </Specimen>
             </SpecimenGroup>
 

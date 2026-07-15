@@ -3,45 +3,61 @@
 /**
  * DeparturesBoard — the Trips launcher reimagined as an airport split-flap board.
  *
- * Cycles through the group's trips (current → upcoming → past), flapping each
- * trip name into place with a time-based status (Boarding / Scheduled / Arrived).
- * Purely presentational + gallery-importable: trips come in via props, `todayIso`
- * pins "today" for deterministic specimens. The whole card links to the trips page.
+ * Cycles through the group's trips (current → upcoming → past), flapping the trip
+ * name, its date range, and a relative countdown into place with a time-based
+ * status pill (Boarding / Scheduled / Arrived). Purely presentational +
+ * gallery-importable: trips come in via props, `todayIso` pins "today" for
+ * deterministic specimens. The whole card links to the trips page.
  *
- * Motion is polite: honours prefers-reduced-motion (no scramble — a gentle text
- * swap instead) and pauses the cycle while the tab is hidden.
+ * Names are auto-shortened to fit the fixed board width — the year is stripped
+ * (it reappears in the date row) and anything still too long is truncated at a
+ * word boundary. The name row is a grid of flap tiles; the date/relative row is
+ * plain scrambling text (no tiles) so the small type stays legible. All rows have
+ * fixed slot counts so the board never reflows as trips cycle. Motion is polite:
+ * honours prefers-reduced-motion (no scramble) and pauses while the tab is hidden.
  */
 import { Box, Typography } from '@mui/material'
 import { IconPlaneDeparture } from '@tabler/icons-react'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { colors } from '@/lib/colors'
 import type { TripSummary } from '@/lib/types'
 
 type PassState = 'upcoming' | 'travelling' | 'complete'
 
-// Flap-panel background — a lighter, warmer brown than the ink-heavy original.
+// Monochrome-brown color scheme (Sand / Mocha / Sand). Retheme by editing this block.
+const HEADER_BG = '#c9a877'
 const PANEL_BG = '#866340'
+const FOOTER_BG = '#c9a877'
+const TILE_BG = '#f3ead6'
+const META_TEXT = '#fbeed6'
+const FOOTER_TEXT = '#4a3418'
+const PILL_BG = '#f3ead6'
+const PILL_TEXT = '#4a3418'
 const CELLS = 14
-// Scramble alphabet the flaps roll through while settling. Final characters are
-// set directly, so names with chars outside this set (’, lowercase) still land.
+// Alphabet the flaps roll through while settling. Final characters are set
+// directly, so names/dates with chars outside this set (’, –) still land.
 const FLAP_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .'
 const CYCLE_MS = 3200
 const TICK_MS = 55
 
-const STATUS: Record<PassState, { label: string; bg: string; fg: string }> = {
-    travelling: { label: 'Boarding', bg: colors.primaryYellow, fg: '#533b23' },
-    upcoming: { label: 'Scheduled', bg: '#cdd9e3', fg: '#2f4256' },
-    complete: { label: 'Arrived', bg: '#e8edca', fg: '#393a10' },
+const STATUS_LABEL: Record<PassState, string> = {
+    travelling: 'Boarding',
+    upcoming: 'Scheduled',
+    complete: 'Arrived',
 }
 
 const RANK: Record<PassState, number> = { travelling: 0, upcoming: 1, complete: 2 }
 
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+const MS_PER_DAY = 86400000
 const parseDay = (iso: string) => new Date(iso + 'T00:00:00')
+const diffDays = (fromIso: string, toIso: string) =>
+    Math.round((parseDay(toIso).getTime() - parseDay(fromIso).getTime()) / MS_PER_DAY)
 
-const shortDate = (iso: string) =>
-    parseDay(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
+const dd = (n: number) => String(n).padStart(2, '0')
+const yy = (d: Date) => `’${String(d.getFullYear()).slice(-2)}`
 
 function passState(trip: Pick<TripSummary, 'startDate' | 'endDate'>, today: string): PassState {
     if (today < trip.startDate) return 'upcoming'
@@ -61,19 +77,160 @@ function orderTrips(trips: TripSummary[], today: string): TripSummary[] {
     })
 }
 
-// Center a trip name into the fixed flap slots (truncating if it overflows).
-function composeLine(name: string): string[] {
-    const s = name.toUpperCase().slice(0, CELLS)
+/** Board-safe display name: uppercase, drop a trailing year, truncate on a word
+ *  boundary if it still overflows the flap width. */
+function boardName(name: string): string {
+    let s = name.trim().toUpperCase()
+    s = s.replace(/[\s,–-]*(?:(?:19|20)\d{2}|['’`]\d{2})$/, '').trim()
+    if (s.length <= CELLS) return s
+    let out = ''
+    for (const word of s.split(/\s+/)) {
+        const next = out ? `${out} ${word}` : word
+        if (next.length > CELLS) break
+        out = next
+    }
+    return out || s.slice(0, CELLS) // first word alone overflows → hard cut
+}
+
+/** Center a string into the fixed flap slots (spaces render as blank tiles). */
+function centerName(name: string): string {
+    const s = name.slice(0, CELLS)
     const left = Math.floor((CELLS - s.length) / 2)
-    return Array.from({ length: CELLS }, (_, i) => {
-        const idx = i - left
-        return idx >= 0 && idx < s.length ? s[idx] : ' '
-    })
+    return ' '.repeat(left) + s + ' '.repeat(CELLS - s.length - left)
+}
+
+/** Compact US-style date range (month day, year); loosens spacing when it fits. */
+function dateRange(startIso: string, endIso: string): string {
+    const s = parseDay(startIso)
+    const e = parseDay(endIso)
+    const sm = MONTHS[s.getMonth()]
+    const em = MONTHS[e.getMonth()]
+    if (s.getFullYear() !== e.getFullYear()) {
+        return `${sm}${dd(s.getDate())}${yy(s)}–${em}${dd(e.getDate())}${yy(e)}`
+    }
+    if (s.getMonth() !== e.getMonth()) {
+        return `${sm} ${dd(s.getDate())}–${em} ${dd(e.getDate())} ${yy(s)}`
+    }
+    return `${sm} ${dd(s.getDate())}–${dd(e.getDate())} ${yy(s)}`
+}
+
+/** Days → months → years, as picked for the board's relative-time readout. */
+function humanDelta(days: number): { n: number; unit: string } {
+    if (days < 30) return { n: days, unit: days === 1 ? 'DAY' : 'DAYS' }
+    const months = Math.round(days / 30)
+    if (months < 12) return { n: months, unit: 'MO' }
+    return { n: Math.round(days / 365), unit: 'YR' }
+}
+
+function relLabel(trip: TripSummary, today: string, state: PassState): string {
+    if (state === 'travelling') {
+        const days = Math.max(1, diffDays(trip.startDate, trip.endDate) + 1)
+        const dayOfTrip = Math.min(days, Math.max(1, diffDays(trip.startDate, today) + 1))
+        return `DAY ${dayOfTrip} / ${days}`
+    }
+    if (state === 'upcoming') {
+        const d = diffDays(today, trip.startDate)
+        if (d === 1) return 'TOMORROW'
+        const { n, unit } = humanDelta(d)
+        return `IN ${n} ${unit}`
+    }
+    const d = diffDays(trip.endDate, today)
+    if (d === 1) return 'YESTERDAY'
+    const { n, unit } = humanDelta(d)
+    return `${n} ${unit} AGO`
 }
 
 const prefersReducedMotion = () =>
     typeof window !== 'undefined' &&
     !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+const randChar = () => FLAP_ALPHABET[Math.floor(Math.random() * FLAP_ALPHABET.length)]
+const nextChar = (c: string) => {
+    const i = FLAP_ALPHABET.indexOf(c)
+    return FLAP_ALPHABET[(i + 1) % FLAP_ALPHABET.length] ?? randChar()
+}
+
+// Fixed slot counts so the board never reflows as trips cycle. The name row is a
+// visible tile grid; the meta strings are padded (spaces are invisible as text).
+const RANGE_SLOTS = 17
+const REL_SLOTS = 11
+const NAME_CELL = { w: 17, h: 27, fs: 15, gap: 2 }
+
+/** Scrambles into `text` whenever it changes; shared by both row styles. */
+function useFlap(text: string): string[] {
+    const [chars, setChars] = useState<string[]>(() => text.split(''))
+
+    useEffect(() => {
+        const target = text.split('')
+        if (prefersReducedMotion() || text.trim() === '') {
+            setChars(target)
+            return
+        }
+        const steps = target.map((_, i) => 3 + ((i * 3 + 4) % 8))
+        const working = target.map((ch) => (ch === ' ' ? ' ' : randChar()))
+        setChars(working.slice())
+        const id = setInterval(() => {
+            let done = true
+            for (let i = 0; i < target.length; i++) {
+                if (steps[i] > 0) {
+                    done = false
+                    steps[i] -= 1
+                    working[i] = steps[i] === 0 ? target[i] : nextChar(working[i])
+                }
+            }
+            setChars(working.slice())
+            if (done) clearInterval(id)
+        }, TICK_MS)
+        return () => clearInterval(id)
+    }, [text])
+
+    return chars
+}
+
+/** The trip name — a run of split-flap tiles. */
+function TileRow({ chars }: { chars: string[] }) {
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: `${NAME_CELL.gap}px` }}>
+            {chars.map((ch, i) => (
+                <Box
+                    key={i}
+                    sx={{
+                        width: NAME_CELL.w,
+                        height: NAME_CELL.h,
+                        lineHeight: `${NAME_CELL.h}px`,
+                        textAlign: 'center',
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: NAME_CELL.fs,
+                        fontWeight: 700,
+                        color: colors.primaryBlack,
+                        backgroundColor: TILE_BG,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        borderRadius: '2px',
+                    }}>
+                    {ch === ' ' ? ' ' : ch}
+                </Box>
+            ))}
+        </Box>
+    )
+}
+
+/** The date range / countdown — plain scrambling monospace text, no tiles. */
+function PlainRow({ chars }: { chars: string[] }) {
+    return (
+        <Box
+            component="span"
+            sx={{
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                color: META_TEXT,
+                whiteSpace: 'pre',
+            }}>
+            {chars.join('')}
+        </Box>
+    )
+}
 
 type DeparturesBoardProps = {
     trips: TripSummary[]
@@ -92,14 +249,6 @@ export default function DeparturesBoard({
     const count = ordered.length
 
     const [index, setIndex] = useState(0)
-    const [display, setDisplay] = useState<string[]>(() =>
-        composeLine(count ? ordered[0].name : 'No trips yet')
-    )
-    const displayRef = useRef(display)
-    const commit = (arr: string[]) => {
-        displayRef.current = arr
-        setDisplay(arr)
-    }
 
     // Reset to the front whenever the trip set changes.
     useEffect(() => {
@@ -129,45 +278,17 @@ export default function DeparturesBoard({
         }
     }, [count])
 
-    // Flap the current trip name into place.
-    useEffect(() => {
-        if (!count) return
-        const target = composeLine(ordered[index % count].name)
-        if (prefersReducedMotion()) {
-            commit(target)
-            return
-        }
-        const steps = target.map((_, i) => 4 + ((i * 3 + 5) % 10))
-        const working = displayRef.current.slice()
-        const id = setInterval(() => {
-            let done = true
-            for (let i = 0; i < CELLS; i++) {
-                if (steps[i] > 0) {
-                    done = false
-                    steps[i]--
-                    if (steps[i] === 0) {
-                        working[i] = target[i]
-                    } else {
-                        const cur = FLAP_ALPHABET.indexOf(working[i])
-                        working[i] = FLAP_ALPHABET[(cur + 1) % FLAP_ALPHABET.length] ?? ' '
-                    }
-                }
-            }
-            commit(working.slice())
-            if (done) clearInterval(id)
-        }, TICK_MS)
-        return () => clearInterval(id)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [index, count, ordered])
-
     const current = count ? ordered[index % count] : null
     const state = current ? passState(current, today) : null
-    const status = state ? STATUS[state] : null
-    const dateLabel = current
-        ? state === 'complete'
-            ? `ARR ${shortDate(current.endDate)}`
-            : `DEP ${shortDate(current.startDate)}`
-        : ''
+    const status = state ? STATUS_LABEL[state] : null
+
+    const nameLine = centerName(boardName(current ? current.name : 'No trips yet'))
+    const range = current ? dateRange(current.startDate, current.endDate) : ''
+    const rel = current && state ? relLabel(current, today, state) : ''
+
+    const nameChars = useFlap(nameLine)
+    const rangeChars = useFlap(range.padEnd(RANGE_SLOTS).slice(0, RANGE_SLOTS))
+    const relChars = useFlap(rel.padStart(REL_SLOTS).slice(-REL_SLOTS))
 
     return (
         <Box
@@ -200,7 +321,7 @@ export default function DeparturesBoard({
                     gap: 1,
                     paddingX: 1.75,
                     minHeight: 34,
-                    backgroundColor: colors.primaryYellow,
+                    backgroundColor: HEADER_BG,
                     borderBottom: `1px solid ${colors.primaryBlack}`,
                 }}>
                 <Typography
@@ -227,51 +348,27 @@ export default function DeparturesBoard({
                             paddingY: '2px',
                             borderRadius: 999,
                             border: `1.5px solid ${colors.primaryBlack}`,
-                            backgroundColor: status.bg,
-                            color: status.fg,
+                            backgroundColor: PILL_BG,
+                            color: PILL_TEXT,
                         }}>
-                        {status.label}
+                        {status}
                     </Typography>
                 )}
             </Box>
 
             {/* Split-flap panel */}
             <Box sx={{ backgroundColor: PANEL_BG, paddingX: 1.5, paddingY: 1.25 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: '2px' }}>
-                    {display.map((ch, i) => (
-                        <Box
-                            key={i}
-                            sx={{
-                                width: 17,
-                                height: 26,
-                                lineHeight: '26px',
-                                textAlign: 'center',
-                                fontFamily: 'var(--font-mono, monospace)',
-                                fontSize: 14,
-                                fontWeight: 700,
-                                color: colors.primaryBlack,
-                                backgroundColor: colors.secondaryYellow,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                borderRadius: '2px',
-                                boxShadow: 'inset 0 -2px 0 rgba(9,4,1,0.12)',
-                            }}>
-                            {ch === ' ' ? ' ' : ch}
-                        </Box>
-                    ))}
-                </Box>
+                <TileRow chars={nameChars} />
                 <Box
                     sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        marginTop: 1,
-                        color: colors.secondaryYellow,
-                        fontSize: 8.5,
-                        fontWeight: 700,
-                        letterSpacing: '0.16em',
+                        gap: 1,
+                        marginTop: 1.25,
                     }}>
-                    <span>GUS AIR</span>
-                    <span>{dateLabel}</span>
+                    <PlainRow chars={rangeChars} />
+                    <PlainRow chars={relChars} />
                 </Box>
             </Box>
 
@@ -284,7 +381,8 @@ export default function DeparturesBoard({
                     paddingX: 1.5,
                     paddingY: 0.5,
                     borderTop: `1px solid ${colors.primaryBlack}`,
-                    color: colors.primaryBrown,
+                    backgroundColor: FOOTER_BG,
+                    color: FOOTER_TEXT,
                     fontSize: 8.5,
                     fontWeight: 700,
                     letterSpacing: '0.14em',
@@ -299,9 +397,9 @@ export default function DeparturesBoard({
                                     width: 5,
                                     height: 5,
                                     borderRadius: '50%',
-                                    border: `1px solid ${colors.primaryBrown}`,
+                                    border: `1px solid ${FOOTER_TEXT}`,
                                     backgroundColor:
-                                        i === index % count ? colors.primaryBrown : 'transparent',
+                                        i === index % count ? FOOTER_TEXT : 'transparent',
                                 }}
                             />
                         ))}
