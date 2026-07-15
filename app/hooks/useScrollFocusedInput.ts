@@ -129,14 +129,22 @@ export function useScrollFocusedInput() {
             ? measured
             : Math.max(measured, lastKeyboardHeight)
 
-        // End the scroller at the keyboard top.
+        // End the scroller at the keyboard top. The scroller may only SHRINK
+        // while typing continues: growing it back reduces the max scroll and
+        // clamps scrollTop, yanking the view toward the form top (the "reset
+        // then move down" flicker on field switches). It grows back only on a
+        // real keyboard dismissal — or in detach().
         if (isElementScroller && expectsKeyboard()) {
             if (baseBottomRef.current === null) {
                 baseBottomRef.current =
                     parseFloat(getComputedStyle(scroller).bottom) || 0
             }
+            const applied = parseFloat(scroller.style.bottom) || 0
+            const dismissed =
+                haveMeasuredRef.current && measured < MIN_KEYBOARD
+            const next = dismissed ? 0 : Math.max(applied, kb)
             scroller.style.bottom =
-                kb > baseBottomRef.current ? `${kb}px` : ''
+                next > baseBottomRef.current ? `${next}px` : ''
         }
 
         // vv.offsetTop covers any viewport push that survived the pin above.
@@ -224,15 +232,24 @@ export function useScrollFocusedInput() {
             if (!isTypingTarget(e.target)) return
             const container = e.currentTarget
             if (blurTimer.current) window.clearTimeout(blurTimer.current)
-            // Wait a tick: focus may just be moving to another field
-            blurTimer.current = window.setTimeout(() => {
+            // Restore only once the keyboard is really gone. Focus often just
+            // moves to another field — iOS can take a beat to deliver the new
+            // focus, and restoring the scroller in that gap clamps the scroll
+            // position and yanks the view. While the keyboard is still up,
+            // keep waiting (a dismissed keyboard closes within ~2 checks).
+            const settle = () => {
                 blurTimer.current = null
                 const active = document.activeElement
                 if (isTypingTarget(active) && container.contains(active)) {
                     return
                 }
+                if (expectsKeyboard() && measureKeyboard() > MIN_KEYBOARD) {
+                    blurTimer.current = window.setTimeout(settle, 250)
+                    return
+                }
                 detach()
-            }, 100)
+            }
+            blurTimer.current = window.setTimeout(settle, 250)
         },
         [detach]
     )
