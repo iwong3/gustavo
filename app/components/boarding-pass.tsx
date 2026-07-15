@@ -219,9 +219,10 @@ const journeyLabelSx = {
     opacity: 0.55,
 } as const
 
-/** Rubber-stamp debt status: double border, rotated, inked over the body.
- *  Always bottom-right, just above the stub — the country stamps are the
- *  scattered ones. */
+/** Rubber-stamp debt status: double border, rotated, inked over the middle
+ *  of the header strip (static text there leaves the center empty, so it
+ *  never fights the participants row). The country stamps are the scattered
+ *  ones. */
 function DebtStamp({ stats }: { stats: TripStats }) {
     const net = safeNum(stats.yourNetUsd)
     const settled = stats.isSettled
@@ -237,9 +238,9 @@ function DebtStamp({ stats }: { stats: TripStats }) {
         <Box
             sx={{
                 position: 'absolute',
-                right: 14,
-                bottom: 6,
-                transform: 'rotate(-8deg)',
+                top: 3,
+                left: '50%',
+                transform: 'translateX(-50%) rotate(-6deg)',
                 border: `2px solid ${color}`,
                 borderRadius: '5px',
                 padding: '2px 3px',
@@ -421,6 +422,9 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 </Typography>
             </Box>
 
+            {/* Debt stamp — inked over the header strip's empty middle */}
+            {state === 'complete' && stats && <DebtStamp stats={stats} />}
+
             {/* Body — taps through to the trip's expenses */}
             <Box
                 component={Link}
@@ -436,7 +440,6 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 }}>
                 {state === 'complete' && stats && (
                     <>
-                        <DebtStamp stats={stats} />
                         {entryCountries.map((code, i) => (
                             <EntryStamp key={code} code={code} monthYear={stampMonthYear} index={i} />
                         ))}
