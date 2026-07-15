@@ -3,7 +3,6 @@
 import {
     Autocomplete,
     Box,
-    Chip,
     IconButton,
     MenuItem,
     Select,
@@ -13,6 +12,7 @@ import {
 } from '@mui/material'
 import { IconPlus, IconCheck, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { colors, hardShadow } from '@/lib/colors'
 import {
@@ -67,62 +67,82 @@ let nextLocalId = -1
 // MUI small TextField rendered height (with size="small") is 40px
 const INPUT_HEIGHT = 40
 
-// Removable pill for a selected country / location — clean neo-brutalist chip
-// with an ✕ to remove. Shared by the Countries and Locations fields so both
-// read as the same "search/add above, chips below" pattern.
-function RemovableTag({
+// Role → accent color for the participant role labels.
+const ROLE_COLOR: Record<TripRole, string> = {
+    owner: colors.primaryGreen,
+    admin: colors.primaryRed,
+    editor: colors.primaryBlue,
+    viewer: colors.primaryBrown,
+}
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+// ── Shared "selected items" card (Countries / Locations / Participants) ──────
+// One consistent bordered card: uppercase header with a count, then rows.
+
+const selectedCardSx = {
+    marginTop: 1,
+    backgroundColor: colors.primaryWhite,
+    border: `1px solid ${colors.primaryBlack}`,
+    borderRadius: '4px',
+    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+    overflow: 'hidden',
+} as const
+
+const selectedHeaderSx = {
+    display: 'flex',
+    alignItems: 'center',
+    height: 34,
+    paddingX: '10px',
+    borderBottom: `1px solid ${colors.primaryBlack}`,
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: colors.primaryBrown,
+} as const
+
+const selectedRowSx = (isLast: boolean) =>
+    ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        minHeight: 44,
+        paddingX: '10px',
+        paddingY: 0.5,
+        borderBottom: isLast
+            ? 'none'
+            : `1px solid ${colors.primaryBlack}15`,
+    }) as const
+
+// Small ✕ that removes a row — used across all three cards.
+function RowRemove({
+    onClick,
     label,
-    onRemove,
 }: {
+    onClick: () => void
     label: string
-    onRemove: () => void
 }) {
     return (
         <Box
+            onClick={onClick}
+            role="button"
+            aria-label={label}
             sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                height: 28,
-                paddingLeft: '10px',
-                paddingRight: '5px',
-                borderRadius: '14px',
-                border: `1px solid ${colors.primaryBlack}`,
-                boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                backgroundColor: colors.primaryYellow,
-                fontSize: 13,
-                fontWeight: 600,
-                color: colors.primaryBlack,
-                userSelect: 'none',
-                maxWidth: '100%',
+                'display': 'flex',
+                'alignItems': 'center',
+                'justifyContent': 'center',
+                'flexShrink': 0,
+                'width': 26,
+                'height': 26,
+                'borderRadius': '6px',
+                'cursor': 'pointer',
+                'color': colors.primaryBlack,
+                'opacity': 0.4,
+                '&:hover': { opacity: 1, color: colors.primaryRed },
+                '&:active': { transform: 'scale(0.9)' },
+                'transition': 'transform 0.1s',
             }}>
-            <Box
-                component="span"
-                sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                }}>
-                {label}
-            </Box>
-            <Box
-                onClick={onRemove}
-                role="button"
-                aria-label={`Remove ${label}`}
-                sx={{
-                    'display': 'flex',
-                    'alignItems': 'center',
-                    'justifyContent': 'center',
-                    'flexShrink': 0,
-                    'width': 18,
-                    'height': 18,
-                    'borderRadius': '50%',
-                    'cursor': 'pointer',
-                    '&:active': { transform: 'scale(0.88)' },
-                    'transition': 'transform 0.1s',
-                }}>
-                <IconX size={13} stroke={2.5} />
-            </Box>
+            <IconX size={15} />
         </Box>
     )
 }
@@ -469,6 +489,87 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
             if (b.id === ownerId) return 1
             return a.firstName.localeCompare(b.firstName)
         })
+    // Edit mode knows the roster ids before the user names have loaded.
+    const rosterLoading =
+        allUsers.length === 0 && selectedUserIds.length > 0
+    const rosterCount = rosterLoading
+        ? selectedUserIds.length
+        : selectedParticipants.length
+
+    // Right-side role control for a participant row: a colored, tappable label
+    // (editable roles open the role menu) with a fixed width so the ✕ column
+    // stays aligned across rows.
+    const roleControl = (
+        userId: number,
+        role: TripRole,
+        editable: boolean
+    ): ReactNode => {
+        const color = ROLE_COLOR[role]
+        const opacity = role === 'viewer' ? 0.75 : 1
+        if (!editable) {
+            return (
+                <Box
+                    sx={{
+                        minWidth: 62,
+                        textAlign: 'right',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color,
+                        opacity,
+                    }}>
+                    {capitalize(role)}
+                </Box>
+            )
+        }
+        return (
+            <Select
+                value={role}
+                onChange={(e) => {
+                    const newRole = e.target.value as TripRole
+                    setParticipantRoles((prev) => {
+                        const next = new Map(prev)
+                        next.set(userId, newRole)
+                        return next
+                    })
+                }}
+                variant="standard"
+                MenuProps={selectMenuProps}
+                renderValue={(val) => (
+                    <Box
+                        component="span"
+                        sx={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: ROLE_COLOR[val as TripRole],
+                            opacity: val === 'viewer' ? 0.75 : 1,
+                        }}>
+                        {capitalize(val)}
+                    </Box>
+                )}
+                sx={{
+                    'minWidth': 62,
+                    '&::before': { display: 'none' },
+                    '&::after': { display: 'none' },
+                    '& .MuiSelect-select': {
+                        paddingRight: '18px !important',
+                        paddingY: 0,
+                        minWidth: 0,
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        backgroundColor: 'transparent !important',
+                    },
+                    '& .MuiSelect-icon': {
+                        right: 0,
+                        fontSize: 18,
+                        color,
+                    },
+                }}>
+                <MenuItem value="admin">Admin</MenuItem>
+                <MenuItem value="editor">Editor</MenuItem>
+                <MenuItem value="viewer">Viewer</MenuItem>
+            </Select>
+        )
+    }
 
     return (
         <>
@@ -579,107 +680,8 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                     </Box>
                 </Box>
 
-                {/* 3. Countries — search above, selected shown as chips below */}
-                <Box>
-                    <Typography sx={labelSx}>Countries</Typography>
-                    <Autocomplete
-                        multiple
-                        fullWidth
-                        size="small"
-                        disableCloseOnSelect
-                        options={countryOptions}
-                        value={selectedCountries}
-                        onChange={(_e, val) =>
-                            setCountryCodes(val.map((c) => c.code))
-                        }
-                        getOptionLabel={(c) => c.name}
-                        isOptionEqualToValue={(a, b) => a.code === b.code}
-                        disablePortal
-                        // Chips render in their own row below, not in the box
-                        renderTags={() => null}
-                        slotProps={{
-                            popper: dropdownPopperProps,
-                            listbox: {
-                                sx: {
-                                    'maxHeight': 240,
-                                    'padding': 0,
-                                    '& .MuiAutocomplete-option':
-                                        dropdownMenuItemSx,
-                                },
-                            },
-                            paper: { sx: dropdownPaperSx },
-                        }}
-                        renderOption={(props, option, { selected }) => {
-                            const { key: _key, ...rest } = props
-                            return (
-                                <li key={option.code} {...rest}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            width: '100%',
-                                        }}>
-                                        <Box
-                                            component="span"
-                                            sx={{ fontSize: 16 }}>
-                                            {option.flag}
-                                        </Box>
-                                        <Typography
-                                            sx={{
-                                                fontSize: 14,
-                                                fontWeight: selected ? 700 : 400,
-                                            }}>
-                                            {option.name}
-                                        </Typography>
-                                        {selected && (
-                                            <IconCheck
-                                                size={16}
-                                                stroke={2.5}
-                                                color={colors.primaryBlack}
-                                                style={{ marginLeft: 'auto' }}
-                                            />
-                                        )}
-                                    </Box>
-                                </li>
-                            )
-                        }}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                size="small"
-                                placeholder="Add countries"
-                                sx={fieldSx}
-                            />
-                        )}
-                    />
-                    {selectedCountries.length > 0 && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 0.75,
-                                marginTop: 1,
-                            }}>
-                            {selectedCountries.map((c) => (
-                                <RemovableTag
-                                    key={c.code}
-                                    label={`${c.flag} ${c.name}`}
-                                    onRemove={() =>
-                                        setCountryCodes((prev) =>
-                                            prev.filter(
-                                                (code) => code !== c.code
-                                            )
-                                        )
-                                    }
-                                />
-                            ))}
-                        </Box>
-                    )}
-                </Box>
-
-                {/* 4. Participants — search to add; the role list below is the
-                    roster (remove via the ✕ on each row) */}
+                {/* 3. Participants — search to add; roster card below with
+                    per-person role (colored, tappable) + remove */}
                 <Box>
                     <Typography sx={labelSx}>Participants</Typography>
                     <Autocomplete
@@ -760,238 +762,247 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                         )}
                     />
 
-                    {/* Loading placeholder while users resolve (edit mode
-                        knows the roster ids before names arrive) */}
-                    {allUsers.length === 0 && selectedUserIds.length > 0 && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 0.5,
-                                mt: 1.5,
-                            }}>
-                            {Array.from(
-                                { length: Math.min(selectedUserIds.length, 5) },
-                                (_, i) => (
+                    {(rosterLoading || selectedParticipants.length > 0) && (
+                        <Box sx={selectedCardSx}>
+                            <Box sx={selectedHeaderSx}>
+                                {rosterCount}{' '}
+                                {rosterCount === 1 ? 'person' : 'people'}
+                            </Box>
+                            {rosterLoading
+                                ? Array.from(
+                                      {
+                                          length: Math.min(
+                                              selectedUserIds.length,
+                                              5
+                                          ),
+                                      },
+                                      (_, i) => (
+                                          <Box
+                                              key={i}
+                                              sx={selectedRowSx(
+                                                  i ===
+                                                      Math.min(
+                                                          selectedUserIds.length,
+                                                          5
+                                                      ) -
+                                                          1
+                                              )}>
+                                              <Skeleton
+                                                  variant="circular"
+                                                  width={26}
+                                                  height={26}
+                                              />
+                                              <Skeleton
+                                                  variant="text"
+                                                  width={90}
+                                              />
+                                          </Box>
+                                      )
+                                  )
+                                : selectedParticipants.map((u, i) => {
+                                      const isOwner = u.id === ownerId
+                                      const currentRole =
+                                          participantRoles.get(u.id) ??
+                                          (isOwner ? 'owner' : 'viewer')
+                                      const canEditRole =
+                                          !isOwner &&
+                                          (showRoleManagement || !isEdit)
+                                      const isLast =
+                                          i ===
+                                          selectedParticipants.length - 1
+                                      return (
+                                          <Box
+                                              key={u.id}
+                                              sx={selectedRowSx(isLast)}>
+                                              <InitialsIcon
+                                                  name={u.firstName}
+                                                  initials={u.initials}
+                                                  iconColor={u.iconColor}
+                                                  sx={{
+                                                      width: 26,
+                                                      height: 26,
+                                                      fontSize: 10,
+                                                  }}
+                                              />
+                                              <Typography
+                                                  sx={{ fontSize: 14 }}>
+                                                  {u.firstName}
+                                              </Typography>
+                                              <Box
+                                                  sx={{
+                                                      marginLeft: 'auto',
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 0.75,
+                                                  }}>
+                                                  {roleControl(
+                                                      u.id,
+                                                      currentRole,
+                                                      canEditRole
+                                                  )}
+                                                  {isOwner ? (
+                                                      <Box
+                                                          sx={{ width: 26 }}
+                                                      />
+                                                  ) : (
+                                                      <RowRemove
+                                                          onClick={() =>
+                                                              toggleUser(u.id)
+                                                          }
+                                                          label={`Remove ${u.firstName}`}
+                                                      />
+                                                  )}
+                                              </Box>
+                                          </Box>
+                                      )
+                                  })}
+                        </Box>
+                    )}
+                </Box>
+
+                {/* 4. Trip visibility */}
+                <Box>
+                    <Typography sx={labelSx}>Trip visibility</Typography>
+                    <SlidingToggle
+                        value={visibility}
+                        options={[
+                            { value: 'participants', label: 'Participants only' },
+                            { value: 'all_users', label: 'All users' },
+                        ]}
+                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
+                        fontSize={13}
+                        borderWidth={1}
+                    />
+                </Box>
+
+                {/* 5. Countries — search above; roster card below shows each
+                    country + the currency it contributes */}
+                <Box>
+                    <Typography sx={labelSx}>Countries</Typography>
+                    <Autocomplete
+                        multiple
+                        fullWidth
+                        size="small"
+                        disableCloseOnSelect
+                        options={countryOptions}
+                        value={selectedCountries}
+                        onChange={(_e, val) =>
+                            setCountryCodes(val.map((c) => c.code))
+                        }
+                        getOptionLabel={(c) => c.name}
+                        isOptionEqualToValue={(a, b) => a.code === b.code}
+                        disablePortal
+                        // Selected countries render in the card below, not the box
+                        renderTags={() => null}
+                        slotProps={{
+                            popper: dropdownPopperProps,
+                            listbox: {
+                                sx: {
+                                    'maxHeight': 240,
+                                    'padding': 0,
+                                    '& .MuiAutocomplete-option':
+                                        dropdownMenuItemSx,
+                                },
+                            },
+                            paper: { sx: dropdownPaperSx },
+                        }}
+                        renderOption={(props, option, { selected }) => {
+                            const { key: _key, ...rest } = props
+                            return (
+                                <li key={option.code} {...rest}>
                                     <Box
-                                        key={i}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 1,
-                                            paddingY: 0.25,
-                                        }}>
-                                        <Skeleton
-                                            variant="circular"
-                                            width={24}
-                                            height={24}
-                                        />
-                                        <Skeleton variant="text" width={90} />
-                                    </Box>
-                                )
-                            )}
-                        </Box>
-                    )}
-
-                    {/* Inline role list for selected participants */}
-                    {selectedParticipants.length > 0 && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 0.5,
-                                mt: 1.5,
-                            }}>
-                            {selectedParticipants.map((u) => {
-                                const isOwner = u.id === ownerId
-                                const currentRole =
-                                    participantRoles.get(u.id) ??
-                                    (isOwner ? 'owner' : 'viewer')
-                                const canEditRole =
-                                    !isOwner && (showRoleManagement || !isEdit)
-                                return (
-                                    <Box
-                                        key={u.id}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            paddingY: 0.25,
+                                            width: '100%',
                                         }}>
                                         <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
-                                            }}>
-                                            <InitialsIcon
-                                                name={u.firstName}
-                                                initials={u.initials}
-                                                iconColor={u.iconColor}
-                                                sx={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    fontSize: 10,
-                                                }}
-                                            />
-                                            <Typography
-                                                variant="body2"
-                                                sx={{ fontSize: 14 }}>
-                                                {u.firstName}
-                                            </Typography>
+                                            component="span"
+                                            sx={{ fontSize: 16 }}>
+                                            {option.flag}
                                         </Box>
-                                        <Box
+                                        <Typography
                                             sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
+                                                fontSize: 14,
+                                                fontWeight: selected ? 700 : 400,
                                             }}>
-                                        {isOwner ? (
-                                            <Chip
-                                                label="Owner"
-                                                size="small"
-                                                sx={{
-                                                    fontSize: 12,
-                                                    height: 26,
-                                                    backgroundColor:
-                                                        colors.primaryYellow,
-                                                    fontWeight: 600,
-                                                    border: `1px solid ${colors.primaryBlack}`,
-                                                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                                }}
-                                            />
-                                        ) : canEditRole ? (
-                                            <Select
-                                                value={currentRole}
-                                                onChange={(e) => {
-                                                    const newRole = e.target
-                                                        .value as TripRole
-                                                    setParticipantRoles(
-                                                        (prev) => {
-                                                            const next =
-                                                                new Map(prev)
-                                                            next.set(
-                                                                u.id,
-                                                                newRole
-                                                            )
-                                                            return next
-                                                        }
-                                                    )
-                                                }}
-                                                size="small"
-                                                MenuProps={selectMenuProps}
-                                                sx={{
-                                                    'fontSize': 12,
-                                                    'height': 26,
-                                                    'width': 78,
-                                                    'borderRadius': '16px',
-                                                    'backgroundColor':
-                                                        colors.primaryWhite,
-                                                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                    '&.Mui-focused': {
-                                                        boxShadow: `1px 1px 0px ${colors.primaryYellow}`,
-                                                    },
-                                                    '& .MuiOutlinedInput-notchedOutline':
-                                                        {
-                                                            borderColor:
-                                                                colors.primaryBlack,
-                                                            borderRadius:
-                                                                '16px',
-                                                        },
-                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                                                        {
-                                                            borderColor:
-                                                                colors.primaryYellow,
-                                                        },
-                                                    '& .MuiSelect-select': {
-                                                        paddingY: 0,
-                                                        paddingLeft: '12px',
-                                                        paddingRight:
-                                                            '28px !important',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                    },
-                                                    '& .MuiSelect-icon': {
-                                                        right: 4,
-                                                        fontSize: 18,
-                                                    },
-                                                }}>
-                                                <MenuItem value="admin">
-                                                    Admin
-                                                </MenuItem>
-                                                <MenuItem value="editor">
-                                                    Editor
-                                                </MenuItem>
-                                                <MenuItem value="viewer">
-                                                    Viewer
-                                                </MenuItem>
-                                            </Select>
-                                        ) : (
-                                            <Chip
-                                                label={
-                                                    currentRole
-                                                        .charAt(0)
-                                                        .toUpperCase() +
-                                                    currentRole.slice(1)
-                                                }
-                                                size="small"
-                                                sx={{
-                                                    fontSize: 12,
-                                                    height: 26,
-                                                    border: `1px solid ${colors.primaryBlack}`,
-                                                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                                }}
+                                            {option.name}
+                                        </Typography>
+                                        {selected && (
+                                            <IconCheck
+                                                size={16}
+                                                stroke={2.5}
+                                                color={colors.primaryBlack}
+                                                style={{ marginLeft: 'auto' }}
                                             />
                                         )}
-                                        {isOwner ? (
-                                            // Spacer matching the ✕ button so
-                                            // role pills align across rows
-                                            <Box sx={{ width: 23 }} />
-                                        ) : (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() =>
-                                                    toggleUser(u.id)
-                                                }
-                                                aria-label={`Remove ${u.firstName}`}
-                                                sx={{
-                                                    'color':
-                                                        colors.primaryBlack,
-                                                    'padding': '4px',
-                                                    'opacity': 0.4,
-                                                    '&:hover': {
-                                                        opacity: 1,
-                                                        color: colors.primaryRed,
-                                                    },
-                                                }}>
-                                                <IconX size={15} />
-                                            </IconButton>
-                                        )}
-                                        </Box>
                                     </Box>
-                                )
-                            })}
-                        </Box>
-                    )}
-                </Box>
-
-                {/* 5. Description */}
-                <Box>
-                    <Typography sx={labelSx}>Description</Typography>
-                    <TextField
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Optional"
-                        multiline
-                        rows={2}
-                        fullWidth
-                        size="small"
-                        slotProps={{ htmlInput: { maxLength: 2000 } }}
-                        sx={fieldSx}
+                                </li>
+                            )
+                        }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                size="small"
+                                placeholder="Add countries"
+                                sx={fieldSx}
+                            />
+                        )}
                     />
+                    {selectedCountries.length > 0 && (
+                        <Box sx={selectedCardSx}>
+                            <Box sx={selectedHeaderSx}>
+                                {selectedCountries.length}{' '}
+                                {selectedCountries.length === 1
+                                    ? 'country'
+                                    : 'countries'}
+                            </Box>
+                            {selectedCountries.map((c, i) => (
+                                <Box
+                                    key={c.code}
+                                    sx={selectedRowSx(
+                                        i === selectedCountries.length - 1
+                                    )}>
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontSize: 18,
+                                            width: 22,
+                                            textAlign: 'center',
+                                            flexShrink: 0,
+                                        }}>
+                                        {c.flag}
+                                    </Box>
+                                    <Typography sx={{ fontSize: 14 }}>
+                                        {c.name}
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            marginLeft: 'auto',
+                                            fontSize: 11.5,
+                                            fontWeight: 600,
+                                            color: colors.primaryBrown,
+                                        }}>
+                                        {c.currency}
+                                    </Typography>
+                                    <RowRemove
+                                        onClick={() =>
+                                            setCountryCodes((prev) =>
+                                                prev.filter(
+                                                    (code) => code !== c.code
+                                                )
+                                            )
+                                        }
+                                        label={`Remove ${c.name}`}
+                                    />
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
                 </Box>
 
-                {/* 6. Locations — add above, selected shown as chips below */}
+                {/* 6. Locations — add above; roster card below */}
                 <Box>
                     <Typography sx={labelSx}>Locations</Typography>
                     <Box
@@ -1047,36 +1058,44 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                         </IconButton>
                     </Box>
                     {locations.length > 0 && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 0.75,
-                                marginTop: 1,
-                            }}>
-                            {locations.map((loc) => (
-                                <RemovableTag
+                        <Box sx={selectedCardSx}>
+                            <Box sx={selectedHeaderSx}>
+                                {locations.length}{' '}
+                                {locations.length === 1 ? 'place' : 'places'}
+                            </Box>
+                            {locations.map((loc, i) => (
+                                <Box
                                     key={loc.id}
-                                    label={loc.name}
-                                    onRemove={() => removeLocation(loc.id)}
-                                />
+                                    sx={selectedRowSx(
+                                        i === locations.length - 1
+                                    )}>
+                                    <Typography sx={{ fontSize: 14 }}>
+                                        {loc.name}
+                                    </Typography>
+                                    <Box sx={{ marginLeft: 'auto' }} />
+                                    <RowRemove
+                                        onClick={() => removeLocation(loc.id)}
+                                        label={`Remove ${loc.name}`}
+                                    />
+                                </Box>
                             ))}
                         </Box>
                     )}
                 </Box>
 
-                {/* 7. Trip visibility */}
+                {/* 7. Description */}
                 <Box>
-                    <Typography sx={labelSx}>Trip visibility</Typography>
-                    <SlidingToggle
-                        value={visibility}
-                        options={[
-                            { value: 'participants', label: 'Participants only' },
-                            { value: 'all_users', label: 'All users' },
-                        ]}
-                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
-                        fontSize={13}
-                        borderWidth={1}
+                    <Typography sx={labelSx}>Description</Typography>
+                    <TextField
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Optional"
+                        multiline
+                        rows={2}
+                        fullWidth
+                        size="small"
+                        slotProps={{ htmlInput: { maxLength: 2000 } }}
+                        sx={fieldSx}
                     />
                 </Box>
 
