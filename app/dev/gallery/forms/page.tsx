@@ -126,6 +126,10 @@ export default function FormsGallery() {
                 <Box
                     sx={{
                         pt: `${HEADER_HEIGHT}px`,
+                        // Clear the form's fixed PageActionBar (portaled to
+                        // body) so the last fields are scrollable. The real app
+                        // reserves this via #main-scroll's bottom inset.
+                        pb: '140px',
                         display: 'flex',
                         justifyContent: 'center',
                     }}>
@@ -151,6 +155,10 @@ export default function FormsGallery() {
                 <Box
                     sx={{
                         pt: `${HEADER_HEIGHT}px`,
+                        // Clear the form's fixed PageActionBar (portaled to
+                        // body) so the last fields are scrollable. The real app
+                        // reserves this via #main-scroll's bottom inset.
+                        pb: '140px',
                         display: 'flex',
                         justifyContent: 'center',
                     }}>

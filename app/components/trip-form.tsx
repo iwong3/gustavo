@@ -9,7 +9,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { IconPlus, IconCheck, IconSearch, IconX } from '@tabler/icons-react'
+import { IconCirclePlus, IconCheck, IconSearch, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -1150,7 +1150,10 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                                     'transition':
                                                         'transform 0.1s',
                                                 }}>
-                                                <IconPlus size={20} />
+                                                <IconCirclePlus
+                                                    size={22}
+                                                    stroke={1.75}
+                                                />
                                             </Box>
                                         ),
                                     },
