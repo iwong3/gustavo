@@ -1,7 +1,7 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { TripToolbar } from 'components/menu/trip-toolbar'
@@ -29,6 +29,12 @@ export default function ExpensesPage() {
         [router, trip.slug]
     )
     useRegisterFab(showAddExpense ? fabCallback : null)
+
+    // Warm the add-expense route so the FAB opens the form instantly
+    useEffect(() => {
+        if (!showAddExpense) return
+        router.prefetch(`/gustavo/trips/${trip.slug}/expenses/new`)
+    }, [router, trip.slug, showAddExpense])
 
     return (
         <Box

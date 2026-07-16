@@ -3,7 +3,7 @@
 import { Box } from '@mui/material'
 import { useRouter } from 'next/navigation'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import BoardingPass from 'components/boarding-pass'
@@ -71,6 +71,11 @@ export default function TripsPage() {
             router.push('/gustavo/trips/new')
         }, [router])
     )
+
+    // Warm the new-trip route so the FAB opens the form instantly
+    useEffect(() => {
+        router.prefetch('/gustavo/trips/new')
+    }, [router])
 
     if (loading) {
         return (

@@ -35,6 +35,7 @@ import { MoneyMap } from 'components/debt/money-map'
 import { SettleProgressCard, SettleRow, SettledRow } from 'components/debt/settle-up'
 import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
 import { PersonSwitcher } from 'components/person-switcher'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { addSettlement, deleteSettlement } from 'utils/api'
@@ -308,24 +309,27 @@ export default function DebtsPage() {
                 String(s.debtorId) === String(personId) &&
                 creditor.venmoUrl
             return (
-                <SettleRow
+                <PrefetchOnVisible
                     key={`${s.debtorId}-${s.creditorId}`}
-                    debtor={debtor}
-                    creditor={creditor}
-                    amount={s.amount}
-                    perspectiveId={personId}
-                    youId={trip.currentUserId}
-                    venmo={
-                        showVenmo
-                            ? { url: creditor.venmoUrl!, note: trip.name }
-                            : null
-                    }
-                    onTap={() => openDetail(s)}
-                    onMarkPaid={() => {
-                        setDialogError(null)
-                        setMarkTarget(s)
-                    }}
-                />
+                    href={`/gustavo/trips/${trip.slug}/debts/${s.debtorId}-${s.creditorId}`}>
+                    <SettleRow
+                        debtor={debtor}
+                        creditor={creditor}
+                        amount={s.amount}
+                        perspectiveId={personId}
+                        youId={trip.currentUserId}
+                        venmo={
+                            showVenmo
+                                ? { url: creditor.venmoUrl!, note: trip.name }
+                                : null
+                        }
+                        onTap={() => openDetail(s)}
+                        onMarkPaid={() => {
+                            setDialogError(null)
+                            setMarkTarget(s)
+                        }}
+                    />
+                </PrefetchOnVisible>
             )
         })
 

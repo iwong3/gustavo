@@ -8,6 +8,7 @@ import dayjs from 'dayjs'
 import { cardSx, colors } from '@/lib/colors'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import { useRefresh } from 'providers/refresh-provider'
@@ -145,20 +146,23 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                         </Typography>
                                     </Box>
                                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                        <SwipeableRow
-                                            canEdit={rowCanEdit}
-                                            canDelete={rowCanDelete}
-                                            onEdit={() => handleEdit(row)}
-                                            onDelete={() => setSwipeDeleteExpense(row)}
-                                            backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
-                                            showBottomBorder={false}
-                                        >
-                                            <ExpenseRow
-                                                expense={row}
-                                                onTap={handleTap}
-                                                hideDate
-                                            />
-                                        </SwipeableRow>
+                                        <PrefetchOnVisible
+                                            href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
+                                            <SwipeableRow
+                                                canEdit={rowCanEdit}
+                                                canDelete={rowCanDelete}
+                                                onEdit={() => handleEdit(row)}
+                                                onDelete={() => setSwipeDeleteExpense(row)}
+                                                backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
+                                                showBottomBorder={false}
+                                            >
+                                                <ExpenseRow
+                                                    expense={row}
+                                                    onTap={handleTap}
+                                                    hideDate
+                                                />
+                                            </SwipeableRow>
+                                        </PrefetchOnVisible>
                                     </Box>
                                 </Box>
                             )
@@ -197,20 +201,23 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                             const rowCanDelete = canDeleteExpense(trip.userRole, trip.isAdmin, isReporter)
 
                                             return (
-                                                <SwipeableRow
+                                                <PrefetchOnVisible
                                                     key={row.id}
-                                                    canEdit={rowCanEdit}
-                                                    canDelete={rowCanDelete}
-                                                    onEdit={() => handleEdit(row)}
-                                                    onDelete={() => setSwipeDeleteExpense(row)}
-                                                    backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
-                                                    showBottomBorder={i < group.expenses.length - 1}
-                                                >
-                                                    <ExpenseRow
-                                                        expense={row}
-                                                        onTap={handleTap}
-                                                    />
-                                                </SwipeableRow>
+                                                    href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
+                                                    <SwipeableRow
+                                                        canEdit={rowCanEdit}
+                                                        canDelete={rowCanDelete}
+                                                        onEdit={() => handleEdit(row)}
+                                                        onDelete={() => setSwipeDeleteExpense(row)}
+                                                        backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
+                                                        showBottomBorder={i < group.expenses.length - 1}
+                                                    >
+                                                        <ExpenseRow
+                                                            expense={row}
+                                                            onTap={handleTap}
+                                                        />
+                                                    </SwipeableRow>
+                                                </PrefetchOnVisible>
                                             )
                                         })}
                                     </Collapse>
