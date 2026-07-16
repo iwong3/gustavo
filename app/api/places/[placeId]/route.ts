@@ -3,7 +3,14 @@ import { requireAuthWithUserId } from '@/lib/api-helpers'
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
-const FIELD_MASK = 'id,displayName,formattedAddress,location,addressComponents,types,primaryType,priceLevel,rating,regularOpeningHours,websiteUri,photos'
+// Every field here is fetched in ONE call when a place is picked in the expense
+// form, then cached in place_details forever — a place is never re-fetched.
+//
+// Tier note: this mask sits in Google's Enterprise SKU (rating, priceLevel,
+// priceRange, userRatingCount, websiteUri, regularOpeningHours). Adding an
+// Atmosphere-tier field (editorialSummary, reviews) bumps EVERY call to a
+// pricier SKU — check with Ivan before touching this string.
+const FIELD_MASK = 'id,displayName,formattedAddress,location,addressComponents,types,primaryType,priceLevel,priceRange,rating,userRatingCount,regularOpeningHours,websiteUri,photos'
 
 export async function GET(
     _request: NextRequest,
@@ -69,7 +76,11 @@ export async function GET(
         types: data.types || [],
         primaryType: data.primaryType || null,
         priceLevel: priceLevelInt,
+        // Raw Google shape: {startPrice:{currencyCode,units}, endPrice:{...}}.
+        // Kept raw and formatted in lib/place-display.ts.
+        priceRange: data.priceRange ?? null,
         rating: data.rating != null ? data.rating : null,
+        userRatingCount: data.userRatingCount != null ? data.userRatingCount : null,
         website: data.websiteUri || null,
         hoursJson: data.regularOpeningHours || null,
         photoRefs: photoRefs.length > 0 ? photoRefs : null,

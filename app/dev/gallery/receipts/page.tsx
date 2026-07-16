@@ -17,21 +17,27 @@ const noop = () => {}
 export default function ReceiptsGallery() {
     const [collapsed, setCollapsed] = useState(false)
     const [lastAction, setLastAction] = useState('none')
-    const [usd, jpy, longName, error] = expenses
+    const [usd, jpy, longName, error, ramen, donki] = expenses
 
     return (
         <GalleryPage title="Receipts">
             <SpecimenGroup title="ExpenseRow">
-                <Specimen label="default (USD)">
+                <Specimen label="default (USD) — no place, falls back to trip location">
                     <ExpenseRow expense={usd} onTap={noop} />
                 </Specimen>
                 <Specimen label="foreign currency (JPY)">
                     <ExpenseRow expense={jpy} onTap={noop} />
                 </Specimen>
+                <Specimen label="with place — area reads “Shibuya, Tokyo”, not the street">
+                    <ExpenseRow expense={ramen} onTap={noop} />
+                </Specimen>
+                <Specimen label="pre-00039 place — no components, falls back to trip location">
+                    <ExpenseRow expense={donki} onTap={noop} />
+                </Specimen>
                 <Specimen label="long name — truncation">
                     <ExpenseRow expense={longName} onTap={noop} />
                 </Specimen>
-                <Specimen label="conversion error">
+                <Specimen label="conversion error — area collapses to one level (“Kyoto”)">
                     <ExpenseRow expense={error} onTap={noop} />
                 </Specimen>
                 <Specimen label="hideDate (grouped view)">

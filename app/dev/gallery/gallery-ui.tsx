@@ -14,6 +14,7 @@ export const sections = [
     { slug: 'header', title: 'Header', description: 'Trip name fitting, pull-to-refresh' },
     { slug: 'trips', title: 'Trips', description: 'Boarding-pass trip cards — upcoming, travelling, complete' },
     { slug: 'receipts', title: 'Receipts', description: 'Expense rows, date group headers' },
+    { slug: 'expense-detail', title: 'Expense detail', description: 'Receipt, map + place chips, trip-context tiles' },
     { slug: 'debt', title: 'Debt', description: 'Balance cards, settlement cards' },
     { slug: 'insights', title: 'Insights', description: 'My Spend chart + share list' },
     { slug: 'forms', title: 'Forms', description: 'Expense/trip forms, delete dialogs — quick-switch to compare' },

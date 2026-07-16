@@ -4,12 +4,13 @@ import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, canEditExpense, canDeleteExpense } from '@/lib/permissions'
 import { occMatchSql, occTokensMatch } from '@/lib/occ'
+import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
 
 type RouteParams = { params: Promise<{ tripId: string; expenseId: string }> }
 
 // ── PUT: Update expense ──
 
-type UpdateExpenseBody = {
+type UpdateExpenseBody = PlaceUpsertBody & {
     name?: string
     date?: string
     cost?: number
@@ -21,19 +22,6 @@ type UpdateExpenseBody = {
     location?: string | null // location name
     notes?: string
     local_currency_received?: number | null
-    google_place_id?: string | null
-    // Place details for upsert into place_details table
-    google_place_name?: string
-    google_place_address?: string
-    google_place_lat?: number
-    google_place_lng?: number
-    google_place_price_level?: number | null
-    google_place_rating?: number | null
-    google_place_primary_type?: string | null
-    google_place_types?: string[] | null
-    google_place_website?: string | null
-    google_place_hours_json?: Record<string, unknown> | null
-    google_place_photo_refs?: string[] | null
     /** ISO timestamp the client read; if mismatch, server returns 409. Optional during rollout. */
     expectedUpdatedAt?: string
 }
@@ -145,38 +133,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 }
             }
 
-            // Google Place: upsert place_details then set FK
+            // Google Place: cache the place then point the expense at it.
+            // A null id clears the place (upsert no-ops on it).
             if (body.google_place_id !== undefined) {
-                if (body.google_place_id && body.google_place_name) {
-                    // Upsert place data
-                    await client.query(
-                        `INSERT INTO place_details (google_place_id, name, address, lat, lng, price_level, rating, primary_type, types, website, hours_json, photo_refs)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                         ON CONFLICT (google_place_id) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            address = EXCLUDED.address,
-                            lat = EXCLUDED.lat,
-                            lng = EXCLUDED.lng,
-                            price_level = COALESCE(EXCLUDED.price_level, place_details.price_level),
-                            rating = COALESCE(EXCLUDED.rating, place_details.rating),
-                            primary_type = COALESCE(EXCLUDED.primary_type, place_details.primary_type),
-                            types = COALESCE(EXCLUDED.types, place_details.types),
-                            website = COALESCE(EXCLUDED.website, place_details.website),
-                            hours_json = COALESCE(EXCLUDED.hours_json, place_details.hours_json),
-                            photo_refs = COALESCE(EXCLUDED.photo_refs, place_details.photo_refs),
-                            fetched_at = NOW()`,
-                        [
-                            body.google_place_id, body.google_place_name,
-                            body.google_place_address || null, body.google_place_lat || null, body.google_place_lng || null,
-                            body.google_place_price_level ?? null, body.google_place_rating ?? null,
-                            body.google_place_primary_type ?? null,
-                            body.google_place_types ? JSON.stringify(body.google_place_types) : null,
-                            body.google_place_website ?? null,
-                            body.google_place_hours_json ? JSON.stringify(body.google_place_hours_json) : null,
-                            body.google_place_photo_refs ? JSON.stringify(body.google_place_photo_refs) : null,
-                        ]
-                    )
-                }
+                await upsertPlaceDetails(client, body)
                 sets.push(`google_place_id = $${idx++}`)
                 values.push(body.google_place_id)
             }

@@ -111,6 +111,13 @@ export type SettlementRecord = {
     createdAt: string
 }
 
+/** Raw Google `priceRange`. `units` is an int64-as-string in proto3 JSON.
+ *  Stored raw in place_details.price_range; format via lib/place-display.ts. */
+export type PlacePriceRange = {
+    startPrice?: { currencyCode?: string; units?: string } | null
+    endPrice?: { currencyCode?: string; units?: string } | null
+}
+
 /** Place data from the place_details table, returned via JOIN on expenses. */
 export type PlaceInfo = {
     googlePlaceId: string
@@ -119,12 +126,19 @@ export type PlaceInfo = {
     lat: number | null
     lng: number | null
     priceLevel: number | null        // 0-4
+    priceRange: PlacePriceRange | null
     rating: number | null            // e.g. 4.2
+    userRatingCount: number | null   // N behind `rating`, e.g. 2431
     primaryType: string | null       // e.g. 'japanese_restaurant'
     types: string[] | null
     website: string | null
     hoursJson: Record<string, unknown> | null
     photoRefs: string[] | null
+    /** Raw Google address components. The area display ("Shibuya, Tokyo") is
+     *  derived from these in lib/place-display.ts — the rule is per-country, so
+     *  it stays in code rather than baked in at save time. Null for places saved
+     *  before migration 00039. */
+    addressComponents: AddressComponent[] | null
 }
 
 export type ExpenseCategory = {
@@ -179,7 +193,9 @@ export type PlaceDetails = {
     types: string[]
     primaryType: string | null
     priceLevel: number | null
+    priceRange: PlacePriceRange | null
     rating: number | null
+    userRatingCount: number | null
     website: string | null
     hoursJson: Record<string, unknown> | null
     photoRefs: string[] | null

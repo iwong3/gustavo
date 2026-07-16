@@ -17,18 +17,14 @@ import {
 import { deleteExpense } from 'utils/api'
 
 import { DrawerHeader } from 'components/receipts/drawer/drawer-header'
-import { DrawerCostSection } from 'components/receipts/drawer/drawer-cost-section'
-import { DrawerPayerProfile } from 'components/receipts/drawer/drawer-payer-profile'
-import { DrawerSplitSection } from 'components/receipts/drawer/drawer-split-section'
+import { DrawerReceipt } from 'components/receipts/drawer/drawer-receipt'
 import { DrawerMapSection } from 'components/receipts/drawer/drawer-map-section'
-import { DrawerPlaceMetadata } from 'components/receipts/drawer/drawer-place-metadata'
+import { DrawerStatTiles } from 'components/receipts/drawer/drawer-stat-tiles'
 import { DrawerNotes } from 'components/receipts/drawer/drawer-notes'
 import { DrawerMetadataFooter } from 'components/receipts/drawer/drawer-metadata-footer'
 
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
-
-import type { Expense } from '@/lib/types'
 
 export default function ExpenseDetailPage() {
     const { id } = useParams<{ slug: string; id: string }>()
@@ -49,8 +45,8 @@ export default function ExpenseDetailPage() {
     // JSON actually carries), so `e.id === Number(id)` never matches
     const expense = allTripExpenses.find((e) => String(e.id) === id) ?? null
 
-    // Position within the current (filtered) list — used by the metadata
-    // footer and place-metadata jump links, matching the list the user came from
+    // Position within the current (filtered) list — the receipt's "EXP 17/32"
+    // counts the list the user actually came from, not the whole trip
     const navList = useMemo(
         () =>
             expense && !filteredExpenses.some((e) => e.id === expense.id)
@@ -61,10 +57,6 @@ export default function ExpenseDetailPage() {
     const currentIndex = expense
         ? navList.findIndex((e) => e.id === expense.id)
         : -1
-
-    const goToExpense = (e: Expense) => {
-        router.push(`/gustavo/trips/${trip.slug}/expenses/${e.id}`)
-    }
 
     if (!expense) {
         return (
@@ -112,63 +104,38 @@ export default function ExpenseDetailPage() {
                 paddingTop: 1.5,
                 paddingBottom: 1,
             }}>
-            {/* Header — name, date/location */}
-            <DrawerHeader expense={expense} />
-
-            {/* Cost */}
-            <DrawerCostSection expense={expense} costUsd={costUsd} />
-
-            {/* Payer profile — uses unfiltered trip expenses for stats */}
-            <DrawerPayerProfile
-                payer={expense.paidBy}
-                allExpenses={allTripExpenses}
-                getUsdValue={getUsdValue}
-                currentUserId={trip.currentUserId}
+            {/* Header — name, weekday/day/area */}
+            <DrawerHeader
+                expense={expense}
+                dayNumber={isWithinTrip ? dayNumber : null}
+                totalDays={isWithinTrip ? totalDays : null}
             />
 
-            {/* Split */}
-            <DrawerSplitSection
+            {/* The money: cost, conversion, split, barcode. Ends without a
+                settle CTA on purpose — debts are handled on the debts page,
+                never per-expense. */}
+            <DrawerReceipt
                 expense={expense}
                 costUsd={costUsd}
                 currentUserId={trip.currentUserId}
                 tripParticipantCount={trip.participants.length}
+                expenseIndex={currentIndex}
+                totalExpenses={navList.length}
+                dayNumber={isWithinTrip ? dayNumber : null}
+                totalDays={isWithinTrip ? totalDays : null}
             />
 
-            {/* --- Section divider (only if map follows) --- */}
-            {expense.place && (
-                <Box
-                    sx={{
-                        mx: 2.5,
-                        mb: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                />
-            )}
+            {/* The place: map + Google chips + Maps/Site links */}
+            {expense.place && <DrawerMapSection place={expense.place} />}
 
-            {/* Map + place metadata */}
-            {expense.place && (
-                <DrawerMapSection place={expense.place}>
-                    <DrawerPlaceMetadata
-                        place={expense.place}
-                        allExpenses={navList}
-                        currentExpenseId={expense.id}
-                        onJumpToExpense={goToExpense}
-                    />
-                </DrawerMapSection>
-            )}
-
-            {/* --- Section divider (only if notes follow) --- */}
-            {expense.notes?.trim() && (
-                <Box
-                    sx={{
-                        mx: 2.5,
-                        mb: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                />
-            )}
+            {/* Trip context — computed from unfiltered trip expenses so the
+                ranking is against the whole trip, not the current filter */}
+            <DrawerStatTiles
+                expense={expense}
+                costUsd={costUsd}
+                allExpenses={allTripExpenses}
+                getUsdValue={getUsdValue}
+            />
 
             {/* Notes */}
             <DrawerNotes
@@ -176,15 +143,9 @@ export default function ExpenseDetailPage() {
                 onEdit={canEdit ? goToEdit : undefined}
             />
 
-            {/* Metadata footer — pushed to the bottom of the content area */}
+            {/* Attribution — pushed to the bottom of the content area */}
             <Box sx={{ marginTop: 'auto' }}>
-                <DrawerMetadataFooter
-                    expense={expense}
-                    expenseIndex={currentIndex}
-                    totalExpenses={navList.length}
-                    dayNumber={isWithinTrip ? dayNumber : null}
-                    totalDays={isWithinTrip ? totalDays : null}
-                />
+                <DrawerMetadataFooter expense={expense} />
             </Box>
 
             {/* Action bar — edit/delete, permission-gated */}

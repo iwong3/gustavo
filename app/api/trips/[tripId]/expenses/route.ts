@@ -3,6 +3,7 @@ import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, canAddExpense } from '@/lib/permissions'
+import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
 
 function userSummary(row: { id: number; name: string; email: string | null; avatar_url: string | null; initials: string | null; icon_color: string | null; venmo_url: string | null }) {
     return {
@@ -38,10 +39,12 @@ export async function GET(
             e.google_place_id,
             pd.name AS place_name, pd.address AS place_address,
             pd.lat AS place_lat, pd.lng AS place_lng,
-            pd.price_level AS place_price_level, pd.rating AS place_rating,
+            pd.price_level AS place_price_level, pd.price_range AS place_price_range,
+            pd.rating AS place_rating, pd.user_rating_count AS place_user_rating_count,
             pd.primary_type AS place_primary_type, pd.types AS place_types,
             pd.website AS place_website, pd.hours_json AS place_hours_json,
             pd.photo_refs AS place_photo_refs,
+            pd.address_components AS place_address_components,
             e.notes, e.reported_at,
             payer.id AS payer_id, payer.name AS payer_name, payer.email AS payer_email,
             payer.avatar_url AS payer_avatar_url, payer.initials AS payer_initials,
@@ -137,12 +140,15 @@ export async function GET(
                 lat: e.place_lat != null ? parseFloat(e.place_lat) : null,
                 lng: e.place_lng != null ? parseFloat(e.place_lng) : null,
                 priceLevel: e.place_price_level != null ? e.place_price_level : null,
+                priceRange: e.place_price_range || null,
                 rating: e.place_rating != null ? parseFloat(e.place_rating) : null,
+                userRatingCount: e.place_user_rating_count != null ? e.place_user_rating_count : null,
                 primaryType: e.place_primary_type || null,
                 types: e.place_types || null,
                 website: e.place_website || null,
                 hoursJson: e.place_hours_json || null,
                 photoRefs: e.place_photo_refs || null,
+                addressComponents: e.place_address_components || null,
             } : null,
             receiptImageUrl: null,
         }
@@ -151,7 +157,7 @@ export async function GET(
     return NextResponse.json(expenses)
 }
 
-type CreateExpenseBody = {
+type CreateExpenseBody = PlaceUpsertBody & {
     name: string
     date: string // YYYY-MM-DD
     cost: number
@@ -163,19 +169,6 @@ type CreateExpenseBody = {
     location?: string // location name
     notes?: string
     local_currency_received?: number
-    google_place_id?: string
-    // Place details for upsert into place_details table
-    google_place_name?: string
-    google_place_address?: string
-    google_place_lat?: number
-    google_place_lng?: number
-    google_place_price_level?: number | null
-    google_place_rating?: number | null
-    google_place_primary_type?: string | null
-    google_place_types?: string[] | null
-    google_place_website?: string | null
-    google_place_hours_json?: Record<string, unknown> | null
-    google_place_photo_refs?: string[] | null
 }
 
 export async function POST(
@@ -228,36 +221,8 @@ export async function POST(
                 }
             }
 
-            // Upsert place_details if Google Place data is provided
-            if (body.google_place_id && body.google_place_name) {
-                await client.query(
-                    `INSERT INTO place_details (google_place_id, name, address, lat, lng, price_level, rating, primary_type, types, website, hours_json, photo_refs)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                     ON CONFLICT (google_place_id) DO UPDATE SET
-                        name = EXCLUDED.name,
-                        address = EXCLUDED.address,
-                        lat = EXCLUDED.lat,
-                        lng = EXCLUDED.lng,
-                        price_level = COALESCE(EXCLUDED.price_level, place_details.price_level),
-                        rating = COALESCE(EXCLUDED.rating, place_details.rating),
-                        primary_type = COALESCE(EXCLUDED.primary_type, place_details.primary_type),
-                        types = COALESCE(EXCLUDED.types, place_details.types),
-                        website = COALESCE(EXCLUDED.website, place_details.website),
-                        hours_json = COALESCE(EXCLUDED.hours_json, place_details.hours_json),
-                        photo_refs = COALESCE(EXCLUDED.photo_refs, place_details.photo_refs),
-                        fetched_at = NOW()`,
-                    [
-                        body.google_place_id, body.google_place_name,
-                        body.google_place_address || null, body.google_place_lat || null, body.google_place_lng || null,
-                        body.google_place_price_level ?? null, body.google_place_rating ?? null,
-                        body.google_place_primary_type ?? null,
-                        body.google_place_types ? JSON.stringify(body.google_place_types) : null,
-                        body.google_place_website ?? null,
-                        body.google_place_hours_json ? JSON.stringify(body.google_place_hours_json) : null,
-                        body.google_place_photo_refs ? JSON.stringify(body.google_place_photo_refs) : null,
-                    ]
-                )
-            }
+            // Cache the picked place (no-op when the expense has no place)
+            await upsertPlaceDetails(client, body)
 
             // Insert expense (only google_place_id FK, details are in place_details)
             const expenseRes = await client.query(

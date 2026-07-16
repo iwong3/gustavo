@@ -2,7 +2,15 @@
  * Mock data for the dev component gallery (/dev/gallery).
  * Pure fixtures — never imported by production code.
  */
-import type { Expense, SettlementRecord, TripStats, TripSummary, UserSummary } from '@/lib/types'
+import type {
+    AddressComponent,
+    Expense,
+    PlaceInfo,
+    SettlementRecord,
+    TripStats,
+    TripSummary,
+    UserSummary,
+} from '@/lib/types'
 
 /** users.id is BIGINT — the API returns it as a STRING at runtime even though
  *  lib/types.ts says number. Fixtures model the runtime truth so id-comparison
@@ -81,6 +89,86 @@ export const trip: TripSummary = {
     updatedAt: '2026-07-04T12:00:00Z',
 }
 
+const comp = (
+    longText: string,
+    types: string[],
+    shortText = longText
+): AddressComponent => ({ longText, shortText, types })
+
+/** Fully-populated place — the "Google knew everything" case. Its components are
+ *  shaped like a real Tokyo response (ward in `locality`, prefecture in
+ *  admin_1), so the area line renders "Shibuya, Tokyo". */
+export const shibuyaPlace: PlaceInfo = {
+    googlePlaceId: 'fixture-place-shibuya',
+    name: 'Ichiran Shibuya',
+    address: '1-22-7 Jinnan, Shibuya City, Tokyo 150-0042, Japan',
+    lat: 35.6614,
+    lng: 139.7005,
+    priceLevel: 2,
+    priceRange: {
+        startPrice: { currencyCode: 'JPY', units: '1000' },
+        endPrice: { currencyCode: 'JPY', units: '2000' },
+    },
+    rating: 4.6,
+    userRatingCount: 2431,
+    primaryType: 'ramen_restaurant',
+    types: ['ramen_restaurant', 'restaurant', 'food'],
+    website: 'https://ichiran.com/',
+    hoursJson: null,
+    photoRefs: null,
+    addressComponents: [
+        comp('Jinnan', ['sublocality_level_2', 'sublocality', 'political']),
+        comp('Shibuya City', ['locality', 'political']),
+        comp('Tokyo', ['administrative_area_level_1', 'political']),
+        comp('Japan', ['country', 'political'], 'JP'),
+    ],
+}
+
+/** Sparse place — every optional Google field absent, and a Kyoto address whose
+ *  locality and prefecture are the same word (area collapses to just "Kyoto").
+ *  Guards the chips/area line against nulls and duplicate levels. */
+export const kyotoPlace: PlaceInfo = {
+    googlePlaceId: 'fixture-place-kyoto',
+    name: 'Nishiki Market',
+    address: 'Nishiki Market, Nakagyo Ward, Kyoto',
+    lat: 35.005,
+    lng: 135.765,
+    priceLevel: null,
+    priceRange: null,
+    rating: null,
+    userRatingCount: null,
+    primaryType: 'market',
+    types: ['market'],
+    website: null,
+    hoursJson: null,
+    photoRefs: null,
+    addressComponents: [
+        comp('Kyoto', ['locality', 'political']),
+        comp('Kyoto', ['administrative_area_level_1', 'political']),
+        comp('Japan', ['country', 'political'], 'JP'),
+    ],
+}
+
+/** Pre-00039 place: saved before address_components/priceRange existed, so the
+ *  area line must fall back to the trip's location name. */
+export const legacyPlace: PlaceInfo = {
+    googlePlaceId: 'fixture-place-legacy',
+    name: 'Don Quijote Shibuya',
+    address: '28-6 Udagawacho, Shibuya City, Tokyo',
+    lat: 35.6612,
+    lng: 139.6982,
+    priceLevel: 2,
+    priceRange: null,
+    rating: 4.1,
+    userRatingCount: null,
+    primaryType: 'store',
+    types: ['store'],
+    website: null,
+    hoursJson: null,
+    photoRefs: null,
+    addressComponents: null,
+}
+
 let nextExpenseId = 100
 
 export function makeExpense(overrides: Partial<Expense> = {}): Expense {
@@ -118,6 +206,7 @@ export const expenses: Expense[] = [
     makeExpense(),
     makeExpense({
         name: 'Shinkansen to Kyoto',
+        categoryId: 2,
         categoryName: 'Transit',
         categorySlug: 'transit',
         costOriginal: 13800,
@@ -130,6 +219,7 @@ export const expenses: Expense[] = [
     }),
     makeExpense({
         name: 'Hotel Gracery — 3 nights, city view upgrade, late checkout',
+        categoryId: 3,
         categoryName: 'Lodging',
         categorySlug: 'lodging',
         costOriginal: 612,
@@ -139,6 +229,7 @@ export const expenses: Expense[] = [
     }),
     makeExpense({
         name: 'Street market souvenirs',
+        categoryId: 4,
         categoryName: 'Shopping',
         categorySlug: 'shopping',
         costOriginal: 8500,
@@ -147,20 +238,38 @@ export const expenses: Expense[] = [
         conversionError: true,
         paidBy: priya,
         splitBetween: [priya],
-        place: {
-            googlePlaceId: 'fixture-place',
-            name: 'Nishiki Market',
-            address: 'Nishiki Market, Nakagyo Ward, Kyoto',
-            lat: 35.005,
-            lng: 135.765,
-            priceLevel: 2,
-            rating: 4.4,
-            primaryType: 'market',
-            types: ['market'],
-            website: null,
-            hoursJson: null,
-            photoRefs: null,
-        },
+        googlePlaceId: kyotoPlace.googlePlaceId,
+        place: kyotoPlace,
+    }),
+    makeExpense({
+        name: 'Ichiran Ramen',
+        date: '2026-07-05',
+        costOriginal: 4200,
+        currency: 'JPY',
+        costConvertedUsd: 28.5,
+        exchangeRate: 147.4,
+        paidBy: jenny,
+        splitBetween: participants,
+        coveredParticipants: [priya],
+        isEveryone: true,
+        notes: 'Best ramen of the trip — get the kaedama refill.',
+        googlePlaceId: shibuyaPlace.googlePlaceId,
+        place: shibuyaPlace,
+    }),
+    makeExpense({
+        name: 'Don Quijote run',
+        date: '2026-07-05',
+        categoryId: 4,
+        categoryName: 'Shopping',
+        categorySlug: 'shopping',
+        costOriginal: 2760,
+        currency: 'JPY',
+        costConvertedUsd: 18.75,
+        exchangeRate: 147.4,
+        paidBy: ivan,
+        splitBetween: [ivan, jenny],
+        googlePlaceId: legacyPlace.googlePlaceId,
+        place: legacyPlace,
     }),
 ]
 

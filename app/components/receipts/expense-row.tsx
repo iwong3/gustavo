@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
 
 import { colors } from '@/lib/colors'
+import { expenseAreaLabel } from '@/lib/place-display'
 import { CategoryIcon, InitialsIcon } from 'utils/icons'
 import { FormattedMoney } from 'utils/currency'
 
@@ -17,8 +18,11 @@ interface ExpenseRowProps {
 }
 
 export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps) => {
-    // Location: prefer trip location name, fall back to place address
-    const locationDisplay = expense.locationName || expense.place?.address?.split(',')[0]
+    // Area, e.g. "Shibuya, Tokyo" — the neighborhood is how anyone actually
+    // remembers a place, and the city anchors it. Beats the old street fragment
+    // ("1-22-7 Jinnan"), which told you nothing. Falls back to the trip location
+    // name for places saved before migration 00039.
+    const locationDisplay = expenseAreaLabel(expense.place, expense.locationName)
 
     const expenseDate = dayjs(expense.date + 'T00:00:00')
 

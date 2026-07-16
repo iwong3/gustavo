@@ -102,18 +102,21 @@ settlements -- recorded debt payments between trip participants (00038)
   created_by BIGINT FK -> users
   created_at, updated_at, deleted_at
 
-place_details -- cached Google Places metadata (00020)
+place_details -- cached Google Places metadata (00020, 00039)
   google_place_id TEXT PK
   name TEXT
   address TEXT
   lat, lng DOUBLE PRECISION
   price_level INTEGER -- 0-4
   rating NUMERIC(2,1)
+  user_rating_count INTEGER -- (00039) N behind `rating`
+  price_range JSONB -- (00039) raw Google {startPrice,endPrice}
   primary_type TEXT
   types JSONB
   website TEXT
   hours_json JSONB
   photo_refs JSONB
+  address_components JSONB -- (00039) raw; area display derived in code
   fetched_at, created_at, updated_at
 
 audit_log
@@ -358,7 +361,9 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 - **Users without email** — some participants don't have Google accounts. They have `email = NULL` and cannot log in, but can be referenced as payers/participants.
 - **Trip ownership** — `trips.created_by` determines the owner. The owner is also recorded as a participant with `role = 'owner'`.
 - **Multi-currency trips (00035)** — `trip_currencies` is the source of truth for the expense form's currency options; `trip_countries` records destinations. Legacy `trips.currency` is backfilled into `trip_currencies` and awaits a drop migration.
-- **Google Places (00019–00020)** — expenses store only `google_place_id`; all place metadata is cached in `place_details` (PK = Google's place id, refreshable via `fetched_at`).
+- **Google Places (00019–00020, 00039)** — expenses store only `google_place_id`; all place metadata is cached in `place_details` (PK = Google's place id, refreshable via `fetched_at`). Every field comes from ONE Details call made when the place is picked in the expense form — the app never re-fetches a place it already has, which is what keeps Places usage inside the free credit.
+  - **`address_components` is stored raw** (00039) and the "Shibuya, Tokyo" area display is derived from it in `lib/place-display.ts`, not at save time. The rule is per-country and Google's field names invert between them — in Japan the ward is the `locality` ("Shibuya City") and the prefecture is `administrative_area_level_1` ("Tokyo"); in the US the ward-equivalent is `sublocality` ("Manhattan"), `locality` is the city ("New York") and admin_1 is the *state*. Storing raw means a wrong country rule is a code fix, never a re-fetch of every place.
+  - **Field mask tier**: the mask sits in Google's *Enterprise* SKU (`rating`, `priceLevel`, `priceRange`, `userRatingCount`, `websiteUri`, `regularOpeningHours`). Adding an Atmosphere-tier field (`editorialSummary`, `reviews`) would bump every call to a pricier SKU — check with Ivan first.
 - **Optimistic concurrency (00037)** — `updated_at` is the OCC token. A trigger bumps the parent `expenses.updated_at` whenever its `expense_participants` change, so an expense + its participants behave as one aggregate. **The token is millisecond-precision**: Postgres stores microseconds but clients only ever see milliseconds (serialization goes through a JS `Date`), so ALL comparisons must go through `lib/occ.ts` (`occMatchSql` for SQL predicates, `occTokensMatch` for JS). Raw `updated_at = $n` against a client token never matches — this broke all deletes (fixed July 2026; regression test in `tests/occ.test.ts`).
 - **Home currency** — always USD for debt calculation.
 - **Settlements (00038)** — a recorded payment from_user → to_user offsets the

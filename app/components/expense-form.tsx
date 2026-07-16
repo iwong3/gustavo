@@ -1,7 +1,6 @@
 'use client'
 
 import {
-    Autocomplete,
     Box,
     FormControl,
     MenuItem,
@@ -17,12 +16,10 @@ import { fetchExpenseCategories } from 'utils/api'
 import { queryKeys, staleTimes } from '@/lib/query-keys'
 
 import { colors } from '@/lib/colors'
+import { derivePlaceCity } from '@/lib/place-display'
 import type { PlaceDetails } from '@/lib/types'
 import {
     adornedFieldSx,
-    dropdownMenuItemSx,
-    dropdownPaperSx,
-    dropdownPopperProps,
     errorMessageSx,
     fieldShadow,
     fieldSx,
@@ -37,17 +34,14 @@ import {
     IconChevronRight,
     IconX,
 } from '@tabler/icons-react'
+import { CategoryPicker } from 'components/category-picker'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 import PlaceAutocomplete from 'components/place-autocomplete'
 import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, ConflictError, updateExpense } from 'utils/api'
 import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
-import {
-    getColorForCategory,
-    getIconFromCategory,
-    InitialsIcon,
-} from 'utils/icons'
+import { InitialsIcon } from 'utils/icons'
 
 import type { Expense } from '@/lib/types'
 
@@ -130,7 +124,9 @@ type Category = { id: number; name: string; slug: string | null }
 const isoDaysAgo = (days: number) =>
     dayjs().subtract(days, 'day').format('YYYY-MM-DD')
 
-// Map a stored expense's place back to the PlaceDetails shape the autocomplete uses
+// Map a stored expense's place back to the PlaceDetails shape the autocomplete
+// uses. Carries every cached field through, so re-saving an unchanged place
+// writes back what we already knew instead of a thinner version of it.
 const toPlaceDetails = (expense: Expense | undefined): PlaceDetails | null =>
     expense?.place
         ? {
@@ -139,11 +135,13 @@ const toPlaceDetails = (expense: Expense | undefined): PlaceDetails | null =>
               address: expense.place.address ?? '',
               lat: expense.place.lat ?? 0,
               lng: expense.place.lng ?? 0,
-              addressComponents: [], // Not needed for display
+              addressComponents: expense.place.addressComponents ?? [],
               types: expense.place.types ?? [],
               primaryType: expense.place.primaryType ?? null,
               priceLevel: expense.place.priceLevel ?? null,
+              priceRange: expense.place.priceRange ?? null,
               rating: expense.place.rating ?? null,
+              userRatingCount: expense.place.userRatingCount ?? null,
               website: expense.place.website ?? null,
               hoursJson: expense.place.hoursJson ?? null,
               photoRefs: expense.place.photoRefs ?? null,
@@ -172,7 +170,7 @@ export default function ExpenseForm({
 
     const queryClient = useQueryClient()
 
-    const { data: categories = [] } = useQuery<Category[]>({
+    const { data: categories = [], isPending: categoriesPending } = useQuery<Category[]>({
         queryKey: queryKeys.expenseCategories.list(),
         queryFn: fetchExpenseCategories,
         staleTime: staleTimes.medium,
@@ -229,7 +227,6 @@ export default function ExpenseForm({
     const dateInputRef = useRef<HTMLInputElement>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
-    const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
 
@@ -237,20 +234,6 @@ export default function ExpenseForm({
 
     // Scroll the focused input near the top so the mobile keyboard can't hide it
     const focusScroll = useScrollFocusedInput()
-
-    // Derive city name from Google Place address components
-    const deriveCityFromPlace = (place: PlaceDetails): string | null => {
-        const components = place.addressComponents
-        // Prefer administrative_area_level_1 for Japan (returns "Tokyo" instead of "Shibuya City")
-        const country = components.find((c) => c.types.includes('country'))
-        const adminLevel1 = components.find((c) => c.types.includes('administrative_area_level_1'))
-        const locality = components.find((c) => c.types.includes('locality'))
-
-        if (country?.shortText === 'JP' && adminLevel1) {
-            return adminLevel1.longText
-        }
-        return locality?.longText || adminLevel1?.longText || country?.longText || null
-    }
 
     // Handle Google Place selection — auto-derive location, pre-fill name + category
     const handlePlaceChange = async (place: PlaceDetails | null) => {
@@ -281,9 +264,11 @@ export default function ExpenseForm({
 
             setPrefilled(newPrefill)
 
-            // Auto-derive location for non-legacy trips
+            // Auto-derive location for non-legacy trips. Locations stay
+            // city-level ("Tokyo"), not neighborhood-level, so filters don't
+            // fragment into wards — the ward only shows as display text.
             if (!isLegacyTrip) {
-                const city = deriveCityFromPlace(place)
+                const city = derivePlaceCity(place.addressComponents)
                 if (city) {
                     const existingLoc = tripLocations.find(
                         (l) => l.toLowerCase() === city.toLowerCase()
@@ -347,9 +332,6 @@ export default function ExpenseForm({
         return withCount
     }, [categories, categoryUsage])
 
-    const selectedCategoryObj =
-        sortedCategories.find((c) => c.id === categoryId) ?? null
-
     // Repopulate when the expense refreshes under us (e.g. after an OCC
     // conflict invalidates the expenses query) so the form shows the latest
     // saved values — mirrors the old drawer behavior.
@@ -378,7 +360,6 @@ export default function ExpenseForm({
             setLocalCurrencyReceived(
                 expense.localCurrencyReceived?.toFixed(2) ?? ''
             )
-            setCategoryDropdownOpen(false)
         }
     }, [mode, expense])
 
@@ -540,12 +521,17 @@ export default function ExpenseForm({
             google_place_lat: googlePlace?.lat || undefined,
             google_place_lng: googlePlace?.lng || undefined,
             google_place_price_level: googlePlace?.priceLevel ?? undefined,
+            google_place_price_range: googlePlace?.priceRange ?? undefined,
             google_place_rating: googlePlace?.rating ?? undefined,
+            google_place_user_rating_count: googlePlace?.userRatingCount ?? undefined,
             google_place_primary_type: googlePlace?.primaryType ?? undefined,
             google_place_types: googlePlace?.types ?? undefined,
             google_place_website: googlePlace?.website ?? undefined,
             google_place_hours_json: googlePlace?.hoursJson ?? undefined,
             google_place_photo_refs: googlePlace?.photoRefs ?? undefined,
+            // Raw components — the area display ("Shibuya, Tokyo") is derived
+            // from these at render time, not baked in here.
+            google_place_address_components: googlePlace?.addressComponents ?? undefined,
         }
 
         try {
@@ -1242,78 +1228,16 @@ export default function ExpenseForm({
                 {/* 7. Category */}
                 <Box>
                     <Typography sx={labelSx}>Category</Typography>
-                    <Autocomplete
-                        open={categoryDropdownOpen}
-                        onOpen={() => setCategoryDropdownOpen(true)}
-                        onClose={() => setCategoryDropdownOpen(false)}
-                        options={sortedCategories}
-                        getOptionLabel={(opt) => opt.name}
-                        value={selectedCategoryObj}
-                        onChange={(_, val) => {
-                            setCategoryId(val ? val.id : '')
-                            setCategoryDropdownOpen(false)
-                            if (prefilled.category) setPrefilled((p) => ({ ...p, category: false }))
+                    <CategoryPicker
+                        categories={sortedCategories}
+                        value={categoryId}
+                        onChange={(id) => {
+                            setCategoryId(id)
+                            if (prefilled.category)
+                                setPrefilled((p) => ({ ...p, category: false }))
                         }}
-                        isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                        disablePortal
-                        size="small"
-                        slotProps={{
-                            popper: dropdownPopperProps,
-                            listbox: {
-                                sx: {
-                                    'maxHeight': 200,
-                                    '& .MuiAutocomplete-option':
-                                        dropdownMenuItemSx,
-                                },
-                            },
-                            paper: {
-                                sx: dropdownPaperSx,
-                            },
-                        }}
-                        renderOption={(props, option) => {
-                            const { key, ...rest } = props
-                            return (
-                                <li key={key} {...rest}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            width: '100%',
-                                        }}>
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: 24,
-                                                height: 24,
-                                                borderRadius: '50%',
-                                                backgroundColor:
-                                                    getColorForCategory(
-                                                        option.name
-                                                    ),
-                                                flexShrink: 0,
-                                            }}>
-                                            {getIconFromCategory(
-                                                option.name,
-                                                14
-                                            )}
-                                        </Box>
-                                        <Typography variant="body2">
-                                            {option.name}
-                                        </Typography>
-                                    </Box>
-                                </li>
-                            )
-                        }}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                placeholder="Search categories..."
-                                sx={prefilled.category ? prefilledFieldSx : fieldSx}
-                            />
-                        )}
+                        isPending={categoriesPending}
+                        isAutoFilled={prefilled.category}
                     />
                 </Box>
 
