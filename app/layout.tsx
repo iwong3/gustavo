@@ -60,9 +60,15 @@ export default function RootLayout({
             <head>
                 <link rel="icon" href="/gus-fring-square.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/gus-fring-square.png" />
+                {/* minimum-scale=1 is what stops pinching the page smaller than
+                    its default view. It replaces maximum-scale=1 + user-scalable=no,
+                    which were doing the opposite of what we wanted: iOS has ignored
+                    both since iOS 10 (it always allows pinch, by accessibility
+                    policy), so they never blocked the zoom-out — while on Android
+                    they DID apply and blocked zooming IN, which we want to keep. */}
                 <meta
                     name="viewport"
-                    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+                    content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover"
                 />
                 <meta name="theme-color" content="#fefae0" />
                 {/* Light-only app. Without this, iOS treats the app as

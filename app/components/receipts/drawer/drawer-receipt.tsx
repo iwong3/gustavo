@@ -30,18 +30,23 @@ const LEADER_COLOR = '#b9b09a'
 
 const monoFont = 'ui-monospace, "Cascadia Mono", Consolas, monospace'
 
-/** Torn paper edge — a zigzag masked out of the receipt's top/bottom. */
-const TearEdge = ({ flip = false }: { flip?: boolean }) => (
-    <Box
-        sx={{
-            height: 9,
-            backgroundImage: `linear-gradient(45deg, ${colors.primaryWhite} 5px, transparent 0), linear-gradient(-45deg, ${colors.primaryWhite} 5px, transparent 0)`,
-            backgroundSize: '12px 12px',
-            backgroundRepeat: 'repeat-x',
-            ...(flip && { transform: 'scaleY(-1)' }),
-        }}
-    />
-)
+/**
+ * Torn bottom edge, cut out of the paper itself with a mask.
+ *
+ * Two things this fixes over stacking separate triangle strips above and below
+ * the paper: the teeth are literally the same element as the paper (so they
+ * can't read as detached), and `drop-shadow` traces the real torn silhouette.
+ *
+ * Only the BOTTOM tears — that's the edge a receipt is torn from, and it's the
+ * only edge a bottom-right shadow can physically fall on. A torn TOP edge puts
+ * notches above the paper, and the hard shadow shows through each one as a dark
+ * triangle floating over the header — shadow above the object, which is exactly
+ * the "slightly awkward" tell.
+ *
+ * Falls back to a plain rectangle if `mask` is unsupported — no visual break.
+ */
+const TOOTH = 12
+const tornBottomMask = `conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / ${TOOTH}px 100%`
 
 const Divider = () => (
     <Box
@@ -289,17 +294,23 @@ export const DrawerReceipt = ({
 
     // No outer card: the torn paper is already its own container, and a border
     // around it just drew a box around a thing that isn't a box. drop-shadow
-    // (not box-shadow) so the hard shadow follows the zigzag tear instead of
-    // squaring it off.
+    // (not box-shadow) so the hard shadow traces the torn bottom edge rather
+    // than squaring it off — that's what makes it read as a shadow.
     return (
         <Box
             sx={{
                 marginX: 2.5,
                 marginBottom: 2,
-                filter: `drop-shadow(3px 3px 0 ${colors.primaryBlack}e6)`,
+                filter: `drop-shadow(3px 3px 0 ${colors.primaryBlack})`,
             }}>
-            <TearEdge flip />
-            <Box sx={{ backgroundColor: colors.primaryWhite, padding: '12px 16px 10px' }}>
+            <Box
+                sx={{
+                    backgroundColor: colors.primaryWhite,
+                    // Bottom padding clears the teeth (they bite ~TOOTH/2 deep)
+                    padding: `12px 16px ${TOOTH}px`,
+                    WebkitMask: tornBottomMask,
+                    mask: tornBottomMask,
+                }}>
                     <Typography
                         sx={{
                             fontFamily: monoFont,
@@ -442,7 +453,6 @@ export const DrawerReceipt = ({
                         </Typography>
                     )}
             </Box>
-            <TearEdge />
         </Box>
     )
 }

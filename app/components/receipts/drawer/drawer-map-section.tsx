@@ -115,23 +115,37 @@ export const DrawerMapSection = ({ place }: DrawerMapSectionProps) => {
             }}>
             {hasMap && (
                 <Box sx={{ position: 'relative', lineHeight: 0 }}>
+                    {/* Interactive: pan/zoom inside the embed. It used to carry
+                        pointerEvents:'none' with a transparent link over it, so
+                        the whole map was one big "open in Maps" target — that
+                        overlay is gone (the place bar has explicit buttons now),
+                        so the map is live. */}
                     <iframe
                         title={`Map of ${place.name}`}
                         src={`https://www.google.com/maps?q=${embedQuery}&output=embed`}
                         width="100%"
                         height="200"
-                        style={{ border: 0, display: 'block', pointerEvents: 'none' }}
+                        style={{ border: 0, display: 'block' }}
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
                     />
+                    {/* Top-RIGHT: Google renders its own "Open in Google Maps"
+                        button in the top-left of the embed, and chips there
+                        covered its label. Right-aligned so a long price range
+                        grows away from it. pointerEvents:none so chips never
+                        eat a pan gesture. */}
                     {chips.length > 0 && (
                         <Box
                             sx={{
                                 position: 'absolute',
                                 top: 8,
-                                left: 8,
                                 right: 8,
+                                // Half the width leaves clear air for Google's
+                                // "Open in Maps" pill; chips wrap rather than
+                                // creep left into it.
+                                maxWidth: '50%',
                                 display: 'flex',
+                                justifyContent: 'flex-end',
                                 gap: CHIP_GAP,
                                 flexWrap: 'wrap',
                                 pointerEvents: 'none',
