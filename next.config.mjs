@@ -28,6 +28,17 @@ const nextConfig = {
     // module. Silences the "Can't resolve 'pg-native'" warning on every compile.
     serverExternalPackages: ['pg'],
     experimental: {
+        // Retain visited/prefetched route segments in the client router cache so
+        // switching between a trip's tools (Expenses/Debts/Insights/...) is
+        // instant instead of re-fetching the route's RSC on every tap. Default
+        // `dynamic` is 0 (no reuse), which caused the ~0.5s switch lag. Safe here:
+        // these pages get all their data from react-query, so the cached RSC
+        // payloads carry only the data-free component shell — react-query still
+        // governs data freshness.
+        staleTimes: {
+            dynamic: 300,
+            static: 300,
+        },
         optimizePackageImports: [
             '@mui/material',
             '@mui/icons-material',

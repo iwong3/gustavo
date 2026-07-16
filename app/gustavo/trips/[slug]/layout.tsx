@@ -4,7 +4,7 @@ import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
@@ -16,12 +16,25 @@ import { getTablerIcon } from 'utils/icons'
 import { ReceiptsListSkeleton } from 'components/receipts/receipts-list-skeleton'
 import { useTripBySlug } from 'hooks/use-trip-by-slug'
 import { queryKeys } from '@/lib/query-keys'
+import { tripTools } from '@/lib/trip-tools'
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
     const { slug } = useParams<{ slug: string }>()
     const queryClient = useQueryClient()
+    const router = useRouter()
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
+
+    // Warm the client router cache for this trip's other tools so switching
+    // between Expenses/Debts/Insights/... is instant rather than re-fetching the
+    // route on each tap. Pairs with experimental.staleTimes (next.config), which
+    // keeps these prefetched segments cached client-side.
+    useEffect(() => {
+        if (!slug) return
+        for (const tool of tripTools) {
+            router.prefetch(`/gustavo/trips/${slug}/${tool.path}`)
+        }
+    }, [slug, router])
 
     const tripQuery = useTripBySlug(slug, { enabled: Boolean(slug) })
     const trip = tripQuery.data ?? null
