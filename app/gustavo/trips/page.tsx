@@ -1,13 +1,13 @@
 'use client'
 
-import { colors } from '@/lib/colors'
-import { Box, CircularProgress } from '@mui/material'
+import { Box } from '@mui/material'
 import { useRouter } from 'next/navigation'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import BoardingPass from 'components/boarding-pass'
+import BoardingPassSkeleton from 'components/boarding-pass-skeleton'
 import { PullToRefresh } from 'components/pull-to-refresh'
 import { fetchTrips } from 'utils/api'
 
@@ -77,10 +77,16 @@ export default function TripsPage() {
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'center',
-                    marginTop: 4,
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    paddingX: 4,
+                    paddingY: 2,
+                    width: '100%',
                 }}>
-                <CircularProgress sx={{ color: colors.primaryYellow }} />
+                {[0, 1, 2].map((i) => (
+                    <BoardingPassSkeleton key={i} />
+                ))}
             </Box>
         )
     }

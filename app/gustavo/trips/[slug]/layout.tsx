@@ -1,7 +1,7 @@
 'use client'
 
 import { colors } from '@/lib/colors'
-import { Box, CircularProgress } from '@mui/material'
+import { Box } from '@mui/material'
 import { resetAllMenuItemStores } from 'components/menu/menu'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useParams } from 'next/navigation'
@@ -10,9 +10,11 @@ import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchExpenses, fetchSettlements, fetchTripBySlug } from 'utils/api'
+import { fetchExpenses, fetchSettlements } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
 
+import { ReceiptsListSkeleton } from 'components/receipts/receipts-list-skeleton'
+import { useTripBySlug } from 'hooks/use-trip-by-slug'
 import { queryKeys } from '@/lib/query-keys'
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
@@ -21,11 +23,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
 
-    const tripQuery = useQuery({
-        queryKey: queryKeys.trips.bySlug(slug),
-        queryFn: () => fetchTripBySlug(slug),
-        enabled: Boolean(slug),
-    })
+    const tripQuery = useTripBySlug(slug, { enabled: Boolean(slug) })
     const trip = tripQuery.data ?? null
 
     const expensesQuery = useQuery({
@@ -135,16 +133,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     }
 
     if (loading || !trip) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    marginTop: 4,
-                }}>
-                <CircularProgress sx={{ color: colors.primaryYellow }} />
-            </Box>
-        )
+        return <ReceiptsListSkeleton />
     }
 
     return (

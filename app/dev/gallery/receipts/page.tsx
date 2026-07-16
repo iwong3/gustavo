@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { cardSx } from '@/lib/colors'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
+import { ReceiptsListSkeleton } from 'components/receipts/receipts-list-skeleton'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { PullToRefresh } from 'components/pull-to-refresh'
 import { GalleryPage, SpecimenGroup, Specimen } from '../gallery-ui'
@@ -84,6 +85,12 @@ export default function ReceiptsGallery() {
                         collapsed={false}
                         onToggle={noop}
                     />
+                </Specimen>
+            </SpecimenGroup>
+
+            <SpecimenGroup title="Loading skeleton">
+                <Specimen label="shown inside a trip while expenses load">
+                    <ReceiptsListSkeleton />
                 </Specimen>
             </SpecimenGroup>
         </GalleryPage>

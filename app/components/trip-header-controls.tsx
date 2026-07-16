@@ -4,12 +4,10 @@ import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { IconChevronDown } from '@tabler/icons-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useLayoutEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchTripBySlug } from 'utils/api'
 import { getTablerIcon } from 'utils/icons'
 
+import { useTripBySlug } from 'hooks/use-trip-by-slug'
 import { colors, hardShadow } from '@/lib/colors'
-import { queryKeys } from '@/lib/query-keys'
 import { getActiveTripTool, getTripSlug, tripTools } from '@/lib/trip-tools'
 
 // Font-size / line-count steps tried in order until the trip name fits without
@@ -100,11 +98,9 @@ export const TripHeaderControls = () => {
     const slug = getTripSlug(pathname)
     const activeTool = getActiveTripTool(pathname)
 
-    const { data: trip } = useQuery({
-        queryKey: queryKeys.trips.bySlug(slug ?? ''),
-        queryFn: () => fetchTripBySlug(slug!),
-        // activeTool guard: non-tool routes like /trips/new (slug "new") and
-        // /trips/<slug>/edit render no header controls — don't fetch for them
+    // activeTool guard: non-tool routes like /trips/new (slug "new") and
+    // /trips/<slug>/edit render no header controls — don't fetch for them
+    const { data: trip } = useTripBySlug(slug, {
         enabled: Boolean(slug) && Boolean(activeTool),
     })
 

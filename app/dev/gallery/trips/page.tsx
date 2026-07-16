@@ -2,6 +2,7 @@
 
 /** Gallery specimens for the boarding-pass trip cards — every state + edge cases. */
 import BoardingPass from 'components/boarding-pass'
+import BoardingPassSkeleton from 'components/boarding-pass-skeleton'
 import DeparturesBoard from 'components/departures-board'
 
 import { GALLERY_TODAY, makePassTrip, makeTripStats } from '../fixtures'
@@ -213,6 +214,12 @@ export default function TripsGallery() {
             <SpecimenGroup title="Edge cases">
                 <Specimen label="stats missing — body only, no stub">
                     <BoardingPass trip={noStats} todayIso={GALLERY_TODAY} />
+                </Specimen>
+            </SpecimenGroup>
+
+            <SpecimenGroup title="Loading skeleton">
+                <Specimen label="shown on the trips list while trips load">
+                    <BoardingPassSkeleton />
                 </Specimen>
             </SpecimenGroup>
         </GalleryPage>
