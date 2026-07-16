@@ -308,6 +308,12 @@ export const DrawerReceipt = ({
                     backgroundColor: colors.primaryWhite,
                     // Bottom padding clears the teeth (they bite ~TOOTH/2 deep)
                     padding: `12px 16px ${TOOTH}px`,
+                    // Border only where the shadow isn't: the drop-shadow already
+                    // draws the bottom and right, so top + left complete the
+                    // outline instead of doubling it. The mask trims the border
+                    // along the torn edge for free — it's the same element.
+                    borderTop: `1px solid ${colors.primaryBlack}`,
+                    borderLeft: `1px solid ${colors.primaryBlack}`,
                     WebkitMask: tornBottomMask,
                     mask: tornBottomMask,
                 }}>

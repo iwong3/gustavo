@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Roboto, IBM_Plex_Serif } from 'next/font/google'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
@@ -19,6 +19,28 @@ const ibmPlexSerif = IBM_Plex_Serif({
     variable: '--font-serif',
     display: 'swap',
 })
+
+/**
+ * MUST be Next's `viewport` export, not a hand-written <meta> in <head>.
+ *
+ * The App Router injects its own default viewport meta ("width=device-width,
+ * initial-scale=1") whenever this export is absent — so the manual tag that
+ * used to live in <head> was shipping alongside a duplicate that overrode it.
+ * That's why `user-scalable=no` never actually did anything on any platform.
+ * Exporting it here emits exactly one tag.
+ *
+ * minimumScale: 1 is the piece that matters — it stops the page being pinched
+ * smaller than its default view. `maximumScale`/`userScalable: false` are
+ * deliberately NOT set: iOS ignores them by accessibility policy anyway, and
+ * Android honours them, which would block zooming IN — which we want to keep.
+ */
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    minimumScale: 1,
+    viewportFit: 'cover',
+    themeColor: '#fefae0',
+}
 
 export const metadata: Metadata = {
     title: 'Gustavo - Track Spending and Split Costs',
@@ -60,17 +82,9 @@ export default function RootLayout({
             <head>
                 <link rel="icon" href="/gus-fring-square.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/gus-fring-square.png" />
-                {/* minimum-scale=1 is what stops pinching the page smaller than
-                    its default view. It replaces maximum-scale=1 + user-scalable=no,
-                    which were doing the opposite of what we wanted: iOS has ignored
-                    both since iOS 10 (it always allows pinch, by accessibility
-                    policy), so they never blocked the zoom-out — while on Android
-                    they DID apply and blocked zooming IN, which we want to keep. */}
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover"
-                />
-                <meta name="theme-color" content="#fefae0" />
+                {/* viewport + theme-color live in the `viewport` export above —
+                    a manual <meta> here ships as a SECOND tag alongside Next's
+                    injected default and loses to it. */}
                 {/* Light-only app. Without this, iOS treats the app as
                     supporting both schemes and may paint its standalone
                     chrome (status bar area) with dark/gray material when the
