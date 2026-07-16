@@ -271,6 +271,17 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
         }
     }, [mode, trip])
 
+    // Keep the end date on/after the start date, and seed an empty end date
+    // with the start date. The native mobile date picker opens at the field's
+    // current value and ignores `min` for an empty field, so without this the
+    // picker starts at today on phones (desktop honors `min` and starts there).
+    useEffect(() => {
+        if (!startDate) return
+        if (endDate === '' || endDate < startDate) {
+            setEndDate(startDate)
+        }
+    }, [startDate, endDate])
+
     const toggleUser = (userId: number) => {
         setSelectedUserIds((prev) =>
             prev.includes(userId)
