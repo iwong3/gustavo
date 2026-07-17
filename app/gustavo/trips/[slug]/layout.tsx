@@ -2,8 +2,10 @@
 
 import { colors } from '@/lib/colors'
 import { Box } from '@mui/material'
-import { resetAllMenuItemStores } from 'components/menu/menu'
+import { resetAllFilterStores } from 'components/menu/filter/filter-stores'
+import { useRefineStore } from 'components/menu/refine-store'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
+import { useSortStore } from 'components/menu/sort/sort-store'
 import { useParams, useRouter } from 'next/navigation'
 import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
@@ -84,8 +86,11 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
                     .filter((l): l is string => l != null)
             )
         )
-        resetAllMenuItemStores({ participantNames, categoryNames, locationNames })
+        resetAllFilterStores({ participantNames, categoryNames, locationNames })
         resetSearchBarStore()
+        useSortStore.getState().reset()
+        // A fresh trip shouldn't open onto the refine panel.
+        useRefineStore.getState().close()
     }, [trip, expensesQuery.data, expensesQuery.dataUpdatedAt, resetSearchBarStore])
 
     const refreshData = useCallback(async () => {

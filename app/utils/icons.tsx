@@ -57,8 +57,6 @@ import {
     IconX,
 } from '@tabler/icons-react'
 
-import type { MenuItemData } from 'components/menu/menu'
-
 import { MenuItem, SortItem, ToolsMenuItem } from 'components/menu/enums'
 import { defaultBackgroundColor } from 'utils/colors'
 
@@ -224,13 +222,6 @@ export const getMenuItemIcon = (
         default:
             return null
     }
-}
-
-export const getMenuItemBackgroundColor = (item: MenuItemData) => {
-    if (item.state.isActive()) {
-        return '#FBBC04'
-    }
-    return defaultBackgroundColor
 }
 
 export const getToolsMenuItemIcon = (

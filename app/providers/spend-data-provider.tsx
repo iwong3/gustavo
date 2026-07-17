@@ -3,15 +3,16 @@
 import Fuse from 'fuse.js'
 import { createContext, useContext, useDeferredValue, useMemo } from 'react'
 
-import { useFilterLocationStore } from 'components/menu/filter/filter-location'
-import { useFilterPaidByStore } from 'components/menu/filter/filter-paid-by'
-import { useFilterSpendTypeStore } from 'components/menu/filter/filter-spend-type'
-import { useFilterSplitBetweenStore } from 'components/menu/filter/filter-split-between'
+import {
+    useFilterLocationStore,
+    useFilterPaidByStore,
+    useFilterSpendTypeStore,
+    useFilterSplitBetweenStore,
+} from 'components/menu/filter/filter-stores'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
-import { useSortCostStore } from 'components/menu/sort/sort-cost'
-import { useSortDateStore } from 'components/menu/sort/sort-date'
-import { useSortItemNameStore } from 'components/menu/sort/sort-item-name'
+import { useSortStore, type SortDir, type SortField } from 'components/menu/sort/sort-store'
 import { useTripData } from 'providers/trip-data-provider'
+import { filterExpenses, type FilterMaps } from 'utils/expense-filters'
 
 import { applySettlements } from '@/lib/debt'
 import { computeBlendedRates, computeDebtMap, getExpenseUsdValue } from '@/lib/spend'
@@ -56,79 +57,41 @@ const fuseOptions = {
 
 // --- Pure filter/sort/search functions ---
 
-function filterBySplitBetween(
-    data: Expense[],
-    filters: Map<string, boolean> // firstName → boolean
-): Expense[] {
-    const isAnyActive = Array.from(filters.values()).includes(true)
-    if (!isAnyActive) return data
-    return data.filter((exp) =>
-        exp.isEveryone || exp.splitBetween.some((u) => filters.get(u.firstName))
-    )
-}
-
-function filterByPaidBy(
-    data: Expense[],
-    filters: Map<string, boolean> // firstName → boolean
-): Expense[] {
-    const isAnyActive = Array.from(filters.values()).includes(true)
-    if (!isAnyActive) return data
-    return data.filter((exp) => filters.get(exp.paidBy.firstName))
-}
-
-function filterBySpendType(
-    data: Expense[],
-    filters: Map<string, boolean> // categoryName → boolean
-): Expense[] {
-    const isAnyActive = Array.from(filters.values()).includes(true)
-    if (!isAnyActive) return data
-    return data.filter((exp) => {
-        const cat = exp.categoryName ?? 'Other'
-        return filters.get(cat)
-    })
-}
-
-function filterByLocation(
-    data: Expense[],
-    filters: Map<string, boolean> // locationName → boolean
-): Expense[] {
-    const isAnyActive = Array.from(filters.values()).includes(true)
-    if (!isAnyActive) return data
-    return data.filter((exp) => {
-        const loc = exp.locationName ?? 'Other'
-        return filters.get(loc)
-    })
-}
+// The filter predicates live in utils/expense-filters — the refine panel counts
+// each option with the same code that filters the list here, so the two can't
+// disagree about what "matches" means.
 
 function applySorting(
     data: Expense[],
-    costOrder: number,
-    dateOrder: number,
-    nameOrder: number,
+    field: SortField,
+    dir: SortDir,
     blendedRates: Map<number, Map<string, number>>
 ): Expense[] {
-    if (costOrder !== 0) {
-        return data.slice().sort((a, b) => {
-            const aUsd = getExpenseUsdValue(a, blendedRates)
-            const bUsd = getExpenseUsdValue(b, blendedRates)
-            return costOrder === 1 ? bUsd - aUsd : aUsd - bUsd
-        })
+    const asc = dir === 'asc'
+    const sorted = data.slice()
+    switch (field) {
+        case 'amount':
+            return sorted.sort((a, b) => {
+                const aUsd = getExpenseUsdValue(a, blendedRates)
+                const bUsd = getExpenseUsdValue(b, blendedRates)
+                return asc ? aUsd - bUsd : bUsd - aUsd
+            })
+        case 'name':
+            return sorted.sort((a, b) =>
+                asc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+            )
+        case 'date':
+        default:
+            return sorted.sort((a, b) => {
+                if (a.date !== b.date) {
+                    const cmp = a.date < b.date ? -1 : 1
+                    return asc ? cmp : -cmp
+                }
+                // Same day: most recently entered first, matching how the
+                // date-grouped cards order rows within a group.
+                return Number(b.id) - Number(a.id)
+            })
     }
-    if (dateOrder !== 0) {
-        return data.slice().sort((a, b) => {
-            const da = new Date(a.date).getTime()
-            const db = new Date(b.date).getTime()
-            return dateOrder === 1 ? db - da : da - db
-        })
-    }
-    if (nameOrder !== 0) {
-        return data.slice().sort((a, b) =>
-            nameOrder === 1
-                ? a.name.localeCompare(b.name)
-                : b.name.localeCompare(a.name)
-        )
-    }
-    return data
 }
 
 function applySearch(data: Expense[], searchInput: string): Expense[] {
@@ -237,9 +200,8 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
     const paidByFilters = useDeferredValue(useFilterPaidByStore((s) => s.filters))
     const spendTypeFilters = useDeferredValue(useFilterSpendTypeStore((s) => s.filters))
     const locationFilters = useDeferredValue(useFilterLocationStore((s) => s.filters))
-    const costOrder = useDeferredValue(useSortCostStore((s) => s.order))
-    const dateOrder = useDeferredValue(useSortDateStore((s) => s.order))
-    const nameOrder = useDeferredValue(useSortItemNameStore((s) => s.order))
+    const sortField = useDeferredValue(useSortStore((s) => s.field))
+    const sortDir = useDeferredValue(useSortStore((s) => s.dir))
     const searchInput = useDeferredValue(useSearchBarStore((s) => s.searchInput))
 
     // Compute blended rates once from ALL expenses (including currency exchanges)
@@ -250,19 +212,24 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
         [blendedRates]
     )
 
+    const filterMaps = useMemo<FilterMaps>(
+        () => ({
+            split: splitBetweenFilters,
+            paidBy: paidByFilters,
+            spendType: spendTypeFilters,
+            location: locationFilters,
+        }),
+        [splitBetweenFilters, paidByFilters, spendTypeFilters, locationFilters]
+    )
+
     const filteredExpenses = useMemo(() => {
-        let filtered = expenses
-        filtered = filterBySplitBetween(filtered, splitBetweenFilters)
-        filtered = filterByPaidBy(filtered, paidByFilters)
-        filtered = filterBySpendType(filtered, spendTypeFilters)
-        filtered = filterByLocation(filtered, locationFilters)
-        filtered = applySorting(filtered, costOrder, dateOrder, nameOrder, blendedRates)
+        let filtered = filterExpenses(expenses, filterMaps)
+        filtered = applySorting(filtered, sortField, sortDir, blendedRates)
+        // Search last: Fuse returns by relevance, which deliberately overrides
+        // the sort while a query is active.
         filtered = applySearch(filtered, searchInput)
         return filtered
-    }, [
-        expenses, splitBetweenFilters, paidByFilters, spendTypeFilters,
-        locationFilters, costOrder, dateOrder, nameOrder, searchInput, blendedRates,
-    ])
+    }, [expenses, filterMaps, sortField, sortDir, searchInput, blendedRates])
 
     const { totalSpend, debtMap } = useMemo(() => {
         const computed = computeDebtMap(expenses, participants.length)

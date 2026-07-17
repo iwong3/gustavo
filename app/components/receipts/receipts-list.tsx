@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
 import { cardSx, colors } from '@/lib/colors'
+import { sortSpec, useSortStore } from 'components/menu/sort/sort-store'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
@@ -29,11 +30,15 @@ type DateGroup = {
     dayTotal: number
 }
 
+
 export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
-    const { filteredExpenses, getUsdValue, isSearching, searchInput } = useSpendData()
+    const { filteredExpenses, getUsdValue, isSearching } = useSpendData()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
     const router = useRouter()
+
+    const sortField = useSortStore((s) => s.field)
+    const spec = sortSpec(sortField)
 
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
 
@@ -41,8 +46,17 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const [swipeDeleteExpense, setSwipeDeleteExpense] = useState<Expense | null>(null)
 
     const displayData = expenses || filteredExpenses
-    // Only apply search-mode rendering when using context data (not when parent passes filtered expenses)
+    // Two ways the date grouping steps aside, and they look different:
+    //
+    // - Sorted by anything but date: re-grouping would discard the order the
+    //   user asked for (which is exactly why sorting by cost used to do nothing
+    //   visible here). Renders as the grouped card minus the header.
+    // - Searching: Fuse orders by relevance, and each hit gets its own dated
+    //   card — the established search look, left alone.
+    //
+    // Search wins when both are active, because relevance overrides the sort.
     const showSearchView = isSearching && !expenses
+    const showSortedView = !isSearching && !spec.groupsByDate && !expenses
 
     // Group expenses by date, most recent date first
     const dateGroups = useMemo<DateGroup[]>(() => {
@@ -104,7 +118,62 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     return (
         <>
             <Box id="receipts-list" sx={{ scrollMarginTop: '54px', pb: 2 }}>
-                {showSearchView ? (
+                {showSortedView ? (
+                    /* Sorted, not grouped — but otherwise the date-grouped card,
+                       unchanged: one card, rows touching, each row carrying its
+                       own date. Only the DateGroupHeader is missing, because
+                       there's no date to head. */
+                    <Box sx={{ mx: 2 }}>
+                        {/* No caption naming the order: a non-date sort is always
+                            an active refinement, so ActiveFilterLine is showing
+                            it in the sticky toolbar right above — and unlike a
+                            caption here, that survives scrolling. */}
+                        <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                            {displayData.map((row, i) => {
+                                const isReporter =
+                                    row.reportedBy?.id === trip.currentUserId
+                                const rowCanEdit = canEditExpense(
+                                    trip.userRole,
+                                    trip.isAdmin,
+                                    isReporter
+                                )
+                                const rowCanDelete = canDeleteExpense(
+                                    trip.userRole,
+                                    trip.isAdmin,
+                                    isReporter
+                                )
+
+                                return (
+                                    <PrefetchOnVisible
+                                        key={row.id}
+                                        href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
+                                        <SwipeableRow
+                                            canEdit={rowCanEdit}
+                                            canDelete={rowCanDelete}
+                                            onEdit={() => handleEdit(row)}
+                                            onDelete={() => setSwipeDeleteExpense(row)}
+                                            backgroundColor={
+                                                row.conversionError
+                                                    ? '#ffe8e5'
+                                                    : colors.primaryWhite
+                                            }
+                                            showBottomBorder={
+                                                i < displayData.length - 1
+                                            }>
+                                            {/* Date stays in the row: it's the
+                                                only thing saying when now that
+                                                the group header is gone. */}
+                                            <ExpenseRow
+                                                expense={row}
+                                                onTap={handleTap}
+                                            />
+                                        </SwipeableRow>
+                                    </PrefetchOnVisible>
+                                )
+                            })}
+                        </Box>
+                    </Box>
+                ) : showSearchView ? (
                     <Box sx={{ mx: 2 }}>
                         {displayData.map((row) => {
                             const isReporter = row.reportedBy?.id === trip.currentUserId
