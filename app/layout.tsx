@@ -33,12 +33,19 @@ const ibmPlexSerif = IBM_Plex_Serif({
  * smaller than its default view. `maximumScale`/`userScalable: false` are
  * deliberately NOT set: iOS ignores them by accessibility policy anyway, and
  * Android honours them, which would block zooming IN — which we want to keep.
+ *
+ * NO `viewportFit: 'cover'`, deliberately. The old duplicate meta meant it never
+ * actually applied, so every `env(safe-area-inset-*)` in the app resolved to 0
+ * and the layout was built and tuned around that. Emitting one authoritative
+ * meta WITH cover turned those insets on for the first time (~34px bottom, ~47px
+ * top on a notched iPhone) and shifted the footer up. Turning cover on is a real
+ * design change — the app would extend under the notch/home indicator — and it
+ * needs device verification, so it stays off until that's a deliberate choice.
  */
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
     minimumScale: 1,
-    viewportFit: 'cover',
     themeColor: '#fefae0',
 }
 
