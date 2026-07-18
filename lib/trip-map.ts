@@ -82,6 +82,12 @@ export type TripMapResponse = {
     summary: TripMapSummary
 }
 
+/** Newest trip first — the order the tap-a-dot card lists a city's trips. */
+const sortTripsByDateDesc = (trips: Map<string, TripMapCityTrip>): TripMapCityTrip[] =>
+    Array.from(trips.values()).sort((a, b) =>
+        a.startDate === b.startDate ? 0 : a.startDate < b.startDate ? 1 : -1
+    )
+
 const findComponent = (
     components: AddressComponent[] | null | undefined,
     type: string
@@ -171,7 +177,7 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
                 lng: a.lngSum / placeCount,
                 totalSpendUsd: a.totalSpendUsd,
                 placeCount,
-                trips: Array.from(a.trips.values()),
+                trips: sortTripsByDateDesc(a.trips),
             }
         })
         .sort((a, b) => b.totalSpendUsd - a.totalSpendUsd)
@@ -233,7 +239,7 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
             lng: a.lng,
             totalSpendUsd: a.totalSpendUsd,
             placeCount: 1,
-            trips: Array.from(a.trips.values()),
+            trips: sortTripsByDateDesc(a.trips),
         }))
         .sort((a, b) => b.totalSpendUsd - a.totalSpendUsd)
 }

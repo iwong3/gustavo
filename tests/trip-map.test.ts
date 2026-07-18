@@ -79,6 +79,16 @@ describe('aggregateTripMapCities', () => {
         expect(cities[0].trips.map((t) => t.id).sort()).toEqual(['1', '2'])
     })
 
+    it('lists a city dot\'s trips newest first', () => {
+        const cities = aggregateTripMapCities([
+            place({ googlePlaceId: 'a', addressComponents: tokyo, tripId: '1', tripStart: '2024-05-01' }),
+            place({ googlePlaceId: 'b', addressComponents: tokyo, tripId: '2', tripStart: '2026-01-10' }),
+            place({ googlePlaceId: 'c', addressComponents: tokyo, tripId: '3', tripStart: '2025-03-20' }),
+        ])
+        expect(cities).toHaveLength(1)
+        expect(cities[0].trips.map((t) => t.id)).toEqual(['2', '3', '1'])
+    })
+
     it('keeps cities in different countries separate', () => {
         const cities = aggregateTripMapCities([
             place({ googlePlaceId: 'a', addressComponents: tokyo }),
