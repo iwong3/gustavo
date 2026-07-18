@@ -4,6 +4,7 @@ import {
     createContext,
     useContext,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useState,
     useSyncExternalStore,
@@ -24,6 +25,10 @@ const ActionBarContext = createContext<ActionBarContextValue>({
 })
 
 const emptySubscribe = () => () => {}
+
+// Layout effect on the client (runs before paint), plain effect on the server
+// so SSR doesn't warn — same pattern as trips-map.
+const useIsoLayout = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 /**
  * Wraps the app shell so leaf pages can swap the bottom tab bar for their
@@ -56,7 +61,13 @@ export const usePageActionBarActive = () => useContext(ActionBarContext).active
 export function PageActionBar({ children }: { children: React.ReactNode }) {
     const { setActive } = useContext(ActionBarContext)
 
-    useEffect(() => {
+    // Layout effect, NOT useEffect: a passive effect runs after paint, so the
+    // tab-bar swap straddled two painted frames — on unmount the browser could
+    // paint an EMPTY footer (action bar gone, tab bar not yet back), a visible
+    // flash on every open/close of a bar like the refine panel's. A layout
+    // effect flushes the setActive re-render before paint, so the swap is
+    // atomic in both directions.
+    useIsoLayout(() => {
         setActive(true)
         return () => setActive(false)
     }, [setActive])
