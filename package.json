@@ -12,6 +12,8 @@
         "db:backfill": "node --env-file=.env.local scripts/backfill/import-expenses.js",
         "db:backfill-places": "node --env-file=.env.local scripts/db/backfill-place-details.js",
         "db:backfill-places:prod": "node --env-file=.env.production.local scripts/db/backfill-place-details.js",
+        "db:backfill-location-geo": "node --env-file=.env.local scripts/db/backfill-location-geo.js",
+        "db:backfill-location-geo:prod": "node --env-file=.env.production.local scripts/db/backfill-location-geo.js",
         "db:create-migration": "bash scripts/db/create-migration.sh",
         "db:migrate": "node --env-file=.env.local scripts/db/migrate.js",
         "db:migrate:prod": "node --env-file=.env.production.local scripts/db/migrate.js",

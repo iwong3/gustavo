@@ -102,6 +102,36 @@ describe('aggregateTripMapCities', () => {
         expect(cities[0].lng).toBeCloseTo(5, 5)
     })
 
+    it('buckets a geocoded location row (explicit countryCode) with place rows of the same city', () => {
+        // Japan 2024 has no Google places — its expenses arrive as one
+        // location row per (location, trip) with countryCode stored directly.
+        const cities = aggregateTripMapCities([
+            place({ googlePlaceId: 'a', addressComponents: tokyo, spendUsd: 40, tripId: '1' }),
+            place({
+                googlePlaceId: 'loc:7',
+                name: 'Tokyo',
+                locationName: 'Tokyo',
+                addressComponents: null,
+                countryCode: 'JP',
+                spendUsd: 60,
+                tripId: '2',
+            }),
+        ])
+        expect(cities).toHaveLength(1)
+        expect(cities[0].city).toBe('Tokyo')
+        expect(cities[0].countryCode).toBe('JP')
+        expect(cities[0].totalSpendUsd).toBe(100)
+        expect(cities[0].trips.map((t) => t.id).sort()).toEqual(['1', '2'])
+    })
+
+    it('keeps a location-only city separate from a same-named city in another country', () => {
+        const cities = aggregateTripMapCities([
+            place({ googlePlaceId: 'loc:1', name: 'Vancouver', locationName: 'Vancouver', countryCode: 'CA' }),
+            place({ googlePlaceId: 'loc:2', name: 'Vancouver', locationName: 'Vancouver', countryCode: 'US' }),
+        ])
+        expect(cities).toHaveLength(2)
+    })
+
     it('groups by the location name when there are no address components', () => {
         const cities = aggregateTripMapCities([
             place({ googlePlaceId: 'a', name: 'H Mart', addressComponents: null, locationName: 'San Francisco' }),
@@ -158,6 +188,24 @@ describe('aggregateTripMapPlaces', () => {
 })
 
 describe('summarizeTripMap', () => {
+    it('counts location-dot countries and trips, but not their placeCount', () => {
+        // Location rows feed cities only (the route never passes them to
+        // aggregateTripMapPlaces) — so KR counts as a country, the trip counts,
+        // but the Places stat stays venues-only.
+        const placeRows = [place({ googlePlaceId: 'a', addressComponents: tokyo, tripId: '1' })]
+        const locRows = [
+            place({ googlePlaceId: 'loc:9', name: 'Seoul', locationName: 'Seoul', countryCode: 'KR', tripId: '2' }),
+        ]
+        const cities = aggregateTripMapCities([...placeRows, ...locRows])
+        const places = aggregateTripMapPlaces(placeRows)
+        expect(summarizeTripMap(cities, places)).toEqual({
+            cityCount: 2,
+            placeCount: 1,
+            countryCount: 2,
+            tripCount: 2,
+        })
+    })
+
     it('counts distinct countries, cities, places, and trips', () => {
         const rows = [
             place({ googlePlaceId: 'a', addressComponents: tokyo, tripId: '1' }),

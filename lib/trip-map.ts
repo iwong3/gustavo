@@ -15,13 +15,22 @@ import { derivePlaceCity } from './place-display'
 import type { AddressComponent } from '@/lib/types'
 
 /** One (place, trip) the user spent at — the raw grain the map query returns,
- *  before city aggregation. ids are strings (BIGINT arrives as string). */
+ *  before city aggregation. ids are strings (BIGINT arrives as string).
+ *
+ *  Also the shape for a city-level LOCATION row (an expense with no Google
+ *  place, mapped via its geocoded location): googlePlaceId is a synthetic
+ *  `loc:<id>` key, name/locationName are the city, and countryCode is stored
+ *  directly instead of arriving via addressComponents. Location rows feed the
+ *  Cities view only — they aren't venues, so the API never passes them to
+ *  aggregateTripMapPlaces. */
 export type TripMapPlace = {
     googlePlaceId: string
     name: string
     lat: number
     lng: number
     addressComponents: AddressComponent[] | null
+    /** Explicit ISO country code (location rows). Wins over addressComponents. */
+    countryCode?: string | null
     /** The expense's city-level location name — a reliable city fallback when the
      *  place has no Google address components to derive one from. */
     locationName: string | null
@@ -111,7 +120,7 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
         // Google-derived city → the expense's stored city location → the venue
         // name as a last resort (so a dot always has a label).
         const city = derivePlaceCity(r.addressComponents) ?? r.locationName ?? r.name
-        const countryCode = deriveCountryCode(r.addressComponents)
+        const countryCode = r.countryCode ?? deriveCountryCode(r.addressComponents)
         const key = `${countryCode ?? '??'}|${city.toLowerCase()}`
 
         let acc = buckets.get(key)
@@ -190,7 +199,7 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
         if (!acc) {
             acc = {
                 name: r.name,
-                countryCode: deriveCountryCode(r.addressComponents),
+                countryCode: r.countryCode ?? deriveCountryCode(r.addressComponents),
                 lat: r.lat,
                 lng: r.lng,
                 totalSpendUsd: 0,

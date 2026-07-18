@@ -103,3 +103,6 @@ postgres_data/
 *.tar.gz
 # Claude Code personal settings (machine-local)
 .claude/settings.local.json
+
+# One-off geocode review file (scripts/db/backfill-location-geo.js --fetch)
+scripts/db/location-geo-results.json

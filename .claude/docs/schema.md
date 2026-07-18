@@ -54,8 +54,16 @@ locations
   id BIGINT PK
   trip_id BIGINT FK -> trips
   name TEXT
+  lat DOUBLE PRECISION   -- city centroid, geocoding backfill (00040); NULL = never geocoded
+  lng DOUBLE PRECISION
+  country_code TEXT      -- ISO 3166-1 alpha-2 ("JP"), from the same backfill
+  geocoded_at TIMESTAMPTZ
   created_at, deleted_at
   UNIQUE(trip_id, name)
+  -- lat/lng/country_code let expenses with NO google_place_id appear on the
+  -- trips map as city dots. Filled by scripts/db/backfill-location-geo.js
+  -- (--fetch to geocode + review, --apply to write); the app does not geocode
+  -- locations at creation.
 
 expense_categories
   id BIGINT PK
@@ -69,9 +77,9 @@ expenses
   trip_id BIGINT FK -> trips
   name TEXT
   date DATE
-  cost_original NUMERIC(12,2)
+  cost_original NUMERIC(12,2)      -- amount as entered, in `currency` (this IS the USD value for USD + currency-exchange rows)
   currency TEXT
-  cost_converted_usd NUMERIC(12,2)
+  cost_converted_usd NUMERIC(12,2) -- NULL for USD expenses AND currency-exchange rows AND conversion errors — see USD-value note below
   exchange_rate NUMERIC(16,8)
   conversion_error BOOLEAN
   category_id BIGINT FK -> expense_categories
@@ -83,6 +91,16 @@ expenses
   google_place_id TEXT FK -> place_details (nullable)
   local_currency_received NUMERIC(12,2) -- only for currency exchange expenses
   created_at, updated_at, deleted_at
+
+  -- USD VALUE of an expense (spend totals, debts, the trips map): never just read
+  -- cost_converted_usd — it is NULL for USD expenses (the amount lives in
+  -- cost_original), for currency-exchange rows, and on conversion errors. Use
+  -- lib/spend.ts getExpenseUsdValue (USD / currency_exchange -> cost_original;
+  -- else payer's blended rate, falling back to cost_converted_usd). SQL shortcut
+  -- for a good-enough total (skips the blended-rate refinement):
+  --   SUM(CASE WHEN currency='USD' THEN cost_original ELSE COALESCE(cost_converted_usd,0) END)
+  -- (Summing cost_converted_usd alone silently reads $0 for all-USD data — the
+  --  bug that made the trips map show "$0 spent".)
 
 expense_participants
   id BIGINT PK
