@@ -124,6 +124,13 @@ type Category = { id: number; name: string; slug: string | null }
 const isoDaysAgo = (days: number) =>
     dayjs().subtract(days, 'day').format('YYYY-MM-DD')
 
+// Late-night guard: an expense logged between midnight and 6am is usually from
+// the previous evening, so a NEW expense defaults to yesterday. A "Use today?"
+// link in the date header explains the backdate and undoes it in one tap.
+const NIGHT_CUTOFF_HOUR = 6
+const defaultNewExpenseDate = () =>
+    isoDaysAgo(dayjs().hour() < NIGHT_CUTOFF_HOUR ? 1 : 0)
+
 // Map a stored expense's place back to the PlaceDetails shape the autocomplete
 // uses. Carries every cached field through, so re-saving an unchanged place
 // writes back what we already knew instead of a thinner version of it.
@@ -192,7 +199,11 @@ export default function ExpenseForm({
     const isEdit = mode === 'edit'
 
     const [name, setName] = useState(expense?.name ?? '')
-    const [date, setDate] = useState(expense?.date ?? isoDaysAgo(0))
+    const [date, setDate] = useState(expense?.date ?? defaultNewExpenseDate())
+    // True while the late-night default is in effect; any manual pick clears it.
+    const [nightGuardActive, setNightGuardActive] = useState(
+        () => !expense && dayjs().hour() < NIGHT_CUTOFF_HOUR
+    )
     const [cost, setCost] = useState(expense?.costOriginal.toFixed(2) ?? '')
     const [currency, setCurrency] = useState<string>(expense?.currency ?? 'USD')
     const [categoryId, setCategoryId] = useState<number | ''>(
@@ -221,7 +232,7 @@ export default function ExpenseForm({
     )
     // First day of the week shown in the date strip
     const [weekAnchor, setWeekAnchor] = useState(() => {
-        const selected = dayjs((expense?.date ?? isoDaysAgo(0)) + 'T00:00:00')
+        const selected = dayjs(date + 'T00:00:00')
         return (selected.isValid() ? selected : dayjs()).startOf('week')
     })
     const dateInputRef = useRef<HTMLInputElement>(null)
@@ -584,6 +595,7 @@ export default function ExpenseForm({
     }
 
     const pickDate = (value: string) => {
+        setNightGuardActive(false)
         setDate(value)
         const day = dayjs(value + 'T00:00:00')
         if (day.isValid()) setWeekAnchor(day.startOf('week'))
@@ -710,6 +722,27 @@ export default function ExpenseForm({
                                 alignItems: 'center',
                                 gap: 1,
                             }}>
+                            {/* Late-night guard: the form opened between
+                                midnight and 6am, so the date defaulted to
+                                yesterday — this link explains the backdate
+                                and flips to today in one tap. Blue = "the
+                                app filled this", same as place prefills. */}
+                            {nightGuardActive && (
+                                <Typography
+                                    onClick={() => pickDate(isoDaysAgo(0))}
+                                    role="button"
+                                    sx={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        color: colors.primaryBlue,
+                                        textDecoration: 'underline',
+                                        lineHeight: 1,
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                    }}>
+                                    Use today?
+                                </Typography>
+                            )}
                             {/* Selected date — plain text */}
                             <Typography
                                 sx={{

@@ -75,6 +75,43 @@
   redirects, navigate immediately and let the new page's query do the loading.
   Don't wait for the POST response and then navigate.
 
+## Ideas — July 2026 brainstorm (with Claude)
+
+### Trips map
+- [ ] Spend-scaled dots (radius ∝ sqrt of city spend) — first pick
+- [ ] Visited-country tint ("passport stamp" land fill) — first pick
+- [ ] Label declutter: top-N labels at low zoom, all past a threshold — first pick
+- [ ] Per-trip map (filter, or map card on the trip page) + route arcs in
+      visit order (min expense date per city per trip)
+- [ ] Tap a country → country card (reuse MorphControl, aggregate per country)
+- [ ] Year chips filter; chronological "replay" animation
+- [ ] Share map as image (SVG → PNG client-side, stat strip baked in)
+- [ ] Deep-link map state (mode/selection in URL)
+
+### Entry friction (UX priority #2)
+- [x] Late-night date guard: 12am–6am defaults new expense to yesterday,
+      "Use today?" link in the date header (July 2026)
+- [ ] Sticky per-trip defaults: currency + split remember last expense on
+      this trip (form hardcodes USD today) — first pick
+- [ ] Repeat chips: this trip's most-used places above the name field,
+      one tap fills name/category/place/currency (supersedes "copy expense")
+- [ ] Amount-first quick add: numpad-style, "Save now" with defaults
+- [ ] Inline single-field edit (long-press amount on a row → popover)
+- [ ] One-tap settle up: debt row button prefills the settlement; Venmo deep link
+- [ ] Optimistic save / instant close + undo toast replacing confirm dialogs
+- [ ] Draft preservation (persisted draft slice survives app switch)
+- [ ] PWA manifest shortcut: "Add expense" on icon long-press
+- [ ] Global search across all trips' expenses
+- [ ] Offline queue for expense entry (IndexedDB + sync) — needs design session
+
+### Other
+- [ ] Trip budget: optional per-trip budget + daily pace bar on expenses page
+- [ ] Upcoming trip countdown card on trips list (budget setup entry point)
+- [ ] Trip recap "boarding pass" share image (concretizes end-of-trip report)
+- [ ] Group superlatives/leaderboard tab on graphs page
+- [ ] Automated Neon pg_dump backup (GH Action cron → private repo/Drive) —
+      do first, closes the data-loss hole
+
 ## Tech Debt
 
 - [ ] Simplify Zustand usage
