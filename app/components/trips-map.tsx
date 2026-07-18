@@ -52,13 +52,26 @@ const GLOBE_ICON = colors.primaryBlue // bare globe glyph, echoes the header but
 // effect on the server so SSR doesn't warn.
 const useIsoLayout = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
-// Pinch tracks the fingers 1:1 — zoom by the ratio the finger distance actually
-// changed since the last event. @visx/zoom's default applies a fixed ×1.1/×0.9
-// per event regardless of movement; pinch events fire every touchmove, so a
-// small pinch compounds into a huge leap. offset[0] is @use-gesture's cumulative
-// pinch scale.
+// Zoom gestures track the input 1:1. @visx/zoom's defaults apply a fixed
+// ×1.1/×0.9 per EVENT regardless of movement — and both pinch (every touchmove)
+// and trackpad scroll (dozens of wheel events per swipe) fire streams of
+// events, so a small gesture compounds into a huge leap (1.1^30 ≈ 17×).
+//
+// Pinch: zoom by the ratio the finger distance actually changed since the last
+// event (offset[0] is @use-gesture's cumulative pinch scale). Clamped as a
+// safety net against a glitchy first offset.
 const pinchDelta: PinchDelta = ({ offset: [s], lastOffset: [lastS] }) => {
-    const ratio = lastS > 0 ? s / lastS : 1
+    const ratio = Math.min(2, Math.max(0.5, lastS > 0 ? s / lastS : 1))
+    return { scaleX: ratio, scaleY: ratio }
+}
+
+// Wheel: d3-zoom's formula — scale ∝ 2^(-deltaY·k), with k per deltaMode
+// (pixels/lines/pages). A trackpad's tiny deltas become tiny zoom steps; a
+// mouse notch (±100px) lands near the old ×1.15 feel. Clamped per event so a
+// jumpy high-resolution wheel can't leap.
+const wheelDelta = (event: WheelEvent | React.WheelEvent) => {
+    const k = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002
+    const ratio = Math.min(1.25, Math.max(0.8, Math.pow(2, -event.deltaY * k)))
     return { scaleX: ratio, scaleY: ratio }
 }
 
@@ -208,6 +221,7 @@ function MapCanvas({
                         scaleYMin={1}
                         scaleYMax={MAX_ZOOM}
                         pinchDelta={pinchDelta}
+                        wheelDelta={wheelDelta}
                         constrain={constrain}
                         initialTransformMatrix={initial}>
                         {(zoom) => {
