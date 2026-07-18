@@ -20,6 +20,7 @@ export const sections = [
     { slug: 'insights', title: 'Insights', description: 'My Spend chart + share list' },
     { slug: 'forms', title: 'Forms', description: 'Expense/trip forms, delete dialogs — quick-switch to compare' },
     { slug: 'activity', title: 'Activity', description: 'Audit-log rows — diffs, participant lifecycle, restores' },
+    { slug: 'nav-drawer', title: 'Nav drawer', description: 'Teleport index — expandable trips/health, active band, pinned account footer' },
 ] as const
 
 const PHONE_WIDTH = 390
