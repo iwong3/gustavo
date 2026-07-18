@@ -13,12 +13,14 @@ export function SlidingToggle({
     onChange,
     fontSize = 14,
     borderWidth = 2,
+    paddingY = 0.75,
 }: {
     value: string
     options: SlidingToggleOption[]
     onChange: (value: string) => void
     fontSize?: number
     borderWidth?: 1 | 2
+    paddingY?: number
 }) {
     const activeIndex = options.findIndex((o) => o.value === value)
     const count = options.length
@@ -72,7 +74,7 @@ export function SlidingToggle({
                         'display': 'flex',
                         'alignItems': 'center',
                         'justifyContent': 'center',
-                        'paddingY': 0.75,
+                        'paddingY': paddingY,
                         'paddingX': 1.5,
                         'fontSize': fontSize,
                         'fontWeight': value === opt.value ? 600 : 400,

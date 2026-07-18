@@ -7,6 +7,7 @@ import {
     IconHome,
     IconPlaneDeparture,
     IconSettings,
+    IconWorld,
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -175,6 +176,11 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
         backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
     } else if (tripEditMatch) {
         backHref = `/gustavo/trips/${tripEditMatch[1]}/details`
+    }
+    // /gustavo/trips/map (world map) → trips list. Explicit so it doesn't rely
+    // on the legacy hub-URL branch treating "map" as a trip slug.
+    else if (pathname === '/gustavo/trips/map') {
+        backHref = '/gustavo/trips'
     }
     // /gustavo/trips/<slug>/<tool> → trips list
     else if (/^\/gustavo\/trips\/[^/]+\/.+$/.test(pathname)) {
@@ -364,6 +370,34 @@ export default function GustavoLayout({
                                 }}>
                                 <TripHeaderControls />
                             </Box>
+
+                            {/* Trips map — circular globe button, mirrors the
+                                round Gus avatar on the left. Only on the trips
+                                list page; opens the "where we've been" map. */}
+                            {pathname === '/gustavo/trips' && (
+                                <Box
+                                    component={Link}
+                                    href="/gustavo/trips/map"
+                                    aria-label="Your trip map"
+                                    sx={{
+                                        'display': 'flex',
+                                        'alignItems': 'center',
+                                        'justifyContent': 'center',
+                                        'width': 34,
+                                        'height': 34,
+                                        // extra gap so the globe sits clear of the back button
+                                        'marginRight': 1.5,
+                                        'flexShrink': 0,
+                                        'cursor': 'pointer',
+                                        'textDecoration': 'none',
+                                        // Bare glyph — no button chrome; blue reads as "explore".
+                                        'color': colors.primaryBlue,
+                                        'transition': 'transform 0.1s',
+                                        '&:active': { transform: 'scale(0.88)' },
+                                    }}>
+                                    <IconWorld size={26} stroke={2} />
+                                </Box>
+                            )}
 
                             {/* Back button — shows on sub-pages.
                                 useSearchParams needs a Suspense boundary */}

@@ -199,8 +199,16 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const queryClient = useQueryClient()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
     const [name, setName] = useState('')
-    const [startDate, setStartDate] = useState(todayISO())
-    const [endDate, setEndDate] = useState('')
+    // Seed dates from the trip up front in edit mode. If endDate started ''
+    // here, the date-sync effect below would run against that stale initial
+    // value on mount and clobber the loaded endDate with the start date (it was
+    // defaulting a trip's end date to today on edit). Create mode: today / empty.
+    const [startDate, setStartDate] = useState(() =>
+        mode === 'edit' && trip ? trip.startDate : todayISO()
+    )
+    const [endDate, setEndDate] = useState(() =>
+        mode === 'edit' && trip ? trip.endDate : ''
+    )
     const [description, setDescription] = useState('')
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([])
     const [countryCodes, setCountryCodes] = useState<string[]>([])

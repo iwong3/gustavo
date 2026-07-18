@@ -4,6 +4,7 @@
  */
 
 import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails, SettlementRecord } from '@/lib/types'
+import type { TripMapResponse } from '@/lib/trip-map'
 
 /** Thrown when a PUT/DELETE fails because the row's updated_at no longer
  *  matches the version the client read. Caller should refresh and retry. */
@@ -25,6 +26,13 @@ export const fetchTrips = async (): Promise<TripSummary[]> => {
 export const fetchTripBySlug = async (slug: string): Promise<TripSummary> => {
     const res = await fetch(`/api/trips?slug=${encodeURIComponent(slug)}`)
     if (!res.ok) throw new Error(`Failed to fetch trip: ${res.status}`)
+    return res.json()
+}
+
+/** "Where we've been" — cities aggregated from the user's place-tagged expenses. */
+export const fetchTripMap = async (): Promise<TripMapResponse> => {
+    const res = await fetch('/api/trips/map')
+    if (!res.ok) throw new Error(`Failed to fetch trip map: ${res.status}`)
     return res.json()
 }
 

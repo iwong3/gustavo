@@ -12,6 +12,7 @@ export const queryKeys = {
     trips: {
         all: ['trips'] as const,
         list: () => [...queryKeys.trips.all, 'list'] as const,
+        map: () => [...queryKeys.trips.all, 'map'] as const,
         bySlug: (slug: string) => [...queryKeys.trips.all, 'by-slug', slug] as const,
         detail: (tripId: string | number) =>
             [...queryKeys.trips.all, 'detail', String(tripId)] as const,
