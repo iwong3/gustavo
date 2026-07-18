@@ -69,6 +69,9 @@ type Props = {
     expenses: Expense[]
     participants: ParticipantSummary[]
     getUsdValue: (exp: Expense) => number
+    /** The page keeps the panel mounted for one frame while it plays its exit
+     *  animation; this flips the animation from enter to exit. */
+    closing?: boolean
 }
 
 // Natural height of a facet card, derived from its option count rather than
@@ -83,7 +86,7 @@ const cardHeight = (optionCount: number, rowHeight: number) =>
     (optionCount - 1) // hairlines between rows
 const sectionHeight = (bodyHeight: number) => H_HEAD + 2 + bodyHeight + SECTION_GAP
 
-export function RefinePanel({ expenses, participants, getUsdValue }: Props) {
+export function RefinePanel({ expenses, participants, getUsdValue, closing = false }: Props) {
     // Paid by opens so the row anatomy is visible — an all-collapsed menu is
     // four mystery rows and teaches nothing. The rest depends on the room
     // available; see the measuring ref below.
@@ -165,13 +168,25 @@ export function RefinePanel({ expenses, participants, getUsdValue }: Props) {
                 flexDirection: 'column',
                 minHeight: 0,
                 flex: 1,
-                // Enter animation: the rows vanish and the panel arrives in their
-                // place. Transform + opacity only, so it composites on the GPU.
+                // Opaque, matching the page: while closing, the page renders the
+                // rows underneath and this panel fades out OVER them — the fade
+                // is a crossfade to the rows, not a fade to a blank screen.
+                backgroundColor: colors.secondaryYellow,
+                // The rows vanish and the panel arrives in their place; closing
+                // reverses it, fading back up over the returning rows. Transform +
+                // opacity only, so both composite on the GPU. Exit is quicker and
+                // eases in (accelerates away) — snappier than the entrance.
                 '@keyframes refineIn': {
                     from: { opacity: 0, transform: 'translateY(-8px)' },
                     to: { opacity: 1, transform: 'translateY(0)' },
                 },
-                animation: 'refineIn 140ms cubic-bezier(0.2, 0, 0, 1)',
+                '@keyframes refineOut': {
+                    from: { opacity: 1, transform: 'translateY(0)' },
+                    to: { opacity: 0, transform: 'translateY(-8px)' },
+                },
+                animation: closing
+                    ? 'refineOut 120ms cubic-bezier(0.4, 0, 1, 1) forwards'
+                    : 'refineIn 140ms cubic-bezier(0.2, 0, 0, 1)',
                 '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }}>
             <Box

@@ -371,9 +371,10 @@ export default function GustavoLayout({
                                 <TripHeaderControls />
                             </Box>
 
-                            {/* Trips map — circular globe button, mirrors the
-                                round Gus avatar on the left. Only on the trips
-                                list page; opens the "where we've been" map. */}
+                            {/* Trips map — square button, same chrome as the
+                                back button beside it. Only on the trips list
+                                page; opens the "where we've been" map. Blue
+                                globe reads as "explore". */}
                             {pathname === '/gustavo/trips' && (
                                 <Box
                                     component={Link}
@@ -385,17 +386,23 @@ export default function GustavoLayout({
                                         'justifyContent': 'center',
                                         'width': 34,
                                         'height': 34,
-                                        // extra gap so the globe sits clear of the back button
-                                        'marginRight': 1.5,
+                                        // gap between this and the back button
+                                        'marginRight': 1,
                                         'flexShrink': 0,
+                                        'borderRadius': '4px',
                                         'cursor': 'pointer',
                                         'textDecoration': 'none',
-                                        // Bare glyph — no button chrome; blue reads as "explore".
                                         'color': colors.primaryBlue,
-                                        'transition': 'transform 0.1s',
-                                        '&:active': { transform: 'scale(0.88)' },
+                                        'backgroundColor': colors.primaryWhite,
+                                        'border': `1px solid ${colors.primaryBlack}`,
+                                        'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                                        'transition': 'transform 0.1s, box-shadow 0.1s',
+                                        '&:active': {
+                                            boxShadow: 'none',
+                                            transform: 'translate(2px, 2px)',
+                                        },
                                     }}>
-                                    <IconWorld size={26} stroke={2} />
+                                    <IconWorld size={20} stroke={2} />
                                 </Box>
                             )}
 

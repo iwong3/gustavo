@@ -27,7 +27,7 @@ import { Box, Typography } from '@mui/material'
 import { NaturalEarth, Graticule } from '@visx/geo'
 import type { GeoPermissibleObjects } from '@visx/geo'
 import { Zoom, applyMatrixToPoint } from '@visx/zoom'
-import type { TransformMatrix } from '@visx/zoom'
+import type { PinchDelta, TransformMatrix } from '@visx/zoom'
 import { IconChevronRight, IconPlaneDeparture, IconWorld, IconX, IconZoomReset } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -51,6 +51,16 @@ const GLOBE_ICON = colors.primaryBlue // bare globe glyph, echoes the header but
 // Measure before paint on the client (avoids a first-open height jump); plain
 // effect on the server so SSR doesn't warn.
 const useIsoLayout = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
+// Pinch tracks the fingers 1:1 — zoom by the ratio the finger distance actually
+// changed since the last event. @visx/zoom's default applies a fixed ×1.1/×0.9
+// per event regardless of movement; pinch events fire every touchmove, so a
+// small pinch compounds into a huge leap. offset[0] is @use-gesture's cumulative
+// pinch scale.
+const pinchDelta: PinchDelta = ({ offset: [s], lastOffset: [lastS] }) => {
+    const ratio = lastS > 0 ? s / lastS : 1
+    return { scaleX: ratio, scaleY: ratio }
+}
 
 type WorldGeo = { type: 'FeatureCollection'; features: GeoPermissibleObjects[] }
 type Projection = (coords: [number, number]) => [number, number] | null
@@ -197,6 +207,7 @@ function MapCanvas({
                         scaleXMax={MAX_ZOOM}
                         scaleYMin={1}
                         scaleYMax={MAX_ZOOM}
+                        pinchDelta={pinchDelta}
                         constrain={constrain}
                         initialTransformMatrix={initial}>
                         {(zoom) => {

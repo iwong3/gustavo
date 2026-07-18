@@ -2,7 +2,7 @@
 
 import { Box } from '@mui/material'
 import { IconCheck, IconRestore } from '@tabler/icons-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { colors } from '@/lib/colors'
@@ -39,12 +39,26 @@ export default function ExpensesPage() {
     const closeRefine = useRefineStore((s) => s.close)
     const refineCount = useRefineCount()
 
+    // Keep the panel mounted through its exit animation: on close, refineOpen
+    // flips false at once but the panel lingers for one quick fade-out before
+    // the rows return. `closing` (mounted but not open) drives that animation.
+    const [panelMounted, setPanelMounted] = useState(refineOpen)
+    useEffect(() => {
+        if (refineOpen) {
+            setPanelMounted(true)
+            return
+        }
+        if (!panelMounted) return
+        const t = setTimeout(() => setPanelMounted(false), 150)
+        return () => clearTimeout(t)
+    }, [refineOpen, panelMounted])
+
     const fabCallback = useCallback(
         () => router.push(`/gustavo/trips/${trip.slug}/expenses/new`),
         [router, trip.slug]
     )
-    // No FAB while refining — the panel is a full surface, not the list.
-    useRegisterFab(showAddExpense && !refineOpen ? fabCallback : null)
+    // No FAB while the refine surface is up — including its exit fade.
+    useRegisterFab(showAddExpense && !panelMounted ? fabCallback : null)
 
     // Warm the add-expense route so the FAB opens the form instantly
     useEffect(() => {
@@ -64,42 +78,59 @@ export default function ExpensesPage() {
                 minHeight: '100%',
             }}>
             <TripToolbar />
-            {refineOpen ? (
-                // The panel takes the rows' place rather than covering them: no
-                // scrim, no portal, and no position:fixed to get clipped by
-                // #main-scroll on iOS.
-                //
-                // Reserve the action bar's slot so the last section clears it,
-                // and so the panel measures the room it actually has when it
-                // decides how many sections to open.
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flex: 1,
-                        minHeight: 0,
-                        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-                    }}>
-                    <RefinePanel
-                        expenses={expenses}
-                        participants={trip.participants}
-                        getUsdValue={getUsdValue}
-                    />
-                </Box>
-            ) : (
-                /* Pull-to-refresh covers everything below the toolbar */
-                <PullToRefresh onRefresh={handlePullRefresh} sx={{ flex: 1 }}>
-                    <Box sx={{ maxWidth: 450, width: '100%' }}>
-                        <ReceiptsList />
+            {/* One relative surface below the toolbar. While the panel closes,
+                the rows are already back in flow and the (opaque) panel fades
+                out as an absolute overlay ON TOP of them — a crossfade, not a
+                fade to blank and a pop. */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: 1,
+                    minHeight: 0,
+                }}>
+                {!refineOpen && (
+                    /* Pull-to-refresh covers everything below the toolbar */
+                    <PullToRefresh onRefresh={handlePullRefresh} sx={{ flex: 1 }}>
+                        <Box sx={{ maxWidth: 450, width: '100%' }}>
+                            <ReceiptsList />
+                        </Box>
+                    </PullToRefresh>
+                )}
+                {panelMounted && (
+                    // While open, the panel takes the rows' place rather than
+                    // covering them: no scrim, no portal, and no position:fixed
+                    // to get clipped by #main-scroll on iOS.
+                    //
+                    // Reserve the action bar's slot so the last section clears
+                    // it, and so the panel measures the room it actually has
+                    // when it decides how many sections to open.
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+                            ...(refineOpen
+                                ? { flex: 1, minHeight: 0 }
+                                : { position: 'absolute', inset: 0, zIndex: 2 }),
+                        }}>
+                        <RefinePanel
+                            expenses={expenses}
+                            participants={trip.participants}
+                            getUsdValue={getUsdValue}
+                            closing={!refineOpen}
+                        />
                     </Box>
-                </PullToRefresh>
-            )}
+                )}
+            </Box>
 
             {/* While refining, the panel's actions take over the tab bar's slot —
                 the same trade expense detail and the forms make. Reset dims
                 rather than disappears: a two-slot bar that reflows would move
-                Done out from under your thumb. */}
-            {refineOpen && (
+                Done out from under your thumb. Stays up through the exit fade so
+                the whole refine surface leaves as one, then the tab bar returns. */}
+            {panelMounted && (
                 <PageActionBar>
                     <PageActionButton
                         onClick={resetRefine}
