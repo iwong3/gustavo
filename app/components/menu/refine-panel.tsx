@@ -172,13 +172,17 @@ export function RefinePanel({ expenses, participants, getUsdValue, closing = fal
                 // rows underneath and this panel fades out OVER them — the fade
                 // is a crossfade to the rows, not a fade to a blank screen.
                 backgroundColor: colors.secondaryYellow,
-                // The rows vanish and the panel arrives in their place; closing
-                // reverses it, fading back up over the returning rows. Transform +
-                // opacity only, so both composite on the GPU. Exit is quicker and
-                // eases in (accelerates away) — snappier than the entrance.
+                // Enter slides WITHOUT an opacity ramp: the rows unmount the
+                // same frame this mounts, so any transparent moment shows the
+                // bare page background as a blank flash — opaque throughout,
+                // the panel covers the rows' spot from its first frame. (The
+                // 8px offset reveals only page-colored background: invisible.)
+                // Exit keeps the fade — the rows are already back underneath,
+                // so it's a true crossfade — and is quicker, easing in
+                // (accelerating away).
                 '@keyframes refineIn': {
-                    from: { opacity: 0, transform: 'translateY(-8px)' },
-                    to: { opacity: 1, transform: 'translateY(0)' },
+                    from: { transform: 'translateY(-8px)' },
+                    to: { transform: 'translateY(0)' },
                 },
                 '@keyframes refineOut': {
                     from: { opacity: 1, transform: 'translateY(0)' },

@@ -57,8 +57,10 @@ export default function ExpensesPage() {
         () => router.push(`/gustavo/trips/${trip.slug}/expenses/new`),
         [router, trip.slug]
     )
-    // No FAB while the refine surface is up — including its exit fade.
-    useRegisterFab(showAddExpense && !panelMounted ? fabCallback : null)
+    // No FAB while refining. Gated on refineOpen, not panelMounted: the FAB
+    // (like the tab bar) should be back the instant Done is tapped, not after
+    // the panel's exit fade.
+    useRegisterFab(showAddExpense && !refineOpen ? fabCallback : null)
 
     // Warm the add-expense route so the FAB opens the form instantly
     useEffect(() => {
@@ -128,9 +130,10 @@ export default function ExpensesPage() {
             {/* While refining, the panel's actions take over the tab bar's slot —
                 the same trade expense detail and the forms make. Reset dims
                 rather than disappears: a two-slot bar that reflows would move
-                Done out from under your thumb. Stays up through the exit fade so
-                the whole refine surface leaves as one, then the tab bar returns. */}
-            {panelMounted && (
+                Done out from under your thumb. Gated on refineOpen (not
+                panelMounted) so the tab bar is back the instant Done is tapped
+                rather than after the exit fade. */}
+            {refineOpen && (
                 <PageActionBar>
                     <PageActionButton
                         onClick={resetRefine}

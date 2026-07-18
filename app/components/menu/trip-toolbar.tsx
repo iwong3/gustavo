@@ -59,8 +59,10 @@ export const TripToolbar = () => {
                 paddingTop: 1,
                 // 16px below the search field on its own; 10px once the filter
                 // line is between them, so the line gets equal air above and
-                // below rather than 6 / 16.
+                // below rather than 6 / 16. Animated in step with the line's
+                // own collapse so the toolbar never jumps mid refine open/close.
                 paddingBottom: showFilterLine ? 1.25 : 2,
+                transition: 'padding-bottom 140ms cubic-bezier(0.2, 0, 0, 1)',
             }}>
             {/* Row 1: search + refine button */}
             <Box
@@ -81,8 +83,23 @@ export const TripToolbar = () => {
             </Box>
 
             {/* Row 2: what's active (collapses when nothing is, hidden while
-                refining — the panel already shows every selection in full) */}
-            {showFilterLine && <ActiveFilterLine />}
+                refining — the panel already shows every selection in full).
+                Grid-rows collapse instead of mount/unmount so opening/closing
+                the refine panel doesn't jump the toolbar's height mid
+                animation — the same trick the panel's own sections use. */}
+            {refineCount > 0 && (
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateRows: showFilterLine ? '1fr' : '0fr',
+                        transition: 'grid-template-rows 140ms cubic-bezier(0.2, 0, 0, 1)',
+                        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+                    }}>
+                    <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
+                        <ActiveFilterLine />
+                    </Box>
+                </Box>
+            )}
         </Box>
     )
 }
