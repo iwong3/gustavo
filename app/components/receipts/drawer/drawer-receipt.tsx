@@ -246,6 +246,13 @@ export const DrawerReceipt = ({
             ? expense.localCurrencyReceived / expense.costOriginal
             : null
 
+    // A foreign-currency expense valuing at $0 means no rate exists for it: no
+    // one has recorded a currency exchange in that currency (and no legacy
+    // converted value is stored). Distinct from conversionError — that's a
+    // backfill-time failure; this one the user can fix by logging an exchange.
+    const noRate =
+        hasForeignAmount && costUsd === 0 && expense.costOriginal > 0 && !expense.conversionError
+
     const coveredIds = new Set(expense.coveredParticipants.map((u) => String(u.id)))
 
     // The per-row amount comes from expenseShareForUser — the same function the
@@ -351,7 +358,7 @@ export const DrawerReceipt = ({
                         valueColor={expense.conversionError ? colors.primaryRed : undefined}
                     />
 
-                    {expense.conversionError && (
+                    {(expense.conversionError || noRate) && (
                         <Box
                             sx={{
                                 display: 'flex',
@@ -367,8 +374,11 @@ export const DrawerReceipt = ({
                                     fontSize: 10.5,
                                     fontWeight: 700,
                                     color: colors.primaryRed,
+                                    textAlign: 'center',
                                 }}>
-                                COULD NOT CONVERT TO USD
+                                {expense.conversionError
+                                    ? 'COULD NOT CONVERT TO USD'
+                                    : `NO ${expense.currency} RATE — LOG A CURRENCY EXCHANGE`}
                             </Typography>
                         </Box>
                     )}

@@ -6,7 +6,13 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { computeTripStats, expenseShareForUser, type SpendExpense } from '../lib/spend'
+import {
+    computeBlendedRates,
+    computeTripStats,
+    expenseShareForUser,
+    getExpenseUsdValue,
+    type SpendExpense,
+} from '../lib/spend'
 import type { Expense, UserSummary } from '../lib/types'
 
 const user = (id: number, firstName: string): UserSummary => ({
@@ -104,6 +110,64 @@ describe('expenseShareForUser', () => {
             .map((p) => expenseShareForUser(exp, p.id, 100, 4))
             .reduce((a, b) => a + b, 0)
         expect(total).toBeCloseTo(100)
+    })
+})
+
+// --- Blended exchange rates (getExpenseUsdValue fallback chain) ---
+
+describe('getExpenseUsdValue', () => {
+    const yenExchange = (payer: UserSummary, usdPaid: number, yenReceived: number) =>
+        baseExpense({
+            paidBy: payer,
+            categorySlug: 'currency_exchange',
+            currency: 'JPY',
+            costOriginal: usdPaid,
+            costConvertedUsd: null as unknown as number, // runtime truth for exchange rows
+            localCurrencyReceived: yenReceived,
+        })
+    const yenExpense = (payer: UserSummary, yen: number) =>
+        baseExpense({
+            paidBy: payer,
+            currency: 'JPY',
+            costOriginal: yen,
+            costConvertedUsd: null as unknown as number, // app-created rows never store it
+        })
+
+    it("uses the payer's own blended rate first", () => {
+        // Ivan: 150 ¥/$; Jenny: 100 ¥/$ — Jenny's expense uses HER rate
+        const rates = computeBlendedRates([
+            yenExchange(ivan, 100, 15000),
+            yenExchange(jenny, 100, 10000),
+        ])
+        expect(getExpenseUsdValue(yenExpense(jenny, 1000), rates)).toBeCloseTo(10)
+        expect(getExpenseUsdValue(yenExpense(ivan, 1500), rates)).toBeCloseTo(10)
+    })
+
+    it('falls back to the trip-wide pooled rate when the payer never exchanged', () => {
+        // Only Ivan exchanged (150 ¥/$) — Jenny's yen expense must not value at $0
+        const rates = computeBlendedRates([yenExchange(ivan, 100, 15000)])
+        expect(getExpenseUsdValue(yenExpense(jenny, 1500), rates)).toBeCloseTo(10)
+    })
+
+    it('pools multiple payers into a weighted rate', () => {
+        // Ivan 100→15000, Jenny 100→10000 ⇒ pooled 200→25000 = 125 ¥/$
+        const rates = computeBlendedRates([
+            yenExchange(ivan, 100, 15000),
+            yenExchange(jenny, 100, 10000),
+        ])
+        // Alex never exchanged → pooled rate
+        expect(getExpenseUsdValue(yenExpense(alex, 1250), rates)).toBeCloseTo(10)
+    })
+
+    it('returns 0 (not null/NaN) when no rate exists anywhere', () => {
+        const rates = computeBlendedRates([])
+        expect(getExpenseUsdValue(yenExpense(jenny, 1000), rates)).toBe(0)
+    })
+
+    it('still uses stored costConvertedUsd for legacy backfilled rows', () => {
+        const rates = computeBlendedRates([])
+        const legacy = baseExpense({ currency: 'EUR', costOriginal: 90, costConvertedUsd: 100 })
+        expect(getExpenseUsdValue(legacy, rates)).toBe(100)
     })
 })
 

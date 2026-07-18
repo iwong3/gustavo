@@ -23,9 +23,17 @@ export type SpendExpense = {
 
 // --- Blended exchange rate calculation ---
 
-/** Compute per-person blended exchange rates from currency exchange expenses.
- *  Returns a Map: payerId → { currency → rate (local per USD) } */
-export function computeBlendedRates(expenses: SpendExpense[]): Map<number, Map<string, number>> {
+export type BlendedRates = {
+    /** payerId → currency → rate (local per USD), from that person's own exchanges. */
+    byPayer: Map<number, Map<string, number>>
+    /** currency → rate pooled across EVERY payer's exchanges — the fallback for
+     *  someone who spent local currency without recording an exchange themselves. */
+    pooled: Map<string, number>
+}
+
+/** Compute blended exchange rates from currency exchange expenses: per payer
+ *  (their own money-changing history) plus a trip-wide pool per currency. */
+export function computeBlendedRates(expenses: SpendExpense[]): BlendedRates {
     // payerId → currency → { totalUsd, totalLocal }
     const pools = new Map<number, Map<string, { totalUsd: number; totalLocal: number }>>()
 
@@ -48,24 +56,37 @@ export function computeBlendedRates(expenses: SpendExpense[]): Map<number, Map<s
     }
 
     // Convert pools to rates: rate = totalLocal / totalUsd
-    const rates = new Map<number, Map<string, number>>()
+    const byPayer = new Map<number, Map<string, number>>()
+    const pooledTotals = new Map<string, { totalUsd: number; totalLocal: number }>()
     pools.forEach((currencyPools, payerId) => {
         const payerRates = new Map<string, number>()
         currencyPools.forEach((pool, currency) => {
             if (pool.totalUsd > 0) {
                 payerRates.set(currency, pool.totalLocal / pool.totalUsd)
             }
+            const agg = pooledTotals.get(currency) ?? { totalUsd: 0, totalLocal: 0 }
+            agg.totalUsd += pool.totalUsd
+            agg.totalLocal += pool.totalLocal
+            pooledTotals.set(currency, agg)
         })
-        rates.set(payerId, payerRates)
+        byPayer.set(payerId, payerRates)
     })
 
-    return rates
+    const pooled = new Map<string, number>()
+    pooledTotals.forEach((pool, currency) => {
+        if (pool.totalUsd > 0) pooled.set(currency, pool.totalLocal / pool.totalUsd)
+    })
+
+    return { byPayer, pooled }
 }
 
-/** Get the USD value of an expense, using blended rates for non-USD local currency expenses. */
+/** Get the USD value of an expense, using blended rates for non-USD local
+ *  currency expenses: the payer's own rate → the trip-wide pooled rate → the
+ *  stored costConvertedUsd → 0. (The pooled step keeps a yen expense from
+ *  valuing at $0 just because its payer never exchanged money themselves.) */
 export function getExpenseUsdValue(
     exp: SpendExpense,
-    blendedRates: Map<number, Map<string, number>>
+    blendedRates: BlendedRates
 ): number {
     // Currency exchange expenses are already in USD (costOriginal = USD paid)
     if (exp.categorySlug === 'currency_exchange') {
@@ -77,15 +98,22 @@ export function getExpenseUsdValue(
         return exp.costOriginal
     }
 
-    // Non-USD expense — try to use payer's blended rate
-    const payerRates = blendedRates.get(exp.paidBy.id)
-    const blendedRate = payerRates?.get(exp.currency)
-    if (blendedRate && blendedRate > 0) {
-        return exp.costOriginal / blendedRate
+    // Non-USD expense — the payer's own blended rate first
+    const payerRate = blendedRates.byPayer.get(exp.paidBy.id)?.get(exp.currency)
+    if (payerRate && payerRate > 0) {
+        return exp.costOriginal / payerRate
     }
 
-    // Fallback: use the pre-computed costConvertedUsd
-    return exp.costConvertedUsd
+    // Someone else changed money on this trip — use the pooled rate
+    const pooledRate = blendedRates.pooled.get(exp.currency)
+    if (pooledRate && pooledRate > 0) {
+        return exp.costOriginal / pooledRate
+    }
+
+    // Fallback: the stored costConvertedUsd (backfilled legacy rows). Runtime
+    // truth: this is null on app-created rows and conversion errors — never
+    // return a non-number.
+    return Number.isFinite(exp.costConvertedUsd) ? exp.costConvertedUsd : 0
 }
 
 // --- Debt calculation ---

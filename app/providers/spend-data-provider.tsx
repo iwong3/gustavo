@@ -15,7 +15,7 @@ import { useTripData } from 'providers/trip-data-provider'
 import { filterExpenses, type FilterMaps } from 'utils/expense-filters'
 
 import { applySettlements } from '@/lib/debt'
-import { computeBlendedRates, computeDebtMap, getExpenseUsdValue } from '@/lib/spend'
+import { computeBlendedRates, computeDebtMap, getExpenseUsdValue, type BlendedRates } from '@/lib/spend'
 import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 
 type SpendDataValue = {
@@ -65,7 +65,7 @@ function applySorting(
     data: Expense[],
     field: SortField,
     dir: SortDir,
-    blendedRates: Map<number, Map<string, number>>
+    blendedRates: BlendedRates
 ): Expense[] {
     const asc = dir === 'asc'
     const sorted = data.slice()
