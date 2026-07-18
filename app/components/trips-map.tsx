@@ -57,11 +57,17 @@ const useIsoLayout = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 // and trackpad scroll (dozens of wheel events per swipe) fire streams of
 // events, so a small gesture compounds into a huge leap (1.1^30 ≈ 17×).
 //
-// Pinch: zoom by the ratio the finger distance actually changed since the last
-// event (offset[0] is @use-gesture's cumulative pinch scale). Clamped as a
-// safety net against a glitchy first offset.
-const pinchDelta: PinchDelta = ({ offset: [s], lastOffset: [lastS] }) => {
-    const ratio = Math.min(2, Math.max(0.5, lastS > 0 ? s / lastS : 1))
+// Pinch: zoom by the ratio the finger distance changed SINCE THE LAST EVENT.
+// offset[0] is @use-gesture's cumulative pinch scale and delta[0] is its
+// per-event change — so the previous event's value is (offset − delta), and
+// the per-event ratio is offset/(offset − delta). NOT offset/lastOffset:
+// lastOffset freezes at gesture START (actions.js: set once in start()), so
+// that ratio is cumulative and re-applying it every touchmove compounds
+// exponentially — one slow finger-spread slams to max zoom. Clamped as a
+// safety net against a zero/garbage first delta.
+const pinchDelta: PinchDelta = ({ offset: [s], delta: [ds] }) => {
+    const prev = s - ds
+    const ratio = Math.min(1.5, Math.max(0.67, prev > 0 && s > 0 ? s / prev : 1))
     return { scaleX: ratio, scaleY: ratio }
 }
 
