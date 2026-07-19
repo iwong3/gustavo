@@ -38,12 +38,6 @@ const apps: AppTile[] = [
         icon: 'IconHeartbeat',
         bg: '#f0b8b4',
     },
-    {
-        name: 'Settings',
-        href: '/gustavo/settings',
-        icon: 'IconSettings',
-        bg: '#cdd9e3',
-    },
 ]
 
 function AppRow({ app }: { app: AppTile }) {

@@ -752,16 +752,15 @@ export function NavDrawerContent({
                         alignItems: 'center',
                         gap: 1.25,
                         borderTop: `1.5px solid ${colors.primaryBlack}`,
-                        pl: 1.5,
-                        pr: 1.5,
-                        // Top gap is pure visual space; the bottom needs more raw
-                        // padding because a curved phone's corner/home-indicator
-                        // zone eats into it — so ~16/30 reads as balanced on-device.
-                        pt: 2,
-                        // 30px floor: the app opts out of viewport-fit=cover, so
-                        // env() is 0 and curved phone corners would clip a footer
-                        // sitting only 10px off the bottom edge.
-                        pb: 'max(calc(env(safe-area-inset-bottom, 0px) + 10px), 30px)',
+                        // The app opts out of viewport-fit=cover, so env() is 0 and
+                        // a curved phone's bottom corner would clip a low-sitting
+                        // footer. Rather than lift the whole row up, inset the avatar
+                        // horizontally (pl) so it clears the corner arc — keeps the
+                        // footer visually low and balanced.
+                        pl: 3,
+                        pr: 2,
+                        pt: 1.25,
+                        pb: 'max(calc(env(safe-area-inset-bottom, 0px) + 10px), 14px)',
                     }}>
                     <Box
                         sx={{
