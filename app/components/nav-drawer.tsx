@@ -11,6 +11,7 @@ import {
     IconHome,
     IconList,
     IconFirstAidKit,
+    IconLogout,
     IconPalette,
     IconPill,
     IconPlaneDeparture,
@@ -598,23 +599,118 @@ export function NavDrawerContent({
                         Settings
                     </Box>
 
-                    {/* Component gallery — dev only (the route 404s in production) */}
-                    {process.env.NODE_ENV === 'development' && (
+                    {/* Divider sets Log out apart from navigation destinations */}
+                    <Box
+                        sx={{
+                            height: '1.5px',
+                            backgroundColor: colors.primaryBlack,
+                            opacity: 0.15,
+                            mx: 2,
+                            my: 0.5,
+                        }}
+                    />
+
+                    {/* Log out — an action, not a destination: red, no href */}
+                    <Box
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        role="button"
+                        aria-label="Log out"
+                        sx={{
+                            'display': 'flex',
+                            'alignItems': 'center',
+                            'gap': 1.5,
+                            'pl': CONTENT_PL,
+                            'pr': CONTENT_PR,
+                            'py': 1,
+                            'cursor': 'pointer',
+                            'color': colors.primaryRed,
+                            'fontWeight': 600,
+                            'fontSize': 15,
+                            'lineHeight': 1,
+                            'transition': 'transform 0.08s',
+                            '&:active': { transform: 'scale(0.97)' },
+                        }}>
                         <Box
-                            component={Link}
-                            href="/dev/gallery"
-                            onClick={onClose}
-                            sx={{ ...navItemSx(isWithin('/dev/gallery')), mt: 0.5 }}>
-                            <IconBadge>
-                                <IconPalette
-                                    size={17}
-                                    stroke={2}
-                                    color={colors.primaryBlack}
-                                    fill={isWithin('/dev/gallery') ? colors.secondaryYellow : colors.primaryWhite}
-                                />
-                            </IconBadge>
-                            Gallery
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 32,
+                                height: 32,
+                                borderRadius: '8px',
+                                backgroundColor: colors.primaryWhite,
+                                border: `1.5px solid ${colors.primaryRed}`,
+                                boxShadow: `1.5px 1.5px 0px ${colors.primaryRed}`,
+                                flexShrink: 0,
+                            }}>
+                            <IconLogout size={17} stroke={2} color={colors.primaryRed} />
                         </Box>
+                        Log out
+                    </Box>
+
+                    {/* Component gallery — dev only (the route 404s in production).
+                        Pushed to the very bottom and visually demoted as a dev tool. */}
+                    {process.env.NODE_ENV === 'development' && (
+                        <>
+                            <Box sx={{ flexGrow: 1, minHeight: 12 }} />
+                            <Box
+                                sx={{
+                                    pl: CONTENT_PL,
+                                    pr: 2,
+                                    pb: 0.3,
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: 1.5,
+                                    textTransform: 'uppercase',
+                                    color: colors.primaryBrown,
+                                    opacity: 0.6,
+                                    userSelect: 'none',
+                                }}>
+                                Dev
+                            </Box>
+                            <Box
+                                component={Link}
+                                href="/dev/gallery"
+                                onClick={onClose}
+                                sx={{
+                                    'display': 'flex',
+                                    'alignItems': 'center',
+                                    'gap': 1.25,
+                                    'pl': CONTENT_PL,
+                                    'pr': CONTENT_PR,
+                                    'py': 0.75,
+                                    'textDecoration': 'none',
+                                    'color': colors.primaryBrown,
+                                    'opacity': isWithin('/dev/gallery') ? 1 : 0.75,
+                                    'fontWeight': isWithin('/dev/gallery') ? 700 : 500,
+                                    'fontSize': 13,
+                                    'lineHeight': 1,
+                                    'transition': 'transform 0.08s',
+                                    '&:active': { transform: 'scale(0.97)' },
+                                }}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '6px',
+                                        backgroundColor: colors.primaryWhite,
+                                        border: `1.5px solid ${colors.primaryBlack}`,
+                                        boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
+                                        flexShrink: 0,
+                                    }}>
+                                    <IconPalette
+                                        size={14}
+                                        stroke={2}
+                                        color={colors.primaryBlack}
+                                        fill={isWithin('/dev/gallery') ? colors.secondaryYellow : colors.primaryWhite}
+                                    />
+                                </Box>
+                                Gallery
+                            </Box>
+                        </>
                     )}
                 </Box>
 
@@ -658,8 +754,14 @@ export function NavDrawerContent({
                         borderTop: `1.5px solid ${colors.primaryBlack}`,
                         pl: 1.5,
                         pr: 1.5,
-                        pt: 1.25,
-                        pb: 'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+                        // Top gap is pure visual space; the bottom needs more raw
+                        // padding because a curved phone's corner/home-indicator
+                        // zone eats into it — so ~16/30 reads as balanced on-device.
+                        pt: 2,
+                        // 30px floor: the app opts out of viewport-fit=cover, so
+                        // env() is 0 and curved phone corners would clip a footer
+                        // sitting only 10px off the bottom edge.
+                        pb: 'max(calc(env(safe-area-inset-bottom, 0px) + 10px), 30px)',
                     }}>
                     <Box
                         sx={{
@@ -719,21 +821,6 @@ export function NavDrawerContent({
                                 {user.email}
                             </Typography>
                         )}
-                    </Box>
-                    <Box
-                        onClick={() => signOut({ callbackUrl: '/login' })}
-                        sx={{
-                            'flexShrink': 0,
-                            'cursor': 'pointer',
-                            'fontSize': 11.5,
-                            'fontWeight': 700,
-                            'color': colors.primaryRed,
-                            'textDecoration': 'underline',
-                            'py': 1,
-                            'pl': 1,
-                            '&:active': { opacity: 0.6 },
-                        }}>
-                        Sign out
                     </Box>
                 </Box>
             )}

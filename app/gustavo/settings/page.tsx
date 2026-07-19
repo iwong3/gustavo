@@ -266,7 +266,7 @@ export default function SettingsPage() {
                 size="large"
                 onClick={() => signOut({ callbackUrl: '/login' })}
                 sx={{ marginTop: 2 }}>
-                Sign out
+                Log out
             </Button>
 
             <Typography

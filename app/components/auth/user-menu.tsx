@@ -52,7 +52,7 @@ export default function UserMenu() {
                 <MenuItem
                     onClick={() => signOut({ callbackUrl: '/login' })}
                     sx={{ color: 'error.main' }}>
-                    Sign out
+                    Log out
                 </MenuItem>
             </Menu>
         </>

@@ -51,6 +51,20 @@ const noop = () => {}
 export default function NavDrawerGallery() {
     return (
         <GalleryPage title="Nav drawer">
+            <SpecimenGroup title="Structure — Settings, Log out row, identity footer, demoted Gallery">
+                <Specimen label="on Home (short list; spacer pins Gallery to the bottom)">
+                    <DrawerFrame height={680}>
+                        <NavDrawerContent
+                            trips={trips}
+                            loading={false}
+                            pathname="/gustavo"
+                            user={user}
+                            onClose={noop}
+                        />
+                    </DrawerFrame>
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="Auto-expand — the drawer opens as a 'you are here' map">
                 <Specimen label="on an expense detail (Japan unfolds, Expenses banded)">
                     <DrawerFrame>
