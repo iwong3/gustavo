@@ -5,13 +5,14 @@ import {
     IconArrowLeft,
     IconHeartbeat,
     IconHome,
+    IconMenu2,
     IconPlaneDeparture,
     IconSettings,
     IconWorld,
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { tripTools } from '@/lib/trip-tools'
 
@@ -60,6 +61,12 @@ function ContentFab() {
 }
 
 const HEADER_HEIGHT = 56
+
+// Run the fly-in before paint on the client (avoids a one-frame flash of the
+// resting icon), but fall back to useEffect during SSR to dodge the layout-
+// effect warning.
+const useIsomorphicLayoutEffect =
+    typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 // Bottom tab bar — hidden while a leaf page's PageActionBar occupies its slot
 function BottomTabBar({ activeTab }: { activeTab: string }) {
@@ -256,12 +263,121 @@ export default function GustavoLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    const isHome = pathname === '/gustavo'
 
     const [drawerOpen, setDrawerOpen] = useState(false)
+
+    // Header menu button — hamburger on home (the page already shows a big Gus,
+    // so a second one up here is redundant), Gus avatar everywhere else.
+    const menuButtonRef = useRef<HTMLDivElement>(null)
+    const prevPathRef = useRef(pathname)
 
     // Scroll main content to top on route change
     useEffect(() => {
         document.getElementById('main-scroll')?.scrollTo(0, 0)
+    }, [pathname])
+
+    // Gus morphs between the big home avatar and the corner menu icon as you
+    // cross the home boundary. The header persists across routes, so we animate
+    // the real elements (no clone / cross-route shared-element transition).
+    // Layout effect so the first keyframe lands before the browser paints the
+    // resting element — no flash.
+    useIsomorphicLayoutEffect(() => {
+        const prev = prevPathRef.current
+        prevPathRef.current = pathname
+        if (prev === pathname) return
+
+        const leavingHome = prev === '/gustavo' && pathname !== '/gustavo'
+        const arrivingHome = prev !== '/gustavo' && pathname === '/gustavo'
+        if (!leavingHome && !arrivingHome) return
+
+        const btn = menuButtonRef.current
+        if (!btn || typeof btn.animate !== 'function') return
+        if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+            return
+
+        const timing: KeyframeAnimationOptions = {
+            duration: 380,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            // Hold the start keyframe until the start time resolves — no
+            // sub-frame flash of the resting element.
+            fill: 'backwards',
+        }
+        const fly = (
+            el: HTMLElement,
+            from: { x: number; y: number; scale: number },
+            to: { x: number; y: number }
+        ) =>
+            el.animate(
+                [
+                    {
+                        transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(${from.scale})`,
+                    },
+                    { transform: 'translate(0, 0) scale(1)' },
+                ],
+                timing
+            )
+
+        const btnRect = btn.getBoundingClientRect()
+        const btnCenter = {
+            x: btnRect.left + btnRect.width / 2,
+            y: btnRect.top + btnRect.height / 2,
+        }
+
+        if (leavingHome) {
+            // The big home avatar is already unmounted; fly the header Gus in
+            // from where it sat — centered, 8px below the scroll area's top
+            // (paddingTop: 1), half of its 96px height down.
+            const mainTop =
+                document
+                    .getElementById('main-scroll')
+                    ?.getBoundingClientRect().top ?? HEADER_HEIGHT
+            fly(
+                btn,
+                { x: window.innerWidth / 2, y: mainTop + 8 + 48, scale: 96 / 36 },
+                btnCenter
+            )
+        } else {
+            // Arriving home: grow the big avatar out of the corner menu button.
+            // #main-scroll is a scroll container, so it clips anything above its
+            // top edge (the header line) — animate a fixed-position clone on the
+            // body instead, so the fly-up isn't cut off, and hide the real
+            // avatar until the clone lands on it.
+            const avatar = document.getElementById('home-gus-avatar')
+            if (!avatar || typeof avatar.animate !== 'function') return
+            const aRect = avatar.getBoundingClientRect()
+            const clone = avatar.cloneNode(true) as HTMLElement
+            clone.id = ''
+            Object.assign(clone.style, {
+                position: 'fixed',
+                left: `${aRect.left}px`,
+                top: `${aRect.top}px`,
+                margin: '0',
+                pointerEvents: 'none',
+                zIndex: '2000',
+            })
+            document.body.appendChild(clone)
+            avatar.style.visibility = 'hidden'
+
+            const cleanup = () => {
+                clone.remove()
+                avatar.style.visibility = ''
+            }
+            const animation = fly(
+                clone,
+                { x: btnCenter.x, y: btnCenter.y, scale: 36 / 96 },
+                {
+                    x: aRect.left + aRect.width / 2,
+                    y: aRect.top + aRect.height / 2,
+                }
+            )
+            if (animation) {
+                animation.onfinish = cleanup
+                animation.oncancel = cleanup
+            } else {
+                cleanup()
+            }
+        }
     }, [pathname])
 
     const getActiveTab = () => {
@@ -326,9 +442,13 @@ export default function GustavoLayout({
                                 backgroundColor: colors.secondaryYellow,
                                 zIndex: 10,
                             }}>
-                            {/* Gus Fring icon — opens nav drawer */}
+                            {/* Menu button — opens nav drawer. Hamburger on the
+                                home page (which already shows a big Gus), Gus
+                                avatar on every other page. */}
                             <Box
+                                ref={menuButtonRef}
                                 onClick={() => setDrawerOpen(true)}
+                                aria-label="Open menu"
                                 sx={{
                                     'display': 'flex',
                                     'alignItems': 'center',
@@ -337,7 +457,7 @@ export default function GustavoLayout({
                                     'borderRadius': '50%',
                                     'padding': '6px',
                                     // Pull the tap-target padding out of the inset
-                                    // so the avatar image sits flush at 16px
+                                    // so the icon sits flush at 16px
                                     'marginLeft': '-6px',
                                     'transition':
                                         'transform 0.1s ease-out, background-color 0.1s',
@@ -346,17 +466,25 @@ export default function GustavoLayout({
                                         transform: 'scale(0.88)',
                                     },
                                 }}>
-                                <img
-                                    src="/gus-fring.png"
-                                    alt="Gustavo"
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: '100%',
-                                        objectFit: 'cover',
-                                        display: 'block',
-                                    }}
-                                />
+                                {isHome ? (
+                                    <IconMenu2
+                                        size={28}
+                                        stroke={2}
+                                        color={colors.primaryBlack}
+                                    />
+                                ) : (
+                                    <img
+                                        src="/gus-fring.png"
+                                        alt="Gustavo"
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '100%',
+                                            objectFit: 'cover',
+                                            display: 'block',
+                                        }}
+                                    />
+                                )}
                             </Box>
 
                             {/* Trip name + tool switcher (trip pages) / spacer */}

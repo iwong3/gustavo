@@ -115,6 +115,7 @@ export default function GustavoHomePage() {
             {/* Gus Fring avatar */}
             <Box sx={{ paddingBottom: 1, paddingTop: 1 }}>
                 <img
+                    id="home-gus-avatar"
                     src="/gus-fring.png"
                     alt="Gustavo"
                     style={{
