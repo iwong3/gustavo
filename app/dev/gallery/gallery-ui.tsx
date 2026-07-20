@@ -21,6 +21,7 @@ export const sections = [
     { slug: 'forms', title: 'Forms', description: 'Expense/trip forms, delete dialogs — quick-switch to compare' },
     { slug: 'activity', title: 'Activity', description: 'Audit-log rows — diffs, participant lifecycle, restores' },
     { slug: 'nav-drawer', title: 'Nav drawer', description: 'Teleport index — expandable trips/health, active band, pinned account footer' },
+    { slug: 'health', title: 'Health', description: 'Training grid — 14-day muscle-group log, freshness dials, empty states' },
 ] as const
 
 const PHONE_WIDTH = 390

@@ -13,6 +13,7 @@ import type {
 } from '@/lib/health-types'
 import type { HealthSection } from '@/lib/health-section-order'
 import { getSectionOrder, saveSectionOrder } from '@/lib/health-section-order'
+import { DAYS_SINCE_ROWS } from '@/lib/health/muscle-groups'
 import { Box, Chip, Typography } from '@mui/material'
 import {
     IconBarbell,
@@ -103,13 +104,6 @@ function formatMonthDay(dateStr: string): string {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const DAYS_SINCE_ROWS: { label: string; groups: string[] }[] = [
-    { label: 'Push', groups: ['Chest', 'Shoulders', 'Triceps'] },
-    { label: 'Pull', groups: ['Upper Back', 'Biceps', 'Forearms'] },
-    { label: 'Legs', groups: ['Legs', 'Lower Back'] },
-    { label: 'Other', groups: ['Core', 'Cardio'] },
-]
 
 const daysSinceCardWidth = 'calc((100% - 12px) / 3)'
 

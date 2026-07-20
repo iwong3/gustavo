@@ -71,6 +71,22 @@ export const DISPLAY_ORDER = [
     'Core', 'Cardio',
 ] as const
 
+/**
+ * Row layout for the "days since" surfaces — the health dashboard's recency grid
+ * and the home-page training grid. Presentation-only (not stored in DB), grouped
+ * push / pull / legs / other. Both surfaces read this, so their row order can't
+ * drift apart; reorder here and they move together.
+ */
+export const DAYS_SINCE_ROWS: { label: string; groups: string[] }[] = [
+    { label: 'Push', groups: ['Chest', 'Shoulders', 'Triceps'] },
+    { label: 'Pull', groups: ['Upper Back', 'Biceps', 'Forearms'] },
+    { label: 'Legs', groups: ['Legs', 'Lower Back'] },
+    { label: 'Other', groups: ['Core', 'Cardio'] },
+]
+
+/** DAYS_SINCE_ROWS flattened — one row per muscle group, in display order. */
+export const DAYS_SINCE_ORDER: string[] = DAYS_SINCE_ROWS.flatMap((row) => row.groups)
+
 /** Check if a muscle group name is a group (top-level) */
 export function isGroup(name: string): boolean {
     return (MUSCLE_GROUPS as readonly string[]).includes(name)

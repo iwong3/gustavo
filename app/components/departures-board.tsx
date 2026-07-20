@@ -335,7 +335,7 @@ export default function DeparturesBoard({
                         textTransform: 'uppercase',
                     }}>
                     <IconPlaneDeparture size={13} stroke={2.5} />
-                    Trips
+                    Departures
                 </Typography>
                 {status && (
                     <Typography
