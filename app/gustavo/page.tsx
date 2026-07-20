@@ -233,6 +233,9 @@ export default function GustavoHomePage() {
                 alignItems: 'center',
                 width: '100%',
                 paddingX: 4,
+                // Clearance so the Health card doesn't crowd the footer — the
+                // grid is a tall card and sat almost flush against it.
+                paddingBottom: 4,
             }}>
             {/* Gus Fring avatar */}
             <Box sx={{ paddingBottom: 1, paddingTop: 1 }}>
