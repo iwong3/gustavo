@@ -9,7 +9,6 @@ import {
     HorizontalSortableList,
     SortablePresetChip,
 } from 'components/health/sortable-preset'
-import { WorkoutDetailDrawer } from 'components/health/workout-detail-drawer'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { selectedBg, selectedBorder } from 'components/health/muscle-group-grid'
 import {
@@ -20,7 +19,7 @@ import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useWorkoutData } from 'hooks/useWorkoutData'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -32,9 +31,6 @@ const ROUTINES_URL = `${LIST_URL}/routines`
 function ExercisePage() {
     const queryClient = useQueryClient()
     const router = useRouter()
-
-    const [detailWorkout, setDetailWorkout] = useState<Workout | null>(null)
-    const [detailOpen, setDetailOpen] = useState(false)
 
     // Legacy deep link (?presets=open, from older dashboard builds) → the
     // routines page that replaced the preset drawer.
@@ -104,16 +100,12 @@ function ExercisePage() {
         (workout: Workout) => router.push(`${LIST_URL}/${workout.id}/edit`),
         [router],
     )
-    const openDuplicate = useCallback(
-        (workout: Workout) => router.push(`${NEW_URL}?from=${workout.id}`),
+    const openRoutines = useCallback(() => router.push(ROUTINES_URL), [router])
+    // Detail is a page too (Edit / Duplicate / Delete live in its action bar)
+    const openDetail = useCallback(
+        (workout: Workout) => router.push(`${LIST_URL}/${workout.id}`),
         [router],
     )
-    const openRoutines = useCallback(() => router.push(ROUTINES_URL), [router])
-
-    const openDetail = useCallback((workout: Workout) => {
-        setDetailWorkout(workout)
-        setDetailOpen(true)
-    }, [])
 
     // For each workout + muscle group, compute days since the previous time that group was worked
     // Returns Map<workoutId, Map<muscleGroupName, daysSincePrevious>>
@@ -544,21 +536,6 @@ function ExercisePage() {
                     })}
                 </Box>
             )}
-
-            {/* Workout detail drawer — edit/duplicate hand off to the
-                page-style form routes */}
-            <WorkoutDetailDrawer
-                workout={detailWorkout}
-                open={detailOpen}
-                onClose={() => {
-                    setDetailOpen(false)
-                    setDetailWorkout(null)
-                }}
-                onEdit={openEdit}
-                onDuplicate={openDuplicate}
-                onDelete={handleDelete}
-                allWorkouts={workouts}
-            />
 
         </HealthPageLayout>
     )

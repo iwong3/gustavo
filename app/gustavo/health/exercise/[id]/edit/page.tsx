@@ -36,6 +36,9 @@ export default function EditWorkoutPage() {
         )
     }
 
+    // Back to the detail page, like expense edit
+    const detailUrl = `${LIST_URL}/${workout.id}`
+
     return (
         <Box
             sx={{
@@ -51,8 +54,8 @@ export default function EditWorkoutPage() {
                 muscleGroups={muscleGroups}
                 exercises={exercises}
                 presets={presets}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => router.replace(detailUrl)}
+                onSuccess={() => router.replace(detailUrl)}
             />
         </Box>
     )

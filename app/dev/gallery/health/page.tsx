@@ -2,10 +2,12 @@
 
 /** Gallery specimens for the home Health launcher — every recency state + empty cases. */
 import TrainingGrid from 'components/health/training-grid'
+import { WorkoutDetail } from 'components/health/workout-detail'
 import { DAYS_SINCE_ORDER, getParents, isGroup } from '@/lib/health/muscle-groups'
 import type { DaysSince, Workout } from '@/lib/health-types'
 
 import { GALLERY_TODAY } from '../fixtures'
+import { workout as pushDay, workoutHistory } from '../health-fixtures'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -123,6 +125,18 @@ const HOME_WIDTH = 326
 export default function HealthGallery() {
     return (
         <GalleryPage title="Health">
+            <SpecimenGroup title="Workout detail — /health/exercise/[id] (action bar not shown)">
+                <Specimen label="push day · notes, cadence stats, history rows + sparkline">
+                    <WorkoutDetail workout={pushDay} allWorkouts={workoutHistory} />
+                </Specimen>
+                <Specimen label="first-ever session · no history, no notes">
+                    <WorkoutDetail
+                        workout={{ ...pushDay, id: 1, notes: null }}
+                        allWorkouts={[{ ...pushDay, id: 1, notes: null }]}
+                    />
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="Training grid — home Health launcher">
                 <Specimen
                     label="typical month · Forearms 9d + Lower Back 8d in alert"

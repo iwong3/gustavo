@@ -588,11 +588,21 @@ Follow it exactly when adding or migrating a form.
   exercise, add location) get a small inline `primaryButtonSx` button next
   to their input — the action bar only ever submits the form itself.
 
+### Detail pages
+
+A record's read-only view is a page too — `<list>/[id]/page.tsx` — never a
+drawer. Same shape as forms: a content component
+(`components/health/workout-detail.tsx`, the receipts `drawer/*` pieces for
+expenses) plus a `PageActionBar` in the route page with the record's actions
+(Delete on the left in `colors.primaryRed`, then Duplicate / Edit). Edit's
+cancel/success returns to the detail page; delete returns to the list.
+
 ### Deletes
 
-Delete stays a confirm dialog (`dialogPaperSx` + `destructiveButtonSx`, see
-`components/delete-expense-dialog.tsx`) opened from the detail page or a swipe
-action — it is a one-tap confirmation, not a form.
+Delete stays a confirm dialog opened from the detail page's action bar or a
+swipe action — it is a one-tap confirmation, not a form. Use
+`components/confirm-delete-dialog.tsx` (`ConfirmDeleteDialog`); the
+expense/trip delete dialogs predate it and look the same.
 
 ### Gallery
 

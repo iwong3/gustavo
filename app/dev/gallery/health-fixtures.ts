@@ -159,3 +159,57 @@ export const workout: Workout = {
     ],
     createdAt: `${GALLERY_TODAY}T18:00:00Z`,
 }
+
+/** Earlier sessions before `workout`, so the detail page's per-group cadence
+ *  stats, exercise history rows, and weight sparkline have data. */
+function daysBefore(iso: string, n: number): string {
+    const d = new Date(iso + 'T00:00:00')
+    d.setDate(d.getDate() - n)
+    const pad = (x: number) => String(x).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+const pushSession = (
+    id: number,
+    daysAgo: number,
+    bench: number,
+    ohp: number
+): Workout => ({
+    id,
+    date: daysBefore(GALLERY_TODAY, daysAgo),
+    notes: null,
+    muscleGroups: [mg('Chest'), mg('Shoulders'), mg('Triceps')],
+    exercises: [
+        {
+            id: id * 10 + 1,
+            exercise: ex(1),
+            weightLbs: bench,
+            sortOrder: 0,
+            sets: [
+                { setNumber: 1, reps: 8 },
+                { setNumber: 2, reps: 8 },
+                { setNumber: 3, reps: 6 },
+            ],
+        },
+        {
+            id: id * 10 + 2,
+            exercise: ex(3),
+            weightLbs: ohp,
+            sortOrder: 1,
+            sets: [
+                { setNumber: 1, reps: 10 },
+                { setNumber: 2, reps: 10 },
+            ],
+        },
+    ],
+    createdAt: `${daysBefore(GALLERY_TODAY, daysAgo)}T18:00:00Z`,
+})
+
+/** Newest first, like /api/health/workouts. */
+export const workoutHistory: Workout[] = [
+    workout,
+    pushSession(41, 4, 180, 95),
+    pushSession(40, 9, 180, 90),
+    pushSession(39, 13, 175, 90),
+    pushSession(38, 20, 175, 85),
+]

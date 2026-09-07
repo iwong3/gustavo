@@ -15,6 +15,9 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 - [x] Workout log / edit / duplicate — `components/health/workout-form.tsx`,
       routes `health/exercise/new` (`?from=<id>` = duplicate) and
       `health/exercise/[id]/edit`
+- [x] Workout detail — `components/health/workout-detail.tsx` at
+      `health/exercise/[id]`, action bar Delete | Duplicate | Edit, delete via
+      the shared `ConfirmDeleteDialog`. Edit returns to the detail page.
 - [x] Workout routines (presets) — list page `health/exercise/routines`,
       `RoutineForm` at `routines/new` + `routines/[id]/edit` (replaced the
       two-view PresetFormDrawer)
@@ -42,10 +45,6 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
       symptoms / Manage symptoms with inline New/Edit Symptom) and
       `SymptomDetailsDrawer` (read-only forensic detail → detail page, like
       expense detail).
-- [ ] **Workout detail** — `components/health/workout-detail-drawer.tsx` is a
-      detail view, not a form, but for parity with expense detail it should
-      become `health/exercise/[id]/page.tsx` (edit/duplicate/delete from its
-      action bar). Then edit's back target becomes the detail page.
 
 ## To do — Trips
 
@@ -72,6 +71,8 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 
 - [ ] `components/form-drawer.tsx` becomes dead once the health drawers are gone
       — delete it and the `zIndex: 1600` note in `selectMenuProps`.
+- [ ] Move `DeleteExpenseDialog` / `DeleteTripDialog` onto the shared
+      `components/confirm-delete-dialog.tsx` (same look, less code).
 - [ ] `FormDateField` week strip: consider a `min`/`max` (trip form end date
       uses `min` on its text field today).
 - [ ] Gallery navigation: the forms page's chip strip is getting long — a left
