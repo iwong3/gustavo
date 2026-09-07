@@ -8,6 +8,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import ExpenseForm from 'components/expense-form'
+import ExerciseForm from 'components/health/exercise-form'
 import RoutineForm from 'components/health/routine-form'
 import WeightForm from 'components/health/weight-form'
 import WorkoutForm from 'components/health/workout-form'
@@ -53,6 +54,8 @@ const GROUPS = [
             { key: 'routine-edit', label: 'Routine · edit', kind: 'page' },
             { key: 'weight-log', label: 'Weight · log', kind: 'page' },
             { key: 'weight-edit', label: 'Weight · edit', kind: 'page' },
+            { key: 'exercise-new', label: 'Exercise · new', kind: 'page' },
+            { key: 'exercise-edit', label: 'Exercise · edit', kind: 'page' },
         ],
     },
 ] as const
@@ -131,6 +134,18 @@ export default function FormsGallery() {
                         preset={selected === 'routine-edit' ? presets[0] : undefined}
                         muscleGroups={muscleGroups}
                         exercises={exercises}
+                        onCancel={close}
+                        onSuccess={close}
+                    />
+                )
+            case 'exercise-new':
+            case 'exercise-edit':
+                return (
+                    <ExerciseForm
+                        key={selected}
+                        mode={selected === 'exercise-new' ? 'add' : 'edit'}
+                        exercise={selected === 'exercise-edit' ? exercises[0] : undefined}
+                        muscleGroups={muscleGroups}
                         onCancel={close}
                         onSuccess={close}
                     />
