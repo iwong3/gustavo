@@ -24,6 +24,17 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 - [x] Weight log / edit — `components/health/weight-form.tsx`, routes
       `health/weight/new` + `health/weight/[id]/edit`; list shares
       `hooks/useWeightLogs`. Back button is covered by `healthFormMatch`.
+- [x] Exercise library — `components/health/exercise-form.tsx`, routes
+      `health/exercises/new` + `health/exercises/[id]/edit`; uses the shared
+      `MuscleGroupGrid` (the page's private card copy is gone).
+- [x] Supplements — split like workouts/routines (`hooks/useSupplementData`):
+      log form `components/health/supplement-log-form.tsx` at
+      `health/supplements/new` (`?date=` edits that day — the day is the
+      record); catalogue at `health/supplements/manage` with `SupplementForm`
+      at `manage/new` + `manage/[id]/edit`; groups at
+      `health/supplements/groups` with `SupplementGroupForm` at `groups/new` +
+      `groups/[id]/edit`. Header: ⚡ → groups, ☰ → manage.
+      `healthSubListMatch` in the layout sends manage/groups back to the list.
 
 ## To do — Health (priority)
 
@@ -32,11 +43,6 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
       of `MuscleGroupCard`; switch it to
       `components/health/muscle-group-grid.tsx`. → `health/exercises/new`,
       `health/exercises/[id]/edit`
-- [ ] **Supplements** — `health/supplements/page.tsx` `SupplementDrawer`
-      (tabbed: Log supplements for a date / Manage supplements with inline
-      New/Edit Supplement) and `SupplementPresetDrawer` (list + New/Edit Group).
-      Split the same way as workouts: log page-form, manage list page, group
-      list + form pages.
 - [ ] **Diet** — `health/diet/page.tsx` `DietDrawer` (Log Meal / Edit Day, 3400
       lines with food picker + meal groups) and `DietPresetDrawer` (list +
       New/Edit Meal). Biggest migration; do after supplements so the list+form
@@ -68,6 +74,10 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
       priority.
 
 ## Follow-ups noticed during the workout migration
+
+- [ ] **Visual touch-up pass** on the migrated pages now that they're not in a
+      drawer (Ivan, Sept 2026) — spacing, field widths, and how the lists +
+      forms read as full pages.
 
 - [ ] `components/form-drawer.tsx` becomes dead once the health drawers are gone
       — delete it and the `zIndex: 1600` note in `selectMenuProps`.

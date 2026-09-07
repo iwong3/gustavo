@@ -168,6 +168,10 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     const healthFormMatch = pathname.match(
         /^(\/gustavo\/health\/[^/]+(?:\/[^/]+)*?)\/(?:new|[^/]+\/edit)$/
     )
+    // /gustavo/health/<section>/(routines|manage|groups) → the section list
+    const healthSubListMatch = pathname.match(
+        /^(\/gustavo\/health\/[^/]+)\/(?:routines|manage|groups)$/
+    )
     // /gustavo/trips/<slug>/edit → trip details
     const tripEditMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/edit$/
@@ -222,9 +226,11 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     } else if (healthFormMatch) {
         backHref = healthFormMatch[1]
     }
-    // /gustavo/health/exercise/routines → workouts
-    else if (pathname === '/gustavo/health/exercise/routines') {
-        backHref = '/gustavo/health/exercise'
+    // Sub-list pages under a health section → that section:
+    // /health/exercise/routines → workouts; /health/supplements/manage and
+    // /health/supplements/groups → supplements
+    else if (healthSubListMatch) {
+        backHref = healthSubListMatch[1]
     }
     // /gustavo/health/<sub> → health
     else if (/^\/gustavo\/health\/.+$/.test(pathname)) {

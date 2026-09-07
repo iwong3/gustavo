@@ -5,6 +5,9 @@
 import type {
     Exercise,
     MuscleGroupWithParents,
+    Supplement,
+    SupplementLog,
+    SupplementPreset,
     WeightLog,
     Workout,
     WorkoutPreset,
@@ -222,3 +225,41 @@ export const weightLog: WeightLog = {
     weightLbs: 184.6,
     createdAt: `${GALLERY_TODAY}T08:15:00.000Z`,
 }
+
+// ── Supplements ──────────────────────────────────────────────────────────────
+
+export const supplements: Supplement[] = [
+    { id: 1, name: 'Creatine', dosage: '5g', isActive: true },
+    { id: 2, name: 'Vitamin D', dosage: '2000 IU', isActive: true },
+    { id: 3, name: 'Fish Oil', dosage: '2 capsules', isActive: true },
+    { id: 4, name: 'Magnesium', dosage: '400mg', isActive: true },
+    { id: 5, name: 'Zinc', dosage: null, isActive: false },
+]
+
+const supLog = (
+    id: number,
+    supplementId: number,
+    date: string,
+    quantity = 1
+): SupplementLog => ({
+    id,
+    supplementId,
+    supplementName: supplements.find((s) => s.id === supplementId)!.name,
+    date,
+    quantity,
+    createdAt: `${date}T08:00:00.000Z`,
+})
+
+/** Two days of logs; GALLERY_TODAY has Fish Oil ×2 — for the Edit variant. */
+export const supplementLogs: SupplementLog[] = [
+    supLog(101, 1, GALLERY_TODAY),
+    supLog(102, 2, GALLERY_TODAY),
+    supLog(103, 3, GALLERY_TODAY, 2),
+    supLog(104, 1, '2026-07-13'),
+    supLog(105, 4, '2026-07-13'),
+]
+
+export const supplementPresets: SupplementPreset[] = [
+    { id: 11, name: 'Morning', supplements: [supplements[0], supplements[1], supplements[2]] },
+    { id: 12, name: 'Evening', supplements: [supplements[3]] },
+]

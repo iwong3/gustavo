@@ -1,57 +1,28 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
-import {
-    fieldSx,
-    labelSx,
-    primaryButtonSx,
-    secondaryButtonSx,
-} from '@/lib/form-styles'
-import type {
-    Supplement,
-    SupplementLog,
-    SupplementPreset,
-} from '@/lib/health-types'
-import {
-    Box,
-    Button,
-    Checkbox,
-    Chip,
-    TextField,
-    Typography,
-} from '@mui/material'
-import { IconArrowLeft, IconBolt, IconMinus, IconPencil, IconPill, IconPlus, IconTrash } from '@tabler/icons-react'
-import FormDrawer from 'components/form-drawer'
+import { colors } from '@/lib/colors'
+import type { SupplementLog } from '@/lib/health-types'
+import { Box, Chip, Typography } from '@mui/material'
+import { IconBolt, IconList, IconPill, IconTrash } from '@tabler/icons-react'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import {
-    arrayMove,
-    SortableDragHandle,
     SortablePresetChip,
-    SortablePresetRow,
     HorizontalSortableList,
-    VerticalSortableList,
 } from 'components/health/sortable-preset'
-import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { useReorderSupplementPresets } from 'components/health/supplement-presets'
+import { todayIso } from 'components/health/workout-presets'
+import { useSupplementData } from 'hooks/useSupplementData'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
 
-function getLocalDate(): string {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
-
-function formatDate(dateStr: string): string {
-    const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-    })
-}
+const LIST_URL = '/gustavo/health/supplements'
+const NEW_URL = `${LIST_URL}/new`
+const MANAGE_URL = `${LIST_URL}/manage`
+const GROUPS_URL = `${LIST_URL}/groups`
 
 function formatWeekday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
@@ -198,77 +169,76 @@ function SupplementLogCard({
     )
 }
 
-export default function SupplementsPage() {
-    const queryClient = useQueryClient()
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [drawerInitialDate, setDrawerInitialDate] = useState<string | null>(
-        null
-    )
-    const [presetDrawerOpen, setPresetDrawerOpen] = useState(false)
+// ── Header icon button (lightning → groups, list → manage) ──────────────────
 
-    // Auto-open the preset drawer when arriving with ?presets=open
+function HeaderIconButton({
+    onClick,
+    children,
+}: {
+    onClick: () => void
+    children: React.ReactNode
+}) {
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                'width': 30,
+                'height': 30,
+                'borderRadius': '50%',
+                'backgroundColor': '#cdbfdb',
+                'border': `1.5px solid ${colors.primaryBlack}`,
+                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                'display': 'flex',
+                'alignItems': 'center',
+                'justifyContent': 'center',
+                'flexShrink': 0,
+                'cursor': 'pointer',
+                '&:active': {
+                    boxShadow: 'none',
+                    transform: 'translate(2px, 2px)',
+                },
+            }}>
+            {children}
+        </Box>
+    )
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
+function SupplementsPage() {
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const { logs: allLogs, presets, loading } = useSupplementData()
+    const reorderPresets = useReorderSupplementPresets()
+
+    // Legacy deep link (?presets=open, from the dashboard) → the groups page
     const searchParams = useSearchParams()
     useEffect(() => {
-        if (searchParams.get('presets') === 'open') setPresetDrawerOpen(true)
-    }, [searchParams])
+        if (searchParams.get('presets') === 'open') router.replace(GROUPS_URL)
+    }, [searchParams, router])
 
-    const queries = useQueries({
-        queries: [
-            {
-                queryKey: [...queryKeys.health.supplements, 'all'] as const,
-                queryFn: async () => {
-                    const r = await fetch('/api/health/supplements?all=true')
-                    if (!r.ok) throw new Error('Failed to fetch supplements')
-                    return r.json() as Promise<Supplement[]>
-                },
-            },
-            {
-                queryKey: queryKeys.health.supplementLogs.all,
-                queryFn: async () => {
-                    const r = await fetch('/api/health/supplement-logs')
-                    if (!r.ok) throw new Error('Failed to fetch supplement logs')
-                    return r.json() as Promise<SupplementLog[]>
-                },
-            },
-            {
-                queryKey: queryKeys.health.presets.byType('supplement'),
-                queryFn: async () => {
-                    const r = await fetch('/api/health/presets?type=supplement')
-                    if (!r.ok) throw new Error('Failed to fetch presets')
-                    return r.json() as Promise<SupplementPreset[]>
-                },
-            },
-        ],
-    })
-    const supplements = queries[0].data ?? []
-    const allLogs = queries[1].data ?? []
-    const presets = queries[2].data ?? []
-    const loading = queries.some((q) => q.isLoading)
+    // Warm the routes the header and FAB lead to
+    useEffect(() => {
+        router.prefetch(NEW_URL)
+        router.prefetch(MANAGE_URL)
+        router.prefetch(GROUPS_URL)
+    }, [router])
 
-    const invalidateSupplements = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.health.supplements })
-    }, [queryClient])
     const invalidateLogs = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all })
     }, [queryClient])
-    const invalidatePresets = useCallback(() => {
+    const invalidateAll = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.supplements })
+        queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all })
         queryClient.invalidateQueries({ queryKey: queryKeys.health.presets.all })
     }, [queryClient])
-    const invalidateAll = useCallback(() => {
-        invalidateSupplements()
-        invalidateLogs()
-        invalidatePresets()
-    }, [invalidateSupplements, invalidateLogs, invalidatePresets])
 
-    const openAdd = useCallback(() => {
-        setDrawerInitialDate(null)
-        setDrawerOpen(true)
-    }, [])
-
-    const openEditDate = useCallback((date: string) => {
-        setDrawerInitialDate(date)
-        setDrawerOpen(true)
-    }, [])
+    const openAdd = useCallback(() => router.push(NEW_URL), [router])
+    const openEditDate = useCallback(
+        (date: string) => router.push(`${NEW_URL}?date=${date}`),
+        [router]
+    )
+    useRegisterFab(openAdd)
 
     const deleteDateMutation = useMutation({
         mutationFn: async (date: string) => {
@@ -284,17 +254,13 @@ export default function SupplementsPage() {
         onSuccess: invalidateLogs,
         onError: (err) => console.error('Failed to delete logs:', err),
     })
-    const handleDeleteDate = useCallback(
-        (date: string) => deleteDateMutation.mutate(date),
-        [deleteDateMutation],
-    )
 
     const applyPresetMutation = useMutation({
         mutationFn: async (presetId: number) => {
             const res = await fetch(`/api/health/presets/${presetId}/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: getLocalDate() }),
+                body: JSON.stringify({ date: todayIso() }),
             })
             if (!res.ok) throw new Error('Apply failed')
             return presetId
@@ -303,33 +269,13 @@ export default function SupplementsPage() {
         onError: (err) => console.error('Failed to apply preset:', err),
     })
     const applyPreset = useCallback(
-        (presetId: number) => {
-            applyPresetMutation.mutate(presetId)
-        },
+        (presetId: number) => applyPresetMutation.mutate(presetId),
         [applyPresetMutation],
     )
     const applyingPreset = applyPresetMutation.isPending
         ? (applyPresetMutation.variables ?? null)
         : null
 
-    const reorderPresets = useCallback(
-        (from: number, to: number) => {
-            const key = queryKeys.health.presets.byType('supplement')
-            const current = queryClient.getQueryData<SupplementPreset[]>(key) ?? presets
-            const next = arrayMove(current, from, to)
-            queryClient.setQueryData(key, next)
-            fetch('/api/health/presets/reorder', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ presetIds: next.map((p) => p.id) }),
-            }).catch((err) => console.error('Failed to save preset order:', err))
-        },
-        [queryClient, presets],
-    )
-
-    useRegisterFab(openAdd)
-
-    const activeSupplements = supplements.filter((s) => s.isActive)
     const dayGroups = groupLogsByDate(allLogs)
 
     return (
@@ -346,33 +292,17 @@ export default function SupplementsPage() {
                         gap: 1,
                         alignItems: 'center',
                     }}>
-                    {/* Lightning circle icon — opens preset drawer */}
-                    <Box
-                        onClick={() => setPresetDrawerOpen(true)}
-                        sx={{
-                            'width': 30,
-                            'height': 30,
-                            'borderRadius': '50%',
-                            'backgroundColor': '#cdbfdb',
-                            'border': `1.5px solid ${colors.primaryBlack}`,
-                            'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                            'display': 'flex',
-                            'alignItems': 'center',
-                            'justifyContent': 'center',
-                            'flexShrink': 0,
-                            'cursor': 'pointer',
-                            '&:active': {
-                                boxShadow: 'none',
-                                transform: 'translate(2px, 2px)',
-                            },
-                        }}>
+                    <HeaderIconButton onClick={() => router.push(GROUPS_URL)}>
                         <IconBolt
                             size={14}
                             stroke={2.5}
                             fill={colors.primaryWhite}
                             color={colors.primaryBlack}
                         />
-                    </Box>
+                    </HeaderIconButton>
+                    <HeaderIconButton onClick={() => router.push(MANAGE_URL)}>
+                        <IconList size={14} stroke={2.5} color={colors.primaryBlack} />
+                    </HeaderIconButton>
                     <HorizontalSortableList items={presets} onReorder={reorderPresets}>
                         {presets.map((preset) => (
                             <SortablePresetChip key={preset.id} id={preset.id}>
@@ -451,1089 +381,22 @@ export default function SupplementsPage() {
                             <SupplementLogCard
                                 group={group}
                                 onEdit={() => openEditDate(group.date)}
-                                onDelete={() => handleDeleteDate(group.date)}
+                                onDelete={() => deleteDateMutation.mutate(group.date)}
                             />
                         </Box>
                     ))}
                 </Box>
             )}
-
-            {/* Unified drawer — Log mode / Manage mode */}
-            <SupplementDrawer
-                open={drawerOpen}
-                onClose={() => {
-                    setDrawerOpen(false)
-                    setDrawerInitialDate(null)
-                }}
-                supplements={supplements}
-                allLogs={allLogs}
-                initialDate={drawerInitialDate}
-                onDataChanged={invalidateAll}
-            />
-
-            {/* Supplement preset drawer */}
-            <SupplementPresetDrawer
-                open={presetDrawerOpen}
-                onClose={() => setPresetDrawerOpen(false)}
-                supplements={supplements}
-                existingPresets={presets}
-                onSaved={invalidatePresets}
-                onDelete={async (id) => {
-                    await fetch(`/api/health/presets/${id}`, {
-                        method: 'DELETE',
-                    })
-                    invalidatePresets()
-                }}
-                onReorder={reorderPresets}
-            />
         </HealthPageLayout>
     )
 }
 
-// ── Unified Supplement Drawer ───────────────────────────────────────────────
-
-type DrawerMode = 'log' | 'manage'
-
-type SupplementDrawerProps = {
-    open: boolean
-    onClose: () => void
-    supplements: Supplement[]
-    allLogs: SupplementLog[]
-    initialDate: string | null
-    onDataChanged: () => void
-}
-
-function SupplementDrawer({
-    open,
-    onClose,
-    supplements,
-    allLogs,
-    initialDate,
-    onDataChanged,
-}: SupplementDrawerProps) {
-    const [mode, setMode] = useState<DrawerMode>('log')
-    const [date, setDate] = useState(getLocalDate)
-    const [quantities, setQuantities] = useState<Map<number, number>>(new Map())
-    const [saving, setSaving] = useState(false)
-
-    // Manage mode state
-    const [editingSupp, setEditingSupp] = useState<Supplement | null>(null)
-    const [name, setName] = useState('')
-    const [dosage, setDosage] = useState('')
-    const [isActive, setIsActive] = useState(true)
-
-    const activeSupplements = supplements.filter((s) => s.isActive)
-
-    // Logs for selected date (from DB)
-    const dateLogs = allLogs.filter((l) => l.date === date)
-
-    // Reset when opened
-    useEffect(() => {
-        if (open) {
-            const d = initialDate || getLocalDate()
-            setMode('log')
-            setDate(d)
-            setEditingSupp(null)
-            setName('')
-            setDosage('')
-            setIsActive(true)
-            // Pre-fill quantities from existing logs for this date
-            const logsForDate = allLogs.filter((l) => l.date === d)
-            const qMap = new Map<number, number>()
-            for (const l of logsForDate) {
-                qMap.set(Number(l.supplementId), l.quantity)
-            }
-            setQuantities(qMap)
-        }
-    }, [open, initialDate, allLogs])
-
-    // Change date and re-sync selections from existing logs
-    const handleDateChange = useCallback((newDate: string) => {
-        setDate(newDate)
-        const logsForDate = allLogs.filter((l) => l.date === newDate)
-        const qMap = new Map<number, number>()
-        for (const l of logsForDate) {
-            qMap.set(Number(l.supplementId), l.quantity)
-        }
-        setQuantities(qMap)
-    }, [allLogs])
-
-    const toggleSupplementSelection = useCallback((suppId: number) => {
-        setQuantities((prev) => {
-            const next = new Map(prev)
-            if (next.has(suppId)) {
-                next.delete(suppId)
-            } else {
-                next.set(suppId, 1)
-            }
-            return next
-        })
-    }, [])
-
-    const setSupplementQuantity = useCallback((suppId: number, qty: number) => {
-        setQuantities((prev) => {
-            const next = new Map(prev)
-            if (qty <= 0) {
-                next.delete(suppId)
-            } else {
-                next.set(suppId, qty)
-            }
-            return next
-        })
-    }, [])
-
-    const handleLogSubmit = useCallback(async () => {
-        setSaving(true)
-        try {
-            const logMap = new Map<number, SupplementLog>()
-            for (const l of dateLogs) logMap.set(Number(l.supplementId), l)
-
-            const ops: Promise<Response>[] = []
-            // Add new or update quantity for selected supplements
-            for (const [suppId, qty] of Array.from(quantities.entries())) {
-                const existing = logMap.get(suppId)
-                if (existing) {
-                    // Update quantity if changed
-                    if (existing.quantity !== qty) {
-                        ops.push(fetch(`/api/health/supplement-logs/${existing.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ quantity: qty }),
-                        }))
-                    }
-                } else {
-                    // New log — POST creates with quantity=1, then PUT if qty > 1
-                    ops.push(
-                        fetch('/api/health/supplement-logs', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ date, supplementId: suppId }),
-                        }).then(async (res) => {
-                            if (res.ok && qty > 1) {
-                                const created = await res.json()
-                                return fetch(`/api/health/supplement-logs/${created.id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ quantity: qty }),
-                                })
-                            }
-                            return res
-                        })
-                    )
-                }
-            }
-            // Remove deselected supplements
-            for (const [suppId, log] of Array.from(logMap.entries())) {
-                if (!quantities.has(suppId)) {
-                    ops.push(fetch(`/api/health/supplement-logs/${log.id}`, { method: 'DELETE' }))
-                }
-            }
-
-            await Promise.all(ops)
-            onDataChanged()
-            onClose()
-        } catch (err) {
-            console.error('Failed to save supplement log:', err)
-        } finally {
-            setSaving(false)
-        }
-    }, [date, quantities, dateLogs, onDataChanged, onClose])
-
-    const startEdit = useCallback((supp: Supplement) => {
-        setEditingSupp(supp)
-        setName(supp.name)
-        setDosage(supp.dosage || '')
-        setIsActive(supp.isActive)
-    }, [])
-
-    const startAdd = useCallback(() => {
-        setEditingSupp(null)
-        setName('')
-        setDosage('')
-        setIsActive(true)
-    }, [])
-
-    const handleSaveSupplement = useCallback(async () => {
-        if (!name.trim()) return
-        setSaving(true)
-        try {
-            const url = editingSupp
-                ? `/api/health/supplements/${editingSupp.id}`
-                : '/api/health/supplements'
-            const method = editingSupp ? 'PUT' : 'POST'
-
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    dosage: dosage.trim() || null,
-                    ...(editingSupp ? { isActive } : {}),
-                }),
-            })
-
-            if (res.ok) {
-                setEditingSupp(null)
-                setName('')
-                setDosage('')
-                setIsActive(true)
-                onDataChanged()
-            }
-        } finally {
-            setSaving(false)
-        }
-    }, [name, dosage, isActive, editingSupp, onDataChanged])
-
-    const handleDeleteSupplement = useCallback(
-        async (id: number) => {
-            const res = await fetch(`/api/health/supplements/${id}`, {
-                method: 'DELETE',
-            })
-            if (res.ok) {
-                setEditingSupp(null)
-                onDataChanged()
-            }
-        },
-        [onDataChanged]
-    )
-
-    const toggleSx = (active: boolean) =>
-        ({
-            'flex': 1,
-            'py': 0.75,
-            'fontSize': 13,
-            'fontWeight': active ? 700 : 500,
-            'color': colors.primaryBlack,
-            'backgroundColor': active ? colors.primaryYellow : 'transparent',
-            'border': `1.5px solid ${colors.primaryBlack}`,
-            'boxShadow': active ? `2px 2px 0px ${colors.primaryBlack}` : 'none',
-            'borderRadius': '4px',
-            'textTransform': 'none',
-            '&:hover': {
-                backgroundColor: active
-                    ? colors.primaryYellow
-                    : `${colors.primaryYellow}30`,
-            },
-        }) as const
-
+export default function Page() {
+    // useSearchParams needs a Suspense boundary
     return (
-        <FormDrawer open={open} onClose={onClose}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                    overflow: 'hidden',
-                }}>
-                {/* Header */}
-                <Box
-                    sx={{
-                        px: 2.5,
-                        py: 2,
-                        borderBottom: `1px solid ${colors.primaryBlack}20`,
-                    }}>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 1.5 }}>
-                        Supplements
-                    </Typography>
-
-                    {/* Mode toggle */}
-                    <Box sx={{ display: 'flex', gap: 0.75 }}>
-                        <Button
-                            onClick={() => setMode('log')}
-                            sx={toggleSx(mode === 'log')}>
-                            Log
-                        </Button>
-                        <Button
-                            onClick={() => setMode('manage')}
-                            sx={toggleSx(mode === 'manage')}>
-                            Manage
-                        </Button>
-                    </Box>
-                </Box>
-
-                {/* Body */}
-                <Box
-                    sx={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        px: 2.5,
-                        py: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                    }}>
-                    {mode === 'log' ? (
-                        <>
-                            {/* Date picker */}
-                            <Box>
-                                <Typography sx={labelSx}>Date</Typography>
-                                <TextField
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) =>
-                                        handleDateChange(e.target.value)
-                                    }
-                                    size="small"
-                                    sx={{ ...fieldSx, maxWidth: 180 }}
-                                />
-                            </Box>
-
-                            {/* Supplement checklist */}
-                            {activeSupplements.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 3 }}>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 14,
-                                            color: colors.primaryBrown,
-                                            mb: 1,
-                                        }}>
-                                        No supplements added yet.
-                                    </Typography>
-                                    <Button
-                                        onClick={() => setMode('manage')}
-                                        size="small"
-                                        sx={primaryButtonSx}>
-                                        Add Supplements
-                                    </Button>
-                                </Box>
-                            ) : (
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 0.75,
-                                    }}>
-                                    {activeSupplements.map((supp) => {
-                                        const qty = quantities.get(supp.id) ?? 0
-                                        const isSelected = qty > 0
-                                        return (
-                                            <Box
-                                                key={supp.id}
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'gap': 1,
-                                                    'padding': '8px 12px',
-                                                    ...cardSx,
-                                                    'backgroundColor':
-                                                        isSelected
-                                                            ? '#f1f8e9'
-                                                            : colors.primaryWhite,
-                                                    'borderColor': isSelected
-                                                        ? '#4caf50'
-                                                        : colors.primaryBlack,
-                                                    'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                    'transition':
-                                                        'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
-                                                }}>
-                                                {/* Checkbox toggles selection */}
-                                                <Checkbox
-                                                    checked={isSelected}
-                                                    onClick={() => toggleSupplementSelection(supp.id)}
-                                                    size="small"
-                                                    sx={{
-                                                        'padding': 0,
-                                                        'color': colors.primaryBlack,
-                                                        '&.Mui-checked': { color: '#4caf50' },
-                                                    }}
-                                                />
-                                                {/* Name + dosage */}
-                                                <Box
-                                                    sx={{ flex: 1, cursor: 'pointer' }}
-                                                    onClick={() => toggleSupplementSelection(supp.id)}>
-                                                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                                        {supp.name}
-                                                    </Typography>
-                                                    {supp.dosage && (
-                                                        <Typography sx={{ fontSize: 12, color: colors.primaryBrown }}>
-                                                            {supp.dosage}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                                {/* Quantity controls — only when selected */}
-                                                {isSelected && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                                                        <Box
-                                                            onClick={() => setSupplementQuantity(supp.id, qty - 1)}
-                                                            sx={{
-                                                                'width': 24,
-                                                                'height': 24,
-                                                                'borderRadius': '50%',
-                                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'justifyContent': 'center',
-                                                                'cursor': 'pointer',
-                                                                'backgroundColor': colors.primaryWhite,
-                                                                '&:active': {
-                                                                    boxShadow: 'none',
-                                                                    transform: 'translate(1px, 1px)',
-                                                                },
-                                                            }}>
-                                                            <IconMinus size={12} stroke={2.5} />
-                                                        </Box>
-                                                        <Typography sx={{ fontSize: 14, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
-                                                            {qty}
-                                                        </Typography>
-                                                        <Box
-                                                            onClick={() => setSupplementQuantity(supp.id, qty + 1)}
-                                                            sx={{
-                                                                'width': 24,
-                                                                'height': 24,
-                                                                'borderRadius': '50%',
-                                                                'border': `1.5px solid ${colors.primaryBlack}`,
-                                                                'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'justifyContent': 'center',
-                                                                'cursor': 'pointer',
-                                                                'backgroundColor': colors.primaryWhite,
-                                                                '&:active': {
-                                                                    boxShadow: 'none',
-                                                                    transform: 'translate(1px, 1px)',
-                                                                },
-                                                            }}>
-                                                            <IconPlus size={12} stroke={2.5} />
-                                                        </Box>
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        )
-                                    })}
-                                </Box>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {/* Add / Edit form */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1.5,
-                                    pb: 2,
-                                    borderBottom: `1px solid ${colors.primaryBlack}15`,
-                                }}>
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: colors.primaryBrown,
-                                    }}>
-                                    {editingSupp
-                                        ? 'Edit Supplement'
-                                        : 'New Supplement'}
-                                </Typography>
-                                <Box>
-                                    <Typography sx={labelSx}>Name</Typography>
-                                    <TextField
-                                        value={name}
-                                        onChange={(e) =>
-                                            setName(e.target.value)
-                                        }
-                                        size="small"
-                                        fullWidth
-                                        placeholder="Creatine, Vitamin D..."
-                                        sx={fieldSx}
-                                    />
-                                </Box>
-                                <Box>
-                                    <Typography sx={labelSx}>Dosage</Typography>
-                                    <TextField
-                                        value={dosage}
-                                        onChange={(e) =>
-                                            setDosage(e.target.value)
-                                        }
-                                        size="small"
-                                        fullWidth
-                                        placeholder="5g, 400mg, 2 capsules..."
-                                        sx={fieldSx}
-                                    />
-                                </Box>
-                                {editingSupp && (
-                                    <Box
-                                        onClick={() => setIsActive(!isActive)}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            cursor: 'pointer',
-                                        }}>
-                                        <Checkbox
-                                            checked={isActive}
-                                            size="small"
-                                            sx={{
-                                                'padding': 0,
-                                                'color': colors.primaryBlack,
-                                                '&.Mui-checked': {
-                                                    color: colors.primaryBlack,
-                                                },
-                                            }}
-                                            tabIndex={-1}
-                                        />
-                                        <Typography sx={{ fontSize: 14 }}>
-                                            Active
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {editingSupp && (
-                                    <Button
-                                        onClick={() => startAdd()}
-                                        size="small"
-                                        sx={secondaryButtonSx}>
-                                        Cancel Edit
-                                    </Button>
-                                )}
-                            </Box>
-
-                            {/* Existing supplements list */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.75,
-                                }}>
-                                {supplements.length === 0 ? (
-                                    <Typography
-                                        sx={{
-                                            fontSize: 14,
-                                            color: colors.primaryBrown,
-                                            textAlign: 'center',
-                                            py: 2,
-                                        }}>
-                                        No supplements yet. Add one above.
-                                    </Typography>
-                                ) : (
-                                    supplements.map((supp) => (
-                                        <Box
-                                            key={supp.id}
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '8px 12px',
-                                                ...cardSx,
-                                                opacity: supp.isActive
-                                                    ? 1
-                                                    : 0.5,
-                                                backgroundColor:
-                                                    editingSupp?.id === supp.id
-                                                        ? colors.secondaryYellow
-                                                        : colors.primaryWhite,
-                                            }}>
-                                            <Box>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                    }}>
-                                                    {supp.name}
-                                                </Typography>
-                                                {supp.dosage && (
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 12,
-                                                            color: colors.primaryBrown,
-                                                        }}>
-                                                        {supp.dosage}
-                                                    </Typography>
-                                                )}
-                                                {!supp.isActive && (
-                                                    <Typography
-                                                        sx={{
-                                                            fontSize: 11,
-                                                            color: colors.primaryBrown,
-                                                            fontStyle: 'italic',
-                                                        }}>
-                                                        Inactive
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    gap: 0.5,
-                                                }}>
-                                                <Box
-                                                    onClick={() =>
-                                                        startEdit(supp)
-                                                    }
-                                                    sx={{
-                                                        'cursor': 'pointer',
-                                                        'p': 0.5,
-                                                        'borderRadius': '4px',
-                                                        '&:active': {
-                                                            backgroundColor: `${colors.primaryYellow}40`,
-                                                        },
-                                                    }}>
-                                                    <IconPencil
-                                                        size={16}
-                                                        stroke={2}
-                                                        color={
-                                                            colors.primaryBrown
-                                                        }
-                                                    />
-                                                </Box>
-                                                <Box
-                                                    onClick={() =>
-                                                        handleDeleteSupplement(
-                                                            supp.id
-                                                        )
-                                                    }
-                                                    sx={{
-                                                        'cursor': 'pointer',
-                                                        'p': 0.5,
-                                                        'borderRadius': '4px',
-                                                        '&:active': {
-                                                            backgroundColor: `${colors.primaryRed}20`,
-                                                        },
-                                                    }}>
-                                                    <IconTrash
-                                                        size={16}
-                                                        stroke={2}
-                                                        color={
-                                                            colors.primaryRed
-                                                        }
-                                                    />
-                                                </Box>
-                                            </Box>
-                                        </Box>
-                                    ))
-                                )}
-                            </Box>
-                        </>
-                    )}
-                </Box>
-
-                {/* Footer */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        px: 2.5,
-                        py: 2,
-                        borderTop: `1px solid ${colors.primaryBlack}20`,
-                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                    }}>
-                    <Button
-                        onClick={onClose}
-                        disabled={saving}
-                        size="large"
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    {mode === 'log' ? (
-                        <Button
-                            onClick={handleLogSubmit}
-                            disabled={quantities.size === 0 || saving}
-                            size="large"
-                            sx={primaryButtonSx}>
-                            {saving ? 'Saving...' : 'Log'}
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleSaveSupplement}
-                            disabled={!name.trim() || saving}
-                            size="large"
-                            sx={primaryButtonSx}>
-                            {saving
-                                ? 'Saving...'
-                                : editingSupp
-                                  ? 'Save'
-                                  : 'Add'}
-                        </Button>
-                    )}
-                </Box>
-            </Box>
-        </FormDrawer>
-    )
-}
-
-// ── Supplement Preset Drawer ────────────────────────────────────────────────
-
-type SupplementPresetDrawerProps = {
-    open: boolean
-    onClose: () => void
-    supplements: Supplement[]
-    existingPresets: SupplementPreset[]
-    onSaved: () => void
-    onDelete: (id: number) => Promise<void>
-    onReorder: (from: number, to: number) => void
-}
-
-type SupPresetView = 'list' | 'form'
-
-function SupplementPresetDrawer({
-    open,
-    onClose,
-    supplements,
-    existingPresets,
-    onSaved,
-    onDelete,
-    onReorder,
-}: SupplementPresetDrawerProps) {
-    const [view, setView] = useState<SupPresetView>('list')
-    const [editingPreset, setEditingPreset] = useState<SupplementPreset | null>(null)
-    const [name, setName] = useState('')
-    const [selectedSupIds, setSelectedSupIds] = useState<Set<number>>(new Set())
-    const [saving, setSaving] = useState(false)
-    const [error, setError] = useState('')
-
-    const activeSupplements = supplements.filter((s) => s.isActive)
-
-    const resetForm = useCallback(() => {
-        setName('')
-        setSelectedSupIds(new Set())
-        setError('')
-    }, [])
-
-    const openForm = useCallback((preset: SupplementPreset | null) => {
-        setEditingPreset(preset)
-        if (preset) {
-            setName(preset.name)
-            setSelectedSupIds(new Set(preset.supplements.map((s) => s.id)))
-        } else {
-            resetForm()
-        }
-        setView('form')
-    }, [resetForm])
-
-    const goBack = useCallback(() => {
-        setView('list')
-        setEditingPreset(null)
-        resetForm()
-    }, [resetForm])
-
-    useEffect(() => {
-        if (open) {
-            setView('list')
-            setEditingPreset(null)
-            resetForm()
-        }
-    }, [open, resetForm])
-
-    const toggleSupplement = useCallback((id: number) => {
-        setSelectedSupIds((prev) => {
-            const next = new Set(prev)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-        })
-    }, [])
-
-    const handleSubmit = useCallback(async () => {
-        if (!name.trim() || selectedSupIds.size === 0) return
-        setSaving(true)
-        setError('')
-
-        const url = editingPreset
-            ? `/api/health/presets/${editingPreset.id}`
-            : '/api/health/presets'
-        const method = editingPreset ? 'PUT' : 'POST'
-
-        try {
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    type: 'supplement',
-                    supplementIds: Array.from(selectedSupIds),
-                }),
-            })
-            if (res.ok) {
-                onSaved()
-                goBack()
-            } else {
-                const data = await res.json()
-                setError(data.error || 'Failed to save')
-            }
-        } catch {
-            setError('Failed to save')
-        } finally {
-            setSaving(false)
-        }
-    }, [name, selectedSupIds, editingPreset, onSaved, goBack])
-
-    return (
-        <FormDrawer open={open} onClose={view === 'form' ? goBack : onClose}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                    overflow: 'hidden',
-                }}>
-                {/* Header */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        px: 2.5,
-                        py: 2,
-                        borderBottom: `1px solid ${colors.primaryBlack}20`,
-                    }}>
-                    {view === 'form' && (
-                        <Box
-                            onClick={goBack}
-                            sx={{
-                                'cursor': 'pointer',
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                '&:active': { opacity: 0.5 },
-                            }}>
-                            <IconArrowLeft size={20} stroke={2} color={colors.primaryBlack} />
-                        </Box>
-                    )}
-                    <Typography
-                        sx={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            fontFamily: 'var(--font-serif)',
-                        }}>
-                        {view === 'list'
-                            ? 'Supplement Groups'
-                            : editingPreset
-                              ? 'Edit Group'
-                              : 'New Group'}
-                    </Typography>
-                </Box>
-
-                {/* Body */}
-                <Box
-                    sx={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        px: 2.5,
-                        py: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                    }}>
-                    {view === 'list' ? (
-                        <>
-                            {existingPresets.length > 0 ? (
-                                <VerticalSortableList items={existingPresets} onReorder={onReorder}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 1,
-                                        }}>
-                                        {existingPresets.map((p) => (
-                                            <SortablePresetRow
-                                                key={p.id}
-                                                id={p.id}>
-                                                <Box
-                                                    sx={{
-                                                        ...cardSx,
-                                                        overflow: 'hidden',
-                                                    }}>
-                                                    <SwipeableRow
-                                                        canEdit
-                                                        canDelete
-                                                        onEdit={() => openForm(p)}
-                                                        onDelete={() => onDelete(p.id)}
-                                                        backgroundColor={colors.primaryWhite}
-                                                        borderColor={colors.primaryBlack}>
-                                                        <Box
-                                                            onClick={() => openForm(p)}
-                                                            sx={{
-                                                                'display': 'flex',
-                                                                'alignItems': 'center',
-                                                                'gap': 1.5,
-                                                                'p': 1.5,
-                                                                'cursor': 'pointer',
-                                                                '&:active': {
-                                                                    backgroundColor:
-                                                                        colors.secondaryYellow,
-                                                                },
-                                                                'transition':
-                                                                    'background-color 150ms ease',
-                                                            }}>
-                                                            <SortableDragHandle id={p.id} />
-                                                            <Box
-                                                                sx={{
-                                                                    flex: 1,
-                                                                    minWidth: 0,
-                                                                }}>
-                                                                <Typography
-                                                                    sx={{
-                                                                        fontSize: 14,
-                                                                        fontWeight: 600,
-                                                                        mb: 0.5,
-                                                                    }}>
-                                                                    {p.name}
-                                                                </Typography>
-                                                                <Typography
-                                                                    sx={{
-                                                                        fontSize: 12,
-                                                                        color: colors.primaryBrown,
-                                                                    }}>
-                                                                    {p.supplements
-                                                                        .map((s) => s.name)
-                                                                        .join(', ')}
-                                                                </Typography>
-                                                            </Box>
-                                                        </Box>
-                                                    </SwipeableRow>
-                                                </Box>
-                                            </SortablePresetRow>
-                                        ))}
-                                    </Box>
-                                </VerticalSortableList>
-                            ) : (
-                                <Typography
-                                    sx={{
-                                        fontSize: 13,
-                                        color: colors.primaryBrown,
-                                        textAlign: 'center',
-                                        py: 2,
-                                    }}>
-                                    No groups yet. Create one to get started.
-                                </Typography>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <Box>
-                                <Typography sx={labelSx}>Name</Typography>
-                                <TextField
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    size="small"
-                                    fullWidth
-                                    placeholder="Daily, Workout, Evening..."
-                                    sx={fieldSx}
-                                />
-                            </Box>
-
-                            {/* Supplement selection */}
-                            <Box>
-                                <Typography sx={labelSx}>Supplements</Typography>
-                                {activeSupplements.length === 0 ? (
-                                    <Typography
-                                        sx={{
-                                            fontSize: 13,
-                                            color: colors.primaryBrown,
-                                        }}>
-                                        No active supplements. Add some first.
-                                    </Typography>
-                                ) : (
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: 0.75,
-                                        }}>
-                                        {activeSupplements.map((supp) => {
-                                            const isSelected = selectedSupIds.has(supp.id)
-                                            return (
-                                                <Box
-                                                    key={supp.id}
-                                                    onClick={() => toggleSupplement(supp.id)}
-                                                    sx={{
-                                                        'display': 'flex',
-                                                        'alignItems': 'center',
-                                                        'gap': 1,
-                                                        'padding': '8px 12px',
-                                                        ...cardSx,
-                                                        'cursor': 'pointer',
-                                                        'backgroundColor': isSelected
-                                                            ? '#f1f8e9'
-                                                            : colors.primaryWhite,
-                                                        'borderColor': isSelected
-                                                            ? '#4caf50'
-                                                            : colors.primaryBlack,
-                                                        'boxShadow': `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                        'transition': 'all 0.15s',
-                                                        '&:active': {
-                                                            boxShadow: `1px 1px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                                            transform: 'translate(1px, 1px)',
-                                                        },
-                                                    }}>
-                                                    <Checkbox
-                                                        checked={isSelected}
-                                                        size="small"
-                                                        sx={{
-                                                            'padding': 0,
-                                                            'color': colors.primaryBlack,
-                                                            '&.Mui-checked': { color: '#4caf50' },
-                                                        }}
-                                                        tabIndex={-1}
-                                                    />
-                                                    <Box>
-                                                        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                                                            {supp.name}
-                                                        </Typography>
-                                                        {supp.dosage && (
-                                                            <Typography
-                                                                sx={{ fontSize: 12, color: colors.primaryBrown }}>
-                                                                {supp.dosage}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                </Box>
-                                            )
-                                        })}
-                                    </Box>
-                                )}
-                            </Box>
-
-                            {error && (
-                                <Typography sx={{ fontSize: 13, color: colors.primaryRed }}>
-                                    {error}
-                                </Typography>
-                            )}
-                        </>
-                    )}
-                </Box>
-
-                {/* Footer */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        px: 2.5,
-                        py: 2,
-                        borderTop: `1px solid ${colors.primaryBlack}20`,
-                        paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                    }}>
-                    {view === 'form' ? (
-                        <>
-                            <Button
-                                onClick={goBack}
-                                disabled={saving}
-                                size="large"
-                                sx={secondaryButtonSx}>
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={!name.trim() || selectedSupIds.size === 0 || saving}
-                                size="large"
-                                sx={primaryButtonSx}>
-                                {saving ? 'Saving...' : editingPreset ? 'Save' : 'Create'}
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <Button onClick={onClose} size="large" sx={secondaryButtonSx}>
-                                Close
-                            </Button>
-                            <Button
-                                onClick={() => openForm(null)}
-                                size="large"
-                                sx={{ ...primaryButtonSx, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <IconPlus size={16} stroke={2} />
-                                New
-                            </Button>
-                        </>
-                    )}
-                </Box>
-            </Box>
-        </FormDrawer>
+        <Suspense
+            fallback={<HealthPageLayout loading>{null}</HealthPageLayout>}>
+            <SupplementsPage />
+        </Suspense>
     )
 }

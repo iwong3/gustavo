@@ -10,17 +10,23 @@ import DeleteTripDialog from 'components/delete-trip-dialog'
 import ExpenseForm from 'components/expense-form'
 import ExerciseForm from 'components/health/exercise-form'
 import RoutineForm from 'components/health/routine-form'
+import SupplementForm from 'components/health/supplement-form'
+import SupplementGroupForm from 'components/health/supplement-group-form'
+import SupplementLogForm from 'components/health/supplement-log-form'
 import WeightForm from 'components/health/weight-form'
 import WorkoutForm from 'components/health/workout-form'
 import TripForm from 'components/trip-form'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { colors, hardShadow } from '@/lib/colors'
 import { GusMenuButton } from '../gallery-ui'
-import { expenses, trip } from '../fixtures'
+import { expenses, GALLERY_TODAY, trip } from '../fixtures'
 import {
     exercises,
     muscleGroups,
     presets,
+    supplementLogs,
+    supplementPresets,
+    supplements,
     weightLog,
     workout,
 } from '../health-fixtures'
@@ -56,6 +62,12 @@ const GROUPS = [
             { key: 'weight-edit', label: 'Weight · edit', kind: 'page' },
             { key: 'exercise-new', label: 'Exercise · new', kind: 'page' },
             { key: 'exercise-edit', label: 'Exercise · edit', kind: 'page' },
+            { key: 'supp-log', label: 'Supplements · log', kind: 'page' },
+            { key: 'supp-log-edit', label: 'Supplements · edit day', kind: 'page' },
+            { key: 'supp-new', label: 'Supplement · new', kind: 'page' },
+            { key: 'supp-edit', label: 'Supplement · edit', kind: 'page' },
+            { key: 'supp-group-new', label: 'Supp. group · new', kind: 'page' },
+            { key: 'supp-group-edit', label: 'Supp. group · edit', kind: 'page' },
         ],
     },
 ] as const
@@ -146,6 +158,47 @@ export default function FormsGallery() {
                         mode={selected === 'exercise-new' ? 'add' : 'edit'}
                         exercise={selected === 'exercise-edit' ? exercises[0] : undefined}
                         muscleGroups={muscleGroups}
+                        onCancel={close}
+                        onSuccess={close}
+                    />
+                )
+            case 'supp-log':
+            case 'supp-log-edit':
+                return (
+                    <SupplementLogForm
+                        key={selected}
+                        mode={selected === 'supp-log' ? 'add' : 'edit'}
+                        initialDate={
+                            selected === 'supp-log-edit' ? GALLERY_TODAY : undefined
+                        }
+                        supplements={supplements}
+                        allLogs={supplementLogs}
+                        onCancel={close}
+                        onSuccess={close}
+                        onAddSupplements={noop}
+                    />
+                )
+            case 'supp-new':
+            case 'supp-edit':
+                return (
+                    <SupplementForm
+                        key={selected}
+                        mode={selected === 'supp-new' ? 'add' : 'edit'}
+                        supplement={selected === 'supp-edit' ? supplements[0] : undefined}
+                        onCancel={close}
+                        onSuccess={close}
+                    />
+                )
+            case 'supp-group-new':
+            case 'supp-group-edit':
+                return (
+                    <SupplementGroupForm
+                        key={selected}
+                        mode={selected === 'supp-group-new' ? 'add' : 'edit'}
+                        preset={
+                            selected === 'supp-group-edit' ? supplementPresets[0] : undefined
+                        }
+                        supplements={supplements}
                         onCancel={close}
                         onSuccess={close}
                     />
