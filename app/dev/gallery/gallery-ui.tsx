@@ -18,7 +18,7 @@ export const sections = [
     { slug: 'expense-detail', title: 'Expense detail', description: 'Receipt, map + place chips, trip-context tiles' },
     { slug: 'debt', title: 'Debt', description: 'Balance cards, settlement cards' },
     { slug: 'insights', title: 'Insights', description: 'My Spend chart + share list' },
-    { slug: 'forms', title: 'Forms', description: 'Expense/trip forms, delete dialogs — quick-switch to compare' },
+    { slug: 'forms', title: 'Forms', description: 'Page-style forms (expense, trip, workout, routine) + delete dialogs — quick-switch to compare' },
     { slug: 'activity', title: 'Activity', description: 'Audit-log rows — diffs, participant lifecycle, restores' },
     { slug: 'nav-drawer', title: 'Nav drawer', description: 'Teleport index — expandable trips/health, active band, pinned account footer' },
     { slug: 'health', title: 'Health', description: 'Training grid — 14-day muscle-group log, freshness dials, empty states' },

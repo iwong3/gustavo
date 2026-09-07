@@ -20,13 +20,12 @@ import {
     dropdownPopperProps,
     errorFieldSx,
     errorLabelSx,
-    errorMessageSx,
     fieldSx,
     labelSx,
     selectMenuProps,
 } from '@/lib/form-styles'
 import type { TripRole, TripSummary, UserSummary } from '@/lib/types'
-import { PageActionBar, PageActionButton } from 'components/page-action-bar'
+import { FormPage } from 'components/form-page'
 import {
     PageInfo,
     PageInfoNote,
@@ -34,7 +33,6 @@ import {
 } from 'components/page-info'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useCurrentUser } from 'hooks/useCurrentUser'
-import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import {
     ConflictError,
     createTrip,
@@ -227,9 +225,6 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const [locations, setLocations] = useState<LocalLocation[]>([])
     const [deletedLocationIds, setDeletedLocationIds] = useState<number[]>([])
     const [newLocName, setNewLocName] = useState('')
-
-    // Scroll the focused input near the top so the mobile keyboard can't hide it
-    const focusScroll = useScrollFocusedInput()
 
     useEffect(() => {
         fetchUsers()
@@ -635,20 +630,22 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     }
 
     return (
-        <>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1,
-                    padding: '16px 16px 0',
-                }}>
-                <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 700, color: colors.primaryBlack }}>
-                    {isEdit ? 'Edit Trip' : 'Create Trip'}
-                </Typography>
+        <FormPage
+            title={isEdit ? 'Edit Trip' : 'Create Trip'}
+            error={error}
+            onCancel={onCancel}
+            onSubmit={handleSubmit}
+            busy={submitting}
+            submitLabel={
+                submitting
+                    ? isEdit
+                        ? 'Saving...'
+                        : 'Creating...'
+                    : isEdit
+                      ? 'Save'
+                      : 'Create'
+            }
+            titleExtra={
                 <PageInfo title="About trips">
                     <PageInfoSection title="Countries">
                         Which countries this trip visits. Picking them sets the
@@ -677,571 +674,534 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                         Details.
                     </PageInfoNote>
                 </PageInfo>
+            }>
+            {/* 1. Trip name */}
+            <Box>
+                <Typography sx={nameError ? errorLabelSx : labelSx}>
+                    Trip name *
+                </Typography>
+                <TextField
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Japan 2025"
+                    required
+                    fullWidth
+                    size="small"
+                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                    sx={nameError ? errorFieldSx : fieldSx}
+                />
             </Box>
-            <Box
-                {...focusScroll}
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    padding: '16px',
-                }}>
-                {/* 1. Trip name */}
-                <Box>
-                    <Typography sx={nameError ? errorLabelSx : labelSx}>
-                        Trip name *
+
+            {/* 2. Dates */}
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Box sx={{ flex: 1 }}>
+                    <Typography
+                        sx={startDateError ? errorLabelSx : labelSx}>
+                        Start date *
                     </Typography>
                     <TextField
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Japan 2025"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                         required
                         fullWidth
                         size="small"
-                        slotProps={{ htmlInput: { maxLength: 200 } }}
-                        sx={nameError ? errorFieldSx : fieldSx}
+                        slotProps={{ inputLabel: { shrink: true } }}
+                        sx={startDateError ? errorFieldSx : fieldSx}
                     />
                 </Box>
-
-                {/* 2. Dates */}
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                    <Box sx={{ flex: 1 }}>
-                        <Typography
-                            sx={startDateError ? errorLabelSx : labelSx}>
-                            Start date *
-                        </Typography>
-                        <TextField
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            required
-                            fullWidth
-                            size="small"
-                            slotProps={{ inputLabel: { shrink: true } }}
-                            sx={startDateError ? errorFieldSx : fieldSx}
-                        />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                        <Typography sx={endDateError ? errorLabelSx : labelSx}>
-                            End date *
-                        </Typography>
-                        <TextField
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            required
-                            fullWidth
-                            size="small"
-                            slotProps={{
-                                inputLabel: { shrink: true },
-                                // Opens the picker at the start date (and blocks
-                                // choosing a day before it) instead of today.
-                                htmlInput: { min: startDate || undefined },
-                            }}
-                            sx={endDateError ? errorFieldSx : fieldSx}
-                        />
-                    </Box>
-                </Box>
-
-                {/* 3. Participants — search is the card's top row; roster
-                    rows below with per-person role (colored, tappable) + remove */}
-                <Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            marginBottom: 0.5,
-                        }}>
-                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
-                            Participants
-                        </Typography>
-                        {rosterCount > 0 && (
-                            <Typography sx={fieldCountSx}>
-                                {rosterCount}{' '}
-                                {rosterCount === 1 ? 'person' : 'people'}
-                            </Typography>
-                        )}
-                    </Box>
-                    <Box sx={selectedCardSx}>
-                        <Box sx={topRowDivider(hasRoster)}>
-                            <Autocomplete
-                                fullWidth
-                                size="small"
-                                options={addableUsers}
-                                value={null}
-                                inputValue={participantQuery}
-                                onInputChange={(_e, val, reason) => {
-                                    if (reason !== 'reset')
-                                        setParticipantQuery(val)
-                                }}
-                                onChange={(_e, val) => {
-                                    if (val) {
-                                        setSelectedUserIds((prev) =>
-                                            prev.includes(val.id)
-                                                ? prev
-                                                : [...prev, val.id]
-                                        )
-                                    }
-                                    setParticipantQuery('')
-                                }}
-                                getOptionLabel={(u) => u.name}
-                                isOptionEqualToValue={(a, b) => a.id === b.id}
-                                blurOnSelect
-                                autoHighlight
-                                noOptionsText={
-                                    allUsers.length === 0
-                                        ? 'Loading people…'
-                                        : 'No one left to add'
-                                }
-                                disablePortal
-                                slotProps={{
-                                    popper: dropdownPopperProps,
-                                    listbox: {
-                                        sx: {
-                                            'maxHeight': 240,
-                                            'padding': 0,
-                                            '& .MuiAutocomplete-option':
-                                                dropdownMenuItemSx,
-                                        },
-                                    },
-                                    paper: { sx: dropdownPaperSx },
-                                }}
-                                renderOption={(props, u) => {
-                                    const { key: _key, ...rest } = props
-                                    return (
-                                        <li key={u.id} {...rest}>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                }}>
-                                                <InitialsIcon
-                                                    name={u.firstName}
-                                                    initials={u.initials}
-                                                    iconColor={u.iconColor}
-                                                    sx={{
-                                                        width: 24,
-                                                        height: 24,
-                                                        fontSize: 10,
-                                                    }}
-                                                />
-                                                <Typography
-                                                    sx={{ fontSize: 14 }}>
-                                                    {u.name}
-                                                </Typography>
-                                            </Box>
-                                        </li>
-                                    )
-                                }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        size="small"
-                                        placeholder="Search people to add"
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            startAdornment: searchAdornment,
-                                        }}
-                                        sx={topRowInputSx}
-                                    />
-                                )}
-                            />
-                        </Box>
-
-                        {rosterLoading
-                            ? Array.from(
-                                  {
-                                      length: Math.min(
-                                          selectedUserIds.length,
-                                          5
-                                      ),
-                                  },
-                                  (_, i) => (
-                                      <Box
-                                          key={i}
-                                          sx={selectedRowSx(
-                                              i ===
-                                                  Math.min(
-                                                      selectedUserIds.length,
-                                                      5
-                                                  ) -
-                                                      1
-                                          )}>
-                                          <Skeleton
-                                              variant="circular"
-                                              width={26}
-                                              height={26}
-                                          />
-                                          <Skeleton
-                                              variant="text"
-                                              width={90}
-                                          />
-                                      </Box>
-                                  )
-                              )
-                            : selectedParticipants.map((u, i) => {
-                                  const isOwner = u.id === ownerId
-                                  const currentRole =
-                                      participantRoles.get(u.id) ??
-                                      (isOwner ? 'owner' : 'viewer')
-                                  const canEditRole =
-                                      !isOwner &&
-                                      (showRoleManagement || !isEdit)
-                                  const isLast =
-                                      i === selectedParticipants.length - 1
-                                  return (
-                                      <Box
-                                          key={u.id}
-                                          sx={selectedRowSx(isLast)}>
-                                          <InitialsIcon
-                                              name={u.firstName}
-                                              initials={u.initials}
-                                              iconColor={u.iconColor}
-                                              sx={{
-                                                  width: 26,
-                                                  height: 26,
-                                                  fontSize: 10,
-                                              }}
-                                          />
-                                          <Typography sx={{ fontSize: 14 }}>
-                                              {u.firstName}
-                                          </Typography>
-                                          <Box
-                                              sx={{
-                                                  marginLeft: 'auto',
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  gap: 0.75,
-                                              }}>
-                                              {roleControl(
-                                                  u.id,
-                                                  currentRole,
-                                                  canEditRole
-                                              )}
-                                              {isOwner ? (
-                                                  <Box sx={{ width: 26 }} />
-                                              ) : (
-                                                  <RowRemove
-                                                      onClick={() =>
-                                                          toggleUser(u.id)
-                                                      }
-                                                      label={`Remove ${u.firstName}`}
-                                                  />
-                                              )}
-                                          </Box>
-                                      </Box>
-                                  )
-                              })}
-                    </Box>
-                </Box>
-
-                {/* 4. Trip visibility */}
-                <Box>
-                    <Typography sx={labelSx}>Trip visibility</Typography>
-                    <SlidingToggle
-                        value={visibility}
-                        options={[
-                            { value: 'participants', label: 'Participants only' },
-                            { value: 'all_users', label: 'All users' },
-                        ]}
-                        onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
-                        fontSize={13}
-                        borderWidth={1}
-                    />
-                </Box>
-
-                {/* 5. Countries — search is the card's top row; each selected
-                    country row shows the currency it contributes */}
-                <Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            marginBottom: 0.5,
-                        }}>
-                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
-                            Countries
-                        </Typography>
-                        {selectedCountries.length > 0 && (
-                            <Typography sx={fieldCountSx}>
-                                {selectedCountries.length}{' '}
-                                {selectedCountries.length === 1
-                                    ? 'country'
-                                    : 'countries'}
-                            </Typography>
-                        )}
-                    </Box>
-                    <Box sx={selectedCardSx}>
-                        <Box sx={topRowDivider(selectedCountries.length > 0)}>
-                            <Autocomplete
-                                multiple
-                                fullWidth
-                                size="small"
-                                disableCloseOnSelect
-                                options={countryOptions}
-                                value={selectedCountries}
-                                onChange={(_e, val) =>
-                                    setCountryCodes(val.map((c) => c.code))
-                                }
-                                getOptionLabel={(c) => c.name}
-                                isOptionEqualToValue={(a, b) =>
-                                    a.code === b.code
-                                }
-                                disablePortal
-                                // Selected countries render as rows below
-                                renderTags={() => null}
-                                slotProps={{
-                                    popper: dropdownPopperProps,
-                                    listbox: {
-                                        sx: {
-                                            'maxHeight': 240,
-                                            'padding': 0,
-                                            '& .MuiAutocomplete-option':
-                                                dropdownMenuItemSx,
-                                        },
-                                    },
-                                    paper: { sx: dropdownPaperSx },
-                                }}
-                                renderOption={(
-                                    props,
-                                    option,
-                                    { selected }
-                                ) => {
-                                    const { key: _key, ...rest } = props
-                                    return (
-                                        <li key={option.code} {...rest}>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                    width: '100%',
-                                                }}>
-                                                <Box
-                                                    component="span"
-                                                    sx={{ fontSize: 16 }}>
-                                                    {option.flag}
-                                                </Box>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 14,
-                                                        fontWeight: selected
-                                                            ? 700
-                                                            : 400,
-                                                    }}>
-                                                    {option.name}
-                                                </Typography>
-                                                {selected && (
-                                                    <IconCheck
-                                                        size={16}
-                                                        stroke={2.5}
-                                                        color={
-                                                            colors.primaryBlack
-                                                        }
-                                                        style={{
-                                                            marginLeft: 'auto',
-                                                        }}
-                                                    />
-                                                )}
-                                            </Box>
-                                        </li>
-                                    )
-                                }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        size="small"
-                                        placeholder="Add countries"
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            startAdornment: searchAdornment,
-                                        }}
-                                        sx={topRowInputSx}
-                                    />
-                                )}
-                            />
-                        </Box>
-                        {selectedCountries.map((c, i) => (
-                            <Box
-                                key={c.code}
-                                sx={selectedRowSx(
-                                    i === selectedCountries.length - 1
-                                )}>
-                                <Box
-                                    component="span"
-                                    sx={{
-                                        fontSize: 18,
-                                        width: 22,
-                                        textAlign: 'center',
-                                        flexShrink: 0,
-                                    }}>
-                                    {c.flag}
-                                </Box>
-                                <Typography sx={{ fontSize: 14 }}>
-                                    {c.name}
-                                </Typography>
-                                <Typography
-                                    sx={{
-                                        fontSize: 11.5,
-                                        fontWeight: 600,
-                                        color: colors.primaryBrown,
-                                    }}>
-                                    {c.currency}
-                                </Typography>
-                                <Box sx={{ marginLeft: 'auto' }} />
-                                <RowRemove
-                                    onClick={() =>
-                                        setCountryCodes((prev) =>
-                                            prev.filter(
-                                                (code) => code !== c.code
-                                            )
-                                        )
-                                    }
-                                    label={`Remove ${c.name}`}
-                                />
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-
-                {/* 6. Locations — add input is the card's top row (+ button
-                    lives inside it); location rows below */}
-                <Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            marginBottom: 0.5,
-                        }}>
-                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
-                            Locations
-                        </Typography>
-                        {locations.length > 0 && (
-                            <Typography sx={fieldCountSx}>
-                                {locations.length}{' '}
-                                {locations.length === 1 ? 'place' : 'places'}
-                            </Typography>
-                        )}
-                    </Box>
-                    <Box sx={selectedCardSx}>
-                        <Box sx={topRowDivider(locations.length > 0)}>
-                            <TextField
-                                value={newLocName}
-                                onChange={(e) => setNewLocName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault()
-                                        addLocation()
-                                    }
-                                }}
-                                placeholder="Add a location"
-                                size="small"
-                                fullWidth
-                                slotProps={{
-                                    htmlInput: { maxLength: 200 },
-                                    input: {
-                                        endAdornment: (
-                                            <Box
-                                                onClick={() => {
-                                                    if (newLocName.trim())
-                                                        addLocation()
-                                                }}
-                                                role="button"
-                                                aria-label="Add location"
-                                                sx={{
-                                                    'display': 'flex',
-                                                    'alignItems': 'center',
-                                                    'justifyContent': 'center',
-                                                    'flexShrink': 0,
-                                                    'color': newLocName.trim()
-                                                        ? colors.primaryBlack
-                                                        : `${colors.primaryBlack}30`,
-                                                    'cursor': newLocName.trim()
-                                                        ? 'pointer'
-                                                        : 'default',
-                                                    '&:active': newLocName.trim()
-                                                        ? { transform: 'scale(0.85)' }
-                                                        : {},
-                                                    'transition':
-                                                        'transform 0.1s',
-                                                }}>
-                                                <IconCirclePlus
-                                                    size={22}
-                                                    stroke={1.75}
-                                                />
-                                            </Box>
-                                        ),
-                                    },
-                                }}
-                                sx={topRowInputSx}
-                            />
-                        </Box>
-                        {locations.map((loc, i) => (
-                            <Box
-                                key={loc.id}
-                                sx={selectedRowSx(i === locations.length - 1)}>
-                                <Typography sx={{ fontSize: 14 }}>
-                                    {loc.name}
-                                </Typography>
-                                <Box sx={{ marginLeft: 'auto' }} />
-                                <RowRemove
-                                    onClick={() => removeLocation(loc.id)}
-                                    label={`Remove ${loc.name}`}
-                                />
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-
-                {/* 7. Description */}
-                <Box>
-                    <Typography sx={labelSx}>Description</Typography>
+                <Box sx={{ flex: 1 }}>
+                    <Typography sx={endDateError ? errorLabelSx : labelSx}>
+                        End date *
+                    </Typography>
                     <TextField
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Optional"
-                        multiline
-                        rows={2}
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        required
                         fullWidth
                         size="small"
-                        slotProps={{ htmlInput: { maxLength: 2000 } }}
-                        sx={fieldSx}
+                        slotProps={{
+                            inputLabel: { shrink: true },
+                            // Opens the picker at the start date (and blocks
+                            // choosing a day before it) instead of today.
+                            htmlInput: { min: startDate || undefined },
+                        }}
+                        sx={endDateError ? errorFieldSx : fieldSx}
                     />
                 </Box>
-
-                {error && (
-                    <Typography variant="body2" sx={errorMessageSx}>
-                        {error}
-                    </Typography>
-                )}
             </Box>
 
-            <PageActionBar>
-                <PageActionButton
-                    onClick={onCancel}
-                    disabled={submitting}
-                    icon={<IconX size={22} />}
-                    label="Cancel"
+            {/* 3. Participants — search is the card's top row; roster
+                rows below with per-person role (colored, tappable) + remove */}
+            <Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 0.5,
+                    }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                        Participants
+                    </Typography>
+                    {rosterCount > 0 && (
+                        <Typography sx={fieldCountSx}>
+                            {rosterCount}{' '}
+                            {rosterCount === 1 ? 'person' : 'people'}
+                        </Typography>
+                    )}
+                </Box>
+                <Box sx={selectedCardSx}>
+                    <Box sx={topRowDivider(hasRoster)}>
+                        <Autocomplete
+                            fullWidth
+                            size="small"
+                            options={addableUsers}
+                            value={null}
+                            inputValue={participantQuery}
+                            onInputChange={(_e, val, reason) => {
+                                if (reason !== 'reset')
+                                    setParticipantQuery(val)
+                            }}
+                            onChange={(_e, val) => {
+                                if (val) {
+                                    setSelectedUserIds((prev) =>
+                                        prev.includes(val.id)
+                                            ? prev
+                                            : [...prev, val.id]
+                                    )
+                                }
+                                setParticipantQuery('')
+                            }}
+                            getOptionLabel={(u) => u.name}
+                            isOptionEqualToValue={(a, b) => a.id === b.id}
+                            blurOnSelect
+                            autoHighlight
+                            noOptionsText={
+                                allUsers.length === 0
+                                    ? 'Loading people…'
+                                    : 'No one left to add'
+                            }
+                            disablePortal
+                            slotProps={{
+                                popper: dropdownPopperProps,
+                                listbox: {
+                                    sx: {
+                                        'maxHeight': 240,
+                                        'padding': 0,
+                                        '& .MuiAutocomplete-option':
+                                            dropdownMenuItemSx,
+                                    },
+                                },
+                                paper: { sx: dropdownPaperSx },
+                            }}
+                            renderOption={(props, u) => {
+                                const { key: _key, ...rest } = props
+                                return (
+                                    <li key={u.id} {...rest}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                            }}>
+                                            <InitialsIcon
+                                                name={u.firstName}
+                                                initials={u.initials}
+                                                iconColor={u.iconColor}
+                                                sx={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    fontSize: 10,
+                                                }}
+                                            />
+                                            <Typography
+                                                sx={{ fontSize: 14 }}>
+                                                {u.name}
+                                            </Typography>
+                                        </Box>
+                                    </li>
+                                )
+                            }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    size="small"
+                                    placeholder="Search people to add"
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        startAdornment: searchAdornment,
+                                    }}
+                                    sx={topRowInputSx}
+                                />
+                            )}
+                        />
+                    </Box>
+
+                    {rosterLoading
+                        ? Array.from(
+                              {
+                                  length: Math.min(
+                                      selectedUserIds.length,
+                                      5
+                                  ),
+                              },
+                              (_, i) => (
+                                  <Box
+                                      key={i}
+                                      sx={selectedRowSx(
+                                          i ===
+                                              Math.min(
+                                                  selectedUserIds.length,
+                                                  5
+                                              ) -
+                                                  1
+                                      )}>
+                                      <Skeleton
+                                          variant="circular"
+                                          width={26}
+                                          height={26}
+                                      />
+                                      <Skeleton
+                                          variant="text"
+                                          width={90}
+                                      />
+                                  </Box>
+                              )
+                          )
+                        : selectedParticipants.map((u, i) => {
+                              const isOwner = u.id === ownerId
+                              const currentRole =
+                                  participantRoles.get(u.id) ??
+                                  (isOwner ? 'owner' : 'viewer')
+                              const canEditRole =
+                                  !isOwner &&
+                                  (showRoleManagement || !isEdit)
+                              const isLast =
+                                  i === selectedParticipants.length - 1
+                              return (
+                                  <Box
+                                      key={u.id}
+                                      sx={selectedRowSx(isLast)}>
+                                      <InitialsIcon
+                                          name={u.firstName}
+                                          initials={u.initials}
+                                          iconColor={u.iconColor}
+                                          sx={{
+                                              width: 26,
+                                              height: 26,
+                                              fontSize: 10,
+                                          }}
+                                      />
+                                      <Typography sx={{ fontSize: 14 }}>
+                                          {u.firstName}
+                                      </Typography>
+                                      <Box
+                                          sx={{
+                                              marginLeft: 'auto',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: 0.75,
+                                          }}>
+                                          {roleControl(
+                                              u.id,
+                                              currentRole,
+                                              canEditRole
+                                          )}
+                                          {isOwner ? (
+                                              <Box sx={{ width: 26 }} />
+                                          ) : (
+                                              <RowRemove
+                                                  onClick={() =>
+                                                      toggleUser(u.id)
+                                                  }
+                                                  label={`Remove ${u.firstName}`}
+                                              />
+                                          )}
+                                      </Box>
+                                  </Box>
+                              )
+                          })}
+                </Box>
+            </Box>
+
+            {/* 4. Trip visibility */}
+            <Box>
+                <Typography sx={labelSx}>Trip visibility</Typography>
+                <SlidingToggle
+                    value={visibility}
+                    options={[
+                        { value: 'participants', label: 'Participants only' },
+                        { value: 'all_users', label: 'All users' },
+                    ]}
+                    onChange={(val) => setVisibility(val as 'participants' | 'all_users')}
+                    fontSize={13}
+                    borderWidth={1}
                 />
-                <PageActionButton
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    icon={<IconCheck size={22} />}
-                    label={
-                        submitting
-                            ? isEdit
-                                ? 'Saving...'
-                                : 'Creating...'
-                            : isEdit
-                              ? 'Save'
-                              : 'Create'
-                    }
+            </Box>
+
+            {/* 5. Countries — search is the card's top row; each selected
+                country row shows the currency it contributes */}
+            <Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 0.5,
+                    }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                        Countries
+                    </Typography>
+                    {selectedCountries.length > 0 && (
+                        <Typography sx={fieldCountSx}>
+                            {selectedCountries.length}{' '}
+                            {selectedCountries.length === 1
+                                ? 'country'
+                                : 'countries'}
+                        </Typography>
+                    )}
+                </Box>
+                <Box sx={selectedCardSx}>
+                    <Box sx={topRowDivider(selectedCountries.length > 0)}>
+                        <Autocomplete
+                            multiple
+                            fullWidth
+                            size="small"
+                            disableCloseOnSelect
+                            options={countryOptions}
+                            value={selectedCountries}
+                            onChange={(_e, val) =>
+                                setCountryCodes(val.map((c) => c.code))
+                            }
+                            getOptionLabel={(c) => c.name}
+                            isOptionEqualToValue={(a, b) =>
+                                a.code === b.code
+                            }
+                            disablePortal
+                            // Selected countries render as rows below
+                            renderTags={() => null}
+                            slotProps={{
+                                popper: dropdownPopperProps,
+                                listbox: {
+                                    sx: {
+                                        'maxHeight': 240,
+                                        'padding': 0,
+                                        '& .MuiAutocomplete-option':
+                                            dropdownMenuItemSx,
+                                    },
+                                },
+                                paper: { sx: dropdownPaperSx },
+                            }}
+                            renderOption={(
+                                props,
+                                option,
+                                { selected }
+                            ) => {
+                                const { key: _key, ...rest } = props
+                                return (
+                                    <li key={option.code} {...rest}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                width: '100%',
+                                            }}>
+                                            <Box
+                                                component="span"
+                                                sx={{ fontSize: 16 }}>
+                                                {option.flag}
+                                            </Box>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 14,
+                                                    fontWeight: selected
+                                                        ? 700
+                                                        : 400,
+                                                }}>
+                                                {option.name}
+                                            </Typography>
+                                            {selected && (
+                                                <IconCheck
+                                                    size={16}
+                                                    stroke={2.5}
+                                                    color={
+                                                        colors.primaryBlack
+                                                    }
+                                                    style={{
+                                                        marginLeft: 'auto',
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
+                                    </li>
+                                )
+                            }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    size="small"
+                                    placeholder="Add countries"
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        startAdornment: searchAdornment,
+                                    }}
+                                    sx={topRowInputSx}
+                                />
+                            )}
+                        />
+                    </Box>
+                    {selectedCountries.map((c, i) => (
+                        <Box
+                            key={c.code}
+                            sx={selectedRowSx(
+                                i === selectedCountries.length - 1
+                            )}>
+                            <Box
+                                component="span"
+                                sx={{
+                                    fontSize: 18,
+                                    width: 22,
+                                    textAlign: 'center',
+                                    flexShrink: 0,
+                                }}>
+                                {c.flag}
+                            </Box>
+                            <Typography sx={{ fontSize: 14 }}>
+                                {c.name}
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    color: colors.primaryBrown,
+                                }}>
+                                {c.currency}
+                            </Typography>
+                            <Box sx={{ marginLeft: 'auto' }} />
+                            <RowRemove
+                                onClick={() =>
+                                    setCountryCodes((prev) =>
+                                        prev.filter(
+                                            (code) => code !== c.code
+                                        )
+                                    )
+                                }
+                                label={`Remove ${c.name}`}
+                            />
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+
+            {/* 6. Locations — add input is the card's top row (+ button
+                lives inside it); location rows below */}
+            <Box>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 0.5,
+                    }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                        Locations
+                    </Typography>
+                    {locations.length > 0 && (
+                        <Typography sx={fieldCountSx}>
+                            {locations.length}{' '}
+                            {locations.length === 1 ? 'place' : 'places'}
+                        </Typography>
+                    )}
+                </Box>
+                <Box sx={selectedCardSx}>
+                    <Box sx={topRowDivider(locations.length > 0)}>
+                        <TextField
+                            value={newLocName}
+                            onChange={(e) => setNewLocName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addLocation()
+                                }
+                            }}
+                            placeholder="Add a location"
+                            size="small"
+                            fullWidth
+                            slotProps={{
+                                htmlInput: { maxLength: 200 },
+                                input: {
+                                    endAdornment: (
+                                        <Box
+                                            onClick={() => {
+                                                if (newLocName.trim())
+                                                    addLocation()
+                                            }}
+                                            role="button"
+                                            aria-label="Add location"
+                                            sx={{
+                                                'display': 'flex',
+                                                'alignItems': 'center',
+                                                'justifyContent': 'center',
+                                                'flexShrink': 0,
+                                                'color': newLocName.trim()
+                                                    ? colors.primaryBlack
+                                                    : `${colors.primaryBlack}30`,
+                                                'cursor': newLocName.trim()
+                                                    ? 'pointer'
+                                                    : 'default',
+                                                '&:active': newLocName.trim()
+                                                    ? { transform: 'scale(0.85)' }
+                                                    : {},
+                                                'transition':
+                                                    'transform 0.1s',
+                                            }}>
+                                            <IconCirclePlus
+                                                size={22}
+                                                stroke={1.75}
+                                            />
+                                        </Box>
+                                    ),
+                                },
+                            }}
+                            sx={topRowInputSx}
+                        />
+                    </Box>
+                    {locations.map((loc, i) => (
+                        <Box
+                            key={loc.id}
+                            sx={selectedRowSx(i === locations.length - 1)}>
+                            <Typography sx={{ fontSize: 14 }}>
+                                {loc.name}
+                            </Typography>
+                            <Box sx={{ marginLeft: 'auto' }} />
+                            <RowRemove
+                                onClick={() => removeLocation(loc.id)}
+                                label={`Remove ${loc.name}`}
+                            />
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+
+            {/* 7. Description */}
+            <Box>
+                <Typography sx={labelSx}>Description</Typography>
+                <TextField
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional"
+                    multiline
+                    rows={2}
+                    fullWidth
+                    size="small"
+                    slotProps={{ htmlInput: { maxLength: 2000 } }}
+                    sx={fieldSx}
                 />
-            </PageActionBar>
-        </>
+            </Box>
+
+            </FormPage>
     )
 }

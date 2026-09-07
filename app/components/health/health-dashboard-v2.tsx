@@ -428,7 +428,7 @@ export function HealthDashboardV2({
                     <Box sx={presetRowScrollSx}>
                         <Box
                             component={Link}
-                            href="/gustavo/health/exercise?presets=open"
+                            href="/gustavo/health/exercise/routines"
                             sx={{ ...boltCircleSx, backgroundColor: '#ffe0b2', cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>

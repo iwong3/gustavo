@@ -8,7 +8,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 
@@ -20,24 +20,17 @@ import { derivePlaceCity } from '@/lib/place-display'
 import type { PlaceDetails } from '@/lib/types'
 import {
     adornedFieldSx,
-    errorMessageSx,
     fieldShadow,
     fieldSx,
     labelSx,
     prefilledFieldSx,
     selectMenuProps,
 } from '@/lib/form-styles'
-import {
-    IconCalendarEvent,
-    IconCheck,
-    IconChevronLeft,
-    IconChevronRight,
-    IconX,
-} from '@tabler/icons-react'
+import { IconCheck } from '@tabler/icons-react'
 import { CategoryPicker } from 'components/category-picker'
-import { PageActionBar, PageActionButton } from 'components/page-action-bar'
+import { FormDateField } from 'components/form-date-field'
+import { FormPage } from 'components/form-page'
 import PlaceAutocomplete from 'components/place-autocomplete'
-import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, ConflictError, updateExpense } from 'utils/api'
 import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
@@ -230,21 +223,12 @@ export default function ExpenseForm({
     const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(() =>
         toPlaceDetails(expense)
     )
-    // First day of the week shown in the date strip
-    const [weekAnchor, setWeekAnchor] = useState(() => {
-        const selected = dayjs(date + 'T00:00:00')
-        return (selected.isValid() ? selected : dayjs()).startOf('week')
-    })
-    const dateInputRef = useRef<HTMLInputElement>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
 
     const isLegacyTrip = LEGACY_TRIP_IDS.has(trip.id)
-
-    // Scroll the focused input near the top so the mobile keyboard can't hide it
-    const focusScroll = useScrollFocusedInput()
 
     // Handle Google Place selection — auto-derive location, pre-fill name + category
     const handlePlaceChange = async (place: PlaceDetails | null) => {
@@ -350,9 +334,6 @@ export default function ExpenseForm({
         if (mode === 'edit' && expense) {
             setName(expense.name)
             setDate(expense.date)
-            setWeekAnchor(
-                dayjs(expense.date + 'T00:00:00').startOf('week')
-            )
             setCost(expense.costOriginal.toFixed(2))
             setCurrency(expense.currency)
             setCategoryId(expense.categoryId ?? '')
@@ -482,7 +463,6 @@ export default function ExpenseForm({
             ? ` · ${currencyMeta.symbol}${(costNum / includedCount).toFixed(currencyMeta.decimals)}${includedCount > 1 ? ' each' : ''}`
             : '')
 
-
     const handleSubmit = async () => {
         if (!name.trim() || !date || !cost || !paidBy) {
             setError('Please fill in all required fields.')
@@ -576,58 +556,11 @@ export default function ExpenseForm({
         }
     }
 
-    // ── Date week strip ──────────────────────────────────────────────────
-    const selectedDay = dayjs(date + 'T00:00:00')
-    const today = dayjs()
-    const weekDays = Array.from({ length: 7 }, (_, i) =>
-        weekAnchor.add(i, 'day')
-    )
-
-    // Desktop browsers only open the calendar via showPicker(); on iOS the
-    // tap lands on the (invisible, full-size) input itself, which opens the
-    // native picker without needing this call.
-    const openNativePicker = () => {
-        try {
-            dateInputRef.current?.showPicker()
-        } catch {
-            // iOS: focusing the input (which the tap already did) opens it
-        }
-    }
-
+    // Any manual pick clears the late-night default.
     const pickDate = (value: string) => {
         setNightGuardActive(false)
         setDate(value)
-        const day = dayjs(value + 'T00:00:00')
-        if (day.isValid()) setWeekAnchor(day.startOf('week'))
     }
-
-    // Week paging paddle at either end of the strip
-    const weekPaddle = (direction: -1 | 1) => (
-        <Box
-            onClick={() =>
-                setWeekAnchor((a) => a.add(direction * 7, 'day'))
-            }
-            role="button"
-            aria-label={direction > 0 ? 'Next week' : 'Previous week'}
-            sx={{
-                'display': 'flex',
-                'alignItems': 'center',
-                'justifyContent': 'center',
-                'width': 30,
-                'flexShrink': 0,
-                'cursor': 'pointer',
-                'userSelect': 'none',
-                [direction > 0 ? 'borderLeft' : 'borderRight']: '1px solid',
-                'borderColor': 'divider',
-                '&:active': { backgroundColor: 'rgba(0,0,0,0.06)' },
-            }}>
-            {direction > 0 ? (
-                <IconChevronRight size={16} color={colors.primaryBlack} />
-            ) : (
-                <IconChevronLeft size={16} color={colors.primaryBlack} />
-            )}
-        </Box>
-    )
 
     // Include-checkbox for the split rows
     const includeCheckbox = (on: boolean) => (
@@ -685,250 +618,257 @@ export default function ExpenseForm({
     )
 
     return (
-        <>
-            <Typography
-                variant="h6"
-                sx={{
-                    fontWeight: 700,
-                    color: colors.primaryBlack,
-                    padding: '16px 16px 0',
-                }}>
-                {isEdit ? 'Edit Expense' : 'Add Expense'}
-            </Typography>
-            <Box
-                {...focusScroll}
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    padding: '16px',
-                }}>
-                {/* 1. Date — week strip: one tap for nearby dates, native
-                    calendar (via the header summary) for anything else */}
-                <Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 1,
-                        }}>
-                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
-                            Date *
-                        </Typography>
-                        <Box
+        <FormPage
+            title={isEdit ? 'Edit Expense' : 'Add Expense'}
+            error={error}
+            onCancel={onCancel}
+            onSubmit={handleSubmit}
+            busy={submitting}
+            submitLabel={
+                submitting
+                    ? isEdit
+                        ? 'Saving...'
+                        : 'Adding...'
+                    : isEdit
+                      ? 'Save'
+                      : 'Add'
+            }>
+            {/* 1. Date — week strip: one tap for nearby dates, native
+                calendar (via the header summary) for anything else */}
+            <FormDateField
+                value={date}
+                onChange={pickDate}
+                required
+                headerExtra={
+                    // Late-night guard: the form opened between midnight
+                    // and 6am, so the date defaulted to yesterday — this
+                    // link explains the backdate and flips to today in
+                    // one tap. Blue = "the app filled this", same as
+                    // place prefills.
+                    nightGuardActive ? (
+                        <Typography
+                            onClick={() => pickDate(isoDaysAgo(0))}
+                            role="button"
                             sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: colors.primaryBlue,
+                                textDecoration: 'underline',
+                                lineHeight: 1,
+                                cursor: 'pointer',
+                                userSelect: 'none',
                             }}>
-                            {/* Late-night guard: the form opened between
-                                midnight and 6am, so the date defaulted to
-                                yesterday — this link explains the backdate
-                                and flips to today in one tap. Blue = "the
-                                app filled this", same as place prefills. */}
-                            {nightGuardActive && (
-                                <Typography
-                                    onClick={() => pickDate(isoDaysAgo(0))}
-                                    role="button"
-                                    sx={{
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        color: colors.primaryBlue,
-                                        textDecoration: 'underline',
-                                        lineHeight: 1,
-                                        cursor: 'pointer',
-                                        userSelect: 'none',
-                                    }}>
-                                    Use today?
-                                </Typography>
-                            )}
-                            {/* Selected date — plain text */}
-                            <Typography
+                            Use today?
+                        </Typography>
+                    ) : undefined
+                }
+            />
+
+            {/* 2. Place (Google Places autocomplete) */}
+            <Box>
+                <Typography sx={labelSx}>Place</Typography>
+                <PlaceAutocomplete
+                    value={googlePlace}
+                    onChange={handlePlaceChange}
+                />
+            </Box>
+
+            {/* 3. Expense name */}
+            <Box>
+                <Typography sx={labelSx}>Expense name *</Typography>
+                <TextField
+                    placeholder="e.g. Lunch at cafe"
+                    value={name}
+                    onChange={(e) => {
+                        setName(e.target.value)
+                        if (prefilled.name) setPrefilled((p) => ({ ...p, name: false }))
+                    }}
+                    required
+                    fullWidth
+                    size="small"
+                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                    sx={prefilled.name ? prefilledFieldSx : fieldSx}
+                />
+            </Box>
+
+            {/* 4. Cost + Currency + Paid by */}
+            <Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography sx={labelSx}>
+                            {isCurrencyExchange ? 'USD paid *' : 'Cost *'}
+                        </Typography>
+                        <TextField
+                            value={cost}
+                            onChange={(e) => {
+                                const v = e.target.value
+                                if (v === '' || /^\d*\.?\d*$/.test(v)) setCost(v)
+                            }}
+                            onBlur={() => {
+                                const n = parseFloat(cost)
+                                if (!isNaN(n))
+                                    setCost(
+                                        n.toFixed(
+                                            isCurrencyExchange
+                                                ? 2
+                                                : getCurrencyMeta(currency)
+                                                      .decimals
+                                        )
+                                    )
+                            }}
+                            required
+                            fullWidth
+                            size="small"
+                            slotProps={{
+                                htmlInput: {
+                                    inputMode: 'decimal',
+                                },
+                                input: {
+                                    startAdornment: (
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: 'text.secondary',
+                                                flexShrink: 0,
+                                                userSelect: 'none',
+                                            }}>
+                                            {isCurrencyExchange
+                                                ? '$'
+                                                : getCurrencyMeta(currency)
+                                                      .symbol}
+                                        </Box>
+                                    ),
+                                },
+                            }}
+                            sx={adornedFieldSx}
+                        />
+                    </Box>
+                    {/* Currency picker. For Currency Exchange the picker
+                      * shows only foreign currencies (the local-received
+                      * side of the exchange). */}
+                    <Box sx={{ minWidth: 100 }}>
+                        <Typography sx={labelSx}>
+                            {isCurrencyExchange
+                                ? 'To currency *'
+                                : 'Currency *'}
+                        </Typography>
+                        <FormControl size="small" fullWidth>
+                            <Select
+                                value={currency}
+                                onChange={(e) =>
+                                    setCurrency(e.target.value)
+                                }
+                                MenuProps={selectMenuProps}
+                                sx={fieldSx}>
+                                {(isCurrencyExchange
+                                    ? foreignCurrencies
+                                    : availableCurrencies
+                                ).map((c) => (
+                                    <MenuItem key={c} value={c}>
+                                        {formatCurrencyLabel(c)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    <Box>
+                        <Typography sx={labelSx}>Paid by *</Typography>
+                        <FormControl size="small">
+                            <Select
+                                value={paidBy}
+                                onChange={(e) => setPaidBy(e.target.value)}
+                                MenuProps={{
+                                    ...selectMenuProps,
+                                    anchorOrigin: {
+                                        vertical: 'bottom',
+                                        horizontal: 'right',
+                                    },
+                                    transformOrigin: {
+                                        vertical: 'top',
+                                        horizontal: 'right',
+                                    },
+                                }}
+                                renderValue={(val) => {
+                                    const p = trip.participants.find(
+                                        (u) => u.firstName === val
+                                    )
+                                    return p ? (
+                                        <InitialsIcon
+                                            name={p.firstName}
+                                            initials={p.initials}
+                                            iconColor={p.iconColor}
+                                            sx={{
+                                                width: 24,
+                                                height: 24,
+                                                fontSize: 10,
+                                            }}
+                                        />
+                                    ) : (
+                                        val
+                                    )
+                                }}
                                 sx={{
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: colors.primaryBlack,
-                                    lineHeight: 1,
-                                }}>
-                                {selectedDay.isValid()
-                                    ? selectedDay.format('ddd, MMM D')
-                                    : 'Pick a date'}
-                            </Typography>
-                            {/* Full-calendar button. The real date input sits
-                                invisibly on top so the tap hits it directly —
-                                iOS opens its native picker from that tap, while
-                                desktop needs the explicit showPicker() call. */}
-                            <Box
-                                sx={{
-                                    'position': 'relative',
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'justifyContent': 'center',
-                                    'width': 28,
-                                    'height': 28,
-                                    'borderRadius': '4px',
-                                    'userSelect': 'none',
-                                    'backgroundColor': colors.primaryWhite,
-                                    'border': `1px solid ${colors.primaryBlack}`,
-                                    'boxShadow': fieldShadow,
-                                    'transition':
-                                        'transform 0.1s, box-shadow 0.1s',
-                                    '&:active': {
-                                        boxShadow: 'none',
-                                        transform: 'translate(2px, 2px)',
+                                    ...fieldSx,
+                                    'height': 40,
+                                    '& .MuiSelect-select': {
+                                        display: 'flex',
+                                        alignItems: 'center',
                                     },
                                 }}>
-                                <IconCalendarEvent
-                                    size={16}
-                                    color={colors.primaryBlack}
-                                />
-                                <input
-                                    ref={dateInputRef}
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => pickDate(e.target.value)}
-                                    onClick={openNativePicker}
-                                    aria-label="Pick a date"
-                                    style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        opacity: 0,
-                                        cursor: 'pointer',
-                                        border: 0,
-                                        padding: 0,
-                                    }}
-                                />
-                            </Box>
-                        </Box>
-                    </Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'stretch',
-                            backgroundColor: colors.primaryWhite,
-                            border: `1px solid ${colors.primaryBlack}`,
-                            borderRadius: '4px',
-                            boxShadow: fieldShadow,
-                            overflow: 'hidden',
-                        }}>
-                        {weekPaddle(-1)}
-                        {weekDays.map((d) => {
-                            const isSelected =
-                                selectedDay.isValid() &&
-                                d.isSame(selectedDay, 'day')
-                            const isToday = d.isSame(today, 'day')
-                            return (
-                                <Box
-                                    key={d.format('YYYY-MM-DD')}
-                                    onClick={() =>
-                                        pickDate(d.format('YYYY-MM-DD'))
-                                    }
-                                    sx={{
-                                        flex: 1,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '3px',
-                                        paddingY: 0.75,
-                                        cursor: 'pointer',
-                                        userSelect: 'none',
-                                        backgroundColor: isSelected
-                                            ? colors.primaryYellow
-                                            : 'transparent',
-                                        transition:
-                                            'background-color 0.15s',
-                                    }}>
-                                    <Typography
+                                {trip.participants.map((p) => (
+                                    <MenuItem
+                                        key={p.id}
+                                        value={p.firstName}
                                         sx={{
-                                            fontSize: 9,
-                                            fontWeight: 600,
-                                            textTransform: 'uppercase',
-                                            color: 'text.secondary',
-                                            lineHeight: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
                                         }}>
-                                        {d.format('dd')}
-                                    </Typography>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 14,
-                                            fontWeight: 700,
-                                            color: colors.primaryBlack,
-                                            lineHeight: 1,
-                                        }}>
-                                        {d.format('D')}
-                                    </Typography>
-                                    {/* Today marker */}
-                                    <Box
-                                        sx={{
-                                            width: 4,
-                                            height: 4,
-                                            borderRadius: '50%',
-                                            backgroundColor: isToday
-                                                ? colors.primaryBrown
-                                                : 'transparent',
-                                        }}
-                                    />
-                                </Box>
-                            )
-                        })}
-                        {weekPaddle(1)}
+                                        <InitialsIcon
+                                            name={p.firstName}
+                                            initials={p.initials}
+                                            iconColor={p.iconColor}
+                                            sx={{
+                                                width: 24,
+                                                height: 24,
+                                                fontSize: 10,
+                                            }}
+                                        />
+                                        {p.firstName}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                     </Box>
                 </Box>
+            </Box>
 
-                {/* 2. Place (Google Places autocomplete) */}
-                <Box>
-                    <Typography sx={labelSx}>Place</Typography>
-                    <PlaceAutocomplete
-                        value={googlePlace}
-                        onChange={handlePlaceChange}
-                    />
-                </Box>
-
-                {/* 3. Expense name */}
-                <Box>
-                    <Typography sx={labelSx}>Expense name *</Typography>
-                    <TextField
-                        placeholder="e.g. Lunch at cafe"
-                        value={name}
-                        onChange={(e) => {
-                            setName(e.target.value)
-                            if (prefilled.name) setPrefilled((p) => ({ ...p, name: false }))
-                        }}
-                        required
-                        fullWidth
-                        size="small"
-                        slotProps={{ htmlInput: { maxLength: 200 } }}
-                        sx={prefilled.name ? prefilledFieldSx : fieldSx}
-                    />
-                </Box>
-
-                {/* 4. Cost + Currency + Paid by */}
-                <Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Box sx={{ flex: 1 }}>
-                            <Typography sx={labelSx}>
-                                {isCurrencyExchange ? 'USD paid *' : 'Cost *'}
-                            </Typography>
+            {/* 5. Local currency received (currency exchange only) */}
+            {isCurrencyExchange &&
+                (() => {
+                    const localMeta = getCurrencyMeta(currency)
+                    return (
+                        <Box>
+                            <Typography
+                                sx={
+                                    labelSx
+                                }>{`Local currency received (${currency}) *`}</Typography>
                             <TextField
-                                value={cost}
+                                value={localCurrencyReceived}
                                 onChange={(e) => {
                                     const v = e.target.value
-                                    if (v === '' || /^\d*\.?\d*$/.test(v)) setCost(v)
+                                    if (v === '' || /^\d*\.?\d*$/.test(v)) setLocalCurrencyReceived(v)
                                 }}
                                 onBlur={() => {
-                                    const n = parseFloat(cost)
+                                    const n = parseFloat(
+                                        localCurrencyReceived
+                                    )
                                     if (!isNaN(n))
-                                        setCost(
-                                            n.toFixed(
-                                                isCurrencyExchange
-                                                    ? 2
-                                                    : getCurrencyMeta(currency)
-                                                          .decimals
-                                            )
+                                        setLocalCurrencyReceived(
+                                            n.toFixed(localMeta.decimals)
                                         )
                                 }}
                                 required
@@ -950,10 +890,7 @@ export default function ExpenseForm({
                                                     flexShrink: 0,
                                                     userSelect: 'none',
                                                 }}>
-                                                {isCurrencyExchange
-                                                    ? '$'
-                                                    : getCurrencyMeta(currency)
-                                                          .symbol}
+                                                {localMeta.symbol}
                                             </Box>
                                         ),
                                     },
@@ -961,388 +898,207 @@ export default function ExpenseForm({
                                 sx={adornedFieldSx}
                             />
                         </Box>
-                        {/* Currency picker. For Currency Exchange the picker
-                          * shows only foreign currencies (the local-received
-                          * side of the exchange). */}
-                        <Box sx={{ minWidth: 100 }}>
-                            <Typography sx={labelSx}>
-                                {isCurrencyExchange
-                                    ? 'To currency *'
-                                    : 'Currency *'}
-                            </Typography>
-                            <FormControl size="small" fullWidth>
-                                <Select
-                                    value={currency}
-                                    onChange={(e) =>
-                                        setCurrency(e.target.value)
-                                    }
-                                    MenuProps={selectMenuProps}
-                                    sx={fieldSx}>
-                                    {(isCurrencyExchange
-                                        ? foreignCurrencies
-                                        : availableCurrencies
-                                    ).map((c) => (
-                                        <MenuItem key={c} value={c}>
-                                            {formatCurrencyLabel(c)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
-                        <Box>
-                            <Typography sx={labelSx}>Paid by *</Typography>
-                            <FormControl size="small">
-                                <Select
-                                    value={paidBy}
-                                    onChange={(e) => setPaidBy(e.target.value)}
-                                    MenuProps={{
-                                        ...selectMenuProps,
-                                        anchorOrigin: {
-                                            vertical: 'bottom',
-                                            horizontal: 'right',
-                                        },
-                                        transformOrigin: {
-                                            vertical: 'top',
-                                            horizontal: 'right',
-                                        },
-                                    }}
-                                    renderValue={(val) => {
-                                        const p = trip.participants.find(
-                                            (u) => u.firstName === val
-                                        )
-                                        return p ? (
-                                            <InitialsIcon
-                                                name={p.firstName}
-                                                initials={p.initials}
-                                                iconColor={p.iconColor}
-                                                sx={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    fontSize: 10,
-                                                }}
-                                            />
-                                        ) : (
-                                            val
-                                        )
-                                    }}
-                                    sx={{
-                                        ...fieldSx,
-                                        'height': 40,
-                                        '& .MuiSelect-select': {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                        },
-                                    }}>
-                                    {trip.participants.map((p) => (
-                                        <MenuItem
-                                            key={p.id}
-                                            value={p.firstName}
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
-                                            }}>
-                                            <InitialsIcon
-                                                name={p.firstName}
-                                                initials={p.initials}
-                                                iconColor={p.iconColor}
-                                                sx={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    fontSize: 10,
-                                                }}
-                                            />
-                                            {p.firstName}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Box>
-                    </Box>
+                    )
+                })()}
+
+            {/* 6. Split between — one row per participant: tap the row to
+                include, "Treat" pill to have the payer cover that share */}
+            <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 1,
+                    }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
+                        Split between *
+                    </Typography>
+                    <Typography
+                        sx={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: colors.primaryBlack,
+                            lineHeight: 1,
+                        }}>
+                        {splitSummary}
+                    </Typography>
                 </Box>
-
-                {/* 5. Local currency received (currency exchange only) */}
-                {isCurrencyExchange &&
-                    (() => {
-                        const localMeta = getCurrencyMeta(currency)
-                        return (
-                            <Box>
-                                <Typography
-                                    sx={
-                                        labelSx
-                                    }>{`Local currency received (${currency}) *`}</Typography>
-                                <TextField
-                                    value={localCurrencyReceived}
-                                    onChange={(e) => {
-                                        const v = e.target.value
-                                        if (v === '' || /^\d*\.?\d*$/.test(v)) setLocalCurrencyReceived(v)
-                                    }}
-                                    onBlur={() => {
-                                        const n = parseFloat(
-                                            localCurrencyReceived
-                                        )
-                                        if (!isNaN(n))
-                                            setLocalCurrencyReceived(
-                                                n.toFixed(localMeta.decimals)
-                                            )
-                                    }}
-                                    required
-                                    fullWidth
-                                    size="small"
-                                    slotProps={{
-                                        htmlInput: {
-                                            inputMode: 'decimal',
-                                        },
-                                        input: {
-                                            startAdornment: (
-                                                <Box
-                                                    component="span"
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: 'text.secondary',
-                                                        flexShrink: 0,
-                                                        userSelect: 'none',
-                                                    }}>
-                                                    {localMeta.symbol}
-                                                </Box>
-                                            ),
-                                        },
-                                    }}
-                                    sx={adornedFieldSx}
-                                />
-                            </Box>
-                        )
-                    })()}
-
-                {/* 6. Split between — one row per participant: tap the row to
-                    include, "Treat" pill to have the payer cover that share */}
-                <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
+                <Box
+                    sx={{
+                        backgroundColor: colors.primaryWhite,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        borderRadius: '4px',
+                        boxShadow: fieldShadow,
+                        overflow: 'hidden',
+                        pointerEvents: isCurrencyExchange ? 'none' : 'auto',
+                    }}>
+                    {/* Header row: Everyone toggle + Treat all */}
                     <Box
+                        onClick={toggleEveryone}
                         sx={{
                             display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            marginBottom: 1,
+                            alignItems: 'center',
+                            gap: 1,
+                            height: 42,
+                            paddingX: '10px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            backgroundColor: colors.primaryWhite,
+                            borderBottom: `1px solid ${colors.primaryBlack}`,
                         }}>
-                        <Typography sx={{ ...labelSx, marginBottom: 0 }}>
-                            Split between *
-                        </Typography>
+                        {includeCheckbox(isEveryone)}
                         <Typography
                             sx={{
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: 600,
                                 color: colors.primaryBlack,
-                                lineHeight: 1,
                             }}>
-                            {splitSummary}
+                            Everyone
                         </Typography>
+                        {coverableParticipants.length > 1 &&
+                            treatPill(
+                                allCovered,
+                                'Treat all',
+                                toggleTreatAll
+                            )}
                     </Box>
-                    <Box
-                        sx={{
-                            backgroundColor: colors.primaryWhite,
-                            border: `1px solid ${colors.primaryBlack}`,
-                            borderRadius: '4px',
-                            boxShadow: fieldShadow,
-                            overflow: 'hidden',
-                            pointerEvents: isCurrencyExchange ? 'none' : 'auto',
-                        }}>
-                        {/* Header row: Everyone toggle + Treat all */}
-                        <Box
-                            onClick={toggleEveryone}
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                height: 42,
-                                paddingX: '10px',
-                                cursor: 'pointer',
-                                userSelect: 'none',
-                                backgroundColor: colors.primaryWhite,
-                                borderBottom: `1px solid ${colors.primaryBlack}`,
-                            }}>
-                            {includeCheckbox(isEveryone)}
-                            <Typography
+                    {trip.participants.map((p, i) => {
+                        const included =
+                            isEveryone || splitBetween.includes(p.firstName)
+                        const isPayer = p.firstName === paidBy
+                        const isCovered = coveredParticipants.includes(
+                            p.firstName
+                        )
+                        return (
+                            <Box
+                                key={p.id}
+                                onClick={() => toggleRow(p.firstName)}
                                 sx={{
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: colors.primaryBlack,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    height: 42,
+                                    paddingX: '10px',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    backgroundColor: included
+                                        ? colors.primaryWhite
+                                        : `${colors.primaryBlack}08`,
+                                    borderBottom:
+                                        i < trip.participants.length - 1
+                                            ? `1px solid ${colors.primaryBlack}15`
+                                            : 'none',
+                                    transition: 'background-color 0.15s',
                                 }}>
-                                Everyone
-                            </Typography>
-                            {coverableParticipants.length > 1 &&
-                                treatPill(
-                                    allCovered,
-                                    'Treat all',
-                                    toggleTreatAll
-                                )}
-                        </Box>
-                        {trip.participants.map((p, i) => {
-                            const included =
-                                isEveryone || splitBetween.includes(p.firstName)
-                            const isPayer = p.firstName === paidBy
-                            const isCovered = coveredParticipants.includes(
-                                p.firstName
-                            )
-                            return (
+                                {includeCheckbox(included)}
                                 <Box
-                                    key={p.id}
-                                    onClick={() => toggleRow(p.firstName)}
                                     sx={{
+                                        opacity: included ? 1 : 0.4,
                                         display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        height: 42,
-                                        paddingX: '10px',
-                                        cursor: 'pointer',
-                                        userSelect: 'none',
-                                        backgroundColor: included
-                                            ? colors.primaryWhite
-                                            : `${colors.primaryBlack}08`,
-                                        borderBottom:
-                                            i < trip.participants.length - 1
-                                                ? `1px solid ${colors.primaryBlack}15`
-                                                : 'none',
-                                        transition: 'background-color 0.15s',
                                     }}>
-                                    {includeCheckbox(included)}
+                                    <InitialsIcon
+                                        name={p.firstName}
+                                        initials={p.initials}
+                                        iconColor={p.iconColor}
+                                        sx={{
+                                            width: 24,
+                                            height: 24,
+                                            fontSize: 10,
+                                        }}
+                                    />
+                                </Box>
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        color: included
+                                            ? colors.primaryBlack
+                                            : 'text.secondary',
+                                    }}>
+                                    {p.firstName}
+                                </Typography>
+                                {isPayer && (
                                     <Box
                                         sx={{
-                                            opacity: included ? 1 : 0.4,
-                                            display: 'flex',
+                                            fontSize: 10,
+                                            lineHeight: 1,
+                                            padding: '3px 7px',
+                                            borderRadius: '10px',
+                                            border: `1px solid ${colors.primaryBlack}`,
+                                            backgroundColor:
+                                                colors.primaryYellow,
+                                            color: colors.primaryBlack,
                                         }}>
-                                        <InitialsIcon
-                                            name={p.firstName}
-                                            initials={p.initials}
-                                            iconColor={p.iconColor}
-                                            sx={{
-                                                width: 24,
-                                                height: 24,
-                                                fontSize: 10,
-                                            }}
-                                        />
+                                        paid
                                     </Box>
-                                    <Typography
-                                        sx={{
-                                            fontSize: 13,
-                                            color: included
-                                                ? colors.primaryBlack
-                                                : 'text.secondary',
-                                        }}>
-                                        {p.firstName}
-                                    </Typography>
-                                    {isPayer && (
-                                        <Box
-                                            sx={{
-                                                fontSize: 10,
-                                                lineHeight: 1,
-                                                padding: '3px 7px',
-                                                borderRadius: '10px',
-                                                border: `1px solid ${colors.primaryBlack}`,
-                                                backgroundColor:
-                                                    colors.primaryYellow,
-                                                color: colors.primaryBlack,
-                                            }}>
-                                            paid
-                                        </Box>
+                                )}
+                                {included &&
+                                    !isPayer &&
+                                    treatPill(isCovered, 'Treat', () =>
+                                        toggleCovered(p.firstName)
                                     )}
-                                    {included &&
-                                        !isPayer &&
-                                        treatPill(isCovered, 'Treat', () =>
-                                            toggleCovered(p.firstName)
-                                        )}
-                                </Box>
-                            )
-                        })}
-                    </Box>
+                            </Box>
+                        )
+                    })}
                 </Box>
-
-                {/* 7. Category */}
-                <Box>
-                    <Typography sx={labelSx}>Category</Typography>
-                    <CategoryPicker
-                        categories={sortedCategories}
-                        value={categoryId}
-                        onChange={(id) => {
-                            setCategoryId(id)
-                            if (prefilled.category)
-                                setPrefilled((p) => ({ ...p, category: false }))
-                        }}
-                        isPending={categoriesPending}
-                        isAutoFilled={prefilled.category}
-                    />
-                </Box>
-
-                {/* 8. Location (legacy trips only) */}
-                {isLegacyTrip && (
-                    <Box>
-                        <Typography sx={labelSx}>Location</Typography>
-                        <FormControl size="small" fullWidth>
-                            <Select
-                                value={location}
-                                onChange={(e) => setLocation(e.target.value)}
-                                displayEmpty
-                                MenuProps={selectMenuProps}
-                                sx={fieldSx}>
-                                <MenuItem value="">
-                                    <em>None</em>
-                                </MenuItem>
-                                {tripLocations.map((l) => (
-                                    <MenuItem key={l} value={l}>
-                                        {l}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-                )}
-
-                {/* 9. Notes */}
-                <Box>
-                    <Typography sx={labelSx}>Notes</Typography>
-                    <TextField
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Optional"
-                        multiline
-                        rows={2}
-                        fullWidth
-                        size="small"
-                        slotProps={{ htmlInput: { maxLength: 2000 } }}
-                        sx={fieldSx}
-                    />
-                </Box>
-
-                {error && (
-                    <Typography variant="body2" sx={errorMessageSx}>
-                        {error}
-                    </Typography>
-                )}
             </Box>
 
-            <PageActionBar>
-                <PageActionButton
-                    onClick={onCancel}
-                    disabled={submitting}
-                    icon={<IconX size={22} />}
-                    label="Cancel"
+            {/* 7. Category */}
+            <Box>
+                <Typography sx={labelSx}>Category</Typography>
+                <CategoryPicker
+                    categories={sortedCategories}
+                    value={categoryId}
+                    onChange={(id) => {
+                        setCategoryId(id)
+                        if (prefilled.category)
+                            setPrefilled((p) => ({ ...p, category: false }))
+                    }}
+                    isPending={categoriesPending}
+                    isAutoFilled={prefilled.category}
                 />
-                <PageActionButton
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    icon={<IconCheck size={22} />}
-                    label={
-                        submitting
-                            ? isEdit
-                                ? 'Saving...'
-                                : 'Adding...'
-                            : isEdit
-                              ? 'Save'
-                              : 'Add'
-                    }
+            </Box>
+
+            {/* 8. Location (legacy trips only) */}
+            {isLegacyTrip && (
+                <Box>
+                    <Typography sx={labelSx}>Location</Typography>
+                    <FormControl size="small" fullWidth>
+                        <Select
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            displayEmpty
+                            MenuProps={selectMenuProps}
+                            sx={fieldSx}>
+                            <MenuItem value="">
+                                <em>None</em>
+                            </MenuItem>
+                            {tripLocations.map((l) => (
+                                <MenuItem key={l} value={l}>
+                                    {l}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+            )}
+
+            {/* 9. Notes */}
+            <Box>
+                <Typography sx={labelSx}>Notes</Typography>
+                <TextField
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Optional"
+                    multiline
+                    rows={2}
+                    fullWidth
+                    size="small"
+                    slotProps={{ htmlInput: { maxLength: 2000 } }}
+                    sx={fieldSx}
                 />
-            </PageActionBar>
-        </>
+            </Box>
+
+            </FormPage>
     )
 }

@@ -157,6 +157,10 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     const debtPairMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/debts\/.+$/
     )
+    // /gustavo/health/<section>[/...]/new or /<id>/edit → the list it came from
+    const healthFormMatch = pathname.match(
+        /^(\/gustavo\/health\/[^/]+(?:\/[^/]+)*?)\/(?:new|[^/]+\/edit)$/
+    )
     // /gustavo/trips/<slug>/edit → trip details
     const tripEditMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/edit$/
@@ -200,6 +204,16 @@ function HeaderBackButton({ pathname }: { pathname: string }) {
     // /gustavo/trips → home
     else if (pathname === '/gustavo/trips') {
         backHref = '/gustavo'
+    }
+    // Page-style forms under a health section go back to what they were
+    // opened from: /health/exercise/new and /health/exercise/<id>/edit →
+    // /health/exercise; /health/exercise/routines/new → .../routines
+    else if (healthFormMatch) {
+        backHref = healthFormMatch[1]
+    }
+    // /gustavo/health/exercise/routines → workouts
+    else if (pathname === '/gustavo/health/exercise/routines') {
+        backHref = '/gustavo/health/exercise'
     }
     // /gustavo/health/<sub> → health
     else if (/^\/gustavo\/health\/.+$/.test(pathname)) {

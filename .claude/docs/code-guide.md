@@ -512,6 +512,102 @@ If you want to understand the codebase by reading files, this order makes sense:
 
 ---
 
+## Page-style Forms (add / edit)
+
+Every add/edit form in the app is a **page at its own route**, not a drawer or
+dialog. The reference implementation is the expense form
+(`components/expense-form.tsx`, rendered by
+`app/gustavo/trips/[slug]/expenses/new/page.tsx` and `.../[id]/edit/page.tsx`).
+Follow it exactly when adding or migrating a form.
+
+### Why pages, not drawers
+
+- The URL is the state: back button, refresh, and deep links all work.
+- The bottom tab bar becomes the form's action bar (Cancel | Save) — no
+  footer inside a scrolling panel, no `position: fixed` inside `#main-scroll`.
+- Keyboard handling (`useScrollFocusedInput`) only has one scroller to reason
+  about.
+
+### The three pieces
+
+1. **Route** — `<list>/new/page.tsx` and `<list>/[id]/edit/page.tsx`. The
+   page owns navigation and permission/not-found messages:
+   ```tsx
+   <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 450 }}>
+       <ThingForm
+           mode="edit"
+           thing={thing}
+           onCancel={() => router.replace(backUrl)}
+           onSuccess={() => router.replace(backUrl)}
+       />
+   </Box>
+   ```
+   Use `router.replace`, not `push`, so the form doesn't sit in history.
+   Variants (duplicate, prefill) are query params on `new`
+   (e.g. `/health/exercise/new?from=<id>`). The list page prefetches the
+   `new` route on mount so the FAB opens it instantly.
+
+2. **Form component** — `components/<area>/<thing>-form.tsx`. Owns state and
+   the request (fetch + React Query invalidation), and renders through
+   `FormPage` (`components/form-page.tsx`):
+   ```tsx
+   <FormPage
+       title={isEdit ? 'Edit Thing' : 'Add Thing'}
+       error={error}
+       onCancel={onCancel}
+       onSubmit={handleSubmit}
+       busy={submitting}
+       submitLabel={submitting ? 'Saving...' : isEdit ? 'Save' : 'Add'}>
+       {/* fields */}
+   </FormPage>
+   ```
+   `FormPage` gives you the title row (optional `titleExtra` for a
+   `PageInfo` ⓘ), the fields column (gap 2, 16px padding, focus-scroll wired),
+   the inline error, and the `PageActionBar`.
+
+3. **Header back button** — `app/gustavo/layout.tsx` maps the route back to
+   the list it came from (`healthFormMatch`, `expenseEditMatch`, ...). Add a
+   rule there when you add a route under a new section.
+
+### Field conventions
+
+- **Order**: date first (when the record has one), then the identifying
+  field (name / place), then the bulk of the form, then free-text notes last.
+- **Date** = `FormDateField` (`components/form-date-field.tsx`): the week
+  strip + calendar button. Never a bare `<TextField type="date">` in a form
+  that logs a dated entry. (Trip start/end are date *ranges*, so they keep the
+  paired text fields.)
+- **Labels** use `labelSx` / `errorLabelSx`; fields use `fieldSx` /
+  `errorFieldSx` / `prefilledFieldSx` from `lib/form-styles.ts`. Required
+  fields get a ` *` suffix on the label.
+- **Validation** is inline: set `attempted` on submit, show red label + field
+  + one message via `FormPage`'s `error`. No toasts, no alerts.
+- **Submit label** wording: `Add` (expense), `Create` (trip, routine),
+  `Log` (health entries), `Save` (every edit). In-flight: `Saving...` etc.
+- **Sub-actions** that create a related record (save-as-routine, quick-add
+  exercise, add location) get a small inline `primaryButtonSx` button next
+  to their input — the action bar only ever submits the form itself.
+
+### Deletes
+
+Delete stays a confirm dialog (`dialogPaperSx` + `destructiveButtonSx`, see
+`components/delete-expense-dialog.tsx`) opened from the detail page or a swipe
+action — it is a one-tap confirmation, not a form.
+
+### Gallery
+
+Every page-style form has a chip in `/dev/gallery/forms`
+(`app/dev/gallery/forms/page.tsx`) with fixture data, so it can be viewed
+without clicking through the app. Health fixtures live in
+`app/dev/gallery/health-fixtures.ts`.
+
+### Migration status
+
+See `.claude/docs/todos/forms-todo.md` for which forms are done and which are
+still drawers/dialogs.
+
+---
+
 ## Touch Gesture Conventions
 
 The app has multiple custom touch handlers that can receive the same touch

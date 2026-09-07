@@ -35,6 +35,10 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **utils files must never import from component files** — extract shared enums/types to a leaf file (prevents circular-import TDZ crashes; check with `pnpm check:cycles`).
 - **New migration ⇒ update `.claude/docs/schema.md`** in the same change.
 - **UI**: neo-brutalist design system — read the `lib/colors.ts` header before styling; shared form styles in `lib/form-styles.ts`.
+- **Forms are pages, not drawers**: every add/edit form is its own route
+  (`<list>/new`, `<list>/[id]/edit`) rendered through `FormPage` with
+  `FormDateField` for dates — follow `.claude/docs/code-guide.md` § Page-style
+  Forms; migration checklist in `.claude/docs/todos/forms-todo.md`.
 - **Per-page help**: use `PageInfo` from `components/page-info.tsx` (with `PageInfoSection`/`PageInfoNote` for the body) — the standardized ⓘ button in a page's title row (top right) that opens a "how this page works" modal. First use: debts page.
 - **Custom touch gestures** (swipe, pull, drag) → follow `.claude/docs/code-guide.md` § Touch Gesture Conventions (axis-lock, `touch-action`, yield on `defaultPrevented`).
 - **No `position: fixed` UI inside `#main-scroll`** (the layout's overflow scroller) — iOS clips fixed elements to the scroller's bounds, so bottom bars render invisible on phones while looking fine on desktop. Portal to `document.body` instead (see `components/page-action-bar.tsx`).

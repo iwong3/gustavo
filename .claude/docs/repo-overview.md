@@ -79,11 +79,12 @@ app/
 │   │       ├── graphs/         spending charts
 │   │       ├── activity/       audit/activity feed
 │   │       └── links/          external links
-│   ├── health/               Health suite: diet, exercise (log), exercises (library),
-│   │                         supplements, symptoms, weight
+│   ├── health/               Health suite: diet, exercise (log + new/[id]/edit + routines),
+│   │                         exercises (library), supplements, symptoms, weight
 │   └── settings/             Settings hub: categories, locations, invite
 │
-├── components/               Reusable components: expense/trip form dialogs, form-drawer,
+├── components/               Reusable components: form-page + form-date-field (page-style
+│                             form shell), expense-form, trip-form, form-drawer (legacy),
 │                             nav-drawer, place-autocomplete, pull-to-refresh, sliding-toggle,
 │                             PWA install/update prompts, plus folders:
 │                             auth/ debt/ graphs/ health/ insights/ links/ menu/ receipts/
@@ -95,7 +96,8 @@ app/
 │   ├── query-provider.tsx       React Query client
 │   └── fab-provider.tsx         Floating action button state
 │
-├── hooks/                    useCurrentUser, useDashboardData, usePWAInstall, useWindowSize
+├── hooks/                    useCurrentUser, useDashboardData, useWorkoutData, useScrollFocusedInput,
+│                             usePWAInstall, useWindowSize
 └── utils/                    api.ts (typed fetch wrappers), permissions.ts (frontend),
                               icons.tsx, currency.ts, cache.ts, colors.ts, links.ts, etc.
 ```
