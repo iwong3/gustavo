@@ -5,6 +5,7 @@
 import type {
     Exercise,
     MuscleGroupWithParents,
+    WeightLog,
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
@@ -213,3 +214,11 @@ export const workoutHistory: Workout[] = [
     pushSession(39, 13, 175, 90),
     pushSession(38, 20, 175, 85),
 ]
+
+/** One weight entry, for the Edit Weight form. */
+export const weightLog: WeightLog = {
+    id: 501,
+    date: GALLERY_TODAY,
+    weightLbs: 184.6,
+    createdAt: `${GALLERY_TODAY}T08:15:00.000Z`,
+}

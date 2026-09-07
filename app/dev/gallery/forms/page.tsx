@@ -9,6 +9,7 @@ import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import DeleteTripDialog from 'components/delete-trip-dialog'
 import ExpenseForm from 'components/expense-form'
 import RoutineForm from 'components/health/routine-form'
+import WeightForm from 'components/health/weight-form'
 import WorkoutForm from 'components/health/workout-form'
 import TripForm from 'components/trip-form'
 import { TripDataProvider } from 'providers/trip-data-provider'
@@ -19,6 +20,7 @@ import {
     exercises,
     muscleGroups,
     presets,
+    weightLog,
     workout,
 } from '../health-fixtures'
 
@@ -49,6 +51,8 @@ const GROUPS = [
             { key: 'workout-dup', label: 'Workout · duplicate', kind: 'page' },
             { key: 'routine-new', label: 'Routine · new', kind: 'page' },
             { key: 'routine-edit', label: 'Routine · edit', kind: 'page' },
+            { key: 'weight-log', label: 'Weight · log', kind: 'page' },
+            { key: 'weight-edit', label: 'Weight · edit', kind: 'page' },
         ],
     },
 ] as const
@@ -127,6 +131,17 @@ export default function FormsGallery() {
                         preset={selected === 'routine-edit' ? presets[0] : undefined}
                         muscleGroups={muscleGroups}
                         exercises={exercises}
+                        onCancel={close}
+                        onSuccess={close}
+                    />
+                )
+            case 'weight-log':
+            case 'weight-edit':
+                return (
+                    <WeightForm
+                        key={selected}
+                        mode={selected === 'weight-log' ? 'add' : 'edit'}
+                        log={selected === 'weight-edit' ? weightLog : undefined}
                         onCancel={close}
                         onSuccess={close}
                     />

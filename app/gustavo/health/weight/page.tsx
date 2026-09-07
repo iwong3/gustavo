@@ -1,27 +1,16 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
-import {
-    fieldSx,
-    labelSx,
-    primaryButtonSx,
-    secondaryButtonSx,
-} from '@/lib/form-styles'
+import { cardSx, colors } from '@/lib/colors'
 import type { WeightLog } from '@/lib/health-types'
-import {
-    Box,
-    Button,
-    CircularProgress,
-    TextField,
-    Typography,
-} from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { IconScale } from '@tabler/icons-react'
-import FormDrawer from 'components/form-drawer'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { useWeightLogs } from 'hooks/useWeightLogs'
+import { useRouter } from 'next/navigation'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
 import { Group } from '@visx/group'
@@ -31,11 +20,6 @@ import { AxisBottom, AxisLeft } from '@visx/axis'
 import * as allCurves from '@visx/curve'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-function getLocalDate(): string {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
 
 function formatWeekday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
@@ -325,60 +309,33 @@ function WeightLogCard({
 
 // ── Page Component ──────────────────────────────────────────────────────────
 
+const LIST_URL = '/gustavo/health/weight'
+const NEW_URL = `${LIST_URL}/new`
+
 export default function WeightPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [chartRange, setChartRange] = useState<ChartRange>('3m')
 
-    // Drawer state
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [editingLog, setEditingLog] = useState<WeightLog | null>(null)
-    const [date, setDate] = useState(getLocalDate)
-    const [weight, setWeight] = useState('')
-    const [saving, setSaving] = useState(false)
-
-    const prevOpenRef = useRef(false)
-
-    const { data: logs = [], isLoading: loading } = useQuery({
-        queryKey: queryKeys.health.weightLogs,
-        queryFn: async () => {
-            const r = await fetch('/api/health/weight-logs')
-            if (!r.ok) throw new Error('Failed to load weight logs')
-            return r.json() as Promise<WeightLog[]>
-        },
-    })
+    const { logs, loading } = useWeightLogs()
 
     const fetchLogs = useCallback(() => {
         return queryClient.invalidateQueries({ queryKey: queryKeys.health.weightLogs })
     }, [queryClient])
 
-    // FAB → new log
-    const openAdd = useCallback(() => {
-        setEditingLog(null)
-        setDrawerOpen(true)
-    }, [])
+    // Warm the form route so the FAB opens it instantly
+    useEffect(() => {
+        router.prefetch(NEW_URL)
+    }, [router])
 
+    // FAB → Log Weight page
+    const openAdd = useCallback(() => router.push(NEW_URL), [router])
     useRegisterFab(openAdd)
 
-    // Reset drawer on fresh open
-    useEffect(() => {
-        const justOpened = drawerOpen && !prevOpenRef.current
-        prevOpenRef.current = drawerOpen
-
-        if (justOpened) {
-            if (editingLog) {
-                setDate(editingLog.date)
-                setWeight(String(editingLog.weightLbs))
-            } else {
-                setDate(getLocalDate())
-                setWeight('')
-            }
-        }
-    }, [drawerOpen, editingLog])
-
-    const handleEdit = useCallback((log: WeightLog) => {
-        setEditingLog(log)
-        setDrawerOpen(true)
-    }, [])
+    const handleEdit = useCallback(
+        (log: WeightLog) => router.push(`${LIST_URL}/${log.id}/edit`),
+        [router]
+    )
 
     const handleDelete = useCallback(async (log: WeightLog) => {
         try {
@@ -388,35 +345,6 @@ export default function WeightPage() {
             console.error('Failed to delete weight log:', err)
         }
     }, [fetchLogs])
-
-    const handleSubmit = useCallback(async () => {
-        const weightNum = parseFloat(weight)
-        if (!date || isNaN(weightNum)) return
-
-        setSaving(true)
-        try {
-            if (editingLog) {
-                await fetch(`/api/health/weight-logs/${editingLog.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date, weightLbs: weightNum }),
-                })
-            } else {
-                await fetch('/api/health/weight-logs', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date, weightLbs: weightNum }),
-                })
-            }
-            fetchLogs()
-            setDrawerOpen(false)
-            setEditingLog(null)
-        } catch (err) {
-            console.error('Failed to save weight log:', err)
-        } finally {
-            setSaving(false)
-        }
-    }, [date, weight, editingLog, fetchLogs])
 
     // Logs sorted by date DESC for history list; compute delta from next-older entry
     const sortedLogs = [...logs].sort((a, b) => b.date.localeCompare(a.date))
@@ -498,91 +426,6 @@ export default function WeightPage() {
                     ))}
                 </Box>
             )}
-
-            {/* Log drawer */}
-            <FormDrawer open={drawerOpen} onClose={() => { setDrawerOpen(false); setEditingLog(null) }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                        overflow: 'hidden',
-                    }}>
-                    {/* Header */}
-                    <Box
-                        sx={{
-                            px: 2.5,
-                            py: 2,
-                            borderBottom: `1px solid ${colors.primaryBlack}20`,
-                        }}>
-                        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
-                            {editingLog ? 'Edit Weight' : 'Log Weight'}
-                        </Typography>
-                    </Box>
-
-                    {/* Body */}
-                    <Box
-                        sx={{
-                            flex: 1,
-                            overflowY: 'auto',
-                            px: 2.5,
-                            py: 2,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                        }}>
-                        <Box>
-                            <Typography sx={labelSx}>Weight (lbs)</Typography>
-                            <TextField
-                                value={weight}
-                                onChange={(e) => setWeight(e.target.value)}
-                                size="small"
-                                fullWidth
-                                type="number"
-                                inputProps={{ step: '0.1', min: '0', inputMode: 'decimal' }}
-                                placeholder="e.g. 185.5"
-                                sx={{ ...fieldSx, maxWidth: 180 }}
-                            />
-                        </Box>
-                        <Box>
-                            <Typography sx={labelSx}>Date</Typography>
-                            <TextField
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                size="small"
-                                sx={{ ...fieldSx, maxWidth: 180 }}
-                            />
-                        </Box>
-                    </Box>
-
-                    {/* Footer */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            px: 2.5,
-                            py: 2,
-                            borderTop: `1px solid ${colors.primaryBlack}20`,
-                            paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
-                        }}>
-                        <Button
-                            onClick={() => { setDrawerOpen(false); setEditingLog(null) }}
-                            disabled={saving}
-                            size="large"
-                            sx={secondaryButtonSx}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={!weight || isNaN(parseFloat(weight)) || saving}
-                            size="large"
-                            sx={primaryButtonSx}>
-                            {saving ? 'Saving...' : editingLog ? 'Save' : 'Log'}
-                        </Button>
-                    </Box>
-                </Box>
-            </FormDrawer>
         </HealthPageLayout>
     )
 }

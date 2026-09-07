@@ -21,6 +21,9 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 - [x] Workout routines (presets) — list page `health/exercise/routines`,
       `RoutineForm` at `routines/new` + `routines/[id]/edit` (replaced the
       two-view PresetFormDrawer)
+- [x] Weight log / edit — `components/health/weight-form.tsx`, routes
+      `health/weight/new` + `health/weight/[id]/edit`; list shares
+      `hooks/useWeightLogs`. Back button is covered by `healthFormMatch`.
 
 ## To do — Health (priority)
 
@@ -29,9 +32,6 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
       of `MuscleGroupCard`; switch it to
       `components/health/muscle-group-grid.tsx`. → `health/exercises/new`,
       `health/exercises/[id]/edit`
-- [ ] **Weight** — `health/weight/page.tsx` inline FormDrawer (Log / Edit
-      Weight: date, lbs). Smallest one; a good template for the rest. →
-      `health/weight/new`, `health/weight/[id]/edit`
 - [ ] **Supplements** — `health/supplements/page.tsx` `SupplementDrawer`
       (tabbed: Log supplements for a date / Manage supplements with inline
       New/Edit Supplement) and `SupplementPresetDrawer` (list + New/Edit Group).
