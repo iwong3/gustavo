@@ -83,15 +83,18 @@ export const FormattedMoney = (
 /**
  * USD for display, null-safe: API numerics can arrive as null/NaN (see
  * CLAUDE.md "Runtime types lie"), which render as '—' rather than "$NaN".
- * Whole dollars by default; maxDigits 2 shows cents when there are any.
+ * Whole dollars by default; maxDigits 2 shows cents (both digits) when
+ * there are any.
  */
 export function formatUsd(n: number | null | undefined, maxDigits = 0): string {
-    return Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: maxDigits,
-          })
-        : '—'
+    if (!Number.isFinite(n)) return '—'
+    // Cents shown in full when there are any ("$15.50", not "$15.5");
+    // whole amounts stay clean ("$64")
+    const hasCents = maxDigits > 0 && Math.round(n! * 100) % 100 !== 0
+    return n!.toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: hasCents ? maxDigits : 0,
+        maximumFractionDigits: maxDigits,
+    })
 }

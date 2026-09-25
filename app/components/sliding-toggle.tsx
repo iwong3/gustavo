@@ -106,7 +106,10 @@ export function SlidingToggle({
                         width: `${widthPct}%`,
                         height: '100%',
                         backgroundColor: colors.primaryYellow,
-                        transition: hasTransition ? 'left 0.25s ease' : 'none',
+                        // Quick and snappy: fast start, soft landing
+                        transition: hasTransition
+                            ? 'left 0.16s cubic-bezier(0.2, 0.9, 0.3, 1)'
+                            : 'none',
                         zIndex: 0,
                     }}
                 />

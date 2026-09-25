@@ -6,18 +6,10 @@ import { useMemo, useState } from 'react'
 
 import { expenseShareForUser } from '@/lib/spend'
 import type { Expense } from '@/lib/types'
-import { MySpendChart } from 'components/insights/my-spend-chart'
-import { MySpendList } from 'components/insights/my-spend-list'
-import { SlidingToggle } from 'components/sliding-toggle'
-import type {
-    MySpendChartDatum,
-    MySpendDimension,
-    MySpendRow,
-    MySpendSort,
-} from 'hooks/useMySpendData'
-import { getColorForCategory, getLocationColor } from 'utils/icons'
+import { MySpendList, type SpendListVariant } from 'components/insights/my-spend-list'
+import { CategoryBreakdown, DayCalendar, PlaceRoute } from 'components/insights/spend-views'
+import type { MySpendRow, MySpendSort } from 'hooks/useMySpendData'
 
-import { colors } from '@/lib/colors'
 import MySpendPage from '../../../gustavo/trips/[slug]/graphs/page'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
@@ -44,116 +36,58 @@ const galleryExpenses: Expense[] = [
     makeExpense({ name: 'Kaiten sushi (conv error)', date: '2026-07-04', categoryName: 'Food', currency: 'JPY', costOriginal: 3000, costConvertedUsd: null as unknown as number, conversionError: true, isEveryone: true, splitBetween: participants }),
 ]
 
-const dimensionOptions = [
-    { value: 'day', label: 'Day' },
-    { value: 'category', label: 'Category' },
-    { value: 'location', label: 'Location' },
-]
-
-/** Standalone interactive harness — mirrors the page wiring without providers. */
-function InteractiveMySpend() {
-    const [dimension, setDimension] = useState<MySpendDimension>('day')
-    const [selectedKey, setSelectedKey] = useState<string | null>(null)
-    const [search, setSearch] = useState('')
-    const [sort, setSort] = useState<MySpendSort>('date-asc')
-
-    const rows = useMemo((): MySpendRow[] => {
-        return galleryExpenses
-            .map((expense) => ({
-                expense,
-                usdTotal: expense.costConvertedUsd,
-                share: expenseShareForUser(
-                    expense,
-                    ivan.id,
-                    expense.costConvertedUsd,
-                    participants.length
+/** Ivan's share rows over the fixture expenses, in a given sort. */
+function useGalleryRows(sort: MySpendSort): MySpendRow[] {
+    return useMemo(
+        () =>
+            galleryExpenses
+                .map((expense) => {
+                    // Conversion-error rows carry null at runtime — treat as 0
+                    const usdTotal = Number.isFinite(expense.costConvertedUsd) ? expense.costConvertedUsd : 0
+                    return {
+                        expense,
+                        usdTotal,
+                        share: expenseShareForUser(expense, ivan.id, usdTotal, participants.length),
+                    }
+                })
+                .filter((r) => r.share > 0.005)
+                .sort((a, b) =>
+                    sort === 'amount-desc'
+                        ? b.share - a.share
+                        : a.expense.date < b.expense.date
+                          ? -1
+                          : 1
                 ),
-            }))
-            .filter((r) => r.share > 0.005)
-            .filter((r) => {
-                const haystack = (
-                    r.expense.name +
-                    ' ' +
-                    (r.expense.categoryName ?? '') +
-                    ' ' +
-                    (r.expense.locationName ?? '')
-                ).toLowerCase()
-                return haystack.includes(search.toLowerCase().trim())
-            })
-            .sort((a, b) =>
-                sort === 'amount-desc'
-                    ? b.share - a.share
-                    : sort === 'amount-asc'
-                      ? a.share - b.share
-                      : sort === 'date-desc'
-                        ? (a.expense.date > b.expense.date ? -1 : 1)
-                        : (a.expense.date < b.expense.date ? -1 : 1)
-            )
-    }, [search, sort])
+        [sort]
+    )
+}
 
-    const chartData = useMemo((): MySpendChartDatum[] => {
-        const totals = new Map<string, number>()
-        for (const r of rows) {
-            const key =
-                dimension === 'day'
-                    ? r.expense.date
-                    : dimension === 'category'
-                      ? (r.expense.categoryName ?? 'Other')
-                      : (r.expense.locationName ?? 'Other')
-            totals.set(key, (totals.get(key) ?? 0) + r.share)
-        }
-        return Array.from(totals.entries())
-            .sort(([a], [b]) => (a < b ? -1 : 1))
-            .map(([key, value]) => ({
-                key,
-                label: dimension === 'day' ? key.slice(5).replace('-', '/') : key,
-                value,
-                color:
-                    dimension === 'day'
-                        ? colors.primaryYellow
-                        : dimension === 'category'
-                          ? getColorForCategory(key)
-                          : getLocationColor(key),
-            }))
-    }, [rows, dimension])
-
+/** One list style over the fixture rows, with working sort/search chrome. */
+function ListSpecimen({ variant, sort }: { variant: SpendListVariant; sort: MySpendSort }) {
+    const [s, setS] = useState<MySpendSort>(sort)
+    const [search, setSearch] = useState('')
+    const rows = useGalleryRows(s).filter((r) =>
+        r.expense.name.toLowerCase().includes(search.toLowerCase().trim())
+    )
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <SlidingToggle
-                value={dimension}
-                options={dimensionOptions}
-                onChange={(val) => {
-                    setDimension(val as MySpendDimension)
-                    setSelectedKey(null)
-                }}
-                fontSize={13}
-                borderWidth={1}
-            />
-            <MySpendChart
-                data={chartData}
-                dimension={dimension}
-                selectedKey={selectedKey}
-                onBarClick={(key) =>
-                    setSelectedKey((prev) => (prev === key ? null : key))
-                }
-            />
-            <MySpendList
-                rows={rows}
-                sort={sort}
-                onSortChange={setSort}
-                search={search}
-                onSearchChange={setSearch}
-                onRowTap={() => {}}
-                shareLabel="my share"
-            />
-        </Box>
+        <MySpendList
+            rows={rows}
+            sort={s}
+            onSortChange={setS}
+            search={search}
+            onSearchChange={setSearch}
+            onRowTap={() => {}}
+            variant={variant}
+            tripStartDate={trip.startDate}
+            tripDays={10}
+        />
     )
 }
 
 export default function InsightsGalleryPage() {
     return (
         <GalleryPage title="Insights">
-            <SpecimenGroup title="Full page (real providers + hook, fixture data)">
+            <SpecimenGroup title="Full page (real providers + hook, fixture data) — switch views, tap to filter, change person">
                 <Specimen label="MySpendPage under Trip/SpendDataProvider">
                     <TripDataProvider
                         expenses={galleryExpenses}
@@ -164,19 +98,30 @@ export default function InsightsGalleryPage() {
                     </TripDataProvider>
                 </Specimen>
             </SpecimenGroup>
-            <SpecimenGroup title="My Spend (interactive — switch tabs, tap bars, search, sort)">
-                <Specimen label="chart + list, Ivan's shares">
-                    <InteractiveMySpend />
+            <SpecimenGroup title="Expense list — the three styles">
+                <Specimen label="groups (default) — the Expenses page format, tap a day header to collapse">
+                    <ListSpecimen variant="groups" sort="date-asc" />
+                </Specimen>
+                <Specimen label="bands — by date">
+                    <ListSpecimen variant="bands" sort="date-asc" />
+                </Specimen>
+                <Specimen label="agenda — by date">
+                    <ListSpecimen variant="agenda" sort="date-asc" />
+                </Specimen>
+                <Specimen label="bands — by amount (flat, date in the subline)">
+                    <ListSpecimen variant="bands" sort="amount-desc" />
+                </Specimen>
+                <Specimen label="agenda — by amount (date per row)">
+                    <ListSpecimen variant="agenda" sort="amount-desc" />
                 </Specimen>
             </SpecimenGroup>
             <SpecimenGroup title="States">
-                <Specimen label="chart — no data">
-                    <MySpendChart
-                        data={[]}
-                        dimension="category"
-                        selectedKey={null}
-                        onBarClick={() => {}}
-                    />
+                <Specimen label="views — no data">
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <CategoryBreakdown data={[]} selectedKey={null} onSelect={() => {}} />
+                        <DayCalendar data={[]} selectedKey={null} onSelect={() => {}} />
+                        <PlaceRoute data={[]} selectedKey={null} onSelect={() => {}} />
+                    </Box>
                 </Specimen>
                 <Specimen label="list — no matches">
                     <MySpendList
@@ -186,7 +131,6 @@ export default function InsightsGalleryPage() {
                         search="zzz"
                         onSearchChange={() => {}}
                         onRowTap={() => {}}
-                        shareLabel="my share"
                     />
                 </Specimen>
             </SpecimenGroup>

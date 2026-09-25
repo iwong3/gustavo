@@ -395,46 +395,66 @@ export function DebtPairSkeleton() {
 export function GraphsSkeleton() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 450, paddingX: 2, paddingY: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                <TitleRowSkeleton width={120} controls={[30]} />
+            <TitleRowSkeleton width={90} controls={[30]} />
+            {/* Person picker: avatar + name */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 36 }}>
+                <Circle size={36} />
+                <TextBone fontSize={14} width={110} />
+            </Box>
+            <ChromeBox height={33} />
+            {/* Chart card: big number, summary line, stacked bar, legend */}
+            <Box sx={{ ...cardSx, padding: 1.5 }}>
+                <TextBone fontSize={28} lineHeight={1.1} width={120} />
+                <TextBone fontSize={12} width="70%" sx={{ marginTop: 0.25, marginBottom: 1.25 }} />
+                <Bone height={22} />
+                {[0, 1, 2, 3].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingY: 0.85, borderBottom: i < 3 ? ROW_DIVIDER : 'none', marginTop: i === 0 ? 0.75 : 0 }}>
+                        <TextBone fontSize={13} width="36%" />
+                        <Bone height={8} sx={{ flex: 1 }} />
+                        <TextBone fontSize={13} width={54} />
+                    </Box>
+                ))}
+            </Box>
+            {/* Expense list: label, search + sort, rows in bands */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 1 }}>
+                <TextBone fontSize={11} width={90} />
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    {[0, 1, 2, 3].map((i) => (
-                        <Circle key={i} size={40} />
-                    ))}
+                    <ChromeBox height={34} sx={{ flex: 1 }} />
+                    <ChromeBox width={88} height={34} />
                 </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, minHeight: 26 }}>
-                <Bone width={72} height={26} radius="13px" />
-                <Bone width={88} height={26} radius="13px" />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <Bone height={60} radius="4px" sx={{ flex: 1.7 }} />
-                <Bone height={60} radius="4px" sx={{ flex: 1 }} />
-            </Box>
-            <ChromeBox height={34} />
-            <Bone height={195} radius="4px" />
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <ChromeBox height={34} sx={{ flex: 1 }} />
-                <ChromeBox width={88} height={34} />
-            </Box>
-            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                {[0, 1, 2].map((i) => (
-                    <Box
-                        key={i}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            paddingX: 1.5,
-                            paddingY: 1.25,
-                            borderBottom: i < 2 ? ROW_DIVIDER : 'none',
-                        }}>
-                        <Circle size={28} />
-                        <Box sx={{ flex: 1 }}>
-                            <TextBone fontSize={14} lineHeight={1.3} width="55%" />
-                            <TextBone fontSize={12} lineHeight={1.3} width="30%" />
+                {/* Day cards, the Expenses page's format — 12px below the
+                    controls, 12px apart */}
+                {[3, 2].map((rows, g) => (
+                    <Box key={g} sx={{ ...cardSx, overflow: 'hidden', marginTop: 0.5 }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                paddingX: 2,
+                                paddingY: 1,
+                                backgroundColor: '#d4ddb6', // DateGroupHeader
+                                borderBottom: `1px solid ${colors.primaryBlack}`,
+                            }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 16 }} />
+                                <Box>
+                                    <TextBone fontSize={13} lineHeight={1.3} width={124} />
+                                    <TextBone fontSize={11} lineHeight={1.3} width={112} />
+                                </Box>
+                            </Box>
+                            <TextBone fontSize={13} width={46} />
                         </Box>
-                        <TextBone fontSize={14} width={50} />
+                        {Array.from({ length: rows }, (_, i) => (
+                            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, paddingX: 1.5, paddingY: 1, borderBottom: i < rows - 1 ? ROW_DIVIDER : 'none' }}>
+                                <Circle size={28} />
+                                <Box sx={{ flex: 1 }}>
+                                    <TextBone fontSize={14} lineHeight={1.3} width="55%" />
+                                    <TextBone fontSize={11.5} lineHeight={1.3} width="40%" />
+                                </Box>
+                                <TextBone fontSize={14} width={52} />
+                            </Box>
+                        ))}
                     </Box>
                 ))}
             </Box>

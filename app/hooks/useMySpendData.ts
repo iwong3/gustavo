@@ -20,6 +20,10 @@ export type MySpendChartDatum = {
     label: string
     value: number
     color: string
+    /** Place view: first day spent there (orders the route) and how many
+     *  distinct days had spending there. */
+    firstDate?: string
+    days?: number
 }
 
 /** An expense paired with the selected person's share of it. */
@@ -82,7 +86,7 @@ export function useMySpendData() {
         participants[0]?.id ??
         0
     const [personId, setPersonId] = useState<number>(defaultPersonId)
-    const [dimension, setDimension] = useState<MySpendDimension>('day')
+    const [dimension, setDimension] = useState<MySpendDimension>('category')
     const [filters, setFilters] = useState<MySpendFilters>(EMPTY_FILTERS)
     const [search, setSearch] = useState('')
     const [sort, setSort] = useState<MySpendSort>('date-asc')
@@ -160,12 +164,20 @@ export function useMySpendData() {
         }
 
         const totals = new Map<string, number>()
+        // Place view extras: first date and distinct days per place
+        const firstDates = new Map<string, string>()
+        const dayCounts = new Map<string, Set<string>>()
         for (const r of chartRows) {
             const key =
                 dimension === 'category'
                     ? (r.expense.categoryName ?? 'Other')
                     : (r.expense.locationName ?? 'Other')
             totals.set(key, (totals.get(key) ?? 0) + r.share)
+            const first = firstDates.get(key)
+            if (!first || r.expense.date < first) firstDates.set(key, r.expense.date)
+            const days = dayCounts.get(key) ?? new Set<string>()
+            days.add(r.expense.date)
+            dayCounts.set(key, days)
         }
         return Array.from(totals.entries())
             .sort(([, a], [, b]) => b - a)
@@ -177,6 +189,8 @@ export function useMySpendData() {
                     dimension === 'category'
                         ? getColorForCategory(name)
                         : getLocationColor(name),
+                firstDate: firstDates.get(name),
+                days: dayCounts.get(name)?.size ?? 0,
             }))
     }, [chartRows, dimension, trip.startDate, trip.endDate])
 
@@ -221,6 +235,18 @@ export function useMySpendData() {
         [filteredRows]
     )
 
+    // The person's whole share, ignoring filters and search — the "of your
+    // $1,862" context when a filter is on
+    const overallTotal = useMemo(
+        () => shareRows.reduce((sum, r) => sum + r.share, 0),
+        [shareRows]
+    )
+
+    const tripDays = Math.max(
+        1,
+        dayjs(trip.endDate + 'T00:00:00').diff(dayjs(trip.startDate + 'T00:00:00'), 'day') + 1
+    )
+
     const hasActiveFilters =
         filters.category !== null ||
         filters.location !== null ||
@@ -244,6 +270,8 @@ export function useMySpendData() {
         toggleChartKey,
         sortedRows,
         totalShare,
+        overallTotal,
+        tripDays,
         expenseCount: filteredRows.length,
         hasActiveFilters,
     }
