@@ -1,13 +1,14 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { IconCheck } from '@tabler/icons-react'
 
-import { cardSx, colors, pressRowSx } from '@/lib/colors'
+import { cardSx, colors, pressRowSx, toneColors } from '@/lib/colors'
 import { expenseDebtContribution, simplifyDebts } from '@/lib/debt'
 import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 import { ListControls, type ListSort } from 'components/list-controls'
@@ -17,18 +18,8 @@ import { useTripData } from 'providers/trip-data-provider'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { InitialsIcon } from 'utils/icons'
 
-const OWE_RED = '#c0392b'
-const OWED_GREEN = '#2e7d32'
-
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-          })
-        : '—'
+const OWE_RED = toneColors.negative
+const OWED_GREEN = toneColors.positive
 
 type DebtRow = {
     expense: Expense
@@ -122,7 +113,7 @@ function DebtExpenseRow({
                         : colors.primaryBlack,
                 }}>
                 {showDirection ? (row.reduces ? '−' : '+') : ''}
-                {formatUsd(row.amount)}
+                {formatUsd(row.amount, 2)}
             </Typography>
         </Box>
     )
@@ -162,7 +153,7 @@ function PaymentRow({
                     flexShrink: 0,
                     borderRadius: '50%',
                     border: `1.5px solid ${OWED_GREEN}`,
-                    backgroundColor: '#eef5ee',
+                    backgroundColor: toneColors.positiveBg,
                 }}>
                 <IconCheck size={15} stroke={2.5} color={OWED_GREEN} />
             </Box>
@@ -182,7 +173,7 @@ function PaymentRow({
                     color: reduces ? OWED_GREEN : OWE_RED,
                 }}>
                 {reduces ? '−' : '+'}
-                {formatUsd(record.amountUsd)}
+                {formatUsd(record.amountUsd, 2)}
             </Typography>
         </Box>
     )
@@ -362,7 +353,7 @@ export function PairDetail({
                 {(pairNet >= 0 ? creditor : debtor).firstName}
             </span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatUsd(Math.abs(pairNet))}
+                {formatUsd(Math.abs(pairNet), 2)}
             </span>
         </Box>
     )
@@ -396,7 +387,7 @@ export function PairDetail({
             <>
                 {groupHead(
                     'Payments',
-                    `${paymentsNet <= 0 ? '−' : '+'}${formatUsd(Math.abs(paymentsNet))}`
+                    `${paymentsNet <= 0 ? '−' : '+'}${formatUsd(Math.abs(paymentsNet), 2)}`
                 )}
                 <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                     {pairPayments.map((r) => {
@@ -508,7 +499,7 @@ export function PairDetail({
                                 lineHeight: 1,
                                 fontVariantNumeric: 'tabular-nums',
                             }}>
-                            {formatUsd(heroAmount)}
+                            {formatUsd(heroAmount, 2)}
                         </Typography>
                         <Typography
                             sx={{
@@ -520,7 +511,7 @@ export function PairDetail({
                             {expenseCount} expense
                             {expenseCount === 1 ? '' : 's'}
                             {showTrueNet &&
-                                ` · direct debt ${formatUsd(directAmount)}`}
+                                ` · direct debt ${formatUsd(directAmount, 2)}`}
                         </Typography>
                     </Box>
                 </Box>
@@ -552,12 +543,12 @@ export function PairDetail({
                 <Box>
                     {groupHead(
                         `${creditor.firstName} covered ${debtor.firstName}`,
-                        formatUsd(sum(creditorRows))
+                        formatUsd(sum(creditorRows), 2)
                     )}
                     {rowCard(creditorRows, false)}
                     {groupHead(
                         `${debtor.firstName} covered ${creditor.firstName}`,
-                        `−${formatUsd(sum(debtorRows))}`
+                        `−${formatUsd(sum(debtorRows), 2)}`
                     )}
                     {rowCard(debtorRows, false)}
                     {paymentsBlock}

@@ -15,7 +15,7 @@ import { Box, Typography } from '@mui/material'
 import { IconCheck, IconClock, IconPlaneDeparture } from '@tabler/icons-react'
 import Link from 'next/link'
 
-import { colors } from '@/lib/colors'
+import { colors, toneColors } from '@/lib/colors'
 import { getCountry } from '@/lib/countries'
 import type { TripStats, TripSummary } from '@/lib/types'
 import { FormattedMoney } from 'utils/currency'
@@ -28,8 +28,8 @@ const STRIP_SLATE = '#cdd9e3'
 // Debt-stamp inks — vivid enough to read as clear green / red (the brand
 // olive-green + maroon go near-black). The green also has to stand off the
 // sage stub background it sits on, so it's kept mid-tone, not pale.
-const STAMP_RED = '#bb2f22'
-const STAMP_GREEN = '#2f7d34'
+const STAMP_RED = toneColors.negative
+const STAMP_GREEN = toneColors.positive
 
 // Passport-ink palette for the per-country entry stamps. Dedicated saturated
 // inks (not the earthy brand palette, which is too low-chroma to read as colour

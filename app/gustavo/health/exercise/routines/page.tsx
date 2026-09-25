@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { cardSx, colors, pressRowSx } from '@/lib/colors'
+import { cardSx, colors, pressRowSx, healthColors } from '@/lib/colors'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { queryKeys } from '@/lib/query-keys'
 import {
@@ -74,7 +74,7 @@ export default function RoutinesPage() {
                     />
                 }
                 title="Routines"
-                color="#ffe0b2"
+                color={healthColors.workouts}
             />
 
             {presets.length === 0 ? (

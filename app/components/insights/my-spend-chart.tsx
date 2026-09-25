@@ -1,6 +1,7 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import { useLayoutEffect, useState } from 'react'
 
 import { cardSx, colors } from '@/lib/colors'
@@ -11,14 +12,6 @@ const BAR_MAX_HEIGHT = 118
 const MIN_BAR_WIDTH = 30
 
 // Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              maximumFractionDigits: 0,
-          })
-        : '—'
 
 // Bar that animates to its target height on mount and on every change.
 // Mounting from 0 makes tab/person switches "grow in"; later data changes

@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors } from '@/lib/colors'
 import type { Exercise } from '@/lib/health-types'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { Box, Chip, Typography } from '@mui/material'
@@ -60,7 +60,7 @@ export default function ExercisesPage() {
             <HealthPageHeader
                 icon={<IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Exercises"
-                color="#fff9c4"
+                color={healthColors.exercises}
             />
 
             {exercises.length === 0 ? (

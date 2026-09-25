@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -552,7 +552,7 @@ export default function DietPage() {
             <HealthPageHeader
                 icon={<IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Diet"
-                color="#c8e6c9">
+                color={healthColors.diet}>
                 {/* Food group legend */}
                 {foodGroups.length > 0 && (
                     <Box sx={{

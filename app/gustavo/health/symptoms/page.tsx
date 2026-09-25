@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors } from '@/lib/colors'
 import {
     fieldSx,
     labelSx,
@@ -334,7 +334,7 @@ export default function SymptomsPage() {
             <HealthPageHeader
                 icon={<IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Symptoms"
-                color="#ffcdd2"
+                color={healthColors.symptoms}
             />
 
             {/* Log history */}

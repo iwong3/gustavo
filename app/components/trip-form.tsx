@@ -37,7 +37,6 @@ import {
     ConflictError,
     createTrip,
     fetchLocations,
-    fetchUserPreferences,
     fetchUsers,
     updateParticipantRole,
     updateTrip,
@@ -48,6 +47,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { COUNTRIES, deriveCurrenciesFromCountries } from '@/lib/countries'
 import { InitialsIcon } from 'utils/icons'
 import { canManageRoles } from 'utils/permissions'
+import { fetchCachedUserPreferences } from 'hooks/useUserPreferences'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
@@ -268,8 +268,9 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 .catch(() => {})
             setDeletedLocationIds([])
         } else if (mode === 'create') {
-            // Load user's default visibility preference
-            fetchUserPreferences()
+            // User's default visibility — from the cached preferences when
+            // Settings (or an earlier form) already loaded them
+            fetchCachedUserPreferences(queryClient)
                 .then((prefs) => setVisibility(prefs.defaultTripVisibility))
                 .catch(() => {})
         }

@@ -11,10 +11,11 @@ import {
     Typography,
 } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
+import { formatUsd } from 'utils/currency'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, toneColors } from '@/lib/colors'
 import {
     directPairwiseSettlements,
     simplifyDebts,
@@ -33,6 +34,7 @@ import { IconArrowsExchange, IconChevronDown, IconChevronUp } from '@tabler/icon
 
 import { MoneyMap } from 'components/debt/money-map'
 import { SettleProgressCard, SettleRow, SettledRow } from 'components/debt/settle-up'
+import { PageTitleRow } from 'components/page-title-row'
 import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
 import { PersonSwitcher } from 'components/person-switcher'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
@@ -41,17 +43,8 @@ import { useTripData } from 'providers/trip-data-provider'
 import { addSettlement, deleteSettlement } from 'utils/api'
 import { InitialsIcon } from 'utils/icons'
 
-const OWE_RED = '#c0392b'
-const OWED_GREEN = '#2e7d32'
-
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              maximumFractionDigits: 0,
-          })
-        : '—'
+const OWE_RED = toneColors.negative
+const OWED_GREEN = toneColors.positive
 
 function StatBox({
     value,
@@ -71,7 +64,7 @@ function StatBox({
             sx={{
                 ...cardSx,
                 flex: 1,
-                backgroundColor: tone === 'owe' ? '#fdf0ee' : '#eef5ee',
+                backgroundColor: tone === 'owe' ? toneColors.negativeBg : toneColors.positiveBg,
                 paddingX: 1.5,
                 paddingY: 1,
             }}>
@@ -366,105 +359,80 @@ export default function DebtsPage() {
                     flexDirection: 'column',
                     gap: 1.25,
                 }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 1,
-                    }}>
-                    <Typography
-                        noWrap
-                        sx={{
-                            fontSize: 16,
-                            fontWeight: 800,
-                            color: colors.primaryBlack,
-                            paddingX: 0.25,
-                            minWidth: 0,
-                        }}>
-                        {isSelf ? 'My Debts' : `${personName}'s Debts`}
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flexShrink: 0,
-                        }}>
-                        {!allSettled && (
-                            <Box
-                                onClick={() =>
-                                    setPlan(
-                                        plan === 'simplified'
-                                            ? 'direct'
-                                            : 'simplified'
-                                    )
-                                }
-                                sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'gap': 0.5,
-                                    'height': 30,
-                                    'paddingX': 1.25,
-                                    'borderRadius': '15px',
-                                    'border': `1px solid ${colors.primaryBlack}`,
-                                    'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                    'backgroundColor': colors.primaryYellow,
-                                    'cursor': 'pointer',
-                                    'userSelect': 'none',
-                                    '&:active': {
-                                        boxShadow: 'none',
-                                        transform: 'translate(1.5px, 1.5px)',
-                                    },
-                                    'transition':
-                                        'transform 0.1s, box-shadow 0.1s',
-                                }}>
-                                <Typography
-                                    sx={{ fontSize: 12.5, fontWeight: 700 }}>
-                                    {plan === 'simplified'
-                                        ? 'Simplified'
-                                        : 'All debts'}
-                                </Typography>
-                                <IconArrowsExchange
-                                    size={15}
-                                    stroke={2}
-                                    color={colors.primaryBlack}
-                                />
-                            </Box>
-                        )}
-                        <PageInfo title="How debts work">
-                            <PageInfoSection title="All debts">
-                                Each pair&apos;s actual net. If Alice covered
-                                things for Bob, Bob owes Alice — nothing is
-                                rerouted.
-                            </PageInfoSection>
-                            <PageInfoSection title="Simplified">
-                                The fewest payments that settle everyone. Money
-                                may be rerouted — you might pay someone who
-                                never covered you.
-                            </PageInfoSection>
-                            <PageInfoSection title="Settling">
-                                Tap <b>Settle</b> on a payment once the money
-                                has actually moved. It&apos;s recorded for the
-                                whole group, balances update, and the payment
-                                drops into <b>Settled</b> below — where ✕
-                                undoes it. On the map, settled money stays
-                                visible as faded ✓ ribbons.
-                            </PageInfoSection>
-                            <PageInfoNote>
-                                Both plans settle everyone to the same final
-                                balances — simplified just gets there in fewer
-                                payments. Switch anytime with the{' '}
-                                <b>Simplified / All debts</b> pill up top.
-                            </PageInfoNote>
-                            <PageInfoNote>
-                                On the map, tap a ribbon or a person to
-                                highlight their flows. Tap a row below it to see
-                                the expenses behind that debt.
-                            </PageInfoNote>
-                        </PageInfo>
-                    </Box>
-                </Box>
+                <PageTitleRow title={isSelf ? 'My Debts' : `${personName}'s Debts`}>
+                    {!allSettled && (
+                        <Box
+                            onClick={() =>
+                                setPlan(
+                                    plan === 'simplified'
+                                        ? 'direct'
+                                        : 'simplified'
+                                )
+                            }
+                            sx={{
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'gap': 0.5,
+                                'height': 30,
+                                'paddingX': 1.25,
+                                'borderRadius': '15px',
+                                'border': `1px solid ${colors.primaryBlack}`,
+                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                                'backgroundColor': colors.primaryYellow,
+                                'cursor': 'pointer',
+                                'userSelect': 'none',
+                                '&:active': {
+                                    boxShadow: 'none',
+                                    transform: 'translate(1.5px, 1.5px)',
+                                },
+                                'transition':
+                                    'transform 0.1s, box-shadow 0.1s',
+                            }}>
+                            <Typography
+                                sx={{ fontSize: 12.5, fontWeight: 700 }}>
+                                {plan === 'simplified'
+                                    ? 'Simplified'
+                                    : 'All debts'}
+                            </Typography>
+                            <IconArrowsExchange
+                                size={15}
+                                stroke={2}
+                                color={colors.primaryBlack}
+                            />
+                        </Box>
+                    )}
+                    <PageInfo title="How debts work">
+                        <PageInfoSection title="All debts">
+                            Each pair&apos;s actual net. If Alice covered
+                            things for Bob, Bob owes Alice — nothing is
+                            rerouted.
+                        </PageInfoSection>
+                        <PageInfoSection title="Simplified">
+                            The fewest payments that settle everyone. Money
+                            may be rerouted — you might pay someone who
+                            never covered you.
+                        </PageInfoSection>
+                        <PageInfoSection title="Settling">
+                            Tap <b>Settle</b> on a payment once the money
+                            has actually moved. It&apos;s recorded for the
+                            whole group, balances update, and the payment
+                            drops into <b>Settled</b> below — where ✕
+                            undoes it. On the map, settled money stays
+                            visible as faded ✓ ribbons.
+                        </PageInfoSection>
+                        <PageInfoNote>
+                            Both plans settle everyone to the same final
+                            balances — simplified just gets there in fewer
+                            payments. Switch anytime with the{' '}
+                            <b>Simplified / All debts</b> pill up top.
+                        </PageInfoNote>
+                        <PageInfoNote>
+                            On the map, tap a ribbon or a person to
+                            highlight their flows. Tap a row below it to see
+                            the expenses behind that debt.
+                        </PageInfoNote>
+                    </PageInfo>
+                </PageTitleRow>
                 <PersonSwitcher
                     participants={participants}
                     selectedId={personId}

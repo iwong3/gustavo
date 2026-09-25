@@ -1,6 +1,7 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 
@@ -9,6 +10,8 @@ import type { Expense } from '@/lib/types'
 import { MySpendChart } from 'components/insights/my-spend-chart'
 import { MySpendList } from 'components/insights/my-spend-list'
 import { PersonSwitcher } from 'components/person-switcher'
+import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
+import { PageTitleRow } from 'components/page-title-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import type { MySpendDimension } from 'hooks/useMySpendData'
 import { useMySpendData } from 'hooks/useMySpendData'
@@ -22,14 +25,6 @@ const dimensionOptions = [
 ]
 
 // Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              maximumFractionDigits: 0,
-          })
-        : '—'
 
 export default function MySpendPage() {
     const { trip } = useTripData()
@@ -99,15 +94,25 @@ export default function MySpendPage() {
                     flexDirection: 'column',
                     gap: 0.75,
                 }}>
-                <Typography
-                    sx={{
-                        fontSize: 16,
-                        fontWeight: 800,
-                        color: colors.primaryBlack,
-                        paddingX: 0.25,
-                    }}>
-                    {isMe ? 'My Expenses' : `${person?.firstName ?? 'Their'}'s Expenses`}
-                </Typography>
+                <PageTitleRow
+                    title={isMe ? 'My Expenses' : `${person?.firstName ?? 'Their'}'s Expenses`}>
+                    <PageInfo title="How this page works">
+                        <PageInfoSection title="Your share">
+                            Every amount here is the selected person&apos;s share
+                            of each expense, not what they paid: a $90 dinner
+                            split three ways counts as $30.
+                        </PageInfoSection>
+                        <PageInfoSection title="Charts and filters">
+                            Switch the chart between Day, Category and Location.
+                            Tap a bar to filter the list to it; tap × on a chip
+                            to clear the filter.
+                        </PageInfoSection>
+                        <PageInfoNote>
+                            Tap an avatar at the top to see anyone&apos;s
+                            spending, and tap a row to open the expense.
+                        </PageInfoNote>
+                    </PageInfo>
+                </PageTitleRow>
                 <PersonSwitcher
                     participants={participants}
                     selectedId={personId}

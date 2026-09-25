@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow, pressShadowSx } from '@/lib/colors'
+import { cardSx, colors, hardShadow, pressShadowSx, healthColors, toneColors } from '@/lib/colors'
 import type {
     DaysSince,
     DietDay,
@@ -444,7 +444,7 @@ export function HealthDashboardV2({
             <Box>
                 <DragHandleBadge>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5, pr: 4 }}>
-                    <Box component={Link} href="/gustavo/health/exercise" sx={{ ...badgeSx, backgroundColor: '#ffe0b2', mb: 0 }}>
+                    <Box component={Link} href="/gustavo/health/exercise" sx={{ ...badgeSx, backgroundColor: healthColors.workouts, mb: 0 }}>
                         <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                         <Typography sx={badgeTextSx}>Workouts</Typography>
                     </Box>
@@ -488,7 +488,7 @@ export function HealthDashboardV2({
                         <Box
                             component={Link}
                             href="/gustavo/health/exercise/routines"
-                            sx={{ ...boltCircleSx, backgroundColor: '#ffe0b2', cursor: 'pointer' }}>
+                            sx={{ ...boltCircleSx, backgroundColor: healthColors.workouts, cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         {workoutPresets.map((preset) => (
@@ -570,7 +570,7 @@ export function HealthDashboardV2({
         diet: (
             <Box>
                 <DragHandleBadge>
-                <Box component={Link} href="/gustavo/health/diet" sx={{ ...badgeSx, backgroundColor: '#c8e6c9' }}>
+                <Box component={Link} href="/gustavo/health/diet" sx={{ ...badgeSx, backgroundColor: healthColors.diet }}>
                     <IconSalad size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Diet</Typography>
                 </Box>
@@ -580,7 +580,7 @@ export function HealthDashboardV2({
                         <Box
                             component={Link}
                             href="/gustavo/health/diet?presets=open"
-                            sx={{ ...boltCircleSx, backgroundColor: '#c8e6c9', cursor: 'pointer' }}>
+                            sx={{ ...boltCircleSx, backgroundColor: healthColors.diet, cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         {dietPresets.map((preset) => (
@@ -628,7 +628,7 @@ export function HealthDashboardV2({
         supplements: (
             <Box>
                 <DragHandleBadge>
-                <Box component={Link} href="/gustavo/health/supplements" sx={{ ...badgeSx, backgroundColor: '#cdbfdb' }}>
+                <Box component={Link} href="/gustavo/health/supplements" sx={{ ...badgeSx, backgroundColor: healthColors.supplements }}>
                     <IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Supplements</Typography>
                 </Box>
@@ -637,8 +637,8 @@ export function HealthDashboardV2({
                     <Box sx={presetRowScrollSx}>
                         <Box
                             component={Link}
-                            href="/gustavo/health/supplements?presets=open"
-                            sx={{ ...boltCircleSx, backgroundColor: '#cdbfdb', cursor: 'pointer' }}>
+                            href="/gustavo/health/supplements/groups"
+                            sx={{ ...boltCircleSx, backgroundColor: healthColors.supplements, cursor: 'pointer' }}>
                             <IconBolt size={14} stroke={2.5} fill={colors.primaryWhite} color={colors.primaryBlack} />
                         </Box>
                         {supplementPresets.map((preset) => (
@@ -683,7 +683,7 @@ export function HealthDashboardV2({
         exercises: (
             <Box>
                 <DragHandleBadge>
-                <Box component={Link} href="/gustavo/health/exercises" sx={{ ...badgeSx, backgroundColor: '#fff9c4' }}>
+                <Box component={Link} href="/gustavo/health/exercises" sx={{ ...badgeSx, backgroundColor: healthColors.exercises }}>
                     <IconStretching size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Exercises</Typography>
                 </Box>
@@ -708,7 +708,7 @@ export function HealthDashboardV2({
         symptoms: (
             <Box>
                 <DragHandleBadge>
-                <Box component={Link} href="/gustavo/health/symptoms" sx={{ ...badgeSx, backgroundColor: '#ffcdd2' }}>
+                <Box component={Link} href="/gustavo/health/symptoms" sx={{ ...badgeSx, backgroundColor: healthColors.symptoms }}>
                     <IconFirstAidKit size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                     <Typography sx={badgeTextSx}>Symptoms</Typography>
                 </Box>
@@ -750,7 +750,7 @@ export function HealthDashboardV2({
             return (
                 <Box>
                     <DragHandleBadge>
-                    <Box component={Link} href="/gustavo/health/weight" sx={{ ...badgeSx, backgroundColor: '#b3e5fc' }}>
+                    <Box component={Link} href="/gustavo/health/weight" sx={{ ...badgeSx, backgroundColor: healthColors.weight }}>
                         <IconScale size={20} stroke={2} color={colors.primaryBlack} />
                         <Typography sx={badgeTextSx}>Weight</Typography>
                     </Box>
@@ -782,7 +782,7 @@ export function HealthDashboardV2({
                                                                 fontSize: 11,
                                                                 fontWeight: 700,
                                                                 lineHeight: 1,
-                                                                color: delta! < 0 ? '#2e7d32' : '#c62828',
+                                                                color: delta! < 0 ? toneColors.positive : toneColors.negative,
                                                                 whiteSpace: 'nowrap',
                                                             }}>
                                                                 {deltaStr}

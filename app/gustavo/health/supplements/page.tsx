@@ -1,6 +1,6 @@
 'use client'
 
-import { colors, pressRowSx } from '@/lib/colors'
+import { colors, pressRowSx, healthColors } from '@/lib/colors'
 import type { SupplementLog } from '@/lib/health-types'
 import { Box, Chip, Typography } from '@mui/material'
 import { IconBolt, IconList, IconPill } from '@tabler/icons-react'
@@ -14,8 +14,8 @@ import { useReorderSupplementPresets } from 'components/health/supplement-preset
 import { todayIso } from 'components/health/workout-presets'
 import { useSupplementData } from 'hooks/useSupplementData'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -128,7 +128,7 @@ function HeaderIconButton({
                 'width': 30,
                 'height': 30,
                 'borderRadius': '50%',
-                'backgroundColor': '#cdbfdb',
+                'backgroundColor': healthColors.supplements,
                 'border': `1.5px solid ${colors.primaryBlack}`,
                 'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                 'display': 'flex',
@@ -153,12 +153,6 @@ function SupplementsPage() {
     const queryClient = useQueryClient()
     const { logs: allLogs, presets, loading } = useSupplementData()
     const reorderPresets = useReorderSupplementPresets()
-
-    // Legacy deep link (?presets=open, from the dashboard) → the groups page
-    const searchParams = useSearchParams()
-    useEffect(() => {
-        if (searchParams.get('presets') === 'open') router.replace(GROUPS_URL)
-    }, [searchParams, router])
 
     // Warm the routes the header and FAB lead to
     useEffect(() => {
@@ -228,7 +222,7 @@ function SupplementsPage() {
             <HealthPageHeader
                 icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Supplements"
-                color="#cdbfdb">
+                color={healthColors.supplements}>
                 {/* Preset quick-actions */}
                 <Box
                     sx={{
@@ -337,11 +331,5 @@ function SupplementsPage() {
 }
 
 export default function Page() {
-    // useSearchParams needs a Suspense boundary
-    return (
-        <Suspense
-            fallback={<HealthPageLayout loading>{null}</HealthPageLayout>}>
-            <SupplementsPage />
-        </Suspense>
-    )
+    return <SupplementsPage />
 }

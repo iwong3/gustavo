@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, toneColors } from '@/lib/colors'
 import type { Workout, WorkoutExercise } from '@/lib/health-types'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { Box, Chip, Typography } from '@mui/material'
@@ -652,8 +652,8 @@ function ExerciseCard({
                                                     whiteSpace: 'nowrap',
                                                     color:
                                                         row.delta! > 0
-                                                            ? '#2e7d32'
-                                                            : '#c62828',
+                                                            ? toneColors.positive
+                                                            : toneColors.negative,
                                                 }}>
                                                 {deltaStr}
                                             </Typography>

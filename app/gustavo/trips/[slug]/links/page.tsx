@@ -11,7 +11,8 @@ export default function LinksPage() {
                 flexDirection: 'column',
                 width: '100%',
                 maxWidth: 450,
-                paddingTop: 1,
+                paddingX: 2,
+                paddingY: 2,
             }}>
             <Links />
         </Box>

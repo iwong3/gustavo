@@ -1,30 +1,22 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import { IconCheck, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 
-import { cardSx, colors, pressIconSx } from '@/lib/colors'
+import { cardSx, colors, pressIconSx, toneColors } from '@/lib/colors'
 import type { SettlementRecord, UserSummary } from '@/lib/types'
 import { InitialsIcon } from 'utils/icons'
 import { openVenmoPayment } from 'utils/venmo'
 
-const OWED_GREEN = '#2e7d32'
+const OWED_GREEN = toneColors.positive
 const VENMO_BLUE = '#008CFF'
 
 // CSS `dashed` borders can't control dash length/spacing, so settled cards
 // draw their border as an SVG background: longer dashes, wider gaps.
 // stroke-width 3 is centered on the edge, so ~1.5px stays visible.
 const settledDashedBorder = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='4' ry='4' stroke='%23090401' stroke-width='3' stroke-dasharray='9 7' stroke-linecap='square'/%3E%3C/svg%3E")`
-
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              maximumFractionDigits: 0,
-          })
-        : '—'
 
 // ── Trip-settled progress ─────────────────────────────────────────────────────
 
@@ -376,7 +368,7 @@ export function SettledRow({
                     borderRadius: '50%',
                     border: `1.5px solid ${OWED_GREEN}`,
                     boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                    backgroundColor: '#eef5ee',
+                    backgroundColor: toneColors.positiveBg,
                 }}>
                 <IconCheck size={14} stroke={2.5} color={OWED_GREEN} />
             </Box>

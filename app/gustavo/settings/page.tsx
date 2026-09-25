@@ -12,43 +12,70 @@ import {
 import { IconChevronRight, IconPencil } from '@tabler/icons-react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 
-import { colors, hardShadow } from '@/lib/colors'
-import { labelSx, primaryButtonSx, secondaryButtonSx } from '@/lib/form-styles'
+import { cardSx, colors, hardShadow, pressIconSx, pressShadowSx } from '@/lib/colors'
+import {
+    destructiveButtonSx,
+    labelSx,
+    primaryButtonSx,
+    secondaryButtonSx,
+} from '@/lib/form-styles'
 import type { UserPreferences } from '@/lib/types'
+import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
 import { SlidingToggle } from 'components/sliding-toggle'
-import { fetchUserPreferences, updateUserPreferences } from 'utils/api'
+import { Circle, TextBone } from 'components/skeleton/bones'
+import { useUserPreferences } from 'hooks/useUserPreferences'
 import { InitialsIcon, getContrastText } from 'utils/icons'
+
+// Section label — same as the debts / links section headings
+const sectionLabelSx = {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    color: colors.primaryBrown,
+    marginTop: 1,
+} as const
+
+/** A tappable row that opens a settings sub-page — card style, like Home. */
+function SettingsLinkRow({ href, label }: { href: string; label: string }) {
+    return (
+        <Box
+            component={Link}
+            href={href}
+            sx={{
+                ...cardSx,
+                ...pressShadowSx,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingX: 2,
+                paddingY: 1.5,
+                textDecoration: 'none',
+                color: colors.primaryBlack,
+            }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{label}</Typography>
+            <IconChevronRight size={18} color={colors.primaryBlack} />
+        </Box>
+    )
+}
 
 export default function SettingsPage() {
     const { data: session } = useSession()
-    const [prefs, setPrefs] = useState<UserPreferences | null>(null)
+    // Cached + persisted: the last-known values show instantly, even on a
+    // cold open, and a fresh copy loads in the background
+    const { prefs, update: updatePrefs, updateAsync } = useUserPreferences()
     const [iconDialogOpen, setIconDialogOpen] = useState(false)
+    const [logoutOpen, setLogoutOpen] = useState(false)
 
-    useEffect(() => {
-        fetchUserPreferences()
-            .then(setPrefs)
-            .catch(() => {})
-    }, [])
+    const handlePrefChange = (field: keyof UserPreferences, value: string) =>
+        updatePrefs({ [field]: value } as Partial<UserPreferences>)
 
-    const handlePrefChange = useCallback(
-        async (field: keyof UserPreferences, value: string) => {
-            const update = { [field]: value } as Partial<UserPreferences>
-            setPrefs((prev) => (prev ? { ...prev, ...update } : prev))
-            try {
-                await updateUserPreferences(update)
-            } catch (err) {
-                console.error('Failed to update preference:', err)
-            }
-        },
-        []
-    )
-
-    if (!session?.user) return null
-
-    const { name, email } = session.user
+    // Render straight away — the session fills the name/email in when ready
+    const name = session?.user?.name ?? null
+    const email = session?.user?.email ?? null
 
     return (
         <Box
@@ -64,23 +91,32 @@ export default function SettingsPage() {
             }}>
             {/* Profile icon + edit button */}
             <Box
+                role="button"
+                aria-label="Edit your icon"
                 sx={{
                     position: 'relative',
                     cursor: 'pointer',
+                    ...pressIconSx,
                 }}
                 onClick={() => setIconDialogOpen(true)}>
-                <InitialsIcon
-                    name={name ?? ''}
-                    initials={prefs?.initials}
-                    iconColor={prefs?.iconColor}
-                    sx={{
-                        width: 80,
-                        height: 80,
-                        fontSize: 32,
-                        border: `2px solid ${colors.primaryBlack}`,
-                        boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
-                    }}
-                />
+                {/* Custom initials/colour live in prefs: placeholder until they
+                    load, rather than name-derived initials that then swap */}
+                {prefs ? (
+                    <InitialsIcon
+                        name={name ?? ''}
+                        initials={prefs.initials}
+                        iconColor={prefs.iconColor}
+                        sx={{
+                            width: 80,
+                            height: 80,
+                            fontSize: 32,
+                            border: `2px solid ${colors.primaryBlack}`,
+                            boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
+                        }}
+                    />
+                ) : (
+                    <Circle size={80} />
+                )}
                 <Box
                     sx={{
                         position: 'absolute',
@@ -99,12 +135,20 @@ export default function SettingsPage() {
                 </Box>
             </Box>
             <Box sx={{ textAlign: 'center' }}>
-                <Typography sx={{ fontSize: 20, fontWeight: 600 }}>
-                    {name}
-                </Typography>
-                <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-                    {email}
-                </Typography>
+                {name !== null ? (
+                    <Typography sx={{ fontSize: 20, fontWeight: 600 }}>
+                        {name}
+                    </Typography>
+                ) : (
+                    <TextBone fontSize={20} width={140} sx={{ marginX: 'auto' }} />
+                )}
+                {email !== null ? (
+                    <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
+                        {email}
+                    </Typography>
+                ) : (
+                    <TextBone fontSize={14} width={180} sx={{ marginX: 'auto' }} />
+                )}
             </Box>
             <Box
                 sx={{
@@ -115,23 +159,15 @@ export default function SettingsPage() {
                     maxWidth: 300,
                     marginTop: 1,
                 }}>
-                <Typography
-                    sx={{
-                        fontSize: 16,
-                        fontWeight: 500,
-                        color: colors.primaryBlack,
-                    }}>
-                    Trip
-                </Typography>
+                <Typography sx={sectionLabelSx}>Trip</Typography>
 
                 <Box
                     sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography
-                        variant="body2"
-                        sx={{ color: colors.primaryBlack }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
                         Default trip visibility
                     </Typography>
                     <SlidingToggle
+                        loading={!prefs}
                         value={prefs?.defaultTripVisibility ?? ''}
                         options={[
                             {
@@ -148,12 +184,11 @@ export default function SettingsPage() {
 
                 <Box
                     sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography
-                        variant="body2"
-                        sx={{ color: colors.primaryBlack }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
                         Default participant role
                     </Typography>
                     <SlidingToggle
+                        loading={!prefs}
                         value={prefs?.defaultParticipantRole ?? ''}
                         options={[
                             { value: 'viewer', label: 'Viewer' },
@@ -166,47 +201,17 @@ export default function SettingsPage() {
                     />
                 </Box>
 
-                <Link
-                    href="/gustavo/settings/categories"
-                    style={{ textDecoration: 'none' }}>
-                    <Box
-                        sx={{
-                            'display': 'flex',
-                            'alignItems': 'center',
-                            'justifyContent': 'space-between',
-                            'paddingY': 1,
-                            'borderRadius': 1,
-                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                        }}>
-                        <Typography
-                            sx={{ fontSize: 14, color: colors.primaryBlack }}>
-                            Manage Categories
-                        </Typography>
-                        <IconChevronRight
-                            size={18}
-                            color={colors.primaryBlack}
-                        />
-                    </Box>
-                </Link>
+                <SettingsLinkRow href="/gustavo/settings/categories" label="Manage categories" />
 
-                <Typography
-                    sx={{
-                        fontSize: 16,
-                        fontWeight: 500,
-                        color: colors.primaryBlack,
-                        marginTop: 1,
-                    }}>
-                    Health
-                </Typography>
+                <Typography sx={sectionLabelSx}>Health</Typography>
 
                 <Box
                     sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography
-                        variant="body2"
-                        sx={{ color: colors.primaryBlack }}>
+                    <Typography sx={{ ...labelSx, marginBottom: 0 }}>
                         Alphabet index side
                     </Typography>
                     <SlidingToggle
+                        loading={!prefs}
                         value={prefs?.alphabetIndexSide ?? 'right'}
                         options={[
                             { value: 'left', label: 'Left' },
@@ -220,54 +225,25 @@ export default function SettingsPage() {
 
                 {prefs?.isAdmin && (
                     <>
-                        <Typography
-                            sx={{
-                                fontSize: 16,
-                                fontWeight: 500,
-                                color: colors.primaryBlack,
-                                marginTop: 1,
-                            }}>
-                            Admin
-                        </Typography>
-                        <Link
-                            href="/gustavo/settings/invite"
-                            style={{ textDecoration: 'none' }}>
-                            <Box
-                                sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'justifyContent': 'space-between',
-                                    'paddingY': 1,
-                                    'borderRadius': 1,
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(0,0,0,0.04)',
-                                    },
-                                }}>
-                                <Typography
-                                    sx={{
-                                        fontSize: 14,
-                                        color: colors.primaryBlack,
-                                    }}>
-                                    Invite Users
-                                </Typography>
-                                <IconChevronRight
-                                    size={18}
-                                    color={colors.primaryBlack}
-                                />
-                            </Box>
-                        </Link>
+                        <Typography sx={sectionLabelSx}>Admin</Typography>
+                        <SettingsLinkRow href="/gustavo/settings/invite" label="Invite users" />
                     </>
                 )}
             </Box>
 
             <Button
-                variant="outlined"
-                color="error"
-                size="large"
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                sx={{ marginTop: 2 }}>
+                onClick={() => setLogoutOpen(true)}
+                sx={{ ...destructiveButtonSx, width: '100%', maxWidth: 300, height: 44, marginTop: 1 }}>
                 Log out
             </Button>
+            <ConfirmDeleteDialog
+                open={logoutOpen}
+                title="Log out?"
+                confirmLabel="Log out"
+                onClose={() => setLogoutOpen(false)}
+                onConfirm={() => signOut({ callbackUrl: '/login' })}>
+                You&apos;ll need to sign in with Google again.
+            </ConfirmDeleteDialog>
 
             {/* Component gallery — dev only (the route 404s in production) */}
             {process.env.NODE_ENV === 'development' && (
@@ -313,16 +289,7 @@ export default function SettingsPage() {
                     initials={prefs.initials}
                     iconColor={prefs.iconColor}
                     onSave={async (newInitials, newColor) => {
-                        setPrefs((prev) =>
-                            prev
-                                ? {
-                                      ...prev,
-                                      initials: newInitials,
-                                      iconColor: newColor,
-                                  }
-                                : prev
-                        )
-                        await updateUserPreferences({
+                        await updateAsync({
                             initials: newInitials,
                             iconColor: newColor,
                         })

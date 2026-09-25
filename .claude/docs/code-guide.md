@@ -267,6 +267,12 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
 
 There is no nav drawer — tabs + the header corner are the whole navigation.
 
+- **Page title rows**: every tool/list page starts its content with
+  `PageTitleRow` (`components/page-title-row.tsx`) — bold 16px title left;
+  toggles/actions then the `PageInfo` ⓘ on the right, 30px controls. Section
+  headings inside a page are the 11px uppercase brown label (see debts,
+  links, settings).
+
 ---
 
 ## API Routes — Pattern Walkthrough

@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 
-import { colors, pressIconSx } from '@/lib/colors'
+import { colors, hardShadow, pressIconSx } from '@/lib/colors'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
@@ -49,10 +49,20 @@ function ContentFab() {
             <Fab
                 onClick={onClick}
                 size="medium"
+                aria-label="Add"
                 sx={{
                     'pointerEvents': 'auto',
                     'backgroundColor': colors.primaryYellow,
+                    'color': colors.primaryBlack,
+                    // House style, not MUI's blurred elevation: black
+                    // border + hard offset shadow that presses flat
+                    ...hardShadow,
                     '&:hover': { backgroundColor: colors.primaryYellow },
+                    '&:active': {
+                        boxShadow: 'none',
+                        transform: 'translate(2px, 2px)',
+                    },
+                    'transition': 'transform 0.1s, box-shadow 0.1s',
                 }}>
                 <IconPlus size={24} />
             </Fab>

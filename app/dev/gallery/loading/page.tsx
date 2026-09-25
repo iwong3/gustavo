@@ -24,7 +24,15 @@ import {
     TripsMapSkeleton,
 } from 'components/skeleton/trip-skeletons'
 
+import { SlidingToggle } from 'components/sliding-toggle'
+
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
+
+const toggleOptions = [
+    { value: 'viewer', label: 'Viewer' },
+    { value: 'editor', label: 'Editor' },
+    { value: 'admin', label: 'Admin' },
+]
 
 // Every page skeleton, each in a phone-width frame on the app background —
 // compare against the loaded page (other gallery sections or the app).
@@ -58,6 +66,16 @@ export default function LoadingGallery() {
                 <Specimen label="links"><Frame><LinksSkeleton /></Frame></Specimen>
                 <Specimen label="trip details"><Frame><TripDetailsSkeleton /></Frame></Specimen>
                 <Specimen label="expense / trip form"><Frame><FormSkeleton /></Frame></Specimen>
+            </SpecimenGroup>
+            <SpecimenGroup title="Controls">
+                <Specimen label="SlidingToggle — loading (first load) then loaded; same height">
+                    <Box id="toggle-loading" sx={{ marginBottom: 2 }}>
+                        <SlidingToggle loading value="" options={toggleOptions} onChange={() => {}} />
+                    </Box>
+                    <Box id="toggle-loaded">
+                        <SlidingToggle value="editor" options={toggleOptions} onChange={() => {}} />
+                    </Box>
+                </Specimen>
             </SpecimenGroup>
             <SpecimenGroup title="Health">
                 <Specimen label="hub (your section order)"><Frame><HealthHubSkeleton /></Frame></Specimen>

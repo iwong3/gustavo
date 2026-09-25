@@ -11,6 +11,9 @@
 //   - Selected/active states: primaryYellow background
 //   - Error states: primaryRed border + shadow + text
 //   - Focus states: primaryYellow border + shadow
+//   - Meaning colours (owe/owed, up/down): toneColors — never a local hex
+//   - Health section identity: healthColors (badges, header chips, ⚡)
+//   - Money text: formatUsd() from utils/currency (null-safe)
 //
 // Layout polish checklist — apply to every UI change:
 //   - Elements sharing a row get the same explicit height (when it makes sense):
@@ -35,6 +38,27 @@ export const colors = {
     primaryBlue: '#4b6981',
     primaryBrown: '#533b23',
     primaryWhite: '#fffdf7',
+} as const
+
+/**
+ * Meaning colours — one shade each, everywhere. negative: you owe, weight
+ * up, worse; positive: you're owed, settled, weight down, better.
+ */
+export const toneColors = {
+    negative: '#c0392b',
+    positive: '#2e7d32',
+    negativeBg: '#fdf0ee',
+    positiveBg: '#eef5ee',
+} as const
+
+/** Health section identity colours — hub badges, page header chips, ⚡ circles. */
+export const healthColors = {
+    workouts: '#ffe0b2',
+    diet: '#c8e6c9',
+    supplements: '#cdbfdb',
+    exercises: '#fff9c4',
+    symptoms: '#ffcdd2',
+    weight: '#b3e5fc',
 } as const
 
 // Reusable hard-shadow border — the signature look used on cards, buttons, etc.

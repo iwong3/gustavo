@@ -1,8 +1,9 @@
 'use client'
 
 import { colors } from '@/lib/colors'
-import { Box, IconButton, Typography } from '@mui/material'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { formatUsd } from 'utils/currency'
+import { Box, Typography } from '@mui/material'
+import { IconEdit, IconTrash } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
@@ -15,6 +16,7 @@ import { InitialsIcon } from 'utils/icons'
 import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
 import DeleteTripDialog from 'components/delete-trip-dialog'
+import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 
 import { queryKeys } from '@/lib/query-keys'
 
@@ -74,14 +76,6 @@ export default function TripDetailsPage() {
     const handleDeleteConfirm = async () => {
         deleteMutation.mutate()
     }
-
-    const formatUsd = (n: number) =>
-        n.toLocaleString('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        })
 
     // Count total outstanding debts
     let totalDebts = 0
@@ -183,72 +177,26 @@ export default function TripDetailsPage() {
             </Box>
 
             {/* Edit / delete actions */}
+            {/* Action bar — same as the expense detail: Delete | Edit,
+                permission-gated, in the bottom bar instead of the page body */}
             {(showEdit || showDelete) && (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        gap: 1.5,
-                        width: '100%',
-                        marginBottom: 1,
-                    }}>
-                    {showEdit && (
-                        <IconButton
-                            onClick={() =>
-                                router.push(
-                                    `/gustavo/trips/${trip.slug}/edit`
-                                )
-                            }
-                            sx={{
-                                'flex': 1,
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                'height': 44,
-                                // Hover only with a real pointer (sticks on touch)
-                                '@media (hover: hover)': {
-                                    '&:hover': { backgroundColor: colors.primaryYellow },
-                                },
-                                '&:active': {
-                                    boxShadow: 'none',
-                                    transform: 'translate(2px, 2px)',
-                                },
-                                'transition':
-                                    'transform 0.1s, box-shadow 0.1s, background-color 0.1s',
-                            }}>
-                            <IconPencil
-                                size={20}
-                                color={colors.primaryBlack}
-                            />
-                        </IconButton>
-                    )}
+                <PageActionBar>
                     {showDelete && (
-                        <IconButton
+                        <PageActionButton
                             onClick={() => setDeleteOpen(true)}
-                            sx={{
-                                'flex': 1,
-                                'backgroundColor': colors.primaryWhite,
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'borderRadius': '4px',
-                                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                'height': 44,
-                                '@media (hover: hover)': {
-                                    '&:hover': { backgroundColor: `${colors.primaryRed}18` },
-                                },
-                                '&:active': {
-                                    boxShadow: 'none',
-                                    transform: 'translate(2px, 2px)',
-                                },
-                                'transition':
-                                    'transform 0.1s, box-shadow 0.1s, background-color 0.1s',
-                            }}>
-                            <IconTrash
-                                size={20}
-                                color={colors.primaryBlack}
-                            />
-                        </IconButton>
+                            icon={<IconTrash size={22} />}
+                            label="Delete"
+                            color={colors.primaryRed}
+                        />
                     )}
-                </Box>
+                    {showEdit && (
+                        <PageActionButton
+                            onClick={() => router.push(`/gustavo/trips/${trip.slug}/edit`)}
+                            icon={<IconEdit size={22} />}
+                            label="Edit"
+                        />
+                    )}
+                </PageActionBar>
             )}
 
             {/* Delete trip confirmation */}

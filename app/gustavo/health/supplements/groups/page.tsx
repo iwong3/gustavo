@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors } from '@/lib/colors'
 import { queryKeys } from '@/lib/query-keys'
 import {
     HealthPageHeader,
@@ -70,7 +70,7 @@ export default function SupplementGroupsPage() {
                     />
                 }
                 title="Supplement Groups"
-                color="#cdbfdb"
+                color={healthColors.supplements}
             />
 
             {presets.length === 0 ? (

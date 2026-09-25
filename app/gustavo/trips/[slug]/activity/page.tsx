@@ -24,6 +24,7 @@ import { fetchActivity } from 'utils/api'
 import type { ActivityResponse } from 'utils/api'
 import { InitialsIcon } from 'utils/icons'
 import { queryKeys } from '@/lib/query-keys'
+import { PageTitleRow } from 'components/page-title-row'
 import { ActivitySkeleton } from 'components/skeleton/trip-skeletons'
 import { GoneState } from 'components/gone-state'
 import { ActivityCard, buildActivityCards, formatTimestamp } from './activity-card'
@@ -135,6 +136,7 @@ export default function ActivityPage() {
             {/* User filter */}
             <IconButton
                 onClick={(e) => setAnchorEl(e.currentTarget)}
+                aria-label="Filter by person"
                 size="small"
                 sx={{
                     'border': `1px solid ${colors.primaryBlack}`,
@@ -143,12 +145,12 @@ export default function ActivityPage() {
                         filterUser !== null
                             ? colors.primaryYellow
                             : colors.primaryWhite,
-                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                    'width': 32,
-                    'height': 32,
+                    'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                    'width': 30,
+                    'height': 30,
                     '&:active': {
                         boxShadow: 'none',
-                        transform: 'translate(1px, 1px)',
+                        transform: 'translate(1.5px, 1.5px)',
                     },
                 }}
                 title="Filter by user">
@@ -230,17 +232,18 @@ export default function ActivityPage() {
             {/* Sort toggle */}
             <IconButton
                 onClick={() => setSortNewest((p) => !p)}
+                aria-label={sortNewest ? 'Showing newest first' : 'Showing oldest first'}
                 size="small"
                 sx={{
                     'border': `1px solid ${colors.primaryBlack}`,
                     'borderRadius': '4px',
                     'backgroundColor': colors.primaryWhite,
-                    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-                    'width': 32,
-                    'height': 32,
+                    'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                    'width': 30,
+                    'height': 30,
                     '&:active': {
                         boxShadow: 'none',
-                        transform: 'translate(1px, 1px)',
+                        transform: 'translate(1.5px, 1.5px)',
                     },
                 }}
                 title={sortNewest ? 'Newest first' : 'Oldest first'}>
@@ -267,18 +270,9 @@ export default function ActivityPage() {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            {/* Header row — filter/sort actions */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: 1,
-                    paddingX: 2,
-                    paddingTop: 1.5,
-                    paddingBottom: 1,
-                }}>
-                {headerActions}
+            {/* Title row — filter/sort actions on the right */}
+            <Box sx={{ paddingX: 2, paddingTop: 2, paddingBottom: 1 }}>
+                <PageTitleRow title="Activity">{headerActions}</PageTitleRow>
             </Box>
 
             {/* Timeline */}

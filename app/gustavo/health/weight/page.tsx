@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors, toneColors } from '@/lib/colors'
 import type { WeightLog } from '@/lib/health-types'
 import { Box, Typography } from '@mui/material'
 import { IconScale } from '@tabler/icons-react'
@@ -37,7 +37,7 @@ function parseDate(dateStr: string): Date {
 }
 
 // Accent color for weight
-const WEIGHT_COLOR = '#81d4fa'
+const WEIGHT_COLOR = healthColors.weight
 const WEIGHT_BORDER = '#0288d1'
 
 // ── Chart Range Picker ──────────────────────────────────────────────────────
@@ -294,7 +294,7 @@ function WeightLogCard({
                                     sx={{
                                         fontSize: 12,
                                         fontWeight: 700,
-                                        color: delta < 0 ? '#2e7d32' : '#c62828',
+                                        color: delta < 0 ? toneColors.positive : toneColors.negative,
                                         lineHeight: 1,
                                     }}>
                                     {delta > 0 ? '+' : ''}{delta.toFixed(1)}

@@ -1,6 +1,7 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 
@@ -12,15 +13,6 @@ import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { CategoryIcon } from 'utils/icons'
 
 // Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
-const formatUsd = (n: number | null | undefined, maxDigits = 0) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              minimumFractionDigits: 0,
-              maximumFractionDigits: maxDigits,
-          })
-        : '—'
 
 /** Wraps a row in PrefetchOnVisible when it has a destination. */
 function PrefetchRow({ href, children }: { href?: string; children: React.ReactNode }) {

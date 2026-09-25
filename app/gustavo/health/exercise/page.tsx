@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, pressRowSx } from '@/lib/colors'
+import { cardSx, colors, pressRowSx, healthColors, pressTextSx } from '@/lib/colors'
 import type { Workout } from '@/lib/health-types'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { Box, Chip, Typography } from '@mui/material'
@@ -21,8 +21,8 @@ import {
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { useWorkoutData } from 'hooks/useWorkoutData'
 import { useRegisterFab } from 'providers/fab-provider'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -34,13 +34,6 @@ const ROUTINES_URL = `${LIST_URL}/routines`
 function ExercisePage() {
     const queryClient = useQueryClient()
     const router = useRouter()
-
-    // Legacy deep link (?presets=open, from older dashboard builds) → the
-    // routines page that replaced the preset drawer.
-    const searchParams = useSearchParams()
-    useEffect(() => {
-        if (searchParams.get('presets') === 'open') router.replace(ROUTINES_URL)
-    }, [searchParams, router])
 
     // Warm the form routes so the FAB / edit taps open instantly
     useEffect(() => {
@@ -146,6 +139,39 @@ function ExercisePage() {
     const fabCallback = useCallback(() => openAdd(), [openAdd])
     useRegisterFab(fabCallback)
 
+    // ⚡ → Routines. Always shown (not only once a routine exists), so the
+    // routines page is reachable from here even with none yet.
+    const routinesButton = (
+        <Box
+            onClick={openRoutines}
+            role="button"
+            aria-label="Routines"
+            sx={{
+                'width': 30,
+                'height': 30,
+                'borderRadius': '50%',
+                'backgroundColor': healthColors.workouts,
+                'border': `1.5px solid ${colors.primaryBlack}`,
+                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
+                'display': 'flex',
+                'alignItems': 'center',
+                'justifyContent': 'center',
+                'flexShrink': 0,
+                'cursor': 'pointer',
+                '&:active': {
+                    boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
+                    transform: 'translate(1px, 1px)',
+                },
+            }}>
+            <IconBolt
+                size={14}
+                stroke={2.5}
+                fill={colors.primaryWhite}
+                color={colors.primaryBlack}
+            />
+        </Box>
+    )
+
     return (
         <HealthPageLayout
             loading={loading}
@@ -154,9 +180,9 @@ function ExercisePage() {
             <HealthPageHeader
                 icon={<IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Workouts"
-                color="#ffe0b2">
+                color={healthColors.workouts}>
                 {/* Routine quick-actions */}
-                {presets.length > 0 && (
+                {presets.length > 0 ? (
                     <HorizontalSortableList
                         items={presets}
                         onReorder={reorderPresets}>
@@ -167,33 +193,7 @@ function ExercisePage() {
                                 gap: 1,
                                 alignItems: 'center',
                             }}>
-                            {/* Lightning circle icon — opens preset drawer */}
-                            <Box
-                                onClick={openRoutines}
-                                sx={{
-                                    'width': 30,
-                                    'height': 30,
-                                    'borderRadius': '50%',
-                                    'backgroundColor': '#ffe0b2',
-                                    'border': `1.5px solid ${colors.primaryBlack}`,
-                                    'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'justifyContent': 'center',
-                                    'flexShrink': 0,
-                                    'cursor': 'pointer',
-                                    '&:active': {
-                                        boxShadow: `0.5px 0.5px 0px ${colors.primaryBlack}`,
-                                        transform: 'translate(1px, 1px)',
-                                    },
-                                }}>
-                                <IconBolt
-                                    size={14}
-                                    stroke={2.5}
-                                    fill={colors.primaryWhite}
-                                    color={colors.primaryBlack}
-                                />
-                            </Box>
+                            {routinesButton}
                             {presets.map((preset) => (
                                 <SortablePresetChip key={preset.id} id={preset.id}>
                                     <Box
@@ -242,6 +242,15 @@ function ExercisePage() {
                             ))}
                         </Box>
                     </HorizontalSortableList>
+                ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {routinesButton}
+                        <Typography
+                            onClick={openRoutines}
+                            sx={{ fontSize: 12, fontWeight: 600, color: colors.primaryBrown, cursor: 'pointer', ...pressTextSx }}>
+                            Routines
+                        </Typography>
+                    </Box>
                 )}
             </HealthPageHeader>
 
@@ -552,10 +561,5 @@ function ExercisePage() {
 }
 
 export default function Page() {
-    // useSearchParams needs a Suspense boundary
-    return (
-        <Suspense fallback={<WorkoutsListSkeleton />}>
-            <ExercisePage />
-        </Suspense>
-    )
+    return <ExercisePage />
 }

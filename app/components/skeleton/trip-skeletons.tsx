@@ -3,7 +3,7 @@
 import { Box } from '@mui/material'
 import { usePathname } from 'next/navigation'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, toneColors } from '@/lib/colors'
 import { Bone, ChromeBox, Circle, TextBone } from 'components/skeleton/bones'
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
 
@@ -14,6 +14,26 @@ import { FormSkeleton } from 'components/skeleton/form-skeleton'
 // for another.
 
 const ROW_DIVIDER = '1px solid rgba(0, 0, 0, 0.12)' // theme divider
+
+/**
+ * Mirrors PageTitleRow: 16px title left; right-side controls as bones of
+ * the given widths (30 = ⓘ circle), plus `chrome` 30px outlined buttons.
+ */
+function TitleRowSkeleton({ width, controls, chrome = 0 }: { width: number; controls: number[]; chrome?: number }) {
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 30 }}>
+            <TextBone fontSize={16} width={width} />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+                {controls.map((w, i) =>
+                    w === 30 ? <Circle key={i} size={30} /> : <Bone key={i} width={w} height={30} radius="15px" />
+                )}
+                {Array.from({ length: chrome }, (_, i) => (
+                    <ChromeBox key={`c${i}`} width={30} height={30} />
+                ))}
+            </Box>
+        </Box>
+    )
+}
 
 // ── Trips list ──────────────────────────────────────────────────────────────
 
@@ -267,13 +287,7 @@ export function ExpenseDetailSkeleton() {
 function TitleWithPeopleSkeleton({ gap }: { gap: number }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 30 }}>
-                <TextBone fontSize={16} width={140} />
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Bone width={64} height={30} radius="15px" />
-                    <Circle size={30} />
-                </Box>
-            </Box>
+            <TitleRowSkeleton width={140} controls={[64, 30]} />
             <Box sx={{ display: 'flex', gap: 1 }}>
                 {[0, 1, 2, 3].map((i) => (
                     <Circle key={i} size={40} />
@@ -290,7 +304,7 @@ export function DebtsSkeleton() {
             <TitleWithPeopleSkeleton gap={1.25} />
             {/* StatBoxes */}
             <Box sx={{ display: 'flex', gap: 1 }}>
-                {['#fdf0ee', '#eef5ee'].map((bg) => (
+                {[toneColors.negativeBg, toneColors.positiveBg].map((bg) => (
                     <Box key={bg} sx={{ ...cardSx, flex: 1, backgroundColor: bg, paddingX: 1.5, paddingY: 1 }}>
                         <TextBone fontSize={22} lineHeight={1.1} width="60%" />
                         <TextBone fontSize={10.5} width="70%" sx={{ marginTop: 0.25 }} />
@@ -382,7 +396,7 @@ export function GraphsSkeleton() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 450, paddingX: 2, paddingY: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                <TextBone fontSize={16} width={120} />
+                <TitleRowSkeleton width={120} controls={[30]} />
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     {[0, 1, 2, 3].map((i) => (
                         <Circle key={i} size={40} />
@@ -434,10 +448,9 @@ export function GraphsSkeleton() {
 export function ActivitySkeleton() {
     return (
         <Box sx={{ width: '100%', maxWidth: 450 }}>
-            {/* Actions row: two 32px icon buttons, right-aligned */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, paddingX: 2, paddingTop: 1.5, paddingBottom: 1 }}>
-                <ChromeBox width={32} height={32} />
-                <ChromeBox width={32} height={32} />
+            {/* Title row: "Activity" + two 30px icon buttons */}
+            <Box sx={{ paddingX: 2, paddingTop: 2, paddingBottom: 1 }}>
+                <TitleRowSkeleton width={70} controls={[]} chrome={2} />
             </Box>
             <Box sx={{ paddingX: 2, paddingBottom: 3 }}>
                 {[3, 2].map((cards, g) => (
@@ -469,18 +482,21 @@ export function ActivitySkeleton() {
 /** Mirrors the links list (components/links/links.tsx). */
 export function LinksSkeleton() {
     return (
-        <Box sx={{ width: '100%', maxWidth: 450, paddingTop: 1 }}>
-            <Box sx={{ marginX: 2 }}>
-                <TextBone fontSize={18} width={170} sx={{ marginBottom: 1 }} />
-                {[0, 1, 2, 3].map((i) => (
-                    <Bone key={i} height={55} radius="10px" sx={{ marginBottom: 1 }} />
-                ))}
-            </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 450, paddingX: 2, paddingY: 2 }}>
+            <TitleRowSkeleton width={50} controls={[]} />
+            <TextBone fontSize={11} width={120} sx={{ marginTop: 0.5 }} />
+            {[0, 1, 2, 3].map((i) => (
+                <Box key={i} sx={{ ...cardSx, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingX: 2, paddingY: 1.5 }}>
+                    <TextBone fontSize={14} width="55%" />
+                    <Bone width={20} height={20} />
+                </Box>
+            ))}
         </Box>
     )
 }
 
-/** Mirrors trip details (app/gustavo/trips/[slug]/details/page.tsx). */
+/** Mirrors trip details (app/gustavo/trips/[slug]/details/page.tsx) —
+ *  its Edit / Delete live in the bottom action bar, not the page. */
 export function TripDetailsSkeleton() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 450, paddingX: 4, paddingY: 2 }}>
@@ -502,10 +518,6 @@ export function TripDetailsSkeleton() {
                         </Box>
                     ))}
                 </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
-                <ChromeBox height={44} sx={{ flex: 1 }} />
-                <ChromeBox height={44} sx={{ flex: 1 }} />
             </Box>
         </Box>
     )

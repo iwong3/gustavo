@@ -4,7 +4,7 @@ import { Box } from '@mui/material'
 import { IconBarbell, IconHeartbeat } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, healthColors } from '@/lib/colors'
 import { HealthHubSkeleton } from 'components/health/health-dashboard-v2'
 import { HealthPageHeader } from 'components/health/health-page-layout'
 import { Bone, Circle, TextBone } from 'components/skeleton/bones'
@@ -15,7 +15,7 @@ import { FormSkeleton } from 'components/skeleton/form-skeleton'
 // own loading states (HealthPageLayout's `skeleton`), so a slow load never
 // swaps one placeholder for another.
 
-const WORKOUTS_COLOR = '#ffe0b2'
+const WORKOUTS_COLOR = healthColors.workouts
 const workoutsIcon = (
     <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
 )

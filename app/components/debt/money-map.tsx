@@ -1,22 +1,14 @@
 'use client'
 
 import { Box } from '@mui/material'
+import { formatUsd } from 'utils/currency'
 import { useState } from 'react'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, toneColors } from '@/lib/colors'
 import type { Settlement } from '@/lib/debt'
 import type { UserSummary } from '@/lib/types'
 
 const DEFAULT_ICON_COLOR = '#FBBC04'
-
-const formatUsd = (n: number | null | undefined) =>
-    Number.isFinite(n)
-        ? n!.toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              maximumFractionDigits: 0,
-          })
-        : '—'
 
 const initialsOf = (p: UserSummary | undefined) =>
     p?.initials ?? (p?.firstName ?? '?').slice(0, 2).toUpperCase()
@@ -189,7 +181,7 @@ export function MoneyMap({
             key={f.key}
             d={f.path}
             fill={f.color}
-            stroke={f.settled ? '#2e7d32' : colors.primaryBlack}
+            stroke={f.settled ? toneColors.positive : colors.primaryBlack}
             strokeWidth={f.highlighted ? 2.5 : 1.5}
             strokeDasharray={f.settled ? '5 4' : undefined}
             opacity={f.pathOpacity}
@@ -217,7 +209,7 @@ export function MoneyMap({
                 height={20}
                 rx={10}
                 fill={f.highlighted ? colors.primaryYellow : colors.primaryWhite}
-                stroke={f.settled ? '#2e7d32' : colors.primaryBlack}
+                stroke={f.settled ? toneColors.positive : colors.primaryBlack}
                 strokeWidth={f.highlighted ? 1.5 : 1}
             />
             <text
@@ -226,7 +218,7 @@ export function MoneyMap({
                 textAnchor="middle"
                 fontSize={11}
                 fontWeight={800}
-                fill={f.settled ? '#2e7d32' : colors.primaryBlack}>
+                fill={f.settled ? toneColors.positive : colors.primaryBlack}>
                 {f.settled ? `✓ ${formatUsd(f.amount)}` : formatUsd(f.amount)}
             </text>
         </g>
@@ -295,7 +287,7 @@ export function MoneyMap({
                         textAnchor="middle"
                         fontSize={10.5}
                         fontWeight={800}
-                        fill={side === 'left' ? '#c0392b' : '#2e7d32'}>
+                        fill={side === 'left' ? toneColors.negative : toneColors.positive}>
                         {side === 'left' ? '−' : '+'}
                         {formatUsd(amount)}
                     </text>
@@ -307,7 +299,7 @@ export function MoneyMap({
                         textAnchor="middle"
                         fontSize={9.5}
                         fontWeight={800}
-                        fill="#2e7d32">
+                        fill={toneColors.positive}>
                         ✓ settled
                     </text>
                 )}

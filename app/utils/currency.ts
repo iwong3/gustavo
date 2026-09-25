@@ -79,3 +79,19 @@ export const FormattedMoney = (
         maximumFractionDigits: digits ?? meta.decimals,
     })
 }
+
+/**
+ * USD for display, null-safe: API numerics can arrive as null/NaN (see
+ * CLAUDE.md "Runtime types lie"), which render as '—' rather than "$NaN".
+ * Whole dollars by default; maxDigits 2 shows cents when there are any.
+ */
+export function formatUsd(n: number | null | undefined, maxDigits = 0): string {
+    return Number.isFinite(n)
+        ? n!.toLocaleString('en-US', {
+              style: 'currency',
+              currency: 'USD',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: maxDigits,
+          })
+        : '—'
+}

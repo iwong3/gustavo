@@ -9,6 +9,7 @@ import { getTablerIcon } from 'utils/icons'
 import { useTripBySlug } from 'hooks/use-trip-by-slug'
 import { colors, hardShadow, pressTextSx } from '@/lib/colors'
 import { getActiveTripTool, getTripSlug, tripTools } from '@/lib/trip-tools'
+import { tripHasLinks } from 'utils/links'
 
 // Font-size / line-count steps tried in order until the trip name fits without
 // truncating. 3 lines at 12.5px (~45px) still fits the 56px header row.
@@ -104,6 +105,12 @@ export const TripHeaderControls = () => {
     const { data: trip } = useTripBySlug(slug, {
         enabled: Boolean(slug) && Boolean(activeTool),
     })
+
+    // Links is hard-coded for a few trips (utils/links.ts) — hide the page
+    // for the rest rather than offer a blank one
+    const tools = tripTools.filter(
+        (t) => t.path !== 'links' || (trip != null && tripHasLinks(trip.slug))
+    )
 
     const [menuOpen, setMenuOpen] = useState(false)
 
@@ -216,7 +223,7 @@ export const TripHeaderControls = () => {
                                 boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
                                 overflow: 'hidden',
                             }}>
-                            {tripTools.map((tool, i) => {
+                            {tools.map((tool, i) => {
                                 const isActive = tool.path === activeTool.path
                                 return (
                                     <Box
@@ -233,7 +240,7 @@ export const TripHeaderControls = () => {
                                                 ? colors.secondaryYellow
                                                 : colors.primaryWhite,
                                             'borderBottom':
-                                                i < tripTools.length - 1
+                                                i < tools.length - 1
                                                     ? `1px solid ${colors.primaryBlack}20`
                                                     : 'none',
                                             '&:active': {

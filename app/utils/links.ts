@@ -83,3 +83,6 @@ export const LinksByTripSlug: Record<string, Link[]> = {
     'south-korea-2025': buildTripLinks('south-korea-2025'),
     'japan-2025': buildTripLinks('japan-2025'),
 }
+
+/** Whether a trip has any links — the Links page is hidden for trips without. */
+export const tripHasLinks = (slug: string) => (LinksByTripSlug[slug]?.length ?? 0) > 0
