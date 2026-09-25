@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, canAddSettlement } from '@/lib/permissions'
+import { getUserTripRole, getTripAccess, canAddSettlement, canViewTrip } from '@/lib/permissions'
 
 export async function GET(
     _request: NextRequest,
@@ -12,6 +12,17 @@ export async function GET(
     const id = parseInt(tripId, 10)
     if (isNaN(id)) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
+    }
+
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const access = await getTripAccess(authUser.userId, id)
+    if (!access.tripExists) {
+        return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+    }
+    if (!canViewTrip(access.role, access.isAdmin, access.visibility)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const res = await pool.query(

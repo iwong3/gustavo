@@ -354,6 +354,7 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 ### Permission functions (lib/permissions.ts, app/utils/permissions.ts)
 | Function | Access granted to |
 |----------|-------------------|
+| `canViewTrip` | admin, any participant, or anyone when visibility = all_users. Every trip-scoped GET checks it via `getTripAccess` (404 missing trip, 403 not visible) |
 | `canEditTrip` | admin, owner, editor |
 | `canDeleteTrip` | admin, owner |
 | `canAddExpense` | owner, editor, viewer (any participant) |

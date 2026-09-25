@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadTripExpenses } from '@/lib/expense-rows'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, canAddExpense } from '@/lib/permissions'
+import { getUserTripRole, getTripAccess, canAddExpense, canViewTrip } from '@/lib/permissions'
 import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
 
 export async function GET(
@@ -13,6 +13,17 @@ export async function GET(
     const id = parseInt(tripId, 10)
     if (isNaN(id)) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
+    }
+
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const access = await getTripAccess(authUser.userId, id)
+    if (!access.tripExists) {
+        return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+    }
+    if (!canViewTrip(access.role, access.isAdmin, access.visibility)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     return NextResponse.json(await loadTripExpenses(id))

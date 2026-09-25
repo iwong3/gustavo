@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, canManageLocations } from '@/lib/permissions'
+import { getUserTripRole, getTripAccess, canManageLocations, canViewTrip } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
 
@@ -18,6 +18,17 @@ export async function GET(
     const tripId = parseTripId((await params).tripId)
     if (!tripId) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
+    }
+
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const access = await getTripAccess(authUser.userId, tripId)
+    if (!access.tripExists) {
+        return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+    }
+    if (!canViewTrip(access.role, access.isAdmin, access.visibility)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { rows } = await pool.query(
