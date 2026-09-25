@@ -3,9 +3,35 @@
 import { useState } from 'react'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 
+// "Not now" is remembered for a while, so browser users (trip friends) aren't
+// asked on every page load
+const DISMISS_KEY = 'pwa-install-dismissed-at'
+const DISMISS_FOR_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+function recentlyDismissed(): boolean {
+    try {
+        const at = Number(localStorage.getItem(DISMISS_KEY))
+        return at > 0 && Date.now() - at < DISMISS_FOR_MS
+    } catch {
+        return false // SSR / storage blocked: ask
+    }
+}
+
+function rememberDismissal() {
+    try {
+        localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    } catch {
+        // storage blocked — the in-memory dismissal still hides it
+    }
+}
+
 export default function PWAInstallPrompt() {
     const { showInstallOption, isIOS, installPWA } = usePWAInstall()
-    const [isDismissed, setIsDismissed] = useState(false)
+    const [isDismissed, setIsDismissedState] = useState(recentlyDismissed)
+    const setIsDismissed = (dismissed: boolean) => {
+        if (dismissed) rememberDismissal()
+        setIsDismissedState(dismissed)
+    }
     const [showIOSInstructions, setShowIOSInstructions] = useState(false)
 
     // Don't show if dismissed, not installable, or already installed
@@ -120,7 +146,8 @@ export default function PWAInstallPrompt() {
             <style jsx>{`
                 .pwa-install-prompt {
                     position: fixed;
-                    bottom: 20px;
+                    /* above the 64px tab / action bar */
+                    bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px);
                     left: 20px;
                     right: 20px;
                     z-index: 1000;
@@ -364,7 +391,6 @@ export default function PWAInstallPrompt() {
                     .pwa-install-prompt {
                         left: 10px;
                         right: 10px;
-                        bottom: 10px;
                     }
 
                     .pwa-install-content {

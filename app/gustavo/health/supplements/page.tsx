@@ -1,10 +1,11 @@
 'use client'
 
-import { colors } from '@/lib/colors'
+import { colors, pressRowSx } from '@/lib/colors'
 import type { SupplementLog } from '@/lib/health-types'
 import { Box, Chip, Typography } from '@mui/material'
-import { IconBolt, IconList, IconPill, IconTrash } from '@tabler/icons-react'
+import { IconBolt, IconList, IconPill } from '@tabler/icons-react'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
 import {
     SortablePresetChip,
     HorizontalSortableList,
@@ -14,7 +15,7 @@ import { todayIso } from 'components/health/workout-presets'
 import { useSupplementData } from 'hooks/useSupplementData'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -54,8 +55,8 @@ function groupLogsByDate(logs: SupplementLog[]): DayGroup[] {
 
 // ── Swipeable Log Card ──────────────────────────────────────────────────────
 
-const DELETE_WIDTH = 64
-
+// SwipeableRow sits inside the card's border (overflow: hidden) so the
+// revealed Edit/Delete buttons read as part of the card
 function SupplementLogCard({
     group,
     onEdit,
@@ -65,106 +66,48 @@ function SupplementLogCard({
     onEdit: () => void
     onDelete: () => void
 }) {
-    const [offsetX, setOffsetX] = useState(0)
-    const [startX, setStartX] = useState<number | null>(null)
-    const [swiping, setSwiping] = useState(false)
-
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        setStartX(e.touches[0].clientX)
-    }, [])
-
-    const handleTouchMove = useCallback(
-        (e: React.TouchEvent) => {
-            if (startX === null) return
-            const dx = e.touches[0].clientX - startX
-            // Only allow left swipe
-            if (dx < -5) setSwiping(true)
-            if (swiping) {
-                setOffsetX(Math.max(-DELETE_WIDTH, Math.min(0, dx)))
-            }
-        },
-        [startX, swiping]
-    )
-
-    const handleTouchEnd = useCallback(() => {
-        if (offsetX < -DELETE_WIDTH / 2) {
-            setOffsetX(-DELETE_WIDTH)
-        } else {
-            setOffsetX(0)
-        }
-        setStartX(null)
-        setSwiping(false)
-    }, [offsetX])
-
-    const handleClick = useCallback(() => {
-        if (offsetX < 0) {
-            // Close swipe
-            setOffsetX(0)
-        } else {
-            onEdit()
-        }
-    }, [offsetX, onEdit])
-
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: '4px', border: `1px solid ${colors.primaryBlack}`, boxShadow: `2px 2px 0px ${colors.primaryBlack}` }}>
-            {/* Delete button — part of the card surface */}
-            <Box
-                onClick={onDelete}
-                sx={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: DELETE_WIDTH,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.primaryRed,
-                    cursor: 'pointer',
-                    borderRadius: '0 3px 3px 0',
-                }}>
-                <IconTrash size={18} stroke={2} color={colors.primaryWhite} />
-            </Box>
-            {/* Card content — slides left */}
-            <Box
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onClick={handleClick}
-                sx={{
-                    position: 'relative',
-                    transform: `translateX(${offsetX}px)`,
-                    transition: startX !== null ? 'none' : 'transform 0.2s ease',
-                    padding: '12px 14px',
-                    cursor: 'pointer',
-                    backgroundColor: colors.primaryWhite,
-                    '&:active': offsetX === 0 ? { backgroundColor: colors.secondaryYellow } : {},
-                }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {group.logs.map((log) => (
-                        <Chip
-                            key={log.id}
-                            label={
-                                log.quantity > 1
-                                    ? `${log.supplementName} ×${log.quantity}`
-                                    : log.supplementName
-                            }
-                            size="small"
-                            sx={{
-                                'height': 24,
-                                'fontSize': 12,
-                                'fontWeight': 500,
-                                'backgroundColor': '#f1f8e9',
-                                'border': '1px solid #4caf50',
-                                'boxShadow': '1px 1px 0px #4caf50',
-                                'borderRadius': '3px',
-                                'color': colors.primaryBlack,
-                                '& .MuiChip-label': { px: 1 },
-                            }}
-                        />
-                    ))}
+        <Box sx={{ overflow: 'hidden', borderRadius: '4px', border: `1px solid ${colors.primaryBlack}`, boxShadow: `2px 2px 0px ${colors.primaryBlack}` }}>
+            <SwipeableRow
+                canEdit
+                canDelete
+                onEdit={onEdit}
+                onDelete={onDelete}
+                backgroundColor={colors.primaryWhite}
+                borderColor={colors.primaryBlack}>
+                <Box
+                    onClick={onEdit}
+                    sx={{
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        '&:active': pressRowSx['&:active'],
+                    }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {group.logs.map((log) => (
+                            <Chip
+                                key={log.id}
+                                label={
+                                    log.quantity > 1
+                                        ? `${log.supplementName} ×${log.quantity}`
+                                        : log.supplementName
+                                }
+                                size="small"
+                                sx={{
+                                    'height': 24,
+                                    'fontSize': 12,
+                                    'fontWeight': 500,
+                                    'backgroundColor': '#f1f8e9',
+                                    'border': '1px solid #4caf50',
+                                    'boxShadow': '1px 1px 0px #4caf50',
+                                    'borderRadius': '3px',
+                                    'color': colors.primaryBlack,
+                                    '& .MuiChip-label': { px: 1 },
+                                }}
+                            />
+                        ))}
+                    </Box>
                 </Box>
-            </Box>
+            </SwipeableRow>
         </Box>
     )
 }
@@ -243,16 +186,18 @@ function SupplementsPage() {
     const deleteDateMutation = useMutation({
         mutationFn: async (date: string) => {
             const logsForDate = allLogs.filter((l) => l.date === date)
-            await Promise.all(
+            const results = await Promise.all(
                 logsForDate.map((l) =>
                     fetch(`/api/health/supplement-logs/${l.id}`, {
                         method: 'DELETE',
                     })
                 )
             )
+            if (results.some((r) => !r.ok)) throw new Error('Delete failed')
         },
-        onSuccess: invalidateLogs,
-        onError: (err) => console.error('Failed to delete logs:', err),
+        // Settled, not success: a partial failure still deleted some logs
+        onSettled: invalidateLogs,
+        meta: { errorToast: "Couldn't delete that day's supplements. Try again." },
     })
 
     const applyPresetMutation = useMutation({

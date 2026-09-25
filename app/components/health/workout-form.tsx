@@ -23,6 +23,7 @@ import type {
 } from '@/lib/health-types'
 import { getParents, isTarget } from '@/lib/health/muscle-groups'
 import { queryKeys } from '@/lib/query-keys'
+import { upsertCachedWorkout } from 'utils/workout-cache'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
 import {
@@ -378,6 +379,11 @@ export default function WorkoutForm({
                 body: JSON.stringify(data),
             })
             if (!res.ok) throw new Error('Save failed')
+            // Seed the cached lists with the saved workout before navigating,
+            // so the list/detail shows it immediately; the refetch below
+            // then reconciles in the background
+            const saved = (await res.json().catch(() => null)) as Workout | null
+            if (saved?.id != null && saved.date) upsertCachedWorkout(queryClient, saved)
             queryClient.invalidateQueries({
                 queryKey: queryKeys.health.workouts.all,
             })
@@ -769,6 +775,7 @@ export default function WorkoutForm({
                                                 }}>
                                                 <CompactField
                                                     label="lbs"
+                                                    decimals
                                                     value={item.entry.weightLbs}
                                                     onChange={(v) =>
                                                         updateEntry(
@@ -952,12 +959,15 @@ function CompactField({
     onChange,
     width,
     htmlInputProps,
+    decimals = false,
 }: {
     label: string
     value: string | number
     onChange: (value: string) => void
     width: number
     htmlInputProps?: Record<string, unknown>
+    /** Allows a decimal point (weights); otherwise whole numbers only. */
+    decimals?: boolean
 }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
@@ -979,6 +989,9 @@ function CompactField({
                 placeholder="–"
                 slotProps={{
                     htmlInput: {
+                        // Number pad, not the full keyboard (decimal pad
+                        // for weights, digits only for counts)
+                        inputMode: decimals ? 'decimal' : 'numeric',
                         ...htmlInputProps,
                         style: { textAlign: 'center', padding: '4px 0' },
                     },

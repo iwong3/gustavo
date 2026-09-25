@@ -8,18 +8,23 @@ import { PullToRefresh } from 'components/pull-to-refresh'
 
 /**
  * Shared outer container for all health pages.
- * Handles max-width, padding, loading spinner, and the sticky header section.
+ * Handles max-width, padding, the loading state, and the sticky header section.
  * If `onRefresh` is provided, the page supports pull-to-refresh.
+ * Pass `skeleton` (the page-shaped placeholder the route's loading.tsx also
+ * shows) so loading never swaps placeholders; without it, a spinner.
  */
 export function HealthPageLayout({
     loading,
+    skeleton,
     children,
     onRefresh,
 }: {
     loading: boolean
+    skeleton?: ReactNode
     children: ReactNode
     onRefresh?: () => Promise<unknown> | unknown
 }) {
+    if (loading && skeleton) return <>{skeleton}</>
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 
 import type {
     Exercise,
@@ -21,8 +21,14 @@ const fetchJson = async <T>(url: string): Promise<T> => {
  * the exercise catalogue, and workout routines (presets). Shared by the list
  * page and the add/edit pages so navigating between them hits the cache
  * instead of refetching.
+ *
+ * Pages gate on only what they render (`pending`), not all four queries.
+ * Until the full workout history has loaded once, `workouts` is the Health
+ * hub's cached last-30-days list (`workoutsPartial` is true meanwhile) — so
+ * the Workouts page usually opens with content instead of a skeleton.
  */
 export function useWorkoutData() {
+    const queryClient = useQueryClient()
     const [mg, workouts, exercises, presets] = useQueries({
         queries: [
             {
@@ -36,6 +42,18 @@ export function useWorkoutData() {
             {
                 queryKey: queryKeys.health.workouts.list(),
                 queryFn: () => fetchJson<Workout[]>('/api/health/workouts'),
+                // The hub's date-ranged list shares this key prefix
+                placeholderData: () =>
+                    queryClient
+                        .getQueriesData<Workout[]>({
+                            queryKey: queryKeys.health.workouts.list(),
+                        })
+                        .find(
+                            ([key, data]) =>
+                                key.length >
+                                    queryKeys.health.workouts.list().length &&
+                                data
+                        )?.[1],
             },
             {
                 queryKey: queryKeys.health.exercises,
@@ -56,6 +74,16 @@ export function useWorkoutData() {
         workouts: workouts.data ?? [],
         exercises: exercises.data ?? [],
         presets: presets.data ?? [],
-        loading: [mg, workouts, exercises, presets].some((q) => q.isLoading),
+        /** Per query — gate a page on only the data it renders. */
+        pending: {
+            muscleGroups: mg.isPending,
+            workouts: workouts.isPending,
+            exercises: exercises.isPending,
+            presets: presets.isPending,
+        },
+        /** `workouts` is still the hub's recent-only placeholder. */
+        workoutsPartial: workouts.isPlaceholderData,
+        /** Everything — for the forms, which use all four. */
+        loading: [mg, workouts, exercises, presets].some((q) => q.isPending),
     }
 }

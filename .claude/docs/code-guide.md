@@ -249,35 +249,23 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
 
 ---
 
-## The Menu System (Trip Detail View)
+## Navigation Chrome
 
-The menu bar at the bottom of the trip detail page has two layers:
+- **Bottom tab bar** (`BottomTabBar` in `app/gustavo/layout.tsx`): Home |
+  Trips | Health | Settings. Leaf pages swap it for a `PageActionBar`
+  (Cancel | Save, Delete | Edit …). Re-tapping the active tab scrolls to top.
+- **Header top-left** (`HeaderCornerButton`): empty on Home, Gus on tab roots
+  (tap → Home), ← everywhere deeper. Its target is `getBackHref()` in
+  `utils/back-href.ts` — add a rule there for new routes.
+- **Trip header** (`components/trip-header-controls.tsx`): the trip name
+  (tap → trip details) and the tool pill, a dropdown of the trip's pages
+  (`lib/trip-tools.ts`: Expenses, Debts, Graphs, Links, Activity, Details) —
+  each tool is its own route under `trips/[slug]/`.
+- **Expenses toolbar** (`components/menu/trip-toolbar.tsx`): search + the
+  refine button, which swaps the list for `RefinePanel` (sort + filters;
+  state in `refine-store.ts` / `filter-stores.ts` / `sort-store.ts`).
 
-**Bottom tab bar** (in `app/gustavo/layout.tsx`) — persistent across all
-`/gustavo/*` pages: Home | Expenses | Settings
-
-**Filter/sort menu bar** (in `app/components/menu/menu.tsx`) — visible only on
-trip detail pages, sits just above the bottom tab bar. Contains:
-
-- Reset (clears all filters/sorts)
-- Sort (cost / date / name)
-- Filter: Person (split between), Paid By, Type (category), Location
-- Settings (icon label toggle, receipt submission link)
-
-Clicking a menu icon **expands a panel above it** with the filter options.
-`expandedMenuItem` state in `menu.tsx` controls which panel is open.
-
-**ToolsMenu** (in the header, top right) — switches the main content area
-between: Receipts | Summary | Graph | Debt Calculator | Links. This is
-controlled by `useToolsMenuStore`.
-
-The active view's component renders via:
-
-```typescript
-const ActiveComponent = ToolsMenuItemMap.get(activeItem)?.Component ?? null
-// ...
-{ActiveComponent && <ActiveComponent />}
-```
+There is no nav drawer — tabs + the header corner are the whole navigation.
 
 ---
 
@@ -391,22 +379,45 @@ If no valid session, Auth.js redirects to `/login`.
 
 ---
 
-## Refresh Pattern
+## Loading, Caching & Refresh
 
-When the user adds, edits, or deletes an expense, the expense list needs to
-update without a full page reload.
+All server data goes through React Query (`providers/query-provider.tsx`),
+persisted to IndexedDB, so revisits and cold opens render from cache. Rules:
 
-The pattern:
-
-1. `[slug]/page.tsx` defines `refreshData()` — re-fetches expenses and calls
-   `setExpenses()`
-2. Passes it to `<Gustavo onRefresh={refreshData} />`
-3. `Gustavo` wraps children in `<RefreshProvider onRefresh={...} />`
-4. Deep components (e.g. `ExpenseFormDialog`, delete buttons) call
-   `useRefresh().onRefresh()`
-
-`RefreshProvider` is just a React Context that threads the callback down without
-prop drilling through every intermediate component.
+- **Gate on `isPending`, never `isLoading`.** While the persisted cache is
+  restoring, queries are pending but *not fetching*, so `isLoading` is false
+  with no data — pages flash their empty state ("No workouts yet") instead of
+  a skeleton. (Exception: a query that can be disabled stays pending forever —
+  guard it with the same condition as its `enabled`.)
+- **Gate on only what the page renders** (e.g. `useWorkoutData().pending`),
+  not every query a shared hook runs.
+- **Skeletons mirror the loaded page** — build them from
+  `components/skeleton/bones.tsx` (`TextBone` reserves a text line box,
+  `ChromeBox` draws always-present controls), copying paddings/gaps from the
+  real components. Page skeletons live in `components/skeleton/`
+  (`trip-skeletons.tsx`, `health-skeletons.tsx`, `form-skeleton.tsx`).
+- **One skeleton per page, used twice**: by the route's `loading.tsx` *and* the
+  page's own loading state (`HealthPageLayout skeleton=`, the trip layout
+  gate), so a slow load never swaps one placeholder for another. A folder's
+  `loading.tsx` also covers its nested routes, so area-level ones pick the
+  skeleton from the URL (`TripsRouteSkeleton`, `HealthRouteSkeleton`) —
+  add your route there.
+- **Saves seed the cache before navigating back.** APIs return the saved
+  record in list shape (expenses: `lib/expense-rows.ts`; workouts: POST/PUT
+  bodies) and the form writes it into the cached list (`setQueryData`, see
+  `utils/workout-cache.ts`); a background refetch then reconciles. When
+  seeding isn't possible, await an explicit `refetchQueries` while the form
+  shows "Saving…" (off-screen lists don't refetch on `invalidateQueries`).
+- **Deletes remove the row immediately** (`utils/expense-cache.ts`,
+  `removeCachedWorkout`) and restore it if the request fails. A detail page
+  deleting itself keeps rendering its last copy while it navigates away.
+- **Warm the next screen**: `PrefetchOnVisible` on every `router.push` tap
+  target (its `onVisible` can `prefetchQuery` the destination's data too —
+  the trips list warms each visible trip's expenses/settlements);
+  `router.prefetch` for action-bar destinations (edit, duplicate).
+- **Refresh**: inside a trip, `useRefresh().onRefresh()` invalidates the
+  trip's `queryKeys.trips.detail(id)` subtree (expenses, settlements,
+  activity, …) — put new per-trip queries under that key.
 
 ---
 
@@ -537,12 +548,17 @@ Follow it exactly when adding or migrating a form.
        <ThingForm
            mode="edit"
            thing={thing}
-           onCancel={() => router.replace(backUrl)}
-           onSuccess={() => router.replace(backUrl)}
+           onCancel={() => exitTo(backUrl)}
+           onSuccess={() => exitTo(backUrl)}
        />
    </Box>
    ```
-   Use `router.replace`, not `push`, so the form doesn't sit in history.
+   Exit with `exitTo` from `useExitTo()` (`hooks/use-exit-to.ts`), never
+   `push` or a bare `router.replace`: it pops history when `backUrl` is the page
+   we came from (else replaces), so the form never sits in history AND no
+   duplicate of `backUrl` is left behind — a bare replace turns
+   `[list, detail, edit]` into `[list, detail, detail]`, and native swipe-back
+   lands on the same screen. Same for delete-then-leave on detail pages.
    Variants (duplicate, prefill) are query params on `new`
    (e.g. `/health/exercise/new?from=<id>`). The list page prefetches the
    `new` route on mount so the FAB opens it instantly.
@@ -565,9 +581,12 @@ Follow it exactly when adding or migrating a form.
    `PageInfo` ⓘ), the fields column (gap 2, 16px padding, focus-scroll wired),
    the inline error, and the `PageActionBar`.
 
-3. **Header back button** — `app/gustavo/layout.tsx` maps the route back to
-   the list it came from (`healthFormMatch`, `expenseEditMatch`, ...). Add a
-   rule there when you add a route under a new section.
+3. **Header back button** — `HeaderCornerButton` in `app/gustavo/layout.tsx`
+   maps the route back to the list it came from (`healthFormMatch`,
+   `expenseEditMatch`, ...). Add a rule there when you add a route under a new
+   section. It's the top-left corner: nothing on home, Gus on tab roots
+   (`TAB_ROOTS`, tap → home), ← everywhere deeper. There is no nav drawer —
+   bottom tabs + this corner are the whole navigation.
 
 ### Field conventions
 
@@ -643,8 +662,27 @@ these rules so gestures never fight each other or the browser:
 5. Keep latest callbacks in refs inside the listener effect so it doesn't
    re-attach on every parent render (callers pass inline closures).
 
-Reference implementations: `swipeable-row.tsx` (horizontal, rules 1–3, 5) and
+Reference implementations: `swipeable-row.tsx` (horizontal, rules 1–4) and
 `pull-to-refresh.tsx` (vertical, rules 1, 3–5).
+
+### Swipe actions and delete feedback
+
+- **One swipe pattern app-wide: `SwipeableRow`** — swipe reveals Edit (right)
+  / Delete (left), the row rests open, tapping the button fires it. That tap
+  IS the confirmation, so swipe deletes call the API directly (no dialog).
+  Only one row is open at a time. For bordered cards, render it *inside* the
+  card box (`overflow: hidden`) so the button reads as part of the card.
+  Don't hand-roll swipe gestures.
+- **Single-tap deletes (detail pages) keep `ConfirmDeleteDialog`** — pass
+  `busy` and `error` (from `deleteErrorMessage()` in `utils/delete-error.ts`);
+  on failure the dialog stays open with the reason inline.
+- **Swipe-delete failures → toast.** `useMutation` deletes opt in with
+  `meta: { errorToast: "Couldn't delete …" }` (global handler in
+  `providers/query-provider.tsx`); raw `fetch` deletes must check `res.ok`
+  and call `showToast()` from `components/toast-store.ts`.
+- **Leaving after a delete → `exitTo(getBackHref(...))`** so the deleted page
+  sits ahead in history, not behind. A missing record renders `GoneState`
+  (calm message + a way out), never a bare "no longer exists" line.
 
 ---
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, pressRowSx } from '@/lib/colors'
 import type { Workout } from '@/lib/health-types'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { Box, Chip, Typography } from '@mui/material'
@@ -10,6 +10,9 @@ import {
     SortablePresetChip,
 } from 'components/health/sortable-preset'
 import { HealthPageLayout, HealthPageHeader } from 'components/health/health-page-layout'
+import { WorkoutsListSkeleton } from 'components/skeleton/health-skeletons'
+import { removeCachedWorkout } from 'utils/workout-cache'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { selectedBg, selectedBorder } from 'components/health/muscle-group-grid'
 import {
     todayIso,
@@ -45,7 +48,9 @@ function ExercisePage() {
         router.prefetch(ROUTINES_URL)
     }, [router])
 
-    const { workouts, presets, loading } = useWorkoutData()
+    const { workouts, presets, pending } = useWorkoutData()
+    // Only what this page renders — not the exercise library / muscle groups
+    const loading = pending.workouts || pending.presets
 
     const invalidateWorkouts = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all })
@@ -61,10 +66,14 @@ function ExercisePage() {
             const res = await fetch(`/api/health/workouts/${id}`, { method: 'DELETE' })
             if (!res.ok) throw new Error('Delete failed')
         },
-        onSuccess: invalidateWorkouts,
+        // Row disappears immediately; the refetch after (either way) brings
+        // it back if the delete failed
+        onMutate: (id: number) => removeCachedWorkout(queryClient, id),
+        onSettled: invalidateWorkouts,
+        meta: { errorToast: "Couldn't delete that workout. Try again." },
     })
     const handleDelete = useCallback(
-        (id: number) => deleteMutation.mutateAsync(id),
+        (id: number) => deleteMutation.mutate(id),
         [deleteMutation],
     )
 
@@ -138,7 +147,10 @@ function ExercisePage() {
     useRegisterFab(fabCallback)
 
     return (
-        <HealthPageLayout loading={loading} onRefresh={invalidateAll}>
+        <HealthPageLayout
+            loading={loading}
+            skeleton={<WorkoutsListSkeleton />}
+            onRefresh={invalidateAll}>
             <HealthPageHeader
                 icon={<IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Workouts"
@@ -287,7 +299,8 @@ function ExercisePage() {
                                 : 0
 
                         return (
-                            <Box key={workout.id}>
+                            // Warms the detail route as the entry scrolls into view
+                            <PrefetchOnVisible key={workout.id} href={`${LIST_URL}/${workout.id}`}>
                                 {/* ── Card row with date aligned to top ── */}
                                 <Box sx={{ display: 'flex' }}>
                                     {/* Timeline gutter with days-since node */}
@@ -423,10 +436,7 @@ function ExercisePage() {
                                                         'cursor': 'pointer',
                                                         'backgroundColor':
                                                             colors.primaryWhite,
-                                                        '&:active': {
-                                                            backgroundColor:
-                                                                colors.secondaryYellow,
-                                                        },
+                                                        '&:active': pressRowSx['&:active'],
                                                         'transition':
                                                             'background-color 150ms ease',
                                                     }}>
@@ -531,7 +541,7 @@ function ExercisePage() {
                                 {i < workouts.length - 1 && (
                                     <Box sx={{ height: 12 }} />
                                 )}
-                            </Box>
+                            </PrefetchOnVisible>
                         )
                     })}
                 </Box>
@@ -544,7 +554,7 @@ function ExercisePage() {
 export default function Page() {
     // useSearchParams needs a Suspense boundary
     return (
-        <Suspense fallback={<HealthPageLayout loading>{null}</HealthPageLayout>}>
+        <Suspense fallback={<WorkoutsListSkeleton />}>
             <ExercisePage />
         </Suspense>
     )

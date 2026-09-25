@@ -4,10 +4,11 @@ import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, pressRowSx } from '@/lib/colors'
 import type { Expense } from '@/lib/types'
 import { ListControls } from 'components/list-controls'
 import type { MySpendRow, MySpendSort } from 'hooks/useMySpendData'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { CategoryIcon } from 'utils/icons'
 
 // Null-safe: numeric API fields can be null at runtime (NaN → JSON null)
@@ -20,6 +21,11 @@ const formatUsd = (n: number | null | undefined, maxDigits = 0) =>
               maximumFractionDigits: maxDigits,
           })
         : '—'
+
+/** Wraps a row in PrefetchOnVisible when it has a destination. */
+function PrefetchRow({ href, children }: { href?: string; children: React.ReactNode }) {
+    return href ? <PrefetchOnVisible href={href}>{children}</PrefetchOnVisible> : <>{children}</>
+}
 
 function ShareExpenseRow({
     row,
@@ -45,9 +51,7 @@ function ShareExpenseRow({
                 'borderBottom': showBottomBorder
                     ? `1px solid ${colors.primaryBlack}20`
                     : 'none',
-                '&:active': {
-                    backgroundColor: colors.secondaryYellow,
-                },
+                '&:active': pressRowSx['&:active'],
                 'transition': 'background-color 150ms ease',
             }}>
             <CategoryIcon expense={row.expense} size={28} />
@@ -115,6 +119,8 @@ interface MySpendListProps {
     search: string
     onSearchChange: (search: string) => void
     onRowTap: (expense: Expense) => void
+    /** Where a row navigates — rows prefetch it as they scroll into view. */
+    rowHref?: (expense: Expense) => string
     /** Right-column header, e.g. "my share" or "Jenny's share". */
     shareLabel: string
 }
@@ -126,6 +132,7 @@ export function MySpendList({
     search,
     onSearchChange,
     onRowTap,
+    rowHref,
     shareLabel,
 }: MySpendListProps) {
     const isDateSort = sort === 'date-asc' || sort === 'date-desc'
@@ -239,8 +246,10 @@ export function MySpendList({
                             </Box>
                             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                                 {group.rows.map((row, i) => (
-                                    <ShareExpenseRow
+                                    <PrefetchRow
                                         key={row.expense.id}
+                                        href={rowHref?.(row.expense)}>
+                                    <ShareExpenseRow
                                         row={row}
                                         subtext={[
                                             row.expense.locationName,
@@ -253,6 +262,7 @@ export function MySpendList({
                                         }
                                         onTap={onRowTap}
                                     />
+                                    </PrefetchRow>
                                 ))}
                             </Box>
                         </Box>
@@ -261,8 +271,10 @@ export function MySpendList({
             ) : (
                 <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                     {rows.map((row, i) => (
-                        <ShareExpenseRow
+                        <PrefetchRow
                             key={row.expense.id}
+                            href={rowHref?.(row.expense)}>
+                        <ShareExpenseRow
                             row={row}
                             subtext={[
                                 dayjs(
@@ -276,6 +288,7 @@ export function MySpendList({
                             showBottomBorder={i < rows.length - 1}
                             onTap={onRowTap}
                         />
+                        </PrefetchRow>
                     ))}
                 </Box>
             )}

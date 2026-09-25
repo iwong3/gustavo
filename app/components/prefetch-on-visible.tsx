@@ -14,18 +14,27 @@ import { useEffect, useRef } from 'react'
  * including the route's own loading.tsx, which lives on the far side of that
  * request — so the tap reads as a freeze rather than an instant placeholder.
  *
- * Prefetches once per href, then stops observing.
+ * Prefetches once per href, then stops observing. `onVisible` runs at the
+ * same moment — use it to warm the destination's data too (e.g.
+ * queryClient.prefetchQuery), so the page opens already loaded.
  */
 export function PrefetchOnVisible({
     href,
+    onVisible,
     children,
 }: {
     href: string
+    onVisible?: () => void
     children: React.ReactNode
 }) {
     const router = useRouter()
     const ref = useRef<HTMLDivElement | null>(null)
     const prefetched = useRef(false)
+    // Latest callback without re-observing on every render
+    const onVisibleRef = useRef(onVisible)
+    useEffect(() => {
+        onVisibleRef.current = onVisible
+    }, [onVisible])
 
     useEffect(() => {
         prefetched.current = false
@@ -38,6 +47,7 @@ export function PrefetchOnVisible({
                 if (!entries.some((e) => e.isIntersecting)) return
                 prefetched.current = true
                 router.prefetch(href)
+                onVisibleRef.current?.()
                 observer.disconnect()
             },
             // Warm slightly before the row is actually on screen, like Link does

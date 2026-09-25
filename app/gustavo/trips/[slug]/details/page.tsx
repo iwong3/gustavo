@@ -6,9 +6,11 @@ import { IconPencil, IconTrash } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteTrip } from 'utils/api'
+import { deleteErrorMessage } from 'utils/delete-error'
+import { useExitTo } from 'hooks/use-exit-to'
 import { InitialsIcon } from 'utils/icons'
 import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
@@ -39,23 +41,33 @@ export default function TripDetailsPage() {
     const { trip } = useTripData()
     const { totalSpend, debtMap } = useSpendData()
     const router = useRouter()
+    const exitTo = useExitTo()
     const queryClient = useQueryClient()
 
     // Dialog state
     const [deleteOpen, setDeleteOpen] = useState(false)
 
     const showEdit = canEditTrip(trip.userRole, trip.isAdmin)
+
+    // Warm the edit form so tapping Edit opens it instantly
+    useEffect(() => {
+        if (showEdit) router.prefetch(`/gustavo/trips/${trip.slug}/edit`)
+    }, [router, trip.slug, showEdit])
     const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
 
     const deleteMutation = useMutation({
         mutationFn: () => deleteTrip(trip.id, trip.updatedAt),
         onSuccess: () => {
             setDeleteOpen(false)
-            queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
-            router.push('/gustavo/trips')
-        },
-        onError: (err) => {
-            console.error('Failed to delete trip:', err)
+            // Inactive only: refetching this (now deleted) trip's own active
+            // queries would 404 and flash the not-found state before we leave
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.all,
+                refetchType: 'inactive',
+            })
+            // Pop back to the list so the deleted trip sits ahead in history,
+            // not behind it where swipe-back would land on it
+            exitTo('/gustavo/trips')
         },
     })
 
@@ -193,8 +205,9 @@ export default function TripDetailsPage() {
                                 'borderRadius': '4px',
                                 'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                                 'height': 44,
-                                '&:hover': {
-                                    backgroundColor: colors.primaryYellow,
+                                // Hover only with a real pointer (sticks on touch)
+                                '@media (hover: hover)': {
+                                    '&:hover': { backgroundColor: colors.primaryYellow },
                                 },
                                 '&:active': {
                                     boxShadow: 'none',
@@ -219,8 +232,8 @@ export default function TripDetailsPage() {
                                 'borderRadius': '4px',
                                 'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                                 'height': 44,
-                                '&:hover': {
-                                    backgroundColor: `${colors.primaryRed}18`,
+                                '@media (hover: hover)': {
+                                    '&:hover': { backgroundColor: `${colors.primaryRed}18` },
                                 },
                                 '&:active': {
                                     boxShadow: 'none',
@@ -242,8 +255,17 @@ export default function TripDetailsPage() {
             <DeleteTripDialog
                 open={deleteOpen}
                 trip={trip}
-                onClose={() => setDeleteOpen(false)}
+                onClose={() => {
+                    setDeleteOpen(false)
+                    deleteMutation.reset()
+                }}
                 onConfirm={handleDeleteConfirm}
+                busy={deleteMutation.isPending}
+                error={
+                    deleteMutation.error
+                        ? deleteErrorMessage(deleteMutation.error, 'trip')
+                        : null
+                }
             />
         </Box>
     )

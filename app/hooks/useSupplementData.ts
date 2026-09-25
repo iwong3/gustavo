@@ -54,6 +54,6 @@ export function useSupplementData() {
         supplements: supplements.data ?? [],
         logs: logs.data ?? [],
         presets: presets.data ?? [],
-        loading: [supplements, logs, presets].some((q) => q.isLoading),
+        loading: [supplements, logs, presets].some((q) => q.isPending),
     }
 }

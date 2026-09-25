@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { getTablerIcon } from 'utils/icons'
 
 import { useTripBySlug } from 'hooks/use-trip-by-slug'
-import { colors, hardShadow } from '@/lib/colors'
+import { colors, hardShadow, pressTextSx } from '@/lib/colors'
 import { getActiveTripTool, getTripSlug, tripTools } from '@/lib/trip-tools'
 
 // Font-size / line-count steps tried in order until the trip name fits without
@@ -83,6 +83,7 @@ export const FitTripName = ({
                 minWidth: 0,
                 flexShrink: 1,
                 cursor: 'pointer',
+                ...pressTextSx,
             }}>
             {name}
         </Typography>
@@ -147,10 +148,8 @@ export const TripHeaderControls = () => {
                     sx={{
                         position: 'relative',
                         flexShrink: 0,
+                        // Last item in the header: flush with the 16px edge
                         marginLeft: 'auto',
-                        // 4px here + the wrapper's 4px paddingX = 8px to the
-                        // back button, matching the search→filter gap
-                        marginRight: 0.5,
                     }}>
                     <Box
                         onClick={() => setMenuOpen((o) => !o)}

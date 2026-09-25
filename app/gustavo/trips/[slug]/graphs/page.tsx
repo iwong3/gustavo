@@ -60,13 +60,11 @@ export default function MySpendPage() {
     const isMe = personId === trip.currentUserId
     const possessive = isMe ? 'my' : `${person?.firstName ?? 'their'}'s`
 
-    const handleRowTap = (expense: Expense) => {
-        // ?from=graphs makes the header back button return here, not the
-        // expenses list (see HeaderBackButton in app/gustavo/layout.tsx)
-        router.push(
-            `/gustavo/trips/${trip.slug}/expenses/${expense.id}?from=graphs`
-        )
-    }
+    // ?from=graphs makes the header back button return here, not the
+    // expenses list (see utils/back-href.ts)
+    const expenseHref = (expense: Expense) =>
+        `/gustavo/trips/${trip.slug}/expenses/${expense.id}?from=graphs`
+    const handleRowTap = (expense: Expense) => router.push(expenseHref(expense))
 
     // Active filters as removable chips
     const chips: { kind: MySpendDimension; label: string }[] = []
@@ -259,6 +257,7 @@ export default function MySpendPage() {
                 search={search}
                 onSearchChange={setSearch}
                 onRowTap={handleRowTap}
+                rowHref={expenseHref}
                 shareLabel={`${possessive} share`}
             />
         </Box>

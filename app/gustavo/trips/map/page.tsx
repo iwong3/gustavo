@@ -15,7 +15,7 @@ import { fetchTripMap } from 'utils/api'
 const EMPTY_SUMMARY = { cityCount: 0, placeCount: 0, countryCount: 0, tripCount: 0 }
 
 export default function TripsMapPage() {
-    const { data, isLoading, isError } = useQuery({
+    const { data, isPending: isLoading, isError } = useQuery({
         queryKey: queryKeys.trips.map(),
         queryFn: fetchTripMap,
         staleTime: staleTimes.medium,

@@ -8,7 +8,7 @@ import type {
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
-import { HealthDashboardV2 } from 'components/health/health-dashboard-v2'
+import { HealthDashboardV2, type HubLoading } from 'components/health/health-dashboard-v2'
 import { PullToRefresh } from 'components/pull-to-refresh'
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
@@ -124,7 +124,19 @@ export default function HealthPage() {
     const recentSymptoms = recentSymptomsQ.data ?? []
     const recentWeightLogs = recentWeightLogsQ.data ?? []
 
-    const loading = queries.some((q) => q.isLoading)
+    // Per section: each shows as soon as its own data lands instead of all
+    // waiting on the slowest endpoint. isPending (not isLoading) so a cold
+    // open restoring the persisted cache shows skeletons, not empty states.
+    const loading: HubLoading = {
+        workouts: daysSinceQ.isPending || recentWorkoutsQ.isPending,
+        workoutPresets: workoutPresetsQ.isPending,
+        dietPresets: dietPresetsQ.isPending,
+        diet: recentDietDaysQ.isPending,
+        supplementPresets: supplementPresetsQ.isPending,
+        supplements: recentSupplementsQ.isPending,
+        symptoms: recentSymptomsQ.isPending,
+        weight: recentWeightLogsQ.isPending,
+    }
 
     const [appliedId, setAppliedId] = useState<number | null>(null)
 

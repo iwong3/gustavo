@@ -1,12 +1,13 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 import WorkoutForm from 'components/health/workout-form'
-import { HealthPageLayout } from 'components/health/health-page-layout'
+import { WorkoutFormSkeleton } from 'components/skeleton/health-skeletons'
 import { useWorkoutData } from 'hooks/useWorkoutData'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/exercise'
 
@@ -15,9 +16,9 @@ const LIST_URL = '/gustavo/health/exercise'
  * (same groups/exercises, dated today).
  */
 function AddWorkoutPage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
     const searchParams = useSearchParams()
-    const { muscleGroups, workouts, exercises, presets, loading } =
+    const { muscleGroups, workouts, exercises, presets, loading, workoutsPartial } =
         useWorkoutData()
 
     const fromId = searchParams.get('from')
@@ -25,7 +26,9 @@ function AddWorkoutPage() {
         ? (workouts.find((w) => String(w.id) === fromId) ?? undefined)
         : undefined
 
-    if (loading) return <HealthPageLayout loading>{null}</HealthPageLayout>
+    // The form needs the complete history (duplicating an older workout,
+    // exercise history), not the hub's recent-only placeholder list
+    if (loading || workoutsPartial) return <WorkoutFormSkeleton />
 
     return (
         <Box
@@ -42,8 +45,8 @@ function AddWorkoutPage() {
                 muscleGroups={muscleGroups}
                 exercises={exercises}
                 presets={presets}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )
@@ -53,7 +56,7 @@ export default function Page() {
     // useSearchParams needs a Suspense boundary
     return (
         <Suspense
-            fallback={<HealthPageLayout loading>{null}</HealthPageLayout>}>
+            fallback={<WorkoutFormSkeleton />}>
             <AddWorkoutPage />
         </Suspense>
     )

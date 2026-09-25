@@ -1,12 +1,14 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 
 import ExpenseForm from 'components/expense-form'
+import { GoneState } from 'components/gone-state'
 import { useRefresh } from 'providers/refresh-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { canEditExpense } from 'utils/permissions'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const Message = ({ text }: { text: string }) => (
     <Box
@@ -25,7 +27,7 @@ const Message = ({ text }: { text: string }) => (
 
 export default function EditExpensePage() {
     const { id } = useParams<{ slug: string; id: string }>()
-    const router = useRouter()
+    const exitTo = useExitTo()
     const { trip, expenses } = useTripData()
     const { onRefresh } = useRefresh()
 
@@ -35,7 +37,16 @@ export default function EditExpensePage() {
     const expense = expenses.find((e) => String(e.id) === id) ?? null
 
     if (!expense) {
-        return <Message text="This expense no longer exists." />
+        return (
+            <GoneState
+                title="This expense isn't here anymore"
+                detail="It may have been deleted."
+                action={{
+                    label: 'Back to expenses',
+                    onClick: () => exitTo(`/gustavo/trips/${trip.slug}/expenses`),
+                }}
+            />
+        )
     }
 
     const isReporter = expense.reportedBy?.id === trip.currentUserId
@@ -58,9 +69,9 @@ export default function EditExpensePage() {
             <ExpenseForm
                 mode="edit"
                 expense={expense}
-                onCancel={() => router.replace(detailUrl)}
+                onCancel={() => exitTo(detailUrl)}
                 onSuccess={() => {
-                    router.replace(detailUrl)
+                    exitTo(detailUrl)
                     onRefresh()
                 }}
             />

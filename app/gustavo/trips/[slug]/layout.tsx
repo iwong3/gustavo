@@ -1,28 +1,29 @@
 'use client'
 
-import { colors } from '@/lib/colors'
-import { Box } from '@mui/material'
 import { resetAllFilterStores } from 'components/menu/filter/filter-stores'
 import { useRefineStore } from 'components/menu/refine-store'
 import { useSearchBarStore } from 'components/menu/search/search-bar'
 import { useSortStore } from 'components/menu/sort/sort-store'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchExpenses, fetchSettlements } from 'utils/api'
-import { getTablerIcon } from 'utils/icons'
+import { fetchExpenses, fetchSettlements, NotFoundError } from 'utils/api'
 
-import { ReceiptsListSkeleton } from 'components/receipts/receipts-list-skeleton'
+import { TripPageSkeleton } from 'components/skeleton/trip-skeletons'
 import { useTripBySlug } from 'hooks/use-trip-by-slug'
+import { useExitTo } from 'hooks/use-exit-to'
+import { GoneState } from 'components/gone-state'
 import { queryKeys } from '@/lib/query-keys'
 import { tripTools } from '@/lib/trip-tools'
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
     const { slug } = useParams<{ slug: string }>()
+    const pathname = usePathname()
     const queryClient = useQueryClient()
+    const exitTo = useExitTo()
     const router = useRouter()
 
     const resetSearchBarStore = useSearchBarStore((s) => s.reset)
@@ -56,8 +57,8 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     const settlements = settlementsQuery.data ?? []
 
     const loading =
-        tripQuery.isLoading ||
-        (Boolean(trip) && expensesQuery.isLoading) ||
+        tripQuery.isPending ||
+        (Boolean(trip) && expensesQuery.isPending) ||
         (Boolean(trip) && !expensesQuery.data && !expensesQuery.isError) ||
         (Boolean(trip) && !settlementsQuery.data && !settlementsQuery.isError)
     const error = tripQuery.isError || expensesQuery.isError || settlementsQuery.isError
@@ -102,56 +103,43 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     }, [trip, queryClient])
 
     if (error) {
+        // Deleted (or never existed / no access) — a calm dead end with a way
+        // out. Anything else is a load failure worth retrying.
+        if (tripQuery.error instanceof NotFoundError) {
+            return (
+                <GoneState
+                    title="This trip isn't here anymore"
+                    detail="It may have been deleted, or you no longer have access."
+                    action={{
+                        label: 'Back to trips',
+                        onClick: () => exitTo('/gustavo/trips'),
+                    }}
+                />
+            )
+        }
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    margin: 5,
-                    width: '100%',
-                    border: `1.5px solid ${colors.primaryRed}`,
-                    borderRadius: '10px',
-                    backgroundColor: colors.primaryWhite,
-                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        paddingY: 4,
-                        borderTopLeftRadius: '10px',
-                        borderTopRightRadius: '10px',
-                        backgroundColor: colors.primaryRed,
-                    }}>
-                    {getTablerIcon({
-                        name: 'IconExclamationCircle',
-                        fill: colors.primaryRed,
-                        color: colors.primaryWhite,
-                        size: 42,
-                    })}
-                </Box>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        padding: 2,
-                        borderBottomLeftRadius: '10px',
-                        borderBottomRightRadius: '10px',
-                        backgroundColor: colors.primaryWhite,
-                        fontSize: 16,
-                        textAlign: 'center',
-                    }}>
-                    There was an error loading trip data. Please refresh to try
-                    again.
-                </Box>
-            </Box>
+            <GoneState
+                title="Couldn't load this trip"
+                detail="Check your connection and try again."
+                action={{
+                    label: 'Try again',
+                    onClick: () => {
+                        if (tripQuery.isError) tripQuery.refetch()
+                        if (expensesQuery.isError) expensesQuery.refetch()
+                        if (settlementsQuery.isError) settlementsQuery.refetch()
+                    },
+                }}
+                secondaryAction={{
+                    label: 'Back to trips',
+                    onClick: () => exitTo('/gustavo/trips'),
+                }}
+            />
         )
     }
 
     if (loading || !trip) {
-        return <ReceiptsListSkeleton />
+        // The skeleton for whichever tool is opening, not always the list
+        return <TripPageSkeleton pathname={pathname} />
     }
 
     return (

@@ -103,7 +103,10 @@ export default function RoutineForm({
                 setError(data.error || 'Failed to save')
                 return
             }
-            queryClient.invalidateQueries({
+            // Refresh the (off-screen) routines list before leaving — the
+            // form keeps showing "Saving…" — so we land on up-to-date rows
+            // instead of a stale list that changes a moment later
+            await queryClient.refetchQueries({
                 queryKey: queryKeys.health.presets.all,
             })
             onSuccess()

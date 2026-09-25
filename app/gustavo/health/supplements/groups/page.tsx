@@ -53,6 +53,7 @@ export default function SupplementGroupsPage() {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.health.presets.all,
             }),
+        meta: { errorToast: "Couldn't delete that group. Try again." },
     })
 
     const editUrl = (id: number) => `${LIST_URL}/${id}/edit`

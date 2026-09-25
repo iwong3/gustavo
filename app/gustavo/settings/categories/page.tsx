@@ -57,7 +57,7 @@ export default function CategoriesPage() {
     const queryClient = useQueryClient()
     const focusScroll = useScrollFocusedInput()
 
-    const { data: categories = [], isLoading: loading } = useQuery({
+    const { data: categories = [], isPending: loading } = useQuery({
         queryKey: queryKeys.expenseCategories.listWithMeta(),
         queryFn: fetchExpenseCategoriesWithMeta,
         staleTime: staleTimes.medium,

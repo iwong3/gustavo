@@ -7,8 +7,10 @@ import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import BoardingPass from 'components/boarding-pass'
-import BoardingPassSkeleton from 'components/boarding-pass-skeleton'
+import { TripsListSkeleton } from 'components/skeleton/trip-skeletons'
 import { PullToRefresh } from 'components/pull-to-refresh'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
+import { prefetchTripData } from 'utils/trip-prefetch'
 import { fetchTrips } from 'utils/api'
 
 import { queryKeys } from '@/lib/query-keys'
@@ -16,6 +18,7 @@ import type { TripSummary } from '@/lib/types'
 
 // Trip edit/delete live inside the trip (details page) — passes just navigate.
 function TripSection({ title, trips }: { title: string; trips: TripSummary[] }) {
+    const queryClient = useQueryClient()
     if (trips.length === 0) return null
     return (
         <>
@@ -38,8 +41,15 @@ function TripSection({ title, trips }: { title: string; trips: TripSummary[] }) 
                     width: '100%',
                     marginBottom: 2,
                 }}>
+                {/* A pass in view warms its trip's route AND data, so tapping
+                    it usually opens an already-loaded trip */}
                 {trips.map((t) => (
-                    <BoardingPass key={t.id} trip={t} />
+                    <PrefetchOnVisible
+                        key={t.id}
+                        href={`/gustavo/trips/${t.slug}/expenses`}
+                        onVisible={() => prefetchTripData(queryClient, t.id)}>
+                        <BoardingPass trip={t} />
+                    </PrefetchOnVisible>
                 ))}
             </Box>
         </>
@@ -50,7 +60,7 @@ export default function TripsPage() {
     const queryClient = useQueryClient()
     const router = useRouter()
 
-    const { data: trips = [], isLoading: loading } = useQuery({
+    const { data: trips = [], isPending: loading } = useQuery({
         queryKey: queryKeys.trips.list(),
         queryFn: fetchTrips,
     })
@@ -77,24 +87,9 @@ export default function TripsPage() {
         router.prefetch('/gustavo/trips/new')
     }, [router])
 
-    if (loading) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    paddingX: 4,
-                    paddingY: 2,
-                    width: '100%',
-                }}>
-                {[0, 1, 2].map((i) => (
-                    <BoardingPassSkeleton key={i} />
-                ))}
-            </Box>
-        )
-    }
+    // Same skeleton as the route's loading.tsx, so a slow load doesn't swap
+    // one placeholder for another
+    if (loading) return <TripsListSkeleton />
 
     const noTrips =
         travellingTrips.length === 0 &&

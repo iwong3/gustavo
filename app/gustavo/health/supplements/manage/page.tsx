@@ -51,6 +51,7 @@ export default function ManageSupplementsPage() {
             if (!res.ok) throw new Error('Delete failed')
         },
         onSuccess: invalidate,
+        meta: { errorToast: "Couldn't delete that supplement. Try again." },
     })
 
     const editUrl = (id: number) => `${LIST_URL}/${id}/edit`

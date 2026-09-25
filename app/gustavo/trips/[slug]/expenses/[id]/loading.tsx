@@ -1,10 +1,10 @@
 'use client'
 
-import { PageLoadingSkeleton } from 'components/page-loading-skeleton'
+import { TripsRouteSkeleton } from 'components/skeleton/trip-skeletons'
 
-// Instant navigation boundary for opening an expense. The detail reads from
-// already-loaded trip context, so this only covers the brief route transition —
-// enough to keep the tap from feeling dead.
+// Instant on-tap placeholder while the route payload + data load. The
+// boundary also covers nested routes, so the skeleton is chosen from the URL
+// (see TripsRouteSkeleton) — it always matches the page being opened.
 export default function Loading() {
-    return <PageLoadingSkeleton cards={3} />
+    return <TripsRouteSkeleton />
 }

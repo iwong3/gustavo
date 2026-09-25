@@ -1,10 +1,10 @@
 'use client'
 
-import { PageLoadingSkeleton } from 'components/page-loading-skeleton'
+import { HealthRouteSkeleton } from 'components/skeleton/health-skeletons'
 
-// Instant navigation boundary for the health dashboard — a heavy page with many
-// queries, so tapping "Health" shows structure immediately instead of a dead
-// wait while the route payload + data load.
+// Instant on-tap placeholder while the route payload + data load. This
+// boundary covers every /health/* route, so the skeleton is chosen from the
+// URL (see HealthRouteSkeleton) — it matches the page being opened.
 export default function Loading() {
-    return <PageLoadingSkeleton cards={5} />
+    return <HealthRouteSkeleton />
 }

@@ -5,26 +5,26 @@ import {
     IconArrowLeft,
     IconHeartbeat,
     IconHome,
-    IconMenu2,
     IconPlaneDeparture,
     IconSettings,
     IconWorld,
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 
-import { tripTools } from '@/lib/trip-tools'
-
-import { colors } from '@/lib/colors'
+import { colors, pressIconSx } from '@/lib/colors'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
-import NavDrawer from 'components/nav-drawer'
+import { useExitTo, useTrackPreviousPath } from 'hooks/use-exit-to'
+import { scrollMainToTop, useScrollRestoration } from 'hooks/use-scroll-restoration'
+import { getBackHref } from 'utils/back-href'
 import {
     PageActionBarProvider,
     usePageActionBarActive,
 } from 'components/page-action-bar'
+import { ToastHost } from 'components/toast-host'
 import { TripHeaderControls } from 'components/trip-header-controls'
 import { FabProvider, useFab } from 'providers/fab-provider'
 
@@ -69,7 +69,13 @@ const useIsomorphicLayoutEffect =
     typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 // Bottom tab bar — hidden while a leaf page's PageActionBar occupies its slot
-function BottomTabBar({ activeTab }: { activeTab: string }) {
+function BottomTabBar({
+    activeTab,
+    pathname,
+}: {
+    activeTab: string
+    pathname: string
+}) {
     const actionBarActive = usePageActionBarActive()
     if (actionBarActive) return null
     return (
@@ -96,6 +102,12 @@ function BottomTabBar({ activeTab }: { activeTab: string }) {
                         key={tab.href}
                         component={Link}
                         href={tab.href}
+                        // Re-tapping the tab you're on scrolls it to the top
+                        onClick={(e: React.MouseEvent) => {
+                            if (pathname !== tab.href) return
+                            e.preventDefault()
+                            scrollMainToTop()
+                        }}
                         sx={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -106,7 +118,7 @@ function BottomTabBar({ activeTab }: { activeTab: string }) {
                             height: '100%',
                             textDecoration: 'none',
                             color: colors.primaryBrown,
-                            transition: 'color 0.15s',
+                            ...pressIconSx,
                         }}>
                         <Icon
                             size={22}
@@ -116,11 +128,7 @@ function BottomTabBar({ activeTab }: { activeTab: string }) {
                                     ? colors.secondaryYellow
                                     : 'none'
                             }
-                            color={
-                                isActive
-                                    ? colors.primaryBrown
-                                    : colors.primaryBrown
-                            }
+                            color={colors.primaryBrown}
                         />
                         <Typography
                             sx={{
@@ -137,123 +145,74 @@ function BottomTabBar({ activeTab }: { activeTab: string }) {
     )
 }
 
-// Header back button — static URL hierarchy derived from the pathname (not
-// browser history), so back always goes "up" even after a deep link or
-// refresh. Pages can override one hop with ?from=<trip-tool-path> (e.g. the
-// insights list links expenses with ?from=graphs so back returns there).
-function HeaderBackButton({ pathname }: { pathname: string }) {
-    const searchParams = useSearchParams()
+// Quick fade/scale-in when the header corner swaps between Gus and the arrow
+const cornerFadeInSx = {
+    'animation': 'headerCornerIn 160ms ease-out',
+    '@keyframes headerCornerIn': {
+        from: { opacity: 0, transform: 'scale(0.8)' },
+        to: { opacity: 1, transform: 'scale(1)' },
+    },
+}
 
-    let backHref: string | null = null
-    // /gustavo/trips/<slug>/expenses/<id>/edit → expense detail
-    const expenseEditMatch = pathname.match(
-        /^\/gustavo\/trips\/([^/]+)\/expenses\/([^/]+)\/edit$/
-    )
-    // /gustavo/trips/<slug>/expenses/<id|new> → expenses list (or ?from tool)
-    const expenseDetailMatch = pathname.match(
-        /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
-    )
-    // /gustavo/trips/<slug>/debts/<pair> → debts page
-    const debtPairMatch = pathname.match(
-        /^\/gustavo\/trips\/([^/]+)\/debts\/.+$/
-    )
-    // /gustavo/health/exercise/<id>/edit → workout detail; /<id> → workouts
-    const workoutEditMatch = pathname.match(
-        /^\/gustavo\/health\/exercise\/(\d+)\/edit$/
-    )
-    const workoutDetailMatch = pathname.match(
-        /^\/gustavo\/health\/exercise\/\d+$/
-    )
-    // /gustavo/health/<section>[/...]/new or /<id>/edit → the list it came from
-    const healthFormMatch = pathname.match(
-        /^(\/gustavo\/health\/[^/]+(?:\/[^/]+)*?)\/(?:new|[^/]+\/edit)$/
-    )
-    // /gustavo/health/<section>/(routines|manage|groups) → the section list
-    const healthSubListMatch = pathname.match(
-        /^(\/gustavo\/health\/[^/]+)\/(?:routines|manage|groups)$/
-    )
-    // /gustavo/trips/<slug>/edit → trip details
-    const tripEditMatch = pathname.match(
-        /^\/gustavo\/trips\/([^/]+)\/edit$/
-    )
-    if (expenseEditMatch) {
-        backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
-    } else if (expenseDetailMatch) {
-        const from = searchParams.get('from')
-        // A pair drill-down links its expenses with ?from=debts&pair=<d>-<c>
-        // so back returns to that specific pair, not the debts overview.
-        const pair = searchParams.get('pair')
-        if (from === 'debts' && pair && /^\d+-\d+$/.test(pair)) {
-            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/debts/${pair}`
-        } else {
-            const fromTool =
-                from &&
-                from !== 'expenses' &&
-                tripTools.some((t) => t.path === from)
-                    ? from
-                    : null
-            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
-        }
-    } else if (debtPairMatch) {
-        backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
-    } else if (tripEditMatch) {
-        backHref = `/gustavo/trips/${tripEditMatch[1]}/details`
-    }
-    // /gustavo/trips/map (world map) → trips list. Explicit so it doesn't rely
-    // on the legacy hub-URL branch treating "map" as a trip slug.
-    else if (pathname === '/gustavo/trips/map') {
-        backHref = '/gustavo/trips'
-    }
-    // /gustavo/trips/<slug>/<tool> → trips list
-    else if (/^\/gustavo\/trips\/[^/]+\/.+$/.test(pathname)) {
-        backHref = '/gustavo/trips'
-    }
-    // /gustavo/trips/[slug] (legacy hub URL) → trips list
-    else if (/^\/gustavo\/trips\/[^/]+$/.test(pathname)) {
-        backHref = '/gustavo/trips'
-    }
-    // /gustavo/trips → home
-    else if (pathname === '/gustavo/trips') {
-        backHref = '/gustavo'
-    }
-    // Page-style forms under a health section go back to what they were
-    // opened from: /health/exercise/new and /health/exercise/<id>/edit →
-    // /health/exercise; /health/exercise/routines/new → .../routines
-    else if (workoutEditMatch) {
-        backHref = `/gustavo/health/exercise/${workoutEditMatch[1]}`
-    } else if (workoutDetailMatch) {
-        backHref = '/gustavo/health/exercise'
-    } else if (healthFormMatch) {
-        backHref = healthFormMatch[1]
-    }
-    // Sub-list pages under a health section → that section:
-    // /health/exercise/routines → workouts; /health/supplements/manage and
-    // /health/supplements/groups → supplements
-    else if (healthSubListMatch) {
-        backHref = healthSubListMatch[1]
-    }
-    // /gustavo/health/<sub> → health
-    else if (/^\/gustavo\/health\/.+$/.test(pathname)) {
-        backHref = '/gustavo/health'
-    }
-    // /gustavo/health → home
-    else if (pathname === '/gustavo/health') {
-        backHref = '/gustavo'
-    }
-    // /gustavo/settings/<sub> → settings
-    else if (/^\/gustavo\/settings\/.+$/.test(pathname)) {
-        backHref = '/gustavo/settings'
-    }
-    // /gustavo/settings → home
-    else if (pathname === '/gustavo/settings') {
-        backHref = '/gustavo'
-    }
+// Header top-left corner: Gus on tab roots, back arrow on deeper pages,
+// nothing on home. The target comes from getBackHref (static URL hierarchy);
+// when that parent is the history entry behind us it pops history instead
+// (see useExitTo), so it matches native swipe-back.
+function HeaderCornerButton({ pathname }: { pathname: string }) {
+    const searchParams = useSearchParams()
+    const exitTo = useExitTo()
+
+    const backHref = getBackHref(pathname, searchParams)
     if (!backHref) return null
+    // Pop history when the parent is the page we came from, so the button
+    // and native swipe-back agree (a plain Link would push the parent, and
+    // swiping back afterwards returns to this page)
+    const leave = (e: React.MouseEvent) => {
+        e.preventDefault()
+        exitTo(backHref)
+    }
+
+    // Tab roots show Gus (the home avatar shrunk into the corner); tapping
+    // him goes home. Deeper pages show a back arrow. `key` remounts on a
+    // Gus ↔ arrow swap so the fade-in replays.
+    if (TAB_ROOTS.has(pathname)) {
+        return (
+            <Box
+                key="gus"
+                component={Link}
+                href={backHref}
+                onClick={leave}
+                aria-label="Home"
+                sx={{
+                    ...cornerFadeInSx,
+                    'display': 'block',
+                    'borderRadius': '50%',
+                    'transition': 'transform 0.1s ease-out',
+                    '&:active': { transform: 'scale(0.88)' },
+                }}>
+                <img
+                    src="/gus-fring.png"
+                    alt="Gustavo"
+                    style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                    }}
+                />
+            </Box>
+        )
+    }
     return (
         <Box
+            key="back"
             component={Link}
             href={backHref}
+            onClick={leave}
+            aria-label="Back"
             sx={{
+                ...cornerFadeInSx,
                 'display': 'flex',
                 'alignItems': 'center',
                 'justifyContent': 'center',
@@ -286,6 +245,10 @@ const tabs = [
     { label: 'Health', href: '/gustavo/health', icon: IconHeartbeat },
     { label: 'Settings', href: '/gustavo/settings', icon: IconSettings },
 ]
+// Tab roots other than home — their header corner shows Gus, not an arrow
+const TAB_ROOTS = new Set(
+    tabs.map((t) => t.href).filter((href) => href !== '/gustavo')
+)
 
 
 export default function GustavoLayout({
@@ -294,21 +257,18 @@ export default function GustavoLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    useTrackPreviousPath()
     const isHome = pathname === '/gustavo'
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-
-    // Header menu button — hamburger on home (the page already shows a big Gus,
-    // so a second one up here is redundant), Gus avatar everywhere else.
-    const menuButtonRef = useRef<HTMLDivElement>(null)
+    // Header top-left corner — empty on home (the page already shows a big
+    // Gus), Gus on tab roots, back arrow on deeper pages.
+    const cornerRef = useRef<HTMLDivElement>(null)
     const prevPathRef = useRef(pathname)
 
-    // Scroll main content to top on route change
-    useEffect(() => {
-        document.getElementById('main-scroll')?.scrollTo(0, 0)
-    }, [pathname])
+    // Back restores where you were on the page; forward starts at the top
+    useScrollRestoration(pathname)
 
-    // Gus morphs between the big home avatar and the corner menu icon as you
+    // Gus morphs between the big home avatar and the header corner as you
     // cross the home boundary. The header persists across routes, so we animate
     // the real elements (no clone / cross-route shared-element transition).
     // Layout effect so the first keyframe lands before the browser paints the
@@ -318,11 +278,13 @@ export default function GustavoLayout({
         prevPathRef.current = pathname
         if (prev === pathname) return
 
-        const leavingHome = prev === '/gustavo' && pathname !== '/gustavo'
+        // Leaving only flies when the corner is Gus (a tab root) — a history
+        // pop from home onto a deeper page shows the arrow there instead
+        const leavingHome = prev === '/gustavo' && TAB_ROOTS.has(pathname)
         const arrivingHome = prev !== '/gustavo' && pathname === '/gustavo'
         if (!leavingHome && !arrivingHome) return
 
-        const btn = menuButtonRef.current
+        const btn = cornerRef.current
         if (!btn || typeof btn.animate !== 'function') return
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
             return
@@ -369,7 +331,7 @@ export default function GustavoLayout({
                 btnCenter
             )
         } else {
-            // Arriving home: grow the big avatar out of the corner menu button.
+            // Arriving home: grow the big avatar out of the header corner.
             // #main-scroll is a scroll container, so it clips anything above its
             // top edge (the header line) — animate a fixed-position clone on the
             // body instead, so the fly-up isn't cut off, and hide the real
@@ -443,10 +405,7 @@ export default function GustavoLayout({
         <ClientOnly>
             <FabProvider>
                 <PageActionBarProvider>
-                <NavDrawer
-                    open={drawerOpen}
-                    onClose={() => setDrawerOpen(false)}
-                />
+                <ToastHost />
                 <Box
                     sx={{
                         display: 'flex',
@@ -473,49 +432,27 @@ export default function GustavoLayout({
                                 backgroundColor: colors.secondaryYellow,
                                 zIndex: 10,
                             }}>
-                            {/* Menu button — opens nav drawer. Hamburger on the
-                                home page (which already shows a big Gus), Gus
-                                avatar on every other page. */}
+                            {/* Top-left corner — Gus on tab roots, back arrow
+                                on deeper pages, empty (but laid out, as the
+                                fly animation's anchor) on home. The wrapper
+                                lives outside Suspense so its ref always exists.
+                                useSearchParams needs a Suspense boundary. */}
                             <Box
-                                ref={menuButtonRef}
-                                onClick={() => setDrawerOpen(true)}
-                                aria-label="Open menu"
+                                ref={cornerRef}
                                 sx={{
-                                    'display': 'flex',
-                                    'alignItems': 'center',
-                                    'justifyContent': 'center',
-                                    'cursor': 'pointer',
-                                    'borderRadius': '50%',
-                                    'padding': '6px',
-                                    // Pull the tap-target padding out of the inset
-                                    // so the icon sits flush at 16px
-                                    'marginLeft': '-6px',
-                                    'transition':
-                                        'transform 0.1s ease-out, background-color 0.1s',
-                                    '&:active': {
-                                        backgroundColor: 'rgba(0,0,0,0.1)',
-                                        transform: 'scale(0.88)',
-                                    },
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 36,
+                                    height: 36,
+                                    flexShrink: 0,
+                                    // + the title box's 4px paddingLeft = the old 10px gap
+                                    marginRight: '6px',
+                                    visibility: isHome ? 'hidden' : 'visible',
                                 }}>
-                                {isHome ? (
-                                    <IconMenu2
-                                        size={28}
-                                        stroke={2}
-                                        color={colors.primaryBlack}
-                                    />
-                                ) : (
-                                    <img
-                                        src="/gus-fring.png"
-                                        alt="Gustavo"
-                                        style={{
-                                            width: 36,
-                                            height: 36,
-                                            borderRadius: '100%',
-                                            objectFit: 'cover',
-                                            display: 'block',
-                                        }}
-                                    />
-                                )}
+                                <Suspense fallback={null}>
+                                    <HeaderCornerButton pathname={pathname} />
+                                </Suspense>
                             </Box>
 
                             {/* Trip name + tool switcher (trip pages) / spacer */}
@@ -525,13 +462,15 @@ export default function GustavoLayout({
                                     minWidth: 0,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    paddingX: 0.5,
+                                    // Left only — the right edge is the
+                                    // header's 16px inset, like the content
+                                    paddingLeft: 0.5,
                                 }}>
                                 <TripHeaderControls />
                             </Box>
 
                             {/* Trips map — square button, same chrome as the
-                                back button beside it. Only on the trips list
+                                header back button. Only on the trips list
                                 page; opens the "where we've been" map. Blue
                                 globe reads as "explore". */}
                             {pathname === '/gustavo/trips' && (
@@ -545,8 +484,6 @@ export default function GustavoLayout({
                                         'justifyContent': 'center',
                                         'width': 34,
                                         'height': 34,
-                                        // gap between this and the back button
-                                        'marginRight': 1,
                                         'flexShrink': 0,
                                         'borderRadius': '4px',
                                         'cursor': 'pointer',
@@ -564,12 +501,6 @@ export default function GustavoLayout({
                                     <IconWorld size={20} stroke={2} />
                                 </Box>
                             )}
-
-                            {/* Back button — shows on sub-pages.
-                                useSearchParams needs a Suspense boundary */}
-                            <Suspense fallback={null}>
-                                <HeaderBackButton pathname={pathname} />
-                            </Suspense>
                         </Box>
 
                         {/* Main content — fills space between header and bottom nav, scrolls within */}
@@ -614,7 +545,7 @@ export default function GustavoLayout({
                         />
 
                         {/* Bottom tab bar (hidden while a leaf page's action bar is up) */}
-                        <BottomTabBar activeTab={activeTab} />
+                        <BottomTabBar activeTab={activeTab} pathname={pathname} />
                         {/* FAB overlay — fixed to content area bounds, above scroll container */}
                         <ContentFab />
                     </Box>

@@ -6,13 +6,15 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, pressRowSx } from '@/lib/colors'
 import { isTarget } from '@/lib/health/muscle-groups'
 import { queryKeys } from '@/lib/query-keys'
 import {
     HealthPageHeader,
     HealthPageLayout,
 } from 'components/health/health-page-layout'
+import { RoutinesSkeleton } from 'components/skeleton/health-skeletons'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { selectedBg, selectedBorder } from 'components/health/muscle-group-grid'
 import {
     SortableDragHandle,
@@ -33,7 +35,7 @@ const NEW_URL = '/gustavo/health/exercise/routines/new'
 export default function RoutinesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const { presets, loading } = useWorkoutData()
+    const { presets, pending } = useWorkoutData()
     const reorder = useReorderWorkoutPresets()
 
     useEffect(() => {
@@ -54,13 +56,14 @@ export default function RoutinesPage() {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.health.presets.all,
             }),
+        meta: { errorToast: "Couldn't delete that routine. Try again." },
     })
 
     const editUrl = (id: number) =>
         `/gustavo/health/exercise/routines/${id}/edit`
 
     return (
-        <HealthPageLayout loading={loading}>
+        <HealthPageLayout loading={pending.presets} skeleton={<RoutinesSkeleton />}>
             <HealthPageHeader
                 icon={
                     <IconBolt
@@ -94,6 +97,7 @@ export default function RoutinesPage() {
                         }}>
                         {presets.map((p) => (
                             <SortablePresetRow key={p.id} id={p.id}>
+                            <PrefetchOnVisible href={editUrl(p.id)}>
                                 <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                                     <SwipeableRow
                                         canEdit
@@ -117,10 +121,7 @@ export default function RoutinesPage() {
                                                 'cursor': 'pointer',
                                                 'backgroundColor':
                                                     colors.primaryWhite,
-                                                '&:active': {
-                                                    backgroundColor:
-                                                        colors.secondaryYellow,
-                                                },
+                                                '&:active': pressRowSx['&:active'],
                                             }}>
                                             <SortableDragHandle id={p.id} />
                                             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -183,6 +184,7 @@ export default function RoutinesPage() {
                                         </Box>
                                     </SwipeableRow>
                                 </Box>
+                            </PrefetchOnVisible>
                             </SortablePresetRow>
                         ))}
                     </Box>

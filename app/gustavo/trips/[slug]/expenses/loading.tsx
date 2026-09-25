@@ -1,10 +1,10 @@
 'use client'
 
-import { ReceiptsListSkeleton } from 'components/receipts/receipts-list-skeleton'
+import { TripsRouteSkeleton } from 'components/skeleton/trip-skeletons'
 
-// Instant navigation boundary for entering a trip (its expenses list). Shows on
-// tap while the route payload + trip data load, so going into a trip isn't a
-// dead click. The trip layout's own loading state reuses the same skeleton.
+// Instant on-tap placeholder while the route payload + data load. The
+// boundary also covers nested routes, so the skeleton is chosen from the URL
+// (see TripsRouteSkeleton) — it always matches the page being opened.
 export default function Loading() {
-    return <ReceiptsListSkeleton />
+    return <TripsRouteSkeleton />
 }

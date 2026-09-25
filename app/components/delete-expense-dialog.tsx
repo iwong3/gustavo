@@ -1,19 +1,6 @@
 'use client'
 
-import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography,
-} from '@mui/material'
-import { colors } from '@/lib/colors'
-import {
-    destructiveButtonSx,
-    dialogPaperSx,
-    secondaryButtonSx,
-} from '@/lib/form-styles'
+import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
 
 import type { Expense } from '@/lib/types'
 
@@ -22,37 +9,29 @@ type Props = {
     expense: Expense | null
     onClose: () => void
     onConfirm: () => void
+    /** True while the delete request is in flight. */
+    busy?: boolean
+    /** Why the last attempt failed — shown inline. */
+    error?: string | null
 }
 
-export default function DeleteExpenseDialog({ open, expense, onClose, onConfirm }: Props) {
+export default function DeleteExpenseDialog({
+    open,
+    expense,
+    onClose,
+    onConfirm,
+    busy,
+    error,
+}: Props) {
     return (
-        <Dialog
+        <ConfirmDeleteDialog
             open={open}
+            title="Delete expense?"
             onClose={onClose}
-            maxWidth="xs"
-            fullWidth
-            slotProps={{ paper: { sx: dialogPaperSx } }}>
-            <DialogTitle
-                sx={{
-                    fontWeight: 700,
-                    color: colors.primaryRed,
-                    fontSize: 18,
-                }}>
-                Delete expense?
-            </DialogTitle>
-            <DialogContent>
-                <Typography sx={{ fontSize: 14 }}>
-                    Are you sure you want to delete <strong>{expense?.name}</strong>?
-                </Typography>
-            </DialogContent>
-            <DialogActions sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
-                <Button onClick={onClose} sx={secondaryButtonSx}>
-                    Cancel
-                </Button>
-                <Button onClick={onConfirm} sx={destructiveButtonSx}>
-                    Delete
-                </Button>
-            </DialogActions>
-        </Dialog>
+            onConfirm={onConfirm}
+            busy={busy}
+            error={error}>
+            Are you sure you want to delete <strong>{expense?.name}</strong>?
+        </ConfirmDeleteDialog>
     )
 }

@@ -1,10 +1,9 @@
 'use client'
 
-import { colors } from '@/lib/colors'
+import { colors, pressTextSx } from '@/lib/colors'
 import type { ActivityEntry } from '@/lib/types'
 import {
     Box,
-    CircularProgress,
     Collapse,
     IconButton,
     Menu,
@@ -19,19 +18,27 @@ import {
     IconFilter,
 } from '@tabler/icons-react'
 import { useTripData } from 'providers/trip-data-provider'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { fetchActivity } from 'utils/api'
 import type { ActivityResponse } from 'utils/api'
 import { InitialsIcon } from 'utils/icons'
+import { queryKeys } from '@/lib/query-keys'
+import { ActivitySkeleton } from 'components/skeleton/trip-skeletons'
+import { GoneState } from 'components/gone-state'
 import { ActivityCard, buildActivityCards, formatTimestamp } from './activity-card'
 
 // ── Component ──
 
 export default function ActivityPage() {
     const { trip } = useTripData()
-    const [data, setData] = useState<ActivityResponse | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
+    // Cached + persisted like the rest of the trip, so revisits are instant.
+    // Under the trip's detail key: pull-to-refresh / saves refresh it too.
+    const activityQuery = useQuery<ActivityResponse>({
+        queryKey: queryKeys.trips.activity(trip.id),
+        queryFn: () => fetchActivity(trip.id),
+    })
+    const data = activityQuery.data ?? null
     const [sortNewest, setSortNewest] = useState(true)
     const [filterUser, setFilterUser] = useState<number | null>(null)
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -47,22 +54,6 @@ export default function ActivityPage() {
             return next
         })
     }
-
-    const loadActivity = useCallback(async () => {
-        try {
-            setLoading(true)
-            const result = await fetchActivity(trip.id)
-            setData(result)
-        } catch {
-            setError(true)
-        } finally {
-            setLoading(false)
-        }
-    }, [trip.id])
-
-    useEffect(() => {
-        loadActivity()
-    }, [loadActivity])
 
     const ignoredFields = useMemo(
         () => new Set(data?.ignoredFields ?? []),
@@ -127,24 +118,15 @@ export default function ActivityPage() {
         return groups
     }, [entries])
 
-    if (loading) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    marginTop: 4,
-                }}>
-                <CircularProgress sx={{ color: colors.primaryYellow }} />
-            </Box>
-        )
-    }
+    if (activityQuery.isPending) return <ActivitySkeleton />
 
-    if (error) {
+    if (activityQuery.isError) {
         return (
-            <Box sx={{ padding: 3, textAlign: 'center' }}>
-                <Typography>Failed to load activity log.</Typography>
-            </Box>
+            <GoneState
+                title="Couldn't load activity"
+                detail="Check your connection and try again."
+                action={{ label: 'Try again', onClick: () => activityQuery.refetch() }}
+            />
         )
     }
 
@@ -329,7 +311,7 @@ export default function ActivityPage() {
                                     'cursor': 'pointer',
                                     'marginTop': 1,
                                     'userSelect': 'none',
-                                    '&:hover': { opacity: 0.7 },
+                                    ...pressTextSx,
                                 }}>
                                 {isCollapsed ? (
                                     <IconChevronRight

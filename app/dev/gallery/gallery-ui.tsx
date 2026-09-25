@@ -2,11 +2,9 @@
 
 /** Shared UI for the dev component gallery — labeled specimens on a phone-width canvas. */
 import Link from 'next/link'
-import { useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import { IconArrowLeft } from '@tabler/icons-react'
 
-import NavDrawer from 'components/nav-drawer'
 import { colors, cardSx, hardShadow } from '@/lib/colors'
 
 /** Sections shown on the gallery index. Add an entry when adding a section page. */
@@ -20,41 +18,35 @@ export const sections = [
     { slug: 'insights', title: 'Insights', description: 'My Spend chart + share list' },
     { slug: 'forms', title: 'Forms', description: 'Page-style forms (expense, trip, workout, routine) + delete dialogs — quick-switch to compare' },
     { slug: 'activity', title: 'Activity', description: 'Audit-log rows — diffs, participant lifecycle, restores' },
-    { slug: 'nav-drawer', title: 'Nav drawer', description: 'Teleport index — expandable trips/health, active band, pinned account footer' },
+    { slug: 'loading', title: 'Loading skeletons', description: 'Every page skeleton (trips, health hub, workouts) — compare with the loaded pages' },
     { slug: 'health', title: 'Health', description: 'Workout detail page; training grid — 14-day log, freshness dials, empty states' },
 ] as const
 
 const PHONE_WIDTH = 390
 
-/**
- * Gus avatar button — opens the app's nav drawer, the way back into the app
- * from anywhere in the gallery. Raised above the forms page's z-1400 header.
- */
+/** Gus avatar button — links home, the way back into the app from the gallery. */
 export function GusMenuButton() {
-    const [menuOpen, setMenuOpen] = useState(false)
     return (
-        <>
-            <Box
-                onClick={() => setMenuOpen(true)}
-                sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    ...hardShadow,
-                    '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
-                    transition: 'transform 0.1s, box-shadow 0.1s',
-                }}>
-                <img
-                    src="/gus-fring.png"
-                    alt="Open menu"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-            </Box>
-            <NavDrawer open={menuOpen} onClose={() => setMenuOpen(false)} zIndex={1450} />
-        </>
+        <Box
+            component={Link}
+            href="/gustavo"
+            sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                flexShrink: 0,
+                ...hardShadow,
+                '&:active': { boxShadow: 'none', transform: 'translate(1px, 1px)' },
+                transition: 'transform 0.1s, box-shadow 0.1s',
+            }}>
+            <img
+                src="/gus-fring.png"
+                alt="Back to the app"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+        </Box>
     )
 }
 

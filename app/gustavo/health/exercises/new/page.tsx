@@ -1,17 +1,17 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useRouter } from 'next/navigation'
 
 import ExerciseForm from 'components/health/exercise-form'
 import { HealthPageLayout } from 'components/health/health-page-layout'
 import { useExerciseLibrary } from 'hooks/useExerciseLibrary'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/exercises'
 
 /** New Exercise — /gustavo/health/exercises/new */
 export default function AddExercisePage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
     const { muscleGroups, loading } = useExerciseLibrary()
 
     if (loading) return <HealthPageLayout loading>{null}</HealthPageLayout>
@@ -27,8 +27,8 @@ export default function AddExercisePage() {
             <ExerciseForm
                 mode="add"
                 muscleGroups={muscleGroups}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )

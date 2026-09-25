@@ -99,6 +99,8 @@ export default function FormDrawer({ open, onClose, children }: Props) {
             {/* Drawer panel */}
             <Box
                 ref={panelRef}
+                // Marks unsaved-input UI as open (PWAUpdatePrompt waits for it)
+                data-form-open=""
                 sx={{
                     position: 'fixed',
                     top: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px) + 8px)`,

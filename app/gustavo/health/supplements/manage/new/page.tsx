@@ -1,15 +1,15 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useRouter } from 'next/navigation'
 
 import SupplementForm from 'components/health/supplement-form'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/supplements/manage'
 
 /** New Supplement — /gustavo/health/supplements/manage/new */
 export default function AddSupplementPage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
 
     return (
         <Box
@@ -21,8 +21,8 @@ export default function AddSupplementPage() {
             }}>
             <SupplementForm
                 mode="add"
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )

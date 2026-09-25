@@ -1,10 +1,12 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { IconEdit, IconTrash } from '@tabler/icons-react'
-import { useParams, useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useExitTo } from 'hooks/use-exit-to'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
+import type { Expense } from '@/lib/types'
 
 import { colors } from '@/lib/colors'
 import { useRefresh } from 'providers/refresh-provider'
@@ -14,7 +16,11 @@ import {
     canEditExpense as canEditExpenseFn,
     canDeleteExpense as canDeleteExpenseFn,
 } from 'utils/permissions'
-import { deleteExpense } from 'utils/api'
+import { ConflictError, deleteExpense } from 'utils/api'
+import { getBackHref } from 'utils/back-href'
+import { deleteErrorMessage } from 'utils/delete-error'
+import { removeCachedExpense } from 'utils/expense-cache'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { DrawerHeader } from 'components/receipts/drawer/drawer-header'
 import { DrawerReceipt } from 'components/receipts/drawer/drawer-receipt'
@@ -24,11 +30,16 @@ import { DrawerNotes } from 'components/receipts/drawer/drawer-notes'
 import { DrawerMetadataFooter } from 'components/receipts/drawer/drawer-metadata-footer'
 
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
+import { GoneState } from 'components/gone-state'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 
 export default function ExpenseDetailPage() {
     const { id } = useParams<{ slug: string; id: string }>()
     const router = useRouter()
+    const exitTo = useExitTo()
+    const queryClient = useQueryClient()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
 
     const { trip } = useTripData()
     const {
@@ -39,11 +50,30 @@ export default function ExpenseDetailPage() {
     const { onRefresh } = useRefresh()
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+    const [deleteError, setDeleteError] = useState<string | null>(null)
+
+    // Same place the header ← goes — honours ?from=graphs / ?from=debts&pair
+    const backHref =
+        getBackHref(pathname, searchParams) ??
+        `/gustavo/trips/${trip.slug}/expenses`
 
     // Compare as strings: expense ids are BIGINTs that the pg driver returns
     // as strings at runtime (lib/types.ts says number, but that's not what
     // JSON actually carries), so `e.id === Number(id)` never matches
-    const expense = allTripExpenses.find((e) => String(e.id) === id) ?? null
+    // Just deleted and on our way out: keep rendering the last copy so the
+    // page doesn't flash "not here anymore" before the navigation lands
+    const [leavingExpense, setLeavingExpense] = useState<Expense | null>(null)
+    const expense =
+        allTripExpenses.find((e) => String(e.id) === id) ?? leavingExpense
+
+    // Warm the edit form so tapping Edit opens it instantly
+    const expenseId = expense?.id
+    useEffect(() => {
+        if (expenseId != null) {
+            router.prefetch(`/gustavo/trips/${trip.slug}/expenses/${expenseId}/edit`)
+        }
+    }, [router, trip.slug, expenseId])
 
     // Position within the current (filtered) list — the receipt's "EXP 17/32"
     // counts the list the user actually came from, not the whole trip
@@ -60,18 +90,14 @@ export default function ExpenseDetailPage() {
 
     if (!expense) {
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    width: '100%',
-                    maxWidth: 450,
-                    padding: 4,
-                }}>
-                <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-                    This expense no longer exists.
-                </Typography>
-            </Box>
+            <GoneState
+                title="This expense isn't here anymore"
+                detail="It may have been deleted."
+                action={{
+                    label: 'Back to expenses',
+                    onClick: () => exitTo(backHref),
+                }}
+            />
         )
     }
 
@@ -173,11 +199,30 @@ export default function ExpenseDetailPage() {
             <DeleteExpenseDialog
                 open={deleteDialogOpen}
                 expense={expense}
-                onClose={() => setDeleteDialogOpen(false)}
-                onConfirm={async () => {
-                    await deleteExpense(trip.id, expense.id, expense.updatedAt)
+                busy={deleting}
+                error={deleteError}
+                onClose={() => {
                     setDeleteDialogOpen(false)
-                    router.replace(`/gustavo/trips/${trip.slug}/expenses`)
+                    setDeleteError(null)
+                }}
+                onConfirm={async () => {
+                    setDeleting(true)
+                    setDeleteError(null)
+                    try {
+                        await deleteExpense(trip.id, expense.id, expense.updatedAt)
+                    } catch (err) {
+                        setDeleting(false)
+                        setDeleteError(deleteErrorMessage(err, 'expense'))
+                        // Stale copy — pull the latest so a retry has a fresh version
+                        if (err instanceof ConflictError) onRefresh()
+                        return
+                    }
+                    setDeleting(false)
+                    setDeleteDialogOpen(false)
+                    // Gone from the list before we land on it
+                    setLeavingExpense(expense)
+                    removeCachedExpense(queryClient, trip.id, expense.id)
+                    exitTo(backHref)
                     onRefresh()
                 }}
             />

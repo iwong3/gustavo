@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 import SupplementLogForm from 'components/health/supplement-log-form'
 import { HealthPageLayout } from 'components/health/health-page-layout'
 import { useSupplementData } from 'hooks/useSupplementData'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/supplements'
 const MANAGE_URL = `${LIST_URL}/manage`
@@ -17,6 +18,7 @@ const MANAGE_URL = `${LIST_URL}/manage`
  */
 function LogSupplementsPage() {
     const router = useRouter()
+    const exitTo = useExitTo()
     const searchParams = useSearchParams()
     const { supplements, logs, loading } = useSupplementData()
 
@@ -38,8 +40,8 @@ function LogSupplementsPage() {
                 initialDate={date ?? undefined}
                 supplements={supplements}
                 allLogs={logs}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
                 onAddSupplements={() => router.push(MANAGE_URL)}
             />
         </Box>

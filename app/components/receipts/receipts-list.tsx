@@ -11,12 +11,15 @@ import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
-import DeleteExpenseDialog from 'components/delete-expense-dialog'
+import { showToast } from 'components/toast-store'
 import { useRefresh } from 'providers/refresh-provider'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { canEditExpense, canDeleteExpense } from 'utils/permissions'
-import { deleteExpense } from 'utils/api'
+import { ConflictError, deleteExpense } from 'utils/api'
+import { deleteErrorMessage } from 'utils/delete-error'
+import { removeCachedExpense } from 'utils/expense-cache'
+import { useQueryClient } from '@tanstack/react-query'
 
 import type { Expense } from '@/lib/types'
 
@@ -35,6 +38,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const { filteredExpenses, getUsdValue, isSearching } = useSpendData()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
+    const queryClient = useQueryClient()
     const router = useRouter()
 
     const sortField = useSortStore((s) => s.field)
@@ -43,7 +47,23 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
 
     // Swipe delete confirmation dialog
-    const [swipeDeleteExpense, setSwipeDeleteExpense] = useState<Expense | null>(null)
+    // Swipe → tap Delete is the confirmation, so delete straight away
+    // The row disappears immediately and comes back if the delete fails.
+    const handleSwipeDelete = useCallback(
+        async (expense: Expense) => {
+            const restore = removeCachedExpense(queryClient, trip.id, expense.id)
+            try {
+                await deleteExpense(trip.id, expense.id, expense.updatedAt)
+                onRefresh()
+            } catch (err) {
+                restore()
+                showToast(deleteErrorMessage(err, 'expense'))
+                // Stale copy — pull the latest so a retry has a fresh version
+                if (err instanceof ConflictError) onRefresh()
+            }
+        },
+        [queryClient, trip.id, onRefresh]
+    )
 
     const displayData = expenses || filteredExpenses
     // Two ways the date grouping steps aside, and they look different:
@@ -151,7 +171,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                             canEdit={rowCanEdit}
                                             canDelete={rowCanDelete}
                                             onEdit={() => handleEdit(row)}
-                                            onDelete={() => setSwipeDeleteExpense(row)}
+                                            onDelete={() => handleSwipeDelete(row)}
                                             backgroundColor={
                                                 row.conversionError
                                                     ? '#ffe8e5'
@@ -221,7 +241,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                                 canEdit={rowCanEdit}
                                                 canDelete={rowCanDelete}
                                                 onEdit={() => handleEdit(row)}
-                                                onDelete={() => setSwipeDeleteExpense(row)}
+                                                onDelete={() => handleSwipeDelete(row)}
                                                 backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
                                                 showBottomBorder={false}
                                             >
@@ -277,7 +297,7 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                                         canEdit={rowCanEdit}
                                                         canDelete={rowCanDelete}
                                                         onEdit={() => handleEdit(row)}
-                                                        onDelete={() => setSwipeDeleteExpense(row)}
+                                                        onDelete={() => handleSwipeDelete(row)}
                                                         backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
                                                         showBottomBorder={i < group.expenses.length - 1}
                                                     >
@@ -296,24 +316,6 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                     )
                 })}
             </Box>
-
-            {/* Swipe delete dialog */}
-            <DeleteExpenseDialog
-                open={swipeDeleteExpense !== null}
-                expense={swipeDeleteExpense}
-                onClose={() => setSwipeDeleteExpense(null)}
-                onConfirm={async () => {
-                    if (swipeDeleteExpense) {
-                        await deleteExpense(
-                            trip.id,
-                            swipeDeleteExpense.id,
-                            swipeDeleteExpense.updatedAt
-                        )
-                    }
-                    setSwipeDeleteExpense(null)
-                    onRefresh()
-                }}
-            />
         </>
     )
 }

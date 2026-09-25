@@ -145,7 +145,7 @@ function StatusRow({
  * no trips yet (nothing to flap through).
  */
 function TripsSection() {
-    const { data: trips = [], isLoading } = useQuery({
+    const { data: trips = [], isPending: isLoading } = useQuery({
         queryKey: queryKeys.trips.list(),
         queryFn: fetchTrips,
     })
@@ -200,7 +200,7 @@ function HealthSection() {
         ],
     })
 
-    const loading = daysSinceQ.isLoading || workoutsQ.isLoading
+    const loading = daysSinceQ.isPending || workoutsQ.isPending
 
     return (
         <Box>

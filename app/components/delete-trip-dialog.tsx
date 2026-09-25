@@ -1,24 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    TextField,
-    Typography,
-} from '@mui/material'
-import { colors } from '@/lib/colors'
-import {
-    destructiveButtonSx,
-    dialogPaperSx,
-    fieldSx,
-    labelSx,
-    secondaryButtonSx,
-} from '@/lib/form-styles'
+import { useState } from 'react'
+import { Box, TextField, Typography } from '@mui/material'
+
+import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
+import { fieldSx, labelSx } from '@/lib/form-styles'
 
 import type { TripSummary } from '@/lib/types'
 
@@ -27,38 +13,46 @@ type Props = {
     trip: TripSummary | null
     onClose: () => void
     onConfirm: () => void
+    /** True while the delete request is in flight. */
+    busy?: boolean
+    /** Why the last attempt failed — shown inline. */
+    error?: string | null
 }
 
-export default function DeleteTripDialog({ open, trip, onClose, onConfirm }: Props) {
+export default function DeleteTripDialog({
+    open,
+    trip,
+    onClose,
+    onConfirm,
+    busy,
+    error,
+}: Props) {
     const [confirmText, setConfirmText] = useState('')
-
-    useEffect(() => {
+    // Clear the field each time the dialog opens (adjust-state-on-prop-change,
+    // not an effect)
+    const [wasOpen, setWasOpen] = useState(open)
+    if (open !== wasOpen) {
+        setWasOpen(open)
         if (open) setConfirmText('')
-    }, [open])
+    }
 
     const tripName = trip?.name ?? ''
     const isConfirmed = confirmText === tripName
 
     return (
-        <Dialog
+        <ConfirmDeleteDialog
             open={open}
+            title="Delete trip?"
             onClose={onClose}
-            maxWidth="xs"
-            fullWidth
-            slotProps={{ paper: { sx: dialogPaperSx } }}>
-            <DialogTitle
-                sx={{
-                    fontWeight: 700,
-                    color: colors.primaryRed,
-                    fontSize: 18,
-                }}>
-                Delete trip?
-            </DialogTitle>
-            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography sx={{ fontSize: 14 }}>
-                    This will delete <strong>{tripName}</strong> and all its expenses.
-                    This action cannot be undone.
-                </Typography>
+            onConfirm={onConfirm}
+            busy={busy}
+            error={error}
+            confirmDisabled={!isConfirmed}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box>
+                    This will delete <strong>{tripName}</strong> and all its
+                    expenses. This action cannot be undone.
+                </Box>
                 <Box>
                     <Typography sx={{ ...labelSx, marginBottom: 0.5 }}>
                         Type <strong>{tripName}</strong> to confirm:
@@ -69,22 +63,12 @@ export default function DeleteTripDialog({ open, trip, onClose, onConfirm }: Pro
                         size="small"
                         fullWidth
                         autoFocus
+                        disabled={busy}
                         placeholder={tripName}
                         sx={fieldSx}
                     />
                 </Box>
-            </DialogContent>
-            <DialogActions sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
-                <Button onClick={onClose} sx={secondaryButtonSx}>
-                    Cancel
-                </Button>
-                <Button
-                    onClick={onConfirm}
-                    disabled={!isConfirmed}
-                    sx={destructiveButtonSx}>
-                    Delete
-                </Button>
-            </DialogActions>
-        </Dialog>
+            </Box>
+        </ConfirmDeleteDialog>
     )
 }

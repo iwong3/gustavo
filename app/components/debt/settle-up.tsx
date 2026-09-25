@@ -4,7 +4,7 @@ import { Box, Typography } from '@mui/material'
 import { IconCheck, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, pressIconSx } from '@/lib/colors'
 import type { SettlementRecord, UserSummary } from '@/lib/types'
 import { InitialsIcon } from 'utils/icons'
 import { openVenmoPayment } from 'utils/venmo'
@@ -425,6 +425,7 @@ export function SettledRow({
                     backgroundColor: 'transparent',
                     cursor: 'pointer',
                     opacity: disabled ? 0.4 : 1,
+                    ...(disabled ? {} : pressIconSx),
                 }}>
                 <IconX size={16} stroke={2} color="#9a9075" />
             </Box>

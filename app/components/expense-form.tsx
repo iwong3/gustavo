@@ -526,13 +526,27 @@ export default function ExpenseForm({
         }
 
         try {
-            if (mode === 'edit' && expense) {
-                await updateExpense(trip.id, expense.id, {
-                    ...payload,
-                    expectedUpdatedAt: expense.updatedAt,
-                })
-            } else {
-                await addExpense(trip.id, payload)
+            const saved =
+                mode === 'edit' && expense
+                    ? await updateExpense(trip.id, expense.id, {
+                          ...payload,
+                          expectedUpdatedAt: expense.updatedAt,
+                      })
+                    : await addExpense(trip.id, payload)
+            // Seed the cached list with the saved row before navigating, so the
+            // list/detail shows it immediately instead of stale data that pops
+            // in when the background refetch lands
+            if (saved) {
+                queryClient.setQueryData<Expense[]>(
+                    queryKeys.trips.expenses(trip.id),
+                    (old) =>
+                        old &&
+                        (old.some((e) => String(e.id) === String(saved.id))
+                            ? old.map((e) =>
+                                  String(e.id) === String(saved.id) ? saved : e
+                              )
+                            : [...old, saved])
+                )
             }
             onSuccess()
         } catch (err) {

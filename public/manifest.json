@@ -16,7 +16,8 @@
             "purpose": "maskable"
         }
     ],
-    "start_url": "/",
+    "id": "/",
+    "start_url": "/gustavo",
     "display": "standalone",
     "orientation": "portrait",
     "theme_color": "#fefae0",

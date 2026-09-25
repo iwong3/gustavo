@@ -85,7 +85,7 @@ app/
 │
 ├── components/               Reusable components: form-page + form-date-field (page-style
 │                             form shell), expense-form, trip-form, form-drawer (legacy),
-│                             nav-drawer, place-autocomplete, pull-to-refresh, sliding-toggle,
+│                             place-autocomplete, pull-to-refresh, sliding-toggle,
 │                             PWA install/update prompts, plus folders:
 │                             auth/ debt/ graphs/ health/ insights/ links/ menu/ receipts/
 │

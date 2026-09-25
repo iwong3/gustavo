@@ -38,6 +38,6 @@ export function useExerciseLibrary() {
     return {
         exercises: exercises.data ?? [],
         muscleGroups: mg.data ?? [],
-        loading: [exercises, mg].some((q) => q.isLoading),
+        loading: [exercises, mg].some((q) => q.isPending),
     }
 }

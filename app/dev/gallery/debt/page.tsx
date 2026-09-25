@@ -2,13 +2,12 @@
 
 import DebtsPage from '../../../gustavo/trips/[slug]/debts/page'
 import { PairDetail } from 'components/debt/pair-detail'
-import { PersonBalanceCard } from 'components/debt/person-balance-card'
 import { SettlementCard } from 'components/debt/settlement-card'
 import { SettleProgressCard, SettleRow, SettledRow } from 'components/debt/settle-up'
 import { PersonSwitcher } from 'components/person-switcher'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
-import { computeNetBalances, simplifyDebts } from '@/lib/debt'
+import { simplifyDebts } from '@/lib/debt'
 import { GalleryPage, SpecimenGroup, Specimen } from '../gallery-ui'
 import { currentUserId, debtMap, expenses, ivan, jenny, marco, participantById, participants, priya, settlementRecords, trip } from '../fixtures'
 
@@ -28,8 +27,6 @@ const bigGroup = ['Ava', 'Ben', 'Cleo', 'Dev', 'Elle', 'Finn', 'Gus', 'Hana'].ma
 
 
 export default function DebtGallery() {
-    const balances = computeNetBalances(debtMap, participants)
-    const balanceByUser = new Map(balances.map((b) => [b.userId, b]))
     const settlements = simplifyDebts(debtMap, participants)
 
     return (
@@ -141,32 +138,6 @@ export default function DebtGallery() {
                 </Specimen>
             </SpecimenGroup>
 
-            <SpecimenGroup title="PersonBalanceCard">
-                {balances.map((balance) => {
-                    const participant = participantById.get(balance.userId)
-                    if (!participant) return null
-                    const state =
-                        balance.netBalance > 0.005
-                            ? 'is owed'
-                            : balance.netBalance < -0.005
-                              ? 'owes'
-                              : 'settled'
-                    const you = balance.userId === currentUserId ? ', current user' : ''
-                    return (
-                        <Specimen key={balance.userId} label={`${participant.firstName} — ${state}${you}`}>
-                            <PersonBalanceCard
-                                balance={balance}
-                                participant={participant}
-                                currentUserId={currentUserId}
-                                debtMap={debtMap}
-                                participantById={participantById}
-                                onTap={noop}
-                            />
-                        </Specimen>
-                    )
-                })}
-            </SpecimenGroup>
-
             <SpecimenGroup title="SettlementCard">
                 {settlements.map((s, i) => {
                     const debtor = participantById.get(s.debtorId)
@@ -190,29 +161,6 @@ export default function DebtGallery() {
                         </Specimen>
                     )
                 })}
-            </SpecimenGroup>
-
-            <SpecimenGroup title="PersonBalanceCard — width comparison">
-                <Specimen label="320px (small phone)" width={320}>
-                    <PersonBalanceCard
-                        balance={balanceByUser.get(jenny.id)!}
-                        participant={participantById.get(jenny.id)!}
-                        currentUserId={currentUserId}
-                        debtMap={debtMap}
-                        participantById={participantById}
-                        onTap={noop}
-                    />
-                </Specimen>
-                <Specimen label="390px (default)">
-                    <PersonBalanceCard
-                        balance={balanceByUser.get(jenny.id)!}
-                        participant={participantById.get(jenny.id)!}
-                        currentUserId={currentUserId}
-                        debtMap={debtMap}
-                        participantById={participantById}
-                        onTap={noop}
-                    />
-                </Specimen>
             </SpecimenGroup>
         </GalleryPage>
     )

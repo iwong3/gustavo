@@ -1,17 +1,17 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useRouter } from 'next/navigation'
 
 import SupplementGroupForm from 'components/health/supplement-group-form'
 import { HealthPageLayout } from 'components/health/health-page-layout'
 import { useSupplementData } from 'hooks/useSupplementData'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/supplements/groups'
 
 /** New Supplement Group — /gustavo/health/supplements/groups/new */
 export default function AddSupplementGroupPage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
     const { supplements, loading } = useSupplementData()
 
     if (loading) return <HealthPageLayout loading>{null}</HealthPageLayout>
@@ -27,8 +27,8 @@ export default function AddSupplementGroupPage() {
             <SupplementGroupForm
                 mode="add"
                 supplements={supplements}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )

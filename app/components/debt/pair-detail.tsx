@@ -7,13 +7,14 @@ import { useMemo, useState } from 'react'
 
 import { IconCheck } from '@tabler/icons-react'
 
-import { cardSx, colors } from '@/lib/colors'
+import { cardSx, colors, pressRowSx } from '@/lib/colors'
 import { expenseDebtContribution, simplifyDebts } from '@/lib/debt'
 import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 import { ListControls, type ListSort } from 'components/list-controls'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
+import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { InitialsIcon } from 'utils/icons'
 
 const OWE_RED = '#c0392b'
@@ -71,7 +72,7 @@ function DebtExpenseRow({
                 'cursor': 'pointer',
                 'borderBottom': `1px solid ${colors.primaryBlack}20`,
                 '&:last-of-type': { borderBottom: 'none' },
-                '&:active': { backgroundColor: `${colors.primaryBlack}0a` },
+                '&:active': pressRowSx['&:active'],
                 'transition': 'background-color 0.1s',
             }}>
             {showDirection && (
@@ -334,12 +335,10 @@ export function PairDetail({
         Math.abs(simplifiedAmount - directAmount) > 0.5
 
     // Open an expense's detail; ?from=debts&pair sends the back button here
-    const openExpense = (expense: Expense) => {
-        router.push(
-            `/gustavo/trips/${trip.slug}/expenses/${expense.id}` +
-                `?from=debts&pair=${debtor.id}-${creditor.id}`
-        )
-    }
+    const expenseHref = (expense: Expense) =>
+        `/gustavo/trips/${trip.slug}/expenses/${expense.id}` +
+        `?from=debts&pair=${debtor.id}-${creditor.id}`
+    const openExpense = (expense: Expense) => router.push(expenseHref(expense))
 
     const creditorRows = filtered.filter((r) => !r.reduces)
     const debtorRows = filtered.filter((r) => r.reduces)
@@ -422,12 +421,15 @@ export function PairDetail({
         rows.length ? (
             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                 {rows.map((r, i) => (
-                    <DebtExpenseRow
+                    <PrefetchOnVisible
                         key={`${r.expense.id}-${r.payer.id}-${i}`}
-                        row={r}
-                        showDirection={showDirection}
-                        onTap={() => openExpense(r.expense)}
-                    />
+                        href={expenseHref(r.expense)}>
+                        <DebtExpenseRow
+                            row={r}
+                            showDirection={showDirection}
+                            onTap={() => openExpense(r.expense)}
+                        />
+                    </PrefetchOnVisible>
                 ))}
             </Box>
         ) : (

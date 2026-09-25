@@ -15,6 +15,14 @@ export class ConflictError extends Error {
     }
 }
 
+/** Thrown when the record doesn't exist (deleted, or never did). */
+export class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'NotFoundError'
+    }
+}
+
 // ── Trips ──
 
 export const fetchTrips = async (): Promise<TripSummary[]> => {
@@ -25,6 +33,7 @@ export const fetchTrips = async (): Promise<TripSummary[]> => {
 
 export const fetchTripBySlug = async (slug: string): Promise<TripSummary> => {
     const res = await fetch(`/api/trips?slug=${encodeURIComponent(slug)}`)
+    if (res.status === 404) throw new NotFoundError('Trip not found')
     if (!res.ok) throw new Error(`Failed to fetch trip: ${res.status}`)
     return res.json()
 }
@@ -139,7 +148,13 @@ export type AddExpenseData = {
     google_place_photo_refs?: string[] | null
 }
 
-export const addExpense = async (tripId: number, data: AddExpenseData): Promise<{ id: number }> => {
+/** The saved expense from a POST/PUT, when the response carries the full
+ *  list shape (lib/expense-rows.ts) — null otherwise. */
+const savedExpense = (body: unknown): Expense | null =>
+    body && typeof body === 'object' && 'updatedAt' in body ? (body as Expense) : null
+
+/** Returns the saved expense so callers can seed the cached list. */
+export const addExpense = async (tripId: number, data: AddExpenseData): Promise<Expense | null> => {
     const res = await fetch(`/api/trips/${tripId}/expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +164,7 @@ export const addExpense = async (tripId: number, data: AddExpenseData): Promise<
         const err = await res.json()
         throw new Error(err.error || 'Failed to add expense')
     }
-    return res.json()
+    return savedExpense(await res.json().catch(() => null))
 }
 
 export type UpdateExpenseData = Partial<AddExpenseData> & {
@@ -160,7 +175,7 @@ export const updateExpense = async (
     tripId: number,
     expenseId: number,
     data: UpdateExpenseData
-): Promise<void> => {
+): Promise<Expense | null> => {
     const res = await fetch(`/api/trips/${tripId}/expenses/${expenseId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -173,6 +188,7 @@ export const updateExpense = async (
         }
         throw new Error(err.error || 'Failed to update expense')
     }
+    return savedExpense(await res.json().catch(() => null))
 }
 
 export const deleteExpense = async (

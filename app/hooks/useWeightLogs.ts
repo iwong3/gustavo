@@ -10,7 +10,7 @@ import { queryKeys } from '@/lib/query-keys'
  * navigating between them hits the cache instead of refetching.
  */
 export function useWeightLogs() {
-    const { data: logs = [], isLoading: loading } = useQuery({
+    const { data: logs = [], isPending: loading } = useQuery({
         queryKey: queryKeys.health.weightLogs,
         queryFn: async () => {
             const r = await fetch('/api/health/weight-logs')

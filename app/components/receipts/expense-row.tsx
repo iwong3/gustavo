@@ -3,7 +3,7 @@
 import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
 
-import { colors } from '@/lib/colors'
+import { colors, pressRowSx } from '@/lib/colors'
 import { expenseAreaLabel } from '@/lib/place-display'
 import { CategoryIcon, InitialsIcon } from 'utils/icons'
 import { FormattedMoney } from 'utils/currency'
@@ -41,9 +41,7 @@ export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps
                 ...(expense.conversionError && {
                     borderLeft: `3px solid ${colors.primaryRed}`,
                 }),
-                '&:active': {
-                    backgroundColor: colors.secondaryYellow,
-                },
+                '&:active': pressRowSx['&:active'],
                 transition: 'background-color 150ms ease',
             }}>
             {/* Category icon */}

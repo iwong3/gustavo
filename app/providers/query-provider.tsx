@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { QueryClient } from '@tanstack/react-query'
+import { MutationCache, QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { del, get, set } from 'idb-keyval'
+
+import { showToast } from 'components/toast-store'
 
 // Bump when cached data shapes change (API responses / types) so old persisted
 // caches are discarded on the next load instead of rehydrating a wrong shape.
@@ -34,6 +36,15 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     const [client] = useState(
         () =>
             new QueryClient({
+                // Opt-in error toast: a mutation with meta.errorToast shows
+                // that message when it fails (e.g. swipe deletes, which have
+                // no dialog to put an inline error in)
+                mutationCache: new MutationCache({
+                    onError: (_error, _vars, _ctx, mutation) => {
+                        const message = mutation.meta?.errorToast
+                        if (typeof message === 'string') showToast(message)
+                    },
+                }),
                 defaultOptions: {
                     queries: {
                         // Fresh for 1 min: while fresh, cached data is served

@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
+import { showToast } from 'components/toast-store'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -266,7 +267,7 @@ export default function SymptomsPage() {
     })
     const symptoms = queries[0].data ?? []
     const allLogs = queries[1].data ?? []
-    const loading = queries.some((q) => q.isLoading)
+    const loading = queries.some((q) => q.isPending)
 
     const fetchData = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.health.symptoms })
@@ -306,17 +307,20 @@ export default function SymptomsPage() {
         async (date: string) => {
             const logsForDate = allLogs.filter((l) => l.date === date)
             try {
-                await Promise.all(
+                const results = await Promise.all(
                     logsForDate.map((l) =>
                         fetch(`/api/health/symptom-logs/${l.id}`, {
                             method: 'DELETE',
                         })
                     )
                 )
-                fetchData()
+                if (results.some((r) => !r.ok)) throw new Error('Delete failed')
             } catch (err) {
                 console.error('Failed to delete logs:', err)
+                showToast("Couldn't delete that day's symptoms. Try again.")
             }
+            // Refetch either way — a partial failure still deleted some logs
+            fetchData()
         },
         [allLogs, fetchData]
     )

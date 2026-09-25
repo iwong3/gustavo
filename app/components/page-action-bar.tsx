@@ -12,7 +12,7 @@ import {
 import { createPortal } from 'react-dom'
 import { Box, Typography } from '@mui/material'
 
-import { colors } from '@/lib/colors'
+import { colors, pressIconSx } from '@/lib/colors'
 
 type ActionBarContextValue = {
     active: boolean
@@ -123,7 +123,10 @@ export function PageActionButton({
 }) {
     return (
         <Box
+            component="button"
+            type="button"
             onClick={disabled ? undefined : onClick}
+            disabled={disabled}
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -132,11 +135,17 @@ export function PageActionButton({
                 gap: 0.5,
                 flex: 1,
                 height: '100%',
+                // Reset native button chrome
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                font: 'inherit',
                 cursor: disabled ? 'default' : 'pointer',
                 userSelect: 'none',
                 color,
                 opacity: disabled ? 0.5 : 1,
-                transition: 'opacity 0.15s',
+                // Same press as the nav tabs it replaces
+                ...(disabled ? {} : pressIconSx),
             }}>
             {icon}
             <Typography

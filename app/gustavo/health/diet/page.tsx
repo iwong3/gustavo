@@ -56,6 +56,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
+import { showToast } from 'components/toast-store'
 
 function getLocalDate(): string {
     const now = new Date()
@@ -438,7 +439,7 @@ export default function DietPage() {
     const presets = queries[2].data ?? []
     const prefs = queries[3].data
     const foodGroups = queries[4].data ?? []
-    const loading = queries.some((q) => q.isLoading)
+    const loading = queries.some((q) => q.isPending)
     const alphabetIndexSide: 'left' | 'right' = prefs?.alphabetIndexSide ?? 'right'
 
     const fetchData = useCallback(() => {
@@ -492,11 +493,14 @@ export default function DietPage() {
                         })
                     )
                 }
-                await Promise.all(ops)
-                fetchData()
+                const results = await Promise.all(ops)
+                if (results.some((r) => !r.ok)) throw new Error('Delete failed')
             } catch (err) {
                 console.error('Failed to delete day logs:', err)
+                showToast("Couldn't delete that day's food. Try again.")
             }
+            // Refetch either way — a partial failure still deleted some logs
+            fetchData()
         },
         [fetchData]
     )

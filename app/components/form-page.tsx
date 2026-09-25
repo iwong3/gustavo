@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { colors } from '@/lib/colors'
 import { errorMessageSx } from '@/lib/form-styles'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
+import { useNextFieldKey } from 'hooks/useNextFieldKey'
 import { useScrollFocusedInput } from 'hooks/useScrollFocusedInput'
 
 type Props = {
@@ -32,10 +33,12 @@ type Props = {
  * Shell for every page-style form in the app (add/edit pages, not drawers).
  *
  *   ┌ title row — h6, optional ⓘ on the right
- *   ├ fields — one column, gap 2, 16px padding, keyboard-aware focus scroll
+ *   ├ fields — one column, gap 2, 16px padding, keyboard-aware focus scroll;
+ *     the keyboard's return key is Next / Done between typed fields (never
+ *     saves — see useNextFieldKey)
  *   └ PageActionBar — replaces the bottom tab bar: Cancel | <submitLabel>
  *
- * The page that renders it owns navigation (router.replace on cancel/success)
+ * The page that renders it owns navigation (useExitTo on cancel/success)
  * and the outer `maxWidth: 450` column; the form owns state + the request.
  * Reference usages: components/expense-form.tsx, components/health/workout-form.tsx.
  */
@@ -53,6 +56,8 @@ export function FormPage({
 }: Props) {
     // Scroll the focused input near the top so the mobile keyboard can't hide it
     const focusScroll = useScrollFocusedInput()
+    const { ref: fieldsRef, onKeyDown: onFieldsKeyDown } =
+        useNextFieldKey<HTMLDivElement>()
 
     return (
         <>
@@ -73,6 +78,10 @@ export function FormPage({
             </Box>
             <Box
                 {...focusScroll}
+                ref={fieldsRef}
+                onKeyDown={onFieldsKeyDown}
+                // Marks unsaved-input UI as open (PWAUpdatePrompt waits for it)
+                data-form-open=""
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',

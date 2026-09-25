@@ -269,6 +269,20 @@ export default function SettingsPage() {
                 Log out
             </Button>
 
+            {/* Component gallery — dev only (the route 404s in production) */}
+            {process.env.NODE_ENV === 'development' && (
+                <Link
+                    href="/dev/gallery"
+                    style={{
+                        alignSelf: 'center',
+                        marginTop: 16,
+                        fontSize: 13,
+                        color: colors.primaryBrown,
+                    }}>
+                    Component gallery (dev)
+                </Link>
+            )}
+
             <Typography
                 sx={{
                     fontSize: 11,

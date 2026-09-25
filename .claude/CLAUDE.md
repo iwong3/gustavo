@@ -65,7 +65,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   isolation with mock data (`app/dev/gallery/fixtures.ts`). Dev-only: 404s in prod
   (layout gate) and skips auth (middleware exclusion). Use it to view/verify UI
   without clicking through app flows; add specimens when building new presentational
-  components. Dev-only "Gallery" entry at the bottom of the nav drawer.
+  components. Dev-only "Component gallery" link at the bottom of Settings.
 - Migrations: `pnpm db:create-migration <name>`, `pnpm db:migrate`, reset with `pnpm db:reset`
 
 ## Doc map — read before working in an area

@@ -187,7 +187,8 @@ type Props = {
     mode: 'create' | 'edit'
     trip?: TripSummary
     onCancel: () => void
-    onSuccess: () => void
+    /** Awaited — the form stays in its saving state until it resolves. */
+    onSuccess: () => void | Promise<void>
 }
 
 // Page-style trip form (create + edit) — same shell as ExpenseForm: title,
@@ -472,7 +473,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 await saveLocations(created.id)
             }
 
-            onSuccess()
+            await onSuccess()
         } catch (err) {
             if (err instanceof ConflictError) {
                 queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })

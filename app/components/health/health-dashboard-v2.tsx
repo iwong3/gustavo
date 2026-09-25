@@ -1,6 +1,6 @@
 'use client'
 
-import { cardSx, colors, hardShadow } from '@/lib/colors'
+import { cardSx, colors, hardShadow, pressShadowSx } from '@/lib/colors'
 import type {
     DaysSince,
     DietDay,
@@ -41,12 +41,26 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import Link from 'next/link'
+import { Bone, Circle, TextBone } from 'components/skeleton/bones'
 import React, { useCallback, useState } from 'react'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export type HubLoading = {
+    /** days-since + recent workouts: streak pill, grid, top exercises */
+    workouts: boolean
+    workoutPresets: boolean
+    dietPresets: boolean
+    diet: boolean
+    supplementPresets: boolean
+    supplements: boolean
+    symptoms: boolean
+    weight: boolean
+}
+
 export type HealthDashboardProps = {
-    loading: boolean
+    /** Per section, so each shows as soon as its own data lands. */
+    loading: HubLoading
     daysSince: DaysSince[]
     daysSinceMap: Map<string, DaysSince>
     workoutPresets: WorkoutPreset[]
@@ -119,6 +133,7 @@ const badgeSx = {
     'alignSelf': 'flex-start' as const,
     'textDecoration': 'none',
     'mb': 1.5,
+    ...pressShadowSx,
 }
 
 const badgeTextSx = {
@@ -140,6 +155,7 @@ const boltCircleSx = {
     'alignItems': 'center',
     'justifyContent': 'center',
     'flexShrink': 0,
+    ...pressShadowSx,
 }
 
 const presetItemSx = {
@@ -185,18 +201,20 @@ const logChipSx = {
 }
 
 // ── Skeleton Placeholders ─────────────────────────────────────────────────────
+// Built from the shared bones (same pulse as every other skeleton) and sized
+// to the loaded rows below, so sections don't shift when data lands. The
+// route's loading.tsx renders this dashboard with every section loading
+// (HealthHubSkeleton), so both use exactly these.
 
-const skeletonSx = {
-    backgroundColor: `${colors.primaryBlack}08`,
-}
+const ROW_RULE = `1px solid ${colors.primaryBlack}`
 
 function PresetsSkeleton() {
     return (
         <Box sx={presetRowScrollSx}>
-            <Box sx={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, ...skeletonSx }} />
-            <Box sx={{ width: 70, height: 28, flexShrink: 0, ...skeletonSx }} />
-            <Box sx={{ width: 80, height: 28, flexShrink: 0, ...skeletonSx }} />
-            <Box sx={{ width: 60, height: 28, flexShrink: 0, ...skeletonSx }} />
+            <Circle size={30} />
+            {[70, 80, 60].map((w) => (
+                <Bone key={w} width={w} height={28} radius="4px" />
+            ))}
         </Box>
     )
 }
@@ -217,12 +235,11 @@ function DaysSinceSkeleton() {
                                 padding: '5px 8px',
                                 borderRadius: '4px',
                                 border: `1.5px solid ${colors.primaryBlack}15`,
-                                ...skeletonSx,
                             }}>
-                            <Box sx={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, backgroundColor: `${colors.primaryBlack}15` }} />
+                            <Circle size={7} />
                             <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography sx={{ fontSize: 11, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}10`, width: '70%' }}>·</Typography>
-                                <Typography sx={{ fontSize: 10, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}08`, width: '50%' }}>·</Typography>
+                                <TextBone fontSize={11} lineHeight={1.2} width="70%" />
+                                <TextBone fontSize={10} lineHeight={1.2} width="50%" />
                             </Box>
                         </Box>
                     ))}
@@ -233,38 +250,80 @@ function DaysSinceSkeleton() {
 }
 
 function StreakRestSkeleton() {
+    return <Bone width={90} height={34} radius="4px" />
+}
+
+/** Date column (weekday over month/day) shared by the dated log rows. */
+function DateColumnSkeleton() {
     return (
-        <Box sx={{
-            display: 'flex',
-            alignItems: 'stretch',
-            height: 34,
-            width: 110,
-            borderRadius: '4px',
-            ...skeletonSx,
-        }} />
+        <Box sx={{ flexShrink: 0, minWidth: 44 }}>
+            <TextBone fontSize={10} lineHeight={1.2} width={26} />
+            <TextBone fontSize={12} lineHeight={1.3} width={38} />
+        </Box>
     )
 }
 
-function LogCardSkeleton({ rows = 2 }: { rows?: number }) {
+/** Rows of a log card; `row` renders one row's content. */
+function RowsCardSkeleton({ rows = 3, row }: { rows?: number; row: () => React.ReactNode }) {
     return (
         <Box sx={{ ...cardSx, overflow: 'hidden' }}>
             {Array.from({ length: rows }).map((_, i) => (
                 <Box key={i}>
-                    {i > 0 && <Box sx={{ borderBottom: `1px solid ${colors.primaryBlack}`, mx: 0 }} />}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
-                        <Box sx={{ flexShrink: 0, minWidth: 44 }}>
-                            <Typography sx={{ fontSize: 10, lineHeight: 1.2, color: 'transparent', backgroundColor: `${colors.primaryBlack}10`, width: '70%' }}>·</Typography>
-                            <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'transparent', backgroundColor: `${colors.primaryBlack}08`, width: '90%' }}>·</Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
-                            <Box sx={{ width: 60, height: 22, ...skeletonSx }} />
-                            <Box sx={{ width: 50, height: 22, ...skeletonSx }} />
-                            <Box sx={{ width: 70, height: 22, ...skeletonSx }} />
-                        </Box>
-                    </Box>
+                    {i > 0 && <Box sx={{ borderBottom: ROW_RULE }} />}
+                    {row()}
                 </Box>
             ))}
         </Box>
+    )
+}
+
+/** Diet / supplements / symptoms: date column + chips. */
+function LogCardSkeleton({ rows = 3 }: { rows?: number }) {
+    return (
+        <RowsCardSkeleton
+            rows={rows}
+            row={() => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.25, py: 1 }}>
+                    <DateColumnSkeleton />
+                    <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
+                        {[60, 50, 70].map((w) => (
+                            <Bone key={w} width={w} height={22} />
+                        ))}
+                    </Box>
+                </Box>
+            )}
+        />
+    )
+}
+
+/** Exercises: name + count chip. */
+function ExerciseCardSkeleton() {
+    return (
+        <RowsCardSkeleton
+            row={() => (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.25, py: 1 }}>
+                    <TextBone fontSize={13} width="45%" />
+                    <Bone width={26} height={22} />
+                </Box>
+            )}
+        />
+    )
+}
+
+/** Weight: date column + serif value and "lbs". */
+function WeightCardSkeleton() {
+    return (
+        <RowsCardSkeleton
+            row={() => (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.25, py: 1 }}>
+                    <DateColumnSkeleton />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <TextBone fontSize={16} lineHeight={1} width={36} />
+                        <TextBone fontSize={10} width={16} />
+                    </Box>
+                </Box>
+            )}
+        />
     )
 }
 
@@ -389,7 +448,7 @@ export function HealthDashboardV2({
                         <IconBarbell size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />
                         <Typography sx={badgeTextSx}>Workouts</Typography>
                     </Box>
-                    {loading ? (
+                    {loading.workouts ? (
                         <StreakRestSkeleton />
                     ) : daysSince.length > 0 && (
                         <Box sx={{
@@ -422,7 +481,7 @@ export function HealthDashboardV2({
                 </Box>
                 </DragHandleBadge>
 
-                {loading ? (
+                {loading.workoutPresets ? (
                     <PresetsSkeleton />
                 ) : workoutPresets.length > 0 ? (
                     <Box sx={presetRowScrollSx}>
@@ -454,7 +513,7 @@ export function HealthDashboardV2({
                     </Box>
                 ) : null}
 
-                {loading ? (
+                {loading.workouts ? (
                     <DaysSinceSkeleton />
                 ) : daysSince.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown }}>
@@ -516,7 +575,7 @@ export function HealthDashboardV2({
                     <Typography sx={badgeTextSx}>Diet</Typography>
                 </Box>
                 </DragHandleBadge>
-                {loading ? <PresetsSkeleton /> : dietPresets.length > 0 ? (
+                {loading.dietPresets ? <PresetsSkeleton /> : dietPresets.length > 0 ? (
                     <Box sx={presetRowScrollSx}>
                         <Box
                             component={Link}
@@ -539,7 +598,7 @@ export function HealthDashboardV2({
                         ))}
                     </Box>
                 ) : null}
-                {loading ? <LogCardSkeleton rows={3} /> : recentDiet.length === 0 ? (
+                {loading.diet ? <LogCardSkeleton rows={3} /> : recentDiet.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No food logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
@@ -574,7 +633,7 @@ export function HealthDashboardV2({
                     <Typography sx={badgeTextSx}>Supplements</Typography>
                 </Box>
                 </DragHandleBadge>
-                {loading ? <PresetsSkeleton /> : supplementPresets.length > 0 ? (
+                {loading.supplementPresets ? <PresetsSkeleton /> : supplementPresets.length > 0 ? (
                     <Box sx={presetRowScrollSx}>
                         <Box
                             component={Link}
@@ -597,7 +656,7 @@ export function HealthDashboardV2({
                         ))}
                     </Box>
                 ) : null}
-                {loading ? <LogCardSkeleton rows={3} /> : recentSupplementDays.length === 0 ? (
+                {loading.supplements ? <LogCardSkeleton rows={3} /> : recentSupplementDays.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No supplements logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
@@ -629,7 +688,7 @@ export function HealthDashboardV2({
                     <Typography sx={badgeTextSx}>Exercises</Typography>
                 </Box>
                 </DragHandleBadge>
-                {loading ? <LogCardSkeleton rows={3} /> : topExercises.length === 0 ? (
+                {loading.workouts ? <ExerciseCardSkeleton /> : topExercises.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No exercises logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
@@ -654,7 +713,7 @@ export function HealthDashboardV2({
                     <Typography sx={badgeTextSx}>Symptoms</Typography>
                 </Box>
                 </DragHandleBadge>
-                {loading ? <LogCardSkeleton rows={3} /> : recentSymptomDays.length === 0 ? (
+                {loading.symptoms ? <LogCardSkeleton rows={3} /> : recentSymptomDays.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No symptoms logged yet</Typography>
                 ) : (
                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
@@ -696,7 +755,7 @@ export function HealthDashboardV2({
                         <Typography sx={badgeTextSx}>Weight</Typography>
                     </Box>
                     </DragHandleBadge>
-                    {loading ? <LogCardSkeleton rows={3} /> : recent.length === 0 ? (
+                    {loading.weight ? <WeightCardSkeleton /> : recent.length === 0 ? (
                         <Typography sx={{ fontSize: 13, color: colors.primaryBrown, opacity: 0.6 }}>No weight logged yet</Typography>
                     ) : (
                         <Box sx={{ ...cardSx, overflow: 'hidden' }}>
@@ -768,6 +827,49 @@ export function HealthDashboardV2({
                     ))}
                 </SortableContext>
             </DndContext>
+        </Box>
+    )
+}
+
+// ── Route skeleton ───────────────────────────────────────────────────────────
+
+const ALL_LOADING: HubLoading = {
+    workouts: true,
+    workoutPresets: true,
+    dietPresets: true,
+    diet: true,
+    supplementPresets: true,
+    supplements: true,
+    symptoms: true,
+    weight: true,
+}
+
+/**
+ * The hub with every section loading — the real badges (in the user's
+ * section order) over the same skeletons the page shows while its queries
+ * land. Used by health/loading.tsx; the full-width wrapper mirrors the
+ * page's PullToRefresh.
+ */
+export function HealthHubSkeleton() {
+    return (
+        <Box sx={{ width: '100%' }}>
+            <HealthDashboardV2
+                loading={ALL_LOADING}
+                daysSince={[]}
+                daysSinceMap={new Map()}
+                workoutPresets={[]}
+                dietPresets={[]}
+                supplementPresets={[]}
+                recentDiet={[]}
+                recentSupplementDays={[]}
+                topExercises={[]}
+                recentSymptomDays={[]}
+                recentWeightLogs={[]}
+                workoutStats={{ streak: 0, workoutDays: 0, restDays: 0 }}
+                applyingId={null}
+                appliedId={null}
+                applyPreset={() => {}}
+            />
         </Box>
     )
 }

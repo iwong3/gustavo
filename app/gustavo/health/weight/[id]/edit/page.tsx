@@ -1,18 +1,19 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 
 import WeightForm from 'components/health/weight-form'
 import { HealthPageLayout } from 'components/health/health-page-layout'
 import { useWeightLogs } from 'hooks/useWeightLogs'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/weight'
 
 /** Edit Weight — /gustavo/health/weight/[id]/edit */
 export default function EditWeightPage() {
     const { id } = useParams<{ id: string }>()
-    const router = useRouter()
+    const exitTo = useExitTo()
     const { logs, loading } = useWeightLogs()
 
     if (loading) return <HealthPageLayout loading>{null}</HealthPageLayout>
@@ -48,8 +49,8 @@ export default function EditWeightPage() {
                 key={String(log.id)}
                 mode="edit"
                 log={log}
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )

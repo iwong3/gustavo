@@ -2,7 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 
-import { colors, hardShadow } from '@/lib/colors'
+import { colors, hardShadow, pressShadowSx } from '@/lib/colors'
 
 import type { Expense } from '@/lib/types'
 
@@ -63,11 +63,17 @@ export const DrawerDayContext = ({
                                     ? colors.primaryBlack
                                     : colors.primaryWhite,
                                 cursor: isCurrent ? 'default' : 'pointer',
-                                ...(isCurrent ? {} : hardShadow),
-                                '&:hover': !isCurrent ? {
-                                    backgroundColor: colors.secondaryYellow,
-                                } : {},
-                                transition: 'background-color 150ms ease',
+                                ...(isCurrent
+                                    ? {}
+                                    : {
+                                          ...hardShadow,
+                                          ...pressShadowSx,
+                                          // Hover only where there's a real
+                                          // pointer — on touch it sticks
+                                          '@media (hover: hover)': {
+                                              '&:hover': { backgroundColor: colors.secondaryYellow },
+                                          },
+                                      }),
                             }}>
                             <Typography
                                 sx={{

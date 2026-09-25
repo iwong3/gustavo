@@ -1,15 +1,15 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { useRouter } from 'next/navigation'
 
 import ExpenseForm from 'components/expense-form'
 import { useRefresh } from 'providers/refresh-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { canAddExpense } from 'utils/permissions'
+import { useExitTo } from 'hooks/use-exit-to'
 
 export default function AddExpensePage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
 
@@ -43,9 +43,9 @@ export default function AddExpensePage() {
             }}>
             <ExpenseForm
                 mode="add"
-                onCancel={() => router.replace(listUrl)}
+                onCancel={() => exitTo(listUrl)}
                 onSuccess={() => {
-                    router.replace(listUrl)
+                    exitTo(listUrl)
                     onRefresh()
                 }}
             />

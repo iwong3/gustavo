@@ -1,7 +1,6 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 
 import TripForm from 'components/trip-form'
@@ -9,9 +8,10 @@ import { useTripData } from 'providers/trip-data-provider'
 import { canEditTrip } from 'utils/permissions'
 
 import { queryKeys } from '@/lib/query-keys'
+import { useExitTo } from 'hooks/use-exit-to'
 
 export default function EditTripPage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
     const queryClient = useQueryClient()
     const { trip } = useTripData()
 
@@ -45,12 +45,21 @@ export default function EditTripPage() {
             <TripForm
                 mode="edit"
                 trip={trip}
-                onCancel={() => router.replace(detailsUrl)}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({
-                        queryKey: queryKeys.trips.all,
-                    })
-                    router.replace(detailsUrl)
+                onCancel={() => exitTo(detailsUrl)}
+                onSuccess={async () => {
+                    // Refresh before leaving (the form keeps showing
+                    // "Saving…") so we land on up-to-date data, not a stale
+                    // list that changes a moment later. The list is off
+                    // screen, so it needs an explicit refetch.
+                    await Promise.all([
+                        queryClient.invalidateQueries({
+                            queryKey: queryKeys.trips.all,
+                        }),
+                        queryClient.refetchQueries({
+                            queryKey: queryKeys.trips.list(),
+                        }),
+                    ])
+                    exitTo(detailsUrl)
                 }}
             />
         </Box>

@@ -27,6 +27,10 @@ type Props = {
     onConfirm: () => void
     /** True while the delete request is in flight. */
     busy?: boolean
+    /** Why the last attempt failed — shown inline; the dialog stays open. */
+    error?: string | null
+    /** Keep Delete disabled (e.g. until a type-to-confirm field matches). */
+    confirmDisabled?: boolean
     confirmLabel?: string
 }
 
@@ -42,6 +46,8 @@ export function ConfirmDeleteDialog({
     onClose,
     onConfirm,
     busy = false,
+    error = null,
+    confirmDisabled = false,
     confirmLabel = 'Delete',
 }: Props) {
     return (
@@ -60,7 +66,21 @@ export function ConfirmDeleteDialog({
                 {title}
             </DialogTitle>
             <DialogContent>
-                <Typography sx={{ fontSize: 14 }}>{children}</Typography>
+                <Typography component="div" sx={{ fontSize: 14 }}>
+                    {children}
+                </Typography>
+                {error && (
+                    <Typography
+                        role="alert"
+                        sx={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: colors.primaryRed,
+                            marginTop: 1.5,
+                        }}>
+                        {error}
+                    </Typography>
+                )}
             </DialogContent>
             <DialogActions
                 sx={{
@@ -75,7 +95,7 @@ export function ConfirmDeleteDialog({
                 </Button>
                 <Button
                     onClick={onConfirm}
-                    disabled={busy}
+                    disabled={busy || confirmDisabled}
                     sx={destructiveButtonSx}>
                     {busy ? 'Deleting...' : confirmLabel}
                 </Button>

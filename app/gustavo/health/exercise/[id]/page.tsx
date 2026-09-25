@@ -1,15 +1,19 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { IconCopy, IconEdit, IconTrash } from '@tabler/icons-react'
 import { useParams, useRouter } from 'next/navigation'
+import { useExitTo } from 'hooks/use-exit-to'
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { colors } from '@/lib/colors'
 import { queryKeys } from '@/lib/query-keys'
 import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
-import { HealthPageLayout } from 'components/health/health-page-layout'
+import { GoneState } from 'components/gone-state'
+import { WorkoutDetailSkeleton } from 'components/skeleton/health-skeletons'
+import { removeCachedWorkout } from 'utils/workout-cache'
+import type { Workout } from '@/lib/health-types'
 import { WorkoutDetail } from 'components/health/workout-detail'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 import { useWorkoutData } from 'hooks/useWorkoutData'
@@ -29,9 +33,17 @@ function formatDate(iso: string) {
 export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
+    const exitTo = useExitTo()
     const queryClient = useQueryClient()
-    const { workouts, loading } = useWorkoutData()
+    const { workouts, pending, workoutsPartial } = useWorkoutData()
     const [deleteOpen, setDeleteOpen] = useState(false)
+    // Just deleted and on our way out: keep rendering the last copy so the
+    // page doesn't flash "not here anymore" before the navigation lands
+    const [leavingWorkout, setLeavingWorkout] = useState<Workout | null>(null)
+
+    // Compare as strings: ids are BIGINTs and arrive as strings at runtime
+    const workout =
+        workouts.find((w) => String(w.id) === id) ?? leavingWorkout ?? undefined
 
     const editUrl = `${LIST_URL}/${id}/edit`
     const duplicateUrl = `${LIST_URL}/new?from=${id}`
@@ -50,32 +62,30 @@ export default function WorkoutDetailPage() {
             if (!res.ok) throw new Error('Delete failed')
         },
         onSuccess: () => {
+            setDeleteOpen(false)
+            // Gone from the list before we land on it
+            setLeavingWorkout(workout ?? null)
+            removeCachedWorkout(queryClient, id)
             queryClient.invalidateQueries({
                 queryKey: queryKeys.health.workouts.all,
             })
-            setDeleteOpen(false)
-            router.replace(LIST_URL)
+            exitTo(LIST_URL)
         },
     })
 
-    if (loading) return <HealthPageLayout loading>{null}</HealthPageLayout>
+    // Still loading — or showing the hub's recent-only placeholder list,
+    // which may not include an older workout yet
+    if (pending.workouts || (!workout && workoutsPartial)) {
+        return <WorkoutDetailSkeleton />
+    }
 
-    // Compare as strings: ids are BIGINTs and arrive as strings at runtime
-    const workout = workouts.find((w) => String(w.id) === id)
     if (!workout) {
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    width: '100%',
-                    maxWidth: 450,
-                    padding: 4,
-                }}>
-                <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-                    This workout no longer exists.
-                </Typography>
-            </Box>
+            <GoneState
+                title="This workout isn't here anymore"
+                detail="It may have been deleted."
+                action={{ label: 'Back to workouts', onClick: () => exitTo(LIST_URL) }}
+            />
         )
     }
 

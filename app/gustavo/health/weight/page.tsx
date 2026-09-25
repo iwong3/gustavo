@@ -18,6 +18,7 @@ import { scaleLinear, scaleTime } from '@visx/scale'
 import { LinePath } from '@visx/shape'
 import { AxisBottom, AxisLeft } from '@visx/axis'
 import * as allCurves from '@visx/curve'
+import { showToast } from 'components/toast-store'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -339,11 +340,13 @@ export default function WeightPage() {
 
     const handleDelete = useCallback(async (log: WeightLog) => {
         try {
-            await fetch(`/api/health/weight-logs/${log.id}`, { method: 'DELETE' })
-            fetchLogs()
+            const res = await fetch(`/api/health/weight-logs/${log.id}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error('Delete failed')
         } catch (err) {
             console.error('Failed to delete weight log:', err)
+            showToast("Couldn't delete that weigh-in. Try again.")
         }
+        fetchLogs()
     }, [fetchLogs])
 
     // Logs sorted by date DESC for history list; compute delta from next-older entry

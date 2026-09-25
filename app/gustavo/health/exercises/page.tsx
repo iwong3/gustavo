@@ -46,6 +46,7 @@ export default function ExercisesPage() {
             if (!res.ok) throw new Error('Delete failed')
         },
         onSuccess: invalidateExercises,
+        meta: { errorToast: "Couldn't delete that exercise. Try again." },
     })
     const handleDelete = useCallback(
         (id: number) => deleteMutation.mutate(id),

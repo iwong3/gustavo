@@ -1,15 +1,15 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useRouter } from 'next/navigation'
 
 import WeightForm from 'components/health/weight-form'
+import { useExitTo } from 'hooks/use-exit-to'
 
 const LIST_URL = '/gustavo/health/weight'
 
 /** Log Weight — /gustavo/health/weight/new */
 export default function AddWeightPage() {
-    const router = useRouter()
+    const exitTo = useExitTo()
 
     return (
         <Box
@@ -21,8 +21,8 @@ export default function AddWeightPage() {
             }}>
             <WeightForm
                 mode="add"
-                onCancel={() => router.replace(LIST_URL)}
-                onSuccess={() => router.replace(LIST_URL)}
+                onCancel={() => exitTo(LIST_URL)}
+                onSuccess={() => exitTo(LIST_URL)}
             />
         </Box>
     )

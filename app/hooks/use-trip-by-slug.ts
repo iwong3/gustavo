@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
-import { fetchTripBySlug } from 'utils/api'
+import { fetchTripBySlug, NotFoundError } from 'utils/api'
 
 /**
  * Trip-by-slug query, shared by the trip layout and the header controls so
@@ -28,6 +28,9 @@ export function useTripBySlug(
         queryKey: queryKeys.trips.bySlug(slug ?? ''),
         queryFn: () => fetchTripBySlug(slug!),
         enabled,
+        // A deleted trip stays deleted — no point retrying a 404
+        retry: (failures, err) =>
+            !(err instanceof NotFoundError) && failures < 1,
         placeholderData: () => {
             const list = queryClient.getQueryData<TripSummary[]>(
                 queryKeys.trips.list()

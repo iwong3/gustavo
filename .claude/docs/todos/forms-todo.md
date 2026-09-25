@@ -2,7 +2,7 @@
 
 Convention: `.claude/docs/code-guide.md` § Page-style Forms. Every add/edit form
 becomes its own route rendered through `FormPage` (+ `FormDateField` for dated
-entries), gets a back-button rule in `app/gustavo/layout.tsx`, and a chip in
+entries), gets a back-button rule in `utils/back-href.ts`, and a chip in
 `/dev/gallery/forms`. Delete confirmations stay dialogs.
 
 Inventory taken Sept 2026 — every add/edit/delete surface in the app.
@@ -38,11 +38,6 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 
 ## To do — Health (priority)
 
-- [ ] **Exercise library** — `health/exercises/page.tsx` `ExerciseFormDrawer`
-      (New / Edit Exercise: name, bodyweight, muscle groups). Has its own copy
-      of `MuscleGroupCard`; switch it to
-      `components/health/muscle-group-grid.tsx`. → `health/exercises/new`,
-      `health/exercises/[id]/edit`
 - [ ] **Diet** — `health/diet/page.tsx` `DietDrawer` (Log Meal / Edit Day, 3400
       lines with food picker + meal groups) and `DietPresetDrawer` (list +
       New/Edit Meal). Biggest migration; do after supplements so the list+form
@@ -54,9 +49,8 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 
 ## To do — Trips
 
-- [ ] **Settlements** — `trips/[slug]/debts/page.tsx` has two MUI Dialogs
-      (record settlement: from/to/amount/date/note; delete confirm). The record
-      form → `debts/settle/new` (prefill via `?from=&to=&amount=`).
+- [x] **Settlements** — no form any more: the debts page settles with
+      Mark paid / Undo confirmations (Sept 2026).
 - [ ] **Trip participants / roles** — handled inside the trip form already;
       nothing separate.
 
@@ -65,8 +59,6 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 - [ ] **Categories** — `settings/categories/page.tsx` inline add/edit rows +
       delete Dialog. Inline row editing is fine for a short list; only
       standardize the delete dialog on `dialogPaperSx`/`destructiveButtonSx`.
-- [ ] **Locations** — `settings/locations/page.tsx` same shape; its delete
-      Dialog is unstyled (plain MUI) — restyle.
 - [ ] **Invite** — `settings/invite/page.tsx` inline email add + revoke Dialog
       (unstyled) — restyle the dialog.
 - [ ] **Icon customize** — `settings/page.tsx` `IconCustomizeDialog` (initials +
@@ -81,8 +73,8 @@ Inventory taken Sept 2026 — every add/edit/delete surface in the app.
 
 - [ ] `components/form-drawer.tsx` becomes dead once the health drawers are gone
       — delete it and the `zIndex: 1600` note in `selectMenuProps`.
-- [ ] Move `DeleteExpenseDialog` / `DeleteTripDialog` onto the shared
-      `components/confirm-delete-dialog.tsx` (same look, less code).
+- [x] `DeleteExpenseDialog` / `DeleteTripDialog` are thin wrappers over
+      `ConfirmDeleteDialog` (busy + inline error), Sept 2026.
 - [ ] `FormDateField` week strip: consider a `min`/`max` (trip form end date
       uses `min` on its text field today).
 - [ ] Gallery navigation: the forms page's chip strip is getting long — a left

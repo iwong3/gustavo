@@ -4,7 +4,7 @@
 import { Box } from '@mui/material'
 
 import BoardingPass from 'components/boarding-pass'
-import BoardingPassSkeleton from 'components/boarding-pass-skeleton'
+import { BoardingPassSkeleton } from 'components/skeleton/trip-skeletons'
 import DeparturesBoard from 'components/departures-board'
 import { TripsMap } from 'components/trips-map'
 import type { TripMapCity, TripMapSummary } from '@/lib/trip-map'

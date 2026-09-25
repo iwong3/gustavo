@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { loadTripExpenses } from '@/lib/expense-rows'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, canEditExpense, canDeleteExpense } from '@/lib/permissions'
@@ -38,12 +39,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { userId, isAdmin } = authUser
 
-    // Check permission: role-based or reporter
-    const { role } = await getUserTripRole(userId, tripIdNum)
-    const reporterRes = await pool.query(
-        'SELECT reported_by FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
-        [expenseIdNum, tripIdNum]
-    )
+    // Check permission: role-based or reporter (independent lookups, in parallel)
+    const [{ role }, reporterRes] = await Promise.all([
+        getUserTripRole(userId, tripIdNum),
+        pool.query(
+            'SELECT reported_by FROM expenses WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL',
+            [expenseIdNum, tripIdNum]
+        ),
+    ])
     if (reporterRes.rows.length === 0) {
         return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
     }
@@ -210,7 +213,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             }
         })
 
-        return NextResponse.json({ success: true })
+        // The saved expense in list shape, so the client can seed its cache
+        const [expense] = await loadTripExpenses(tripIdNum, [expenseIdNum])
+        return NextResponse.json(expense ?? { success: true })
     } catch (err) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
