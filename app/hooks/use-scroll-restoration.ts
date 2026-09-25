@@ -82,6 +82,16 @@ export function useScrollRestoration(pathname: string) {
     }, [pathname])
 }
 
+/**
+ * During the render of a back/forward navigation's page: the scroll position
+ * about to be restored (0 otherwise). Lets a long list render enough rows up
+ * front to reach it (see useProgressiveCount). Valid until the layout's
+ * layout effect clears the traversal flag, i.e. through the page's render.
+ */
+export function pendingRestoreY(): number {
+    return traversing ? (positions.get(entryKey()) ?? 0) : 0
+}
+
 /** Smooth-scroll the main scroller to the top (active-tab re-tap). */
 export function scrollMainToTop() {
     document

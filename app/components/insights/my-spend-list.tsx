@@ -2,13 +2,14 @@
 
 import { Box, Collapse, Typography } from '@mui/material'
 import dayjs from 'dayjs'
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 
 import { cardSx, colors, pressRowSx } from '@/lib/colors'
 import type { Expense } from '@/lib/types'
 import { ListControls } from 'components/list-controls'
-import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
+import { usePressPrefetch } from 'hooks/use-press-prefetch'
+import { useProgressiveCount } from 'hooks/use-progressive-count'
 import type { MySpendRow, MySpendSort } from 'hooks/useMySpendData'
 import { formatUsd } from 'utils/currency'
 import { CategoryIcon } from 'utils/icons'
@@ -35,27 +36,27 @@ const isSolo = (r: MySpendRow) => r.usdTotal > 0 && r.share >= r.usdTotal - 0.00
 const shareText = (r: MySpendRow, soloLabel: string) =>
     isSolo(r) ? soloLabel : `share of ${formatUsd(r.usdTotal)}`
 
-function PrefetchRow({ href, children }: { href?: string; children: React.ReactNode }) {
-    return href ? <PrefetchOnVisible href={href}>{children}</PrefetchOnVisible> : <>{children}</>
-}
-
-/** Name (+ subline or share bar) left, the share right. */
-function Row({
+/** Name (+ subline or share bar) left, the share right. Memoized: a filter
+ *  or sort change re-renders the list, but rows that stay are untouched. */
+const Row = memo(function Row({
     row,
     variant,
     subline,
     divider,
     onTap,
+    href,
 }: {
     row: MySpendRow
     variant: SpendListVariant
     subline?: string
     divider: string | 'none'
     onTap: (expense: Expense) => void
+    href?: string
 }) {
     const fraction = row.usdTotal > 0 ? Math.min(1, row.share / row.usdTotal) : 1
     return (
         <Box
+            data-href={href}
             onClick={() => onTap(row.expense)}
             sx={{
                 ...pressRowSx,
@@ -88,7 +89,7 @@ function Row({
             </Typography>
         </Box>
     )
-}
+})
 
 interface MySpendListProps {
     /** Already sorted by the active sort. */
@@ -98,7 +99,7 @@ interface MySpendListProps {
     search: string
     onSearchChange: (search: string) => void
     onRowTap: (expense: Expense) => void
-    /** Where a row navigates — rows prefetch it as they scroll into view. */
+    /** Where a row navigates — prefetched on press (see usePressPrefetch). */
     rowHref?: (expense: Expense) => string
     variant?: SpendListVariant
     /** Subline when the person is the only one on the bill: "just you". */
@@ -108,7 +109,9 @@ interface MySpendListProps {
     tripDays?: number
 }
 
-export function MySpendList({
+/** Memoized: the Insights page re-renders on every toggle/filter tap, and
+ *  the list only needs to when its rows or controls change. */
+export const MySpendList = memo(function MySpendList({
     rows,
     sort,
     onSortChange,
@@ -132,6 +135,11 @@ export function MySpendList({
         })
     const tripStart = tripStartDate ? dayjs(tripStartDate + 'T00:00:00') : null
     const isDateSort = sort === 'date-asc' || sort === 'date-desc'
+
+    // Mount the first screenful now, the rest just after first paint. The
+    // list starts ~350px down the page, below the chart.
+    const limit = useProgressiveCount(rows.length, 350)
+    const onPointerDown = usePressPrefetch(rows[0] && rowHref?.(rows[0].expense))
 
     // Date sorts group by day (biggest share first within a day);
     // amount sorts render one flat ranked list
@@ -157,10 +165,26 @@ export function MySpendList({
         [dayjs(r.expense.date + 'T00:00:00').format('MMM D'), place(r), shareText(r, soloLabel)].filter(Boolean).join(' · ')
 
     const renderRow = (r: MySpendRow, subline: string, divider: string | 'none') => (
-        <PrefetchRow key={r.expense.id} href={rowHref?.(r.expense)}>
-            <Row row={r} variant={variant} subline={subline} divider={divider} onTap={onRowTap} />
-        </PrefetchRow>
+        <Row
+            key={r.expense.id}
+            row={r}
+            variant={variant}
+            subline={subline}
+            divider={divider}
+            onTap={onRowTap}
+            href={rowHref?.(r.expense)}
+        />
     )
+
+    // Day groups within the render budget (totals still count every row)
+    let budget = limit
+    const shownGroups: ((typeof dayGroups)[number] & { count: number })[] = []
+    for (const g of dayGroups) {
+        if (budget <= 0) break
+        shownGroups.push({ ...g, count: g.rows.length, rows: g.rows.slice(0, budget) })
+        budget -= g.rows.length
+    }
+    const shownRows = rows.length > limit ? rows.slice(0, limit) : rows
 
     /** Agenda: day number + weekday as a left margin column. */
     const dateMargin = (date: string) => {
@@ -193,7 +217,7 @@ export function MySpendList({
     } else if (variant === 'groups' && isDateSort) {
         body = (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {dayGroups.map((g) => {
+                {shownGroups.map((g) => {
                     const dayNumber = tripStart
                         ? dayjs(g.date + 'T00:00:00').diff(tripStart, 'day') + 1
                         : null
@@ -206,11 +230,11 @@ export function MySpendList({
                                 dayTotal={g.total}
                                 dayNumber={inTrip ? dayNumber : null}
                                 totalDays={inTrip ? (tripDays ?? null) : null}
-                                expenseCount={g.rows.length}
+                                expenseCount={g.count}
                                 collapsed={collapsed}
                                 onToggle={() => toggleDate(g.date)}
                             />
-                            <Collapse in={!collapsed} timeout={200}>
+                            <Collapse in={!collapsed} timeout={150}>
                                 {g.rows.map((r, i) => renderRow(r, sublineInDay(r), i < g.rows.length - 1 ? RULE : 'none'))}
                             </Collapse>
                         </Box>
@@ -220,8 +244,8 @@ export function MySpendList({
         )
     } else if (variant === 'agenda') {
         const blocks = isDateSort
-            ? dayGroups.map((g) => ({ key: g.date, date: g.date, rows: g.rows }))
-            : rows.map((r) => ({ key: String(r.expense.id), date: r.expense.date, rows: [r] }))
+            ? shownGroups.map((g) => ({ key: g.date, date: g.date, rows: g.rows }))
+            : shownRows.map((r) => ({ key: String(r.expense.id), date: r.expense.date, rows: [r] }))
         body = (
             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
                 {blocks.map((b, bi) => (
@@ -237,7 +261,7 @@ export function MySpendList({
     } else if (isDateSort) {
         body = (
             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                {dayGroups.map((g, gi) => (
+                {shownGroups.map((g, gi) => (
                     <Box key={g.date}>
                         {/* Slim date band — lighter than the rows it labels */}
                         <Box
@@ -269,7 +293,7 @@ export function MySpendList({
     } else {
         body = (
             <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                {rows.map((r, i) => renderRow(r, sublineFlat(r), i < rows.length - 1 ? RULE : 'none'))}
+                {shownRows.map((r, i) => renderRow(r, sublineFlat(r), i < rows.length - 1 ? RULE : 'none'))}
             </Box>
         )
     }
@@ -282,7 +306,9 @@ export function MySpendList({
             </Typography>
             <ListControls search={search} onSearchChange={onSearchChange} sort={sort} onSortChange={onSortChange} />
             {/* 12px below the controls, like the page's toggle → chart gap */}
-            <Box sx={{ marginTop: 0.5 }}>{body}</Box>
+            <Box sx={{ marginTop: 0.5 }} onPointerDown={onPointerDown}>
+                {body}
+            </Box>
         </Box>
     )
-}
+})

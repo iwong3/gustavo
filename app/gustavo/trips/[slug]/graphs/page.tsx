@@ -3,6 +3,7 @@
 import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
+import { useCallback, useDeferredValue } from 'react'
 
 import { cardSx, colors, pressShadowSx } from '@/lib/colors'
 import type { Expense } from '@/lib/types'
@@ -59,10 +60,18 @@ export default function MySpendPage() {
     const possessive = isMe ? 'your' : `${person?.firstName ?? 'their'}'s`
 
     // ?from=graphs makes the header back button return here, not the
-    // expenses list (see utils/back-href.ts)
-    const expenseHref = (expense: Expense) =>
-        `/gustavo/trips/${trip.slug}/expenses/${expense.id}?from=graphs`
-    const handleRowTap = (expense: Expense) => router.push(expenseHref(expense))
+    // expenses list (see utils/back-href.ts). Stable callbacks so the
+    // memoized list can skip renders that don't touch it.
+    const expenseHref = useCallback(
+        (expense: Expense) => `/gustavo/trips/${trip.slug}/expenses/${expense.id}?from=graphs`,
+        [trip.slug]
+    )
+    const handleRowTap = useCallback((expense: Expense) => router.push(expenseHref(expense)), [router, expenseHref])
+
+    // The list is the expensive part of a tap (100+ rows). Deferred, the
+    // toggle, chart and total paint first and the list follows in an
+    // interruptible background render — a tap never waits on it.
+    const listRows = useDeferredValue(sortedRows)
 
     // Active filters as removable chips
     const chips: { kind: MySpendDimension; label: string }[] = []
@@ -77,9 +86,6 @@ export default function MySpendPage() {
     const summaryLine = hasActiveFilters
         ? `${pctOfAll}% of ${possessive} ${formatUsd(overallTotal)} · ${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`
         : `${possessive} share · ${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'} · ${formatUsd(overallTotal / tripDays)}/day`
-
-    // The total rolls to its new amount rather than snapping
-    const shownTotal = useTweenedNumber(totalShare)
 
     const View = dimension === 'day' ? DayCalendar : dimension === 'location' ? PlaceRoute : CategoryBreakdown
 
@@ -189,7 +195,7 @@ export default function MySpendPage() {
             <Box sx={{ ...cardSx, padding: 1.5 }}>
                 <Typography
                     sx={{ fontFamily: 'var(--font-serif)', fontSize: 28, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-                    {formatUsd(shownTotal)}
+                    <RollingUsd value={totalShare} />
                 </Typography>
                 <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginTop: 0.25, marginBottom: 1.25 }}>
                     {summaryLine}
@@ -201,7 +207,7 @@ export default function MySpendPage() {
                     <Box
                         key={dimension}
                         sx={{
-                            'animation': 'viewIn 200ms ease-out',
+                            'animation': 'viewIn 150ms ease-out',
                             '@keyframes viewIn': {
                                 from: { opacity: 0, transform: 'translateY(4px)' },
                                 to: { opacity: 1, transform: 'none' },
@@ -215,7 +221,7 @@ export default function MySpendPage() {
 
             <Box sx={{ marginTop: 1 }}>
                 <MySpendList
-                    rows={sortedRows}
+                    rows={listRows}
                     sort={sort}
                     onSortChange={setSort}
                     search={search}
@@ -229,4 +235,10 @@ export default function MySpendPage() {
             </Box>
         </Box>
     )
+}
+
+/** The total rolls to its new amount rather than snapping. Its own component
+ *  so the per-frame tween re-renders only this text, not the whole page. */
+function RollingUsd({ value }: { value: number }) {
+    return <>{formatUsd(useTweenedNumber(value))}</>
 }

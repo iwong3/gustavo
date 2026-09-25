@@ -11,7 +11,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
  */
 export function AnimatedHeight({
     children,
-    duration = 240,
+    duration = 180,
 }: {
     children: React.ReactNode
     duration?: number

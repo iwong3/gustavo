@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Collapse, Typography } from '@mui/material'
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
@@ -9,9 +9,10 @@ import { cardSx, colors } from '@/lib/colors'
 import { sortSpec, useSortStore } from 'components/menu/sort/sort-store'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
-import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { showToast } from 'components/toast-store'
+import { usePressPrefetch } from 'hooks/use-press-prefetch'
+import { useProgressiveCount } from 'hooks/use-progressive-count'
 import { useRefresh } from 'providers/refresh-provider'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
@@ -33,6 +34,46 @@ type DateGroup = {
     dayTotal: number
 }
 
+/**
+ * One swipeable expense row. Memoized (the list passes stable callbacks) so
+ * collapsing a day or a background refetch only re-renders rows that
+ * changed. `data-href` feeds the list's press prefetch.
+ */
+const ListRow = memo(function ListRow({
+    expense,
+    href,
+    canEdit,
+    canDelete,
+    showBottomBorder,
+    hideDate,
+    onTap,
+    onEdit,
+    onDelete,
+}: {
+    expense: Expense
+    href: string
+    canEdit: boolean
+    canDelete: boolean
+    showBottomBorder: boolean
+    hideDate?: boolean
+    onTap: (expense: Expense) => void
+    onEdit: (expense: Expense) => void
+    onDelete: (expense: Expense) => void
+}) {
+    return (
+        <div data-href={href}>
+            <SwipeableRow
+                canEdit={canEdit}
+                canDelete={canDelete}
+                onEdit={() => onEdit(expense)}
+                onDelete={() => onDelete(expense)}
+                backgroundColor={expense.conversionError ? '#ffe8e5' : colors.primaryWhite}
+                showBottomBorder={showBottomBorder}>
+                <ExpenseRow expense={expense} onTap={onTap} hideDate={hideDate} />
+            </SwipeableRow>
+        </div>
+    )
+})
 
 export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const { filteredExpenses, getUsdValue, isSearching } = useSpendData()
@@ -107,11 +148,14 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
     const tripEnd = dayjs(trip.endDate + 'T00:00:00')
     const totalDays = tripEnd.diff(tripStart, 'day') + 1
 
+    const detailHref = useCallback(
+        (expense: Expense) => `/gustavo/trips/${trip.slug}/expenses/${expense.id}`,
+        [trip.slug]
+    )
+
     const handleTap = useCallback(
-        (expense: Expense) => {
-            router.push(`/gustavo/trips/${trip.slug}/expenses/${expense.id}`)
-        },
-        [router, trip.slug]
+        (expense: Expense) => router.push(detailHref(expense)),
+        [router, detailHref]
     )
 
     const handleEdit = useCallback(
@@ -135,9 +179,41 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
         })
     }, [])
 
+    const renderRow = (row: Expense, showBottomBorder: boolean, hideDate?: boolean) => {
+        const isReporter = row.reportedBy?.id === trip.currentUserId
+        return (
+            <ListRow
+                key={row.id}
+                expense={row}
+                href={detailHref(row)}
+                canEdit={canEditExpense(trip.userRole, trip.isAdmin, isReporter)}
+                canDelete={canDeleteExpense(trip.userRole, trip.isAdmin, isReporter)}
+                showBottomBorder={showBottomBorder}
+                hideDate={hideDate}
+                onTap={handleTap}
+                onEdit={handleEdit}
+                onDelete={handleSwipeDelete}
+            />
+        )
+    }
+
+    // Mount the first screenful now and the rest just after first paint (a
+    // back navigation gets enough rows to reach its restored scroll spot)
+    const limit = useProgressiveCount(displayData.length)
+    const shownData = displayData.length > limit ? displayData.slice(0, limit) : displayData
+    let budget = limit
+    const shownGroups: (DateGroup & { count: number })[] = []
+    for (const g of dateGroups) {
+        if (budget <= 0) break
+        shownGroups.push({ ...g, count: g.expenses.length, expenses: g.expenses.slice(0, budget) })
+        budget -= g.expenses.length
+    }
+
+    const onPointerDown = usePressPrefetch(displayData[0] && detailHref(displayData[0]))
+
     return (
         <>
-            <Box id="receipts-list" sx={{ scrollMarginTop: '54px', pb: 2 }}>
+            <Box id="receipts-list" sx={{ scrollMarginTop: '54px', pb: 2 }} onPointerDown={onPointerDown}>
                 {showSortedView ? (
                     /* Sorted, not grouped — but otherwise the date-grouped card,
                        unchanged: one card, rows touching, each row carrying its
@@ -149,56 +225,14 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                             it in the sticky toolbar right above — and unlike a
                             caption here, that survives scrolling. */}
                         <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                            {displayData.map((row, i) => {
-                                const isReporter =
-                                    row.reportedBy?.id === trip.currentUserId
-                                const rowCanEdit = canEditExpense(
-                                    trip.userRole,
-                                    trip.isAdmin,
-                                    isReporter
-                                )
-                                const rowCanDelete = canDeleteExpense(
-                                    trip.userRole,
-                                    trip.isAdmin,
-                                    isReporter
-                                )
-
-                                return (
-                                    <PrefetchOnVisible
-                                        key={row.id}
-                                        href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
-                                        <SwipeableRow
-                                            canEdit={rowCanEdit}
-                                            canDelete={rowCanDelete}
-                                            onEdit={() => handleEdit(row)}
-                                            onDelete={() => handleSwipeDelete(row)}
-                                            backgroundColor={
-                                                row.conversionError
-                                                    ? '#ffe8e5'
-                                                    : colors.primaryWhite
-                                            }
-                                            showBottomBorder={
-                                                i < displayData.length - 1
-                                            }>
-                                            {/* Date stays in the row: it's the
-                                                only thing saying when now that
-                                                the group header is gone. */}
-                                            <ExpenseRow
-                                                expense={row}
-                                                onTap={handleTap}
-                                            />
-                                        </SwipeableRow>
-                                    </PrefetchOnVisible>
-                                )
-                            })}
+                            {/* Date stays in each row: it's the only thing
+                                saying when now that the group header is gone. */}
+                            {shownData.map((row, i) => renderRow(row, i < displayData.length - 1))}
                         </Box>
                     </Box>
                 ) : showSearchView ? (
                     <Box sx={{ mx: 2 }}>
-                        {displayData.map((row) => {
-                            const isReporter = row.reportedBy?.id === trip.currentUserId
-                            const rowCanEdit = canEditExpense(trip.userRole, trip.isAdmin, isReporter)
-                            const rowCanDelete = canDeleteExpense(trip.userRole, trip.isAdmin, isReporter)
+                        {shownData.map((row) => {
                             const rowDate = dayjs(row.date + 'T00:00:00')
 
                             return (
@@ -235,29 +269,13 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                         </Typography>
                                     </Box>
                                     <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                                        <PrefetchOnVisible
-                                            href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
-                                            <SwipeableRow
-                                                canEdit={rowCanEdit}
-                                                canDelete={rowCanDelete}
-                                                onEdit={() => handleEdit(row)}
-                                                onDelete={() => handleSwipeDelete(row)}
-                                                backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
-                                                showBottomBorder={false}
-                                            >
-                                                <ExpenseRow
-                                                    expense={row}
-                                                    onTap={handleTap}
-                                                    hideDate
-                                                />
-                                            </SwipeableRow>
-                                        </PrefetchOnVisible>
+                                        {renderRow(row, false, true)}
                                     </Box>
                                 </Box>
                             )
                         })}
                     </Box>
-                ) : dateGroups.map((group) => {
+                ) : shownGroups.map((group) => {
                     const expenseDate = dayjs(group.date + 'T00:00:00')
                     const dayNumber = expenseDate.diff(tripStart, 'day') + 1
                     const isWithinTrip = dayNumber >= 1 && dayNumber <= totalDays
@@ -277,38 +295,16 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
                                         dayTotal={group.dayTotal}
                                         dayNumber={isWithinTrip ? dayNumber : null}
                                         totalDays={isWithinTrip ? totalDays : null}
-                                        expenseCount={group.expenses.length}
+                                        expenseCount={group.count}
                                         collapsed={isCollapsed}
                                         onToggle={() => toggleDateCollapse(group.date)}
                                     />
 
                                     {/* Expense rows */}
-                                    <Collapse in={!isCollapsed} timeout={200}>
-                                        {group.expenses.map((row, i) => {
-                                            const isReporter = row.reportedBy?.id === trip.currentUserId
-                                            const rowCanEdit = canEditExpense(trip.userRole, trip.isAdmin, isReporter)
-                                            const rowCanDelete = canDeleteExpense(trip.userRole, trip.isAdmin, isReporter)
-
-                                            return (
-                                                <PrefetchOnVisible
-                                                    key={row.id}
-                                                    href={`/gustavo/trips/${trip.slug}/expenses/${row.id}`}>
-                                                    <SwipeableRow
-                                                        canEdit={rowCanEdit}
-                                                        canDelete={rowCanDelete}
-                                                        onEdit={() => handleEdit(row)}
-                                                        onDelete={() => handleSwipeDelete(row)}
-                                                        backgroundColor={row.conversionError ? '#ffe8e5' : colors.primaryWhite}
-                                                        showBottomBorder={i < group.expenses.length - 1}
-                                                    >
-                                                        <ExpenseRow
-                                                            expense={row}
-                                                            onTap={handleTap}
-                                                        />
-                                                    </SwipeableRow>
-                                                </PrefetchOnVisible>
-                                            )
-                                        })}
+                                    <Collapse in={!isCollapsed} timeout={150}>
+                                        {group.expenses.map((row, i) =>
+                                            renderRow(row, i < group.expenses.length - 1)
+                                        )}
                                     </Collapse>
                                 </Box>
                             </Box>
