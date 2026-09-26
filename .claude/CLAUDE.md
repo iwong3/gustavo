@@ -43,6 +43,12 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Custom touch gestures** (swipe, pull, drag) → follow `.claude/docs/code-guide.md` § Touch Gesture Conventions (axis-lock, `touch-action`, yield on `defaultPrevented`).
 - **No `position: fixed` UI inside `#main-scroll`** (the layout's overflow scroller) — iOS clips fixed elements to the scroller's bounds, so bottom bars render invisible on phones while looking fine on desktop. Portal to `document.body` instead (see `components/page-action-bar.tsx`).
 - **Runtime types lie for DB values.** ALL BIGINT ids (users, trips, expenses…) arrive as strings; NUMERIC fields typed `number` can be `null` (API `parseFloat(null)` → NaN → JSON serializes as null — e.g. `costConvertedUsd` on conversion-error rows). Never call number methods on raw API numerics (guard with `Number.isFinite`, or use `getUsdValue()` for expense amounts); never compare ids with `===` after a `Number()` cast — compare `String(a) === String(b)`. Gallery fixtures model runtime truth (string ids, `null` not `0`).
+- **Leaving a page (cancel, save, delete, back) → `exitTo`** from `useExitTo()`,
+  never a bare `router.push`/`router.replace` — otherwise swipe-back returns to the
+  page you just left. See `.claude/docs/code-guide.md` § Navigation Chrome.
+- **Gate loading UI on `isPending`, never `isLoading`** — during the persisted
+  cache restore `isLoading` is false with no data, so pages flash their empty
+  state. See code-guide § Loading, Caching & Refresh.
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying
@@ -59,6 +65,10 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   Only if nothing is on 3000, start the `gustavo-dev` launch config (runs on **3100**).
   Never run both dev servers at once — they share `.next` and corrupt each other.
 - Verify: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build`
+  - `pnpm lint` has ~25 files of pre-existing errors (React Compiler rules etc.)
+    and Vercel builds skip lint (`ignoreDuringBuilds`) — before a push, lint the
+    changed files (`pnpm exec eslint <files>`) and don't fix unrelated debt.
+  - Don't run `pnpm build` while a dev server is up — it shares `.next`.
 - Tests: `pnpm test` (Vitest, `tests/`) — DB-backed tests hit local docker Postgres, so `pnpm docker:up` first. Run at checkpoints when touching tested logic (OCC, and future real-logic suites).
 - DB: localhost:5432, user `gus`, pass `yellow_shirt_dev`, db `gustavo_dev` (DBeaver); Metabase localhost:3001
 - **Component gallery**: `localhost:3000/dev/gallery` — renders components/forms in

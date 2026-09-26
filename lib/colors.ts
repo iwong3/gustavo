@@ -86,7 +86,10 @@ export const pressShadowSx = {
     '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
 } as const
 
-/** List rows and flat tappable surfaces: a yellow tint while held. */
+/** List rows and flat tappable surfaces: a yellow tint while held.
+ *  Not for rows that toggle a selection highlight (filters): phones hold
+ *  :active a beat past a quick tap, so the tint reads as the highlight
+ *  lingering after unselecting — the highlight is the feedback there. */
 export const pressRowSx = {
     'transition': 'background-color 0.1s',
     '&:active': { backgroundColor: `${colors.primaryYellow}59` }, // ~35%

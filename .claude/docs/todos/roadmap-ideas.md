@@ -2,6 +2,12 @@
 
 Captured wants, not yet scheduled:
 
+- **Per-app footer** (Sept 2026, deferred) — rethink the bottom tab bar as the
+  suite grows (e.g. each app — Trips, Health — getting its own footer/tabs)
+  instead of one global Home | Trips | Health | Settings bar.
+- **Tab memory** (Sept 2026, deferred) — re-tapping a tab returns to where you
+  last were inside it (native tab-stack behaviour) instead of the tab root.
+
 - **DB backup** — on-demand and/or automated `pg_dump` of the Neon prod DB,
   stored securely (Ivan's PC or Google Drive). Neon free tier only keeps ~1 day
   of restore history.

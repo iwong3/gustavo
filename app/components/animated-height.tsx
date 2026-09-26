@@ -8,6 +8,11 @@ import { useLayoutEffect, useRef, useState } from 'react'
  * whose body swaps between views of different heights. Watches the content
  * with a ResizeObserver, so it follows any change (view switch, data
  * arriving, filters). Honours prefers-reduced-motion.
+ *
+ * Clips its content (overflow: hidden), so children can't bleed out with
+ * negative margins — for rows that highlight edge to edge inside a padded
+ * card, drop the card's side padding and let the content inset itself
+ * (see the Insights chart card).
  */
 export function AnimatedHeight({
     children,
