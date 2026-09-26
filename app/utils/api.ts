@@ -3,7 +3,7 @@
  * All types are DB-driven — no enum mappings.
  */
 
-import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails, SettlementRecord } from '@/lib/types'
+import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails, SettlementRecord, SettlePlan } from '@/lib/types'
 import type { TripMapResponse } from '@/lib/trip-map'
 
 /** Thrown when a PUT/DELETE fails because the row's updated_at no longer
@@ -221,6 +221,8 @@ export type AddSettlementData = {
     fromUserId: number
     toUserId: number
     amountUsd: number
+    /** The plan it's settled under — the API rejects mixing plans (409). */
+    plan: SettlePlan
     note?: string
     settledOn?: string // YYYY-MM-DD, defaults to today server-side
 }

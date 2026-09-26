@@ -3,7 +3,7 @@
 import { Box } from '@mui/material'
 import { usePathname } from 'next/navigation'
 
-import { cardSx, colors, toneColors } from '@/lib/colors'
+import { cardSx, colors } from '@/lib/colors'
 import { Bone, ChromeBox, Circle, TextBone } from 'components/skeleton/bones'
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
 
@@ -283,107 +283,68 @@ export function ExpenseDetailSkeleton() {
 
 // ── Debts ───────────────────────────────────────────────────────────────────
 
-/** Title row (title + 30px controls) over a PersonSwitcher of 40px avatars. */
-function TitleWithPeopleSkeleton({ gap }: { gap: number }) {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap }}>
-            <TitleRowSkeleton width={140} controls={[64, 30]} />
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                {[0, 1, 2, 3].map((i) => (
-                    <Circle key={i} size={40} />
-                ))}
-            </Box>
-        </Box>
-    )
-}
-
-/** Mirrors the debts page (app/gustavo/trips/[slug]/debts/page.tsx). */
+/**
+ * Mirrors the debts page (app/gustavo/trips/[slug]/debts/page.tsx): person
+ * picker, plan toggle, then the balance card (components/debt/balance-card)
+ * with a typical three waterfall rows, the result bar and one payment.
+ */
 export function DebtsSkeleton() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 450, paddingX: 2, paddingY: 2 }}>
-            <TitleWithPeopleSkeleton gap={1.25} />
-            {/* StatBoxes */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                {[toneColors.negativeBg, toneColors.positiveBg].map((bg) => (
-                    <Box key={bg} sx={{ ...cardSx, flex: 1, backgroundColor: bg, paddingX: 1.5, paddingY: 1 }}>
-                        <TextBone fontSize={22} lineHeight={1.1} width="60%" />
-                        <TextBone fontSize={10.5} width="70%" sx={{ marginTop: 0.25 }} />
-                        <Box sx={{ display: 'flex', gap: 0.5, minHeight: 22, marginTop: 0.5 }}>
-                            <Circle size={22} />
-                            <Circle size={22} />
+            <TitleRowSkeleton width={56} controls={[30]} />
+            {/* Person picker: avatar + name */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 36 }}>
+                <Circle size={36} />
+                <TextBone fontSize={14} width={110} />
+            </Box>
+            <ChromeBox height={33} />
+            <Box sx={{ ...cardSx, border: `1.5px solid ${colors.primaryBlack}`, boxShadow: `3px 3px 0px ${colors.primaryBlack}`, overflow: 'hidden' }}>
+                {/* Headline + ⓘ */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingX: 1.5, paddingTop: 1.25, paddingBottom: 1 }}>
+                    <Box>
+                        <TextBone fontSize={11} width={56} />
+                        <TextBone fontSize={28} lineHeight={1.1} width={120} />
+                    </Box>
+                    <Circle size={30} />
+                </Box>
+                {/* Waterfall rows: 16px bars, 5px above and below, faint dividers,
+                    a 14px chevron column */}
+                {[0.55, 0.2, 0.3].map((w, i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 1.5, paddingY: '5px', borderTop: i > 0 ? `1px solid ${colors.primaryBlack}1a` : 'none' }}>
+                        <Box sx={{ width: 84, flexShrink: 0 }}>
+                            <TextBone fontSize={12} width={44} />
                         </Box>
+                        <Box sx={{ flex: 1, height: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                            <Bone height={16} sx={{ width: `${w * 100}%`, marginRight: `${i * 12}%` }} />
+                        </Box>
+                        <Box sx={{ width: 14, flexShrink: 0 }} />
                     </Box>
                 ))}
-            </Box>
-            {/* Money map */}
-            <TextBone fontSize={11} width={110} />
-            <Bone height={280} radius="4px" />
-            {/* Settle up */}
-            <TextBone fontSize={11} width={80} />
-            <Bone height={87} radius="4px" />
-            {[0, 1].map((i) => (
-                <Bone key={i} height={48} radius="4px" />
-            ))}
-        </Box>
-    )
-}
-
-/** Mirrors the pair drill-down (components/debt/pair-detail.tsx). */
-export function DebtPairSkeleton() {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 450, paddingX: 2, paddingY: 2 }}>
-            {/* Hero */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 1.75,
-                    backgroundColor: colors.primaryWhite,
-                    border: `1.5px solid ${colors.primaryBlack}`,
-                    boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
-                    borderRadius: '4px',
-                }}>
-                <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <Circle size={32} />
-                        <Bone width={14} height={10} />
-                        <Circle size={32} />
+                {/* Result bar */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 1.5, paddingTop: 1, paddingBottom: 1.25, marginTop: 0.5, borderTop: `1px solid ${colors.primaryBlack}` }}>
+                    <Box sx={{ width: 84, flexShrink: 0 }}>
+                        <TextBone fontSize={12} width={36} />
                     </Box>
-                    <TextBone fontSize={12} width={110} sx={{ marginTop: 0.75 }} />
+                    <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                        <Bone height={22} sx={{ width: '60%' }} />
+                    </Box>
+                    <Box sx={{ width: 14, flexShrink: 0 }} />
                 </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <TextBone fontSize={30} lineHeight={1.1} width={96} />
-                    <TextBone fontSize={11.5} width={70} />
+                {/* One payment */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, paddingX: 1.5, paddingY: 1, borderTop: ROW_DIVIDER }}>
+                    <Circle size={30} />
+                    <Box sx={{ flex: 1 }}>
+                        <TextBone fontSize={14} lineHeight={1.25} width={64} />
+                        <TextBone fontSize={11.5} lineHeight={1.25} width={48} />
+                    </Box>
+                    <TextBone fontSize={15} width={58} />
+                    <Bone width={58} height={30} radius="4px" />
                 </Box>
             </Box>
-            {/* ListControls + toggle */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <ChromeBox height={34} sx={{ flex: 1 }} />
-                <ChromeBox width={88} height={34} />
-            </Box>
-            <ChromeBox height={34} />
-            {/* Rows */}
-            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                {[0, 1, 2, 3].map((i) => (
-                    <Box
-                        key={i}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.25,
-                            paddingX: 1.25,
-                            paddingY: 1,
-                            borderBottom: i < 3 ? ROW_DIVIDER : 'none',
-                        }}>
-                        <Circle size={28} />
-                        <Box sx={{ flex: 1 }}>
-                            <TextBone fontSize={13} lineHeight={1.3} width="55%" />
-                            <TextBone fontSize={11} lineHeight={1.3} width="35%" />
-                        </Box>
-                        <TextBone fontSize={13} width={50} />
-                    </Box>
-                ))}
+            {/* Everyone else (folded) */}
+            <Box sx={{ ...cardSx, display: 'flex', alignItems: 'center', gap: 1.25, paddingX: 1.5, height: 46 }}>
+                <Circle size={24} />
+                <TextBone fontSize={13.5} width="50%" />
             </Box>
         </Box>
     )
@@ -559,7 +520,6 @@ export function TripPageSkeleton({ pathname }: { pathname: string }) {
         return <FormSkeleton />
     }
     if (/^expenses\/[^/]+$/.test(sub)) return <ExpenseDetailSkeleton />
-    if (/^debts\/.+/.test(sub)) return <DebtPairSkeleton />
     if (sub.startsWith('debts')) return <DebtsSkeleton />
     if (sub.startsWith('graphs')) return <GraphsSkeleton />
     if (sub.startsWith('activity')) return <ActivitySkeleton />

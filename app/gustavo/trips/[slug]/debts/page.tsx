@@ -1,345 +1,273 @@
 'use client'
 
-import {
-    Box,
-    Button,
-    Collapse,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography,
-} from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
-import { formatUsd } from 'utils/currency'
+import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 
-import { cardSx, colors, toneColors } from '@/lib/colors'
+import { colors } from '@/lib/colors'
+import type { Settlement } from '@/lib/debt'
 import {
-    directPairwiseSettlements,
-    simplifyDebts,
-    sortSettlements,
-    type Settlement,
-} from '@/lib/debt'
-import {
-    destructiveButtonSx,
-    dialogPaperSx,
-    primaryButtonSx,
-    secondaryButtonSx,
-} from '@/lib/form-styles'
+    balanceSteps,
+    expenseBalanceEffects,
+    lockedPlan,
+    planHandoffs,
+    planNetCents,
+    planSettlements,
+    roundToTotal,
+    toCents,
+} from '@/lib/debt-proof'
 import { queryKeys } from '@/lib/query-keys'
-import type { SettlementRecord, UserSummary } from '@/lib/types'
-import { IconArrowsExchange, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
-
-import { MoneyMap } from 'components/debt/money-map'
-import { SettleProgressCard, SettleRow, SettledRow } from 'components/debt/settle-up'
-import { PageTitleRow } from 'components/page-title-row'
+import type { Expense, SettlementRecord, SettlePlan, UserSummary } from '@/lib/types'
+import { BalanceCard, type PlanPaymentRow } from 'components/debt/balance-card'
+import { useDebtsView } from 'components/debt/debts-view-store'
+import { handoffLine } from 'components/debt/handoff-text'
+import { ProofList, type ProofRow } from 'components/debt/proof-list'
+import { EveryoneElseCard, SettledCard, type OtherPaymentRow } from 'components/debt/trip-payments'
+import { PersonPicker } from 'components/insights/person-picker'
 import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
-import { PersonSwitcher } from 'components/person-switcher'
-import { PrefetchOnVisible } from 'components/prefetch-on-visible'
+import { PageTitleRow } from 'components/page-title-row'
+import { SlidingToggle } from 'components/sliding-toggle'
+import { showToast } from 'components/toast-store'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
 import { addSettlement, deleteSettlement } from 'utils/api'
-import { InitialsIcon } from 'utils/icons'
+import { formatUsd } from 'utils/currency'
+import { canSettlePayment } from 'utils/permissions'
 
-const OWE_RED = toneColors.negative
-const OWED_GREEN = toneColors.positive
+const PLAN_OPTIONS = [
+    { value: 'fewest', label: 'Fewest payments' },
+    { value: 'direct', label: 'Pay who you owe' },
+]
+const PLAN_NAME: Record<SettlePlan, string> = { fewest: 'Fewest payments', direct: 'Pay who you owe' }
 
-function StatBox({
-    value,
-    label,
-    people,
-    prefix,
-    tone,
-}: {
-    value: number
-    label: string
-    people: UserSummary[]
-    prefix: string
-    tone: 'owe' | 'owed'
-}) {
-    return (
-        <Box
-            sx={{
-                ...cardSx,
-                flex: 1,
-                backgroundColor: tone === 'owe' ? toneColors.negativeBg : toneColors.positiveBg,
-                paddingX: 1.5,
-                paddingY: 1,
-            }}>
-            <Typography
-                sx={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    lineHeight: 1.1,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: tone === 'owe' ? OWE_RED : OWED_GREEN,
-                }}>
-                {value > 0 ? formatUsd(value) : '$0'}
-            </Typography>
-            <Typography
-                sx={{
-                    fontSize: 10.5,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: colors.primaryBrown,
-                    marginTop: 0.25,
-                }}>
-                {label}
-            </Typography>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    marginTop: 0.5,
-                    minHeight: 22,
-                }}>
-                {value > 0 ? (
-                    <>
-                        <Typography
-                            sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary' }}>
-                            {prefix}
-                        </Typography>
-                        {people.map((p) => (
-                            <InitialsIcon
-                                key={p.id}
-                                name={p.firstName}
-                                initials={p.initials}
-                                iconColor={p.iconColor}
-                                sx={{
-                                    width: 22,
-                                    height: 22,
-                                    fontSize: 8.5,
-                                    boxShadow: `1px 1px 0px ${colors.primaryBlack}`,
-                                }}
-                            />
-                        ))}
-                    </>
-                ) : (
-                    <Typography
-                        sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary' }}>
-                        all clear
-                    </Typography>
-                )}
-            </Box>
-        </Box>
-    )
-}
-
-/** Uppercase section header with an optional right-aligned tally. */
-function SectionHead({ label, right }: { label: string; right?: string }) {
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                gap: 1,
-                marginTop: 0.5,
-                paddingX: 0.25,
-            }}>
-            <Typography
-                sx={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: colors.primaryBrown,
-                }}>
-                {label}
-            </Typography>
-            {right && (
-                <Typography
-                    sx={{
-                        fontSize: 11,
-                        fontWeight: 800,
-                        fontVariantNumeric: 'tabular-nums',
-                        color: colors.primaryBlack,
-                    }}>
-                    {right}
-                </Typography>
-            )}
-        </Box>
-    )
-}
+const same = (a: number | string, b: number | string) => String(a) === String(b)
+const payKey = (s: Pick<Settlement, 'debtorId' | 'creditorId'>) => `${s.debtorId}>${s.creditorId}`
 
 export default function DebtsPage() {
     const { trip } = useTripData()
-    const { debtMap, participants, settlementRecords } = useSpendData()
+    const { debtMap, expenseDebtMap, participants, settlementRecords, expenses, getUsdValue } = useSpendData()
     const router = useRouter()
     const queryClient = useQueryClient()
-
-    const defaultPersonId =
-        participants.find((p) => p.id === trip.currentUserId)?.id ??
-        participants[0]?.id ??
-        0
-    const [personId, setPersonId] = useState<number>(defaultPersonId)
+    const view = useDebtsView(trip.id)
 
     const participantById = useMemo(() => {
-        const map = new Map<number, UserSummary>()
-        for (const p of participants) map.set(p.id, p)
+        const map = new Map<string, UserSummary>()
+        for (const p of participants) map.set(String(p.id), p)
         return map
     }, [participants])
+    const nameOf = useCallback((id: number) => participantById.get(String(id))?.firstName ?? '?', [participantById])
 
-    // 'simplified' = fewest transactions (may reroute through a third person);
-    // 'direct' = every pair's actual net, nothing rerouted.
-    const [plan, setPlan] = useState<'simplified' | 'direct'>('simplified')
+    const person =
+        participantById.get(String(view.personId ?? trip.currentUserId)) ??
+        participantById.get(String(trip.currentUserId)) ??
+        participants[0]
+    const personId = person?.id ?? trip.currentUserId
+    const isYou = same(personId, trip.currentUserId)
+    const personName = isYou ? 'You' : (person?.firstName ?? '?')
 
-    const settlements = useMemo(
+    // The first payment locks the trip to its plan; until then either can be viewed
+    const locked = lockedPlan(settlementRecords)
+    const plan: SettlePlan = locked ?? view.plan
+
+    const payments = useMemo(() => planSettlements(plan, debtMap, participants), [plan, debtMap, participants])
+    const totalCents = planNetCents(payments, personId)
+    const steps = useMemo(
+        () => balanceSteps(personId, expenseDebtMap, settlementRecords, participants, totalCents),
+        [personId, expenseDebtMap, settlementRecords, participants, totalCents]
+    )
+    const whyLines = useMemo(
         () =>
-            sortSettlements(
-                plan === 'direct'
-                    ? directPairwiseSettlements(debtMap, participants)
-                    : simplifyDebts(debtMap, participants),
-                personId,
-                participantById
+            planHandoffs(personId, debtMap, payments, participants).map((h) =>
+                handoffLine(h, { currentUserId: trip.currentUserId, nameOf })
             ),
-        [plan, debtMap, participants, personId, participantById]
+        [personId, debtMap, payments, participants, trip.currentUserId, nameOf]
     )
 
-    const youOwe = settlements.filter((s) => s.debtorId === personId)
-    const youOwed = settlements.filter((s) => s.creditorId === personId)
-    const others = settlements.filter(
-        (s) => s.debtorId !== personId && s.creditorId !== personId
-    )
-    const sum = (list: Settlement[]) => list.reduce((t, s) => t + s.amount, 0)
-    const oweSum = sum(youOwe)
-    const owedSum = sum(youOwed)
-    const allSettled = settlements.length === 0
-
-    const settledSum = settlementRecords.reduce(
-        (t, r) => t + (Number.isFinite(r.amountUsd) ? r.amountUsd : 0),
-        0
-    )
-
-    // Settled money stays visible on the map — one ghost ribbon per pair
-    const settledFlows = useMemo(() => {
-        const byPair = new Map<string, Settlement>()
-        for (const r of settlementRecords) {
-            if (!Number.isFinite(r.amountUsd)) continue
-            const key = `${r.fromUserId}-${r.toUserId}`
-            const prev = byPair.get(key)
-            if (prev) {
-                prev.amount += r.amountUsd
-            } else {
-                byPair.set(key, {
-                    debtorId: r.fromUserId,
-                    creditorId: r.toUserId,
-                    amount: r.amountUsd,
-                })
-            }
-        }
-        return Array.from(byPair.values())
-    }, [settlementRecords])
-
-    const [othersOpen, setOthersOpen] = useState(false)
-
-    // Mark-paid / undo confirmation state
-    const [markTarget, setMarkTarget] = useState<Settlement | null>(null)
-    const [undoTarget, setUndoTarget] = useState<SettlementRecord | null>(null)
-    const [busy, setBusy] = useState(false)
-    const [dialogError, setDialogError] = useState<string | null>(null)
-
-    const openDetail = (s: Settlement) => {
-        router.push(
-            `/gustavo/trips/${trip.slug}/debts/${s.debtorId}-${s.creditorId}`
+    // ── Settling ────────────────────────────────────────────────────────────
+    const [pending, setPending] = useState<string | null>(null)
+    const settlementsKey = queryKeys.trips.settlements(trip.id)
+    const canSettle = (s: Settlement) =>
+        canSettlePayment(
+            trip.userRole,
+            trip.isAdmin,
+            same(s.debtorId, trip.currentUserId) || same(s.creditorId, trip.currentUserId)
         )
-    }
 
-    const nameOf = (id: number) => participantById.get(id)?.firstName ?? '?'
-    const isSelf = String(personId) === String(trip.currentUserId)
-    const personName = nameOf(personId)
-
-    const refreshSettlements = () =>
-        queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.settlements(trip.id),
-        })
-
-    const confirmMarkPaid = async () => {
-        if (!markTarget) return
-        setBusy(true)
-        setDialogError(null)
-        try {
-            await addSettlement(trip.id, {
-                fromUserId: markTarget.debtorId,
-                toUserId: markTarget.creditorId,
-                amountUsd: markTarget.amount,
-            })
-            await refreshSettlements()
-            setMarkTarget(null)
-        } catch (err) {
-            setDialogError(err instanceof Error ? err.message : 'Something went wrong')
-        } finally {
-            setBusy(false)
-        }
-    }
-
-    const confirmUndo = async () => {
-        if (!undoTarget) return
-        setBusy(true)
-        setDialogError(null)
-        try {
-            await deleteSettlement(trip.id, undoTarget.id)
-            await refreshSettlements()
-            setUndoTarget(null)
-        } catch (err) {
-            setDialogError(err instanceof Error ? err.message : 'Something went wrong')
-        } finally {
-            setBusy(false)
-        }
-    }
-
-    const renderRows = (list: Settlement[]) =>
-        list.map((s) => {
-            const debtor = participantById.get(s.debtorId)
-            const creditor = participantById.get(s.creditorId)
-            if (!debtor || !creditor) return null
-            const showVenmo =
-                isSelf &&
-                String(s.debtorId) === String(personId) &&
-                creditor.venmoUrl
-            return (
-                <PrefetchOnVisible
-                    key={`${s.debtorId}-${s.creditorId}`}
-                    href={`/gustavo/trips/${trip.slug}/debts/${s.debtorId}-${s.creditorId}`}>
-                    <SettleRow
-                        debtor={debtor}
-                        creditor={creditor}
-                        amount={s.amount}
-                        perspectiveId={personId}
-                        youId={trip.currentUserId}
-                        venmo={
-                            showVenmo
-                                ? { url: creditor.venmoUrl!, note: trip.name }
-                                : null
-                        }
-                        onTap={() => openDetail(s)}
-                        onMarkPaid={() => {
-                            setDialogError(null)
-                            setMarkTarget(s)
-                        }}
-                    />
-                </PrefetchOnVisible>
-            )
-        })
-
-    // Unique faces across the "between others" payments, for the folded header
-    const otherFaces = useMemo(() => {
-        const seen = new Map<string, UserSummary>()
-        for (const s of others) {
-            for (const id of [s.debtorId, s.creditorId]) {
-                const u = participantById.get(id)
-                if (u && !seen.has(String(id))) seen.set(String(id), u)
+    const undo = useCallback(
+        async (recordId: number) => {
+            const before = queryClient.getQueryData<SettlementRecord[]>(settlementsKey)
+            queryClient.setQueryData<SettlementRecord[]>(settlementsKey, (old) => old?.filter((r) => !same(r.id, recordId)))
+            try {
+                await deleteSettlement(trip.id, recordId)
+            } catch (err) {
+                queryClient.setQueryData(settlementsKey, before)
+                showToast(err instanceof Error ? err.message : 'Couldn’t undo that payment')
+            } finally {
+                queryClient.invalidateQueries({ queryKey: settlementsKey })
             }
-        }
-        return Array.from(seen.values()).slice(0, 5)
-    }, [others, participantById])
+        },
+        [queryClient, settlementsKey, trip.id]
+    )
 
-    const markDebtor = markTarget ? participantById.get(markTarget.debtorId) : null
-    const markCreditor = markTarget ? participantById.get(markTarget.creditorId) : null
+    // One tap: recorded straight away (optimistically), with Undo on the toast
+    const settle = useCallback(
+        async (key: string) => {
+            const s = payments.find((p) => payKey(p) === key)
+            if (!s || pending) return
+            setPending(key)
+            const before = queryClient.getQueryData<SettlementRecord[]>(settlementsKey)
+            const optimistic: SettlementRecord = {
+                id: `pending-${key}` as unknown as number,
+                fromUserId: s.debtorId,
+                toUserId: s.creditorId,
+                amountUsd: s.amount,
+                plan,
+                note: null,
+                settledOn: dayjs().format('YYYY-MM-DD'),
+                createdBy: trip.currentUserId,
+                createdAt: new Date().toISOString(),
+            }
+            queryClient.setQueryData<SettlementRecord[]>(settlementsKey, (old) => [optimistic, ...(old ?? [])])
+            try {
+                const { id } = await addSettlement(trip.id, {
+                    fromUserId: s.debtorId,
+                    toUserId: s.creditorId,
+                    amountUsd: s.amount,
+                    plan,
+                })
+                const who = (uid: number) => (same(uid, trip.currentUserId) ? 'You' : nameOf(uid))
+                showToast(`${who(s.debtorId)} → ${who(s.creditorId)} · ${formatUsd(s.amount, 2)} settled`, 'success', {
+                    label: 'Undo',
+                    onClick: () => undo(id),
+                })
+            } catch (err) {
+                queryClient.setQueryData(settlementsKey, before)
+                showToast(err instanceof Error ? err.message : 'Couldn’t record that payment')
+            } finally {
+                setPending(null)
+                queryClient.invalidateQueries({ queryKey: settlementsKey })
+            }
+        },
+        [payments, pending, queryClient, settlementsKey, plan, trip.currentUserId, trip.id, nameOf, undo]
+    )
+
+    // ── Rows ────────────────────────────────────────────────────────────────
+    const mine: PlanPaymentRow[] = payments
+        .filter((s) => same(s.debtorId, personId) || same(s.creditorId, personId))
+        .map((s) => {
+            const outgoing = same(s.debtorId, personId)
+            const counterparty = participantById.get(String(outgoing ? s.creditorId : s.debtorId))!
+            return {
+                key: payKey(s),
+                counterparty,
+                cents: toCents(s.amount),
+                outgoing,
+                venmo:
+                    isYou && outgoing && counterparty?.venmoUrl
+                        ? { url: counterparty.venmoUrl, note: trip.name }
+                        : null,
+                canSettle: canSettle(s),
+                pending: pending === payKey(s),
+            }
+        })
+        .filter((r) => r.counterparty)
+        .sort((a, b) => Number(b.outgoing) - Number(a.outgoing) || b.cents - a.cents)
+
+    const others: OtherPaymentRow[] = payments
+        .filter((s) => !same(s.debtorId, personId) && !same(s.creditorId, personId))
+        .map((s) => ({
+            key: payKey(s),
+            debtor: participantById.get(String(s.debtorId))!,
+            creditor: participantById.get(String(s.creditorId))!,
+            cents: toCents(s.amount),
+            canSettle: canSettle(s),
+            pending: pending === payKey(s),
+        }))
+        .filter((r) => r.debtor && r.creditor)
+        .sort((a, b) => a.debtor.firstName.localeCompare(b.debtor.firstName) || b.cents - a.cents)
+
+    const settled = settlementRecords
+        .filter((r) => Number.isFinite(r.amountUsd))
+        .map((r) => ({
+            id: r.id,
+            from: participantById.get(String(r.fromUserId)),
+            to: participantById.get(String(r.toUserId)),
+            cents: toCents(r.amountUsd),
+            settledOn: r.settledOn,
+            canUndo:
+                !String(r.id).startsWith('pending-') &&
+                canSettlePayment(
+                    trip.userRole,
+                    trip.isAdmin,
+                    same(r.fromUserId, trip.currentUserId) || same(r.toUserId, trip.currentUserId)
+                ),
+        }))
+
+    // ── The expenses behind a selected row ─────────────────────────────────
+    // A row that's no longer on the chart (switched person) clears itself
+    const selected =
+        view.selected === 'all' || steps.some((s) => s.kind === 'person' && String(s.userId) === view.selected)
+            ? view.selected
+            : null
+    const deferredSelected = useDeferredValue(selected)
+
+    const proof = useMemo(() => {
+        if (deferredSelected === null) return null
+        const effects: { expense: Expense; usd: number; value: number; splitCount: number }[] = []
+        for (const expense of expenses) {
+            const usd = getUsdValue(expense)
+            const byPerson = expenseBalanceEffects(expense, personId, usd, participants.length)
+            let value = 0
+            if (deferredSelected === 'all') byPerson.forEach((v) => (value += v))
+            else value = byPerson.get(deferredSelected) ?? 0
+            if (Math.abs(value) < 0.005) continue
+            const splitCount = expense.isEveryone ? participants.length : expense.splitBetween.length
+            effects.push({ expense, usd, value, splitCount })
+        }
+        // Anchor to the chart's own rounded row(s) so the list adds up to it
+        const personSteps = steps.filter((s) => s.kind === 'person')
+        const target =
+            deferredSelected === 'all'
+                ? personSteps.reduce((t, s) => t + s.cents, 0)
+                : (personSteps.find((s) => String(s.userId) === deferredSelected)?.cents ?? 0)
+        const cents = roundToTotal(effects.map((e) => e.value), target)
+        const rows: ProofRow[] = effects.map((e, i) => {
+            const payer = same(e.expense.paidBy.id, trip.currentUserId) ? 'You' : e.expense.paidBy.firstName
+            const treated = e.expense.coveredParticipants.length
+            return {
+                expense: e.expense,
+                cents: cents[i],
+                subline: [
+                    `${payer} paid ${formatUsd(e.usd, 2)}`,
+                    `split ${e.splitCount} ${e.splitCount === 1 ? 'way' : 'ways'}`,
+                    treated > 0 ? `${treated} treated` : null,
+                ]
+                    .filter(Boolean)
+                    .join(' · '),
+            }
+        })
+        const title = deferredSelected === 'all' ? 'Every expense' : `With ${nameOf(deferredSelected as unknown as number)}`
+        return { rows, target, title }
+    }, [deferredSelected, expenses, getUsdValue, personId, participants.length, steps, trip.currentUserId, nameOf])
+
+    // ?from=debts brings the header back button here (see utils/back-href.ts)
+    const expenseHref = useCallback(
+        (expense: Expense) => `/gustavo/trips/${trip.slug}/expenses/${expense.id}?from=debts`,
+        [trip.slug]
+    )
+    const openExpense = useCallback((expense: Expense) => router.push(expenseHref(expense)), [router, expenseHref])
+
+    const tripDays =
+        trip.startDate && trip.endDate
+            ? dayjs(trip.endDate + 'T00:00:00').diff(dayjs(trip.startDate + 'T00:00:00'), 'day') + 1
+            : undefined
+
+    const summary =
+        totalCents === 0
+            ? 'all square'
+            : `${totalCents < 0 ? (isYou ? 'pay' : 'pays') : isYou ? 'get' : 'gets'} ${formatUsd(Math.abs(totalCents) / 100, 2)}`
 
     return (
         <Box
@@ -352,375 +280,104 @@ export default function DebtsPage() {
                 paddingY: 2,
                 gap: 1.5,
             }}>
-            {/* Title row: whose view (left) + plan pill and page help (right) */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1.25,
-                }}>
-                <PageTitleRow title={isSelf ? 'My Debts' : `${personName}'s Debts`}>
-                    {!allSettled && (
-                        <Box
-                            onClick={() =>
-                                setPlan(
-                                    plan === 'simplified'
-                                        ? 'direct'
-                                        : 'simplified'
-                                )
-                            }
-                            sx={{
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 0.5,
-                                'height': 30,
-                                'paddingX': 1.25,
-                                'borderRadius': '15px',
-                                'border': `1px solid ${colors.primaryBlack}`,
-                                'boxShadow': `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                'backgroundColor': colors.primaryYellow,
-                                'cursor': 'pointer',
-                                'userSelect': 'none',
-                                '&:active': {
-                                    boxShadow: 'none',
-                                    transform: 'translate(1.5px, 1.5px)',
-                                },
-                                'transition':
-                                    'transform 0.1s, box-shadow 0.1s',
-                            }}>
-                            <Typography
-                                sx={{ fontSize: 12.5, fontWeight: 700 }}>
-                                {plan === 'simplified'
-                                    ? 'Simplified'
-                                    : 'All debts'}
-                            </Typography>
-                            <IconArrowsExchange
-                                size={15}
-                                stroke={2}
-                                color={colors.primaryBlack}
-                            />
-                        </Box>
-                    )}
-                    <PageInfo title="How debts work">
-                        <PageInfoSection title="All debts">
-                            Each pair&apos;s actual net. If Alice covered
-                            things for Bob, Bob owes Alice — nothing is
-                            rerouted.
-                        </PageInfoSection>
-                        <PageInfoSection title="Simplified">
-                            The fewest payments that settle everyone. Money
-                            may be rerouted — you might pay someone who
-                            never covered you.
-                        </PageInfoSection>
-                        <PageInfoSection title="Settling">
-                            Tap <b>Settle</b> on a payment once the money
-                            has actually moved. It&apos;s recorded for the
-                            whole group, balances update, and the payment
-                            drops into <b>Settled</b> below — where ✕
-                            undoes it. On the map, settled money stays
-                            visible as faded ✓ ribbons.
-                        </PageInfoSection>
-                        <PageInfoNote>
-                            Both plans settle everyone to the same final
-                            balances — simplified just gets there in fewer
-                            payments. Switch anytime with the{' '}
-                            <b>Simplified / All debts</b> pill up top.
-                        </PageInfoNote>
-                        <PageInfoNote>
-                            On the map, tap a ribbon or a person to
-                            highlight their flows. Tap a row below it to see
-                            the expenses behind that debt.
-                        </PageInfoNote>
-                    </PageInfo>
-                </PageTitleRow>
-                <PersonSwitcher
-                    participants={participants}
-                    selectedId={personId}
-                    onSelect={setPersonId}
-                />
-            </Box>
+            <PageTitleRow title="Debts">
+                <PageInfo title="How debts work">
+                    <PageInfoSection title="Two ways to settle">
+                        <b>Fewest payments</b> settles the whole group in as few
+                        transfers as possible, so you might pay someone you never
+                        borrowed from. <b>Pay who you owe</b> only ever pays people
+                        you owe, and cancels out loops (you owe Jenny, Jenny owes
+                        Sam, Sam owes you). Both land everyone on exactly the same
+                        balance.
+                    </PageInfoSection>
+                    <PageInfoSection title="One plan per trip">
+                        Anyone can switch plans until the first payment is settled.
+                        After that the trip stays on that plan, so the two never mix.
+                        Undo every payment to switch again.
+                    </PageInfoSection>
+                    <PageInfoSection title="Checking the math">
+                        The chart builds your total from everything between you and
+                        each person. Tap a row for the expenses behind it, and tap an
+                        expense to open it. <b>Why these people?</b> explains any
+                        payment that goes to someone you don&apos;t owe directly.
+                    </PageInfoSection>
+                    <PageInfoSection title="Settling">
+                        Tap <b>Settle</b> once the money has actually moved. It&apos;s
+                        recorded for the whole group straight away; <b>Undo</b> on
+                        the message, or swipe the payment in <b>Settled</b>, takes it
+                        back. Only the payer, the receiver or a trip admin can settle
+                        or undo a payment.
+                    </PageInfoSection>
+                    <PageInfoNote>Tap the avatar to see anyone&apos;s debts.</PageInfoNote>
+                </PageInfo>
+            </PageTitleRow>
 
-            {/* Owe / owed stats */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <StatBox
-                    value={oweSum}
-                    label={isSelf ? 'You owe' : `${personName} owes`}
-                    people={youOwe.map((s) => participantById.get(s.creditorId)!).filter(Boolean)}
-                    prefix="to"
-                    tone="owe"
-                />
-                <StatBox
-                    value={owedSum}
-                    label={isSelf ? "You're owed" : `${personName} is owed`}
-                    people={youOwed.map((s) => participantById.get(s.debtorId)!).filter(Boolean)}
-                    prefix="by"
-                    tone="owed"
-                />
-            </Box>
+            <PersonPicker
+                participants={participants}
+                selectedId={personId}
+                currentUserId={trip.currentUserId}
+                onSelect={view.setPersonId}>
+                <Typography sx={{ fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{personName}</Typography>
+                <Typography noWrap sx={{ fontSize: 12, color: colors.primaryBrown }}>
+                    · {summary}
+                </Typography>
+            </PersonPicker>
 
-            {allSettled && (
+            {/* Same toggle once locked: the settled plan keeps its yellow + a
+                lock, the other fades and explains how to switch back */}
+            <SlidingToggle
+                value={plan}
+                options={PLAN_OPTIONS}
+                onChange={(v) => view.setPlan(v as SettlePlan)}
+                locked={locked !== null}
+                onLockedTap={() =>
+                    showToast(
+                        `Payments were settled with ${PLAN_NAME[plan]}. Undo them all to switch plans.`,
+                        'info'
+                    )
+                }
+                fontSize={13}
+                borderWidth={1}
+            />
+
+            <BalanceCard
+                steps={steps}
+                totalCents={totalCents}
+                isYou={isYou}
+                personName={personName}
+                participantById={participantById}
+                payments={mine}
+                selected={selected}
+                onSelect={view.setSelected}
+                onSettle={settle}
+                whyLines={whyLines}
+            />
+
+            {proof && (
                 <Box
+                    key={String(deferredSelected)}
                     sx={{
-                        ...cardSx,
-                        backgroundColor: '#d4edda',
-                        padding: 2,
-                        textAlign: 'center',
+                        'animation': 'proofIn 150ms ease-out',
+                        '@keyframes proofIn': {
+                            from: { opacity: 0, transform: 'translateY(4px)' },
+                            to: { opacity: 1, transform: 'none' },
+                        },
+                        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
                     }}>
-                    <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
-                        Everyone is settled up! 🎉
-                    </Typography>
+                    <ProofList
+                        title={proof.title}
+                        rows={proof.rows}
+                        totalCents={proof.target}
+                        onTap={openExpense}
+                        hrefOf={expenseHref}
+                        tripStartDate={trip.startDate}
+                        tripDays={tripDays}
+                    />
                 </Box>
             )}
 
-            {/* Money map — settled flows stay on it as ghost ribbons */}
-            {(settlements.length > 0 || settledFlows.length > 0) && (
-                <>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            marginTop: 0.5,
-                            paddingX: 0.25,
-                        }}>
-                        <Typography
-                            sx={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                color: colors.primaryBrown,
-                            }}>
-                            The money map
-                        </Typography>
-                        <Typography
-                            sx={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                color: colors.primaryBrown,
-                            }}>
-                            tap a ribbon or person to highlight
-                        </Typography>
-                    </Box>
-                    <MoneyMap
-                        settlements={settlements}
-                        settledFlows={settledFlows}
-                        participantById={participantById}
-                        youId={personId}
-                    />
-                </>
-            )}
-
-            {/* Trip-level settling progress — heads the payment list */}
-            {(settlements.length > 0 || settlementRecords.length > 0) && (
-                <>
-                    <SectionHead label="Trip debts" />
-                    <SettleProgressCard
-                        settledCount={settlementRecords.length}
-                        settledSum={settledSum}
-                        remainingCount={settlements.length}
-                        remainingSum={sum(settlements)}
-                    />
-                </>
-            )}
-
-            {/* Outstanding payments, grouped by direction */}
-            {youOwe.length > 0 && (
-                <>
-                    <SectionHead
-                        label={isSelf ? 'You pay' : `${personName} pays`}
-                        right={formatUsd(oweSum)}
-                    />
-                    {renderRows(youOwe)}
-                </>
-            )}
-            {youOwed.length > 0 && (
-                <>
-                    <SectionHead
-                        label={isSelf ? 'Coming to you' : `Coming to ${personName}`}
-                        right={formatUsd(owedSum)}
-                    />
-                    {renderRows(youOwed)}
-                </>
-            )}
-            {others.length > 0 && (
-                <>
-                    <SectionHead
-                        label="Between others"
-                        right={formatUsd(sum(others))}
-                    />
-                    <Box>
-                        <Box
-                            onClick={() => setOthersOpen(!othersOpen)}
-                            sx={{
-                                ...cardSx,
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 1.25,
-                                'paddingX': 1.5,
-                                'paddingY': 1.1,
-                                'cursor': 'pointer',
-                                'userSelect': 'none',
-                                '&:active': {
-                                    boxShadow: 'none',
-                                    transform: 'translate(2px, 2px)',
-                                },
-                                'transition': 'transform 0.1s, box-shadow 0.1s',
-                            }}>
-                            <Box sx={{ display: 'flex', flexShrink: 0 }}>
-                                {otherFaces.map((u, i) => (
-                                    <InitialsIcon
-                                        key={u.id}
-                                        name={u.firstName}
-                                        initials={u.initials}
-                                        iconColor={u.iconColor}
-                                        sx={{
-                                            width: 24,
-                                            height: 24,
-                                            fontSize: 9,
-                                            marginLeft: i > 0 ? '-6px' : 0,
-                                        }}
-                                    />
-                                ))}
-                            </Box>
-                            <Typography
-                                sx={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
-                                {others.length}{' '}
-                                {others.length === 1 ? 'payment' : 'payments'}
-                            </Typography>
-                            {othersOpen ? (
-                                <IconChevronUp size={17} stroke={2} color={colors.primaryBlack} />
-                            ) : (
-                                <IconChevronDown size={17} stroke={2} color={colors.primaryBlack} />
-                            )}
-                        </Box>
-                        {/* Animated so expanding doesn't jolt the page */}
-                        <Collapse in={othersOpen} unmountOnExit>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1.5,
-                                    paddingTop: 1.5,
-                                }}>
-                                {renderRows(others)}
-                            </Box>
-                        </Collapse>
-                    </Box>
-                </>
-            )}
-
-            {/* Recorded payments */}
-            {settlementRecords.length > 0 && (
-                <>
-                    <SectionHead label="Settled" right={formatUsd(settledSum)} />
-                    {settlementRecords.map((r) => (
-                        <SettledRow
-                            key={r.id}
-                            record={r}
-                            from={participantById.get(r.fromUserId)}
-                            to={participantById.get(r.toUserId)}
-                            youId={trip.currentUserId}
-                            onUndo={() => {
-                                setDialogError(null)
-                                setUndoTarget(r)
-                            }}
-                        />
-                    ))}
-                </>
-            )}
-
-            {/* Mark-as-paid confirmation */}
-            <Dialog
-                open={markTarget !== null}
-                onClose={() => !busy && setMarkTarget(null)}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ paper: { sx: dialogPaperSx } }}>
-                <DialogTitle sx={{ fontWeight: 700, fontSize: 18 }}>
-                    Mark as paid?
-                </DialogTitle>
-                <DialogContent>
-                    <Typography sx={{ fontSize: 14 }}>
-                        <strong>
-                            {markDebtor?.firstName ?? '?'} →{' '}
-                            {markCreditor?.firstName ?? '?'}
-                        </strong>{' '}
-                        · <strong>{formatUsd(markTarget?.amount)}</strong>
-                    </Typography>
-                    <Typography
-                        sx={{ fontSize: 12.5, color: 'text.secondary', marginTop: 1 }}>
-                        Records the payment for the whole group and updates
-                        everyone&apos;s balances. You can undo it later from the
-                        Settled list.
-                    </Typography>
-                    {dialogError && (
-                        <Typography
-                            sx={{ fontSize: 12.5, color: colors.primaryRed, marginTop: 1 }}>
-                            {dialogError}
-                        </Typography>
-                    )}
-                </DialogContent>
-                <DialogActions
-                    sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
-                    <Button
-                        onClick={() => setMarkTarget(null)}
-                        disabled={busy}
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    <Button onClick={confirmMarkPaid} disabled={busy} sx={primaryButtonSx}>
-                        {busy ? 'Saving…' : 'Mark paid'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Undo confirmation */}
-            <Dialog
-                open={undoTarget !== null}
-                onClose={() => !busy && setUndoTarget(null)}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ paper: { sx: dialogPaperSx } }}>
-                <DialogTitle
-                    sx={{ fontWeight: 700, fontSize: 18, color: colors.primaryRed }}>
-                    Undo this payment?
-                </DialogTitle>
-                <DialogContent>
-                    <Typography sx={{ fontSize: 14 }}>
-                        <strong>
-                            {undoTarget
-                                ? `${nameOf(undoTarget.fromUserId)} → ${nameOf(undoTarget.toUserId)}`
-                                : ''}
-                        </strong>{' '}
-                        · <strong>{formatUsd(undoTarget?.amountUsd)}</strong>
-                    </Typography>
-                    <Typography
-                        sx={{ fontSize: 12.5, color: 'text.secondary', marginTop: 1 }}>
-                        Use this if the payment was marked by mistake — the
-                        debt shows as owed again.
-                    </Typography>
-                    {dialogError && (
-                        <Typography
-                            sx={{ fontSize: 12.5, color: colors.primaryRed, marginTop: 1 }}>
-                            {dialogError}
-                        </Typography>
-                    )}
-                </DialogContent>
-                <DialogActions
-                    sx={{ padding: '8px 24px 16px', justifyContent: 'space-between' }}>
-                    <Button
-                        onClick={() => setUndoTarget(null)}
-                        disabled={busy}
-                        sx={secondaryButtonSx}>
-                        Cancel
-                    </Button>
-                    <Button onClick={confirmUndo} disabled={busy} sx={destructiveButtonSx}>
-                        {busy ? 'Undoing…' : 'Undo payment'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {others.length > 0 && <EveryoneElseCard payments={others} youId={trip.currentUserId} onSettle={settle} />}
+            {settled.length > 0 && <SettledCard records={settled} youId={trip.currentUserId} onUndo={undo} />}
         </Box>
     )
 }

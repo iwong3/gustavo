@@ -30,20 +30,11 @@ export function canDeleteExpense(role: TripRole | null, isAdmin: boolean, isRepo
     return canEditExpense(role, isAdmin, isReporter)
 }
 
-/** Any trip participant can record a settlement (same spirit as canAddExpense). */
-export function canAddSettlement(role: TripRole | null): boolean {
-    return canAddExpense(role)
-}
-
-/** Undo a recorded settlement: trip staff, whoever recorded it, or either
- *  party involved in the payment (they know best whether it happened). */
-export function canDeleteSettlement(
-    role: TripRole | null,
-    isAdmin: boolean,
-    isCreator: boolean,
-    isInvolved: boolean
-): boolean {
-    return isAdmin || role === 'owner' || role === 'admin' || role === 'editor' || isCreator || isInvolved
+/** Record or undo a payment: only the payer, the receiver (they know whether
+ *  the money moved), or trip owners/admins. Mirrored client-side in
+ *  app/utils/permissions.ts to hide the Settle / undo controls. */
+export function canSettlePayment(role: TripRole | null, isAdmin: boolean, isInvolved: boolean): boolean {
+    return isAdmin || role === 'owner' || role === 'admin' || (isInvolved && canAddExpense(role))
 }
 
 export function canManageRoles(role: TripRole | null, isAdmin: boolean): boolean {

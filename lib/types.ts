@@ -100,11 +100,16 @@ export type Expense = {
 
 /** A recorded debt payment between two trip participants ("mark as paid").
  *  Offsets the debt map: fromUser paid toUser this much outside the app. */
+/** How a trip settles its debts (lib/debt-proof.ts). TEXT in the DB. */
+export type SettlePlan = 'fewest' | 'direct'
+
 export type SettlementRecord = {
     id: number
     fromUserId: number
     toUserId: number
     amountUsd: number
+    /** The plan it was settled under — a trip never mixes plans. */
+    plan: SettlePlan
     note: string | null
     settledOn: string   // ISO YYYY-MM-DD
     createdBy: number

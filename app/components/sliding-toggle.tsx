@@ -1,6 +1,7 @@
 'use client'
 
 import { Box } from '@mui/material'
+import { IconLock } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 
 import { colors } from '@/lib/colors'
@@ -16,6 +17,8 @@ export function SlidingToggle({
     borderWidth = 2,
     paddingY = 0.75,
     loading = false,
+    locked = false,
+    onLockedTap,
 }: {
     value: string
     options: SlidingToggleOption[]
@@ -29,6 +32,13 @@ export function SlidingToggle({
      * selection already set — nothing shown and then swapped.
      */
     loading?: boolean
+    /**
+     * Stuck on `value` for now: it keeps its yellow with a small lock, the
+     * other options fade, and tapping one calls `onLockedTap` (explain how
+     * to unlock) instead of `onChange`.
+     */
+    locked?: boolean
+    onLockedTap?: () => void
 }) {
     const activeIndex = options.findIndex((o) => o.value === value)
     const count = options.length
@@ -117,7 +127,10 @@ export function SlidingToggle({
             {options.map((opt, i) => (
                 <Box
                     key={opt.value}
-                    onClick={() => onChange(opt.value)}
+                    onClick={() => {
+                        if (!locked) onChange(opt.value)
+                        else if (opt.value !== value) onLockedTap?.()
+                    }}
                     sx={{
                         'position': 'relative',
                         'zIndex': 1,
@@ -129,7 +142,10 @@ export function SlidingToggle({
                         'paddingX': 1.5,
                         'fontSize': fontSize,
                         'fontWeight': value === opt.value ? 600 : 400,
+                        'gap': 0.5,
                         'color': colors.primaryBlack,
+                        'opacity': locked && value !== opt.value ? 0.4 : 1,
+                        'transition': 'opacity 0.15s',
                         'cursor': 'pointer',
                         'userSelect': 'none',
                         'borderRight':
@@ -146,6 +162,9 @@ export function SlidingToggle({
                             },
                         },
                     }}>
+                    {locked && value === opt.value && (
+                        <IconLock size={Math.round(fontSize * 1.05)} stroke={2.2} style={{ flexShrink: 0 }} aria-label="Locked" />
+                    )}
                     {opt.label}
                 </Box>
             ))}

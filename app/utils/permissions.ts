@@ -20,6 +20,11 @@ export function canDeleteExpense(role: TripRole | null, isAdmin: boolean, isRepo
     return canEditExpense(role, isAdmin, isReporter)
 }
 
+/** Record or undo a payment — mirrors lib/permissions.ts (the API enforces it). */
+export function canSettlePayment(role: TripRole | null, isAdmin: boolean, isInvolved: boolean): boolean {
+    return isAdmin || role === 'owner' || role === 'admin' || (isInvolved && canAddExpense(role))
+}
+
 export function canManageRoles(role: TripRole | null, isAdmin: boolean): boolean {
     return isAdmin || role === 'owner' || role === 'admin'
 }

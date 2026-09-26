@@ -21,10 +21,6 @@ export function getBackHref(
     const expenseDetailMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/expenses\/.+$/
     )
-    // /gustavo/trips/<slug>/debts/<pair> → debts page
-    const debtPairMatch = pathname.match(
-        /^\/gustavo\/trips\/([^/]+)\/debts\/.+$/
-    )
     // /gustavo/health/exercise/<id>/edit → workout detail; /<id> → workouts
     const workoutEditMatch = pathname.match(
         /^\/gustavo\/health\/exercise\/(\d+)\/edit$/
@@ -48,22 +44,13 @@ export function getBackHref(
         backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
     } else if (expenseDetailMatch) {
         const from = searchParams.get('from')
-        // A pair drill-down links its expenses with ?from=debts&pair=<d>-<c>
-        // so back returns to that specific pair, not the debts overview.
-        const pair = searchParams.get('pair')
-        if (from === 'debts' && pair && /^\d+-\d+$/.test(pair)) {
-            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/debts/${pair}`
-        } else {
-            const fromTool =
-                from &&
-                from !== 'expenses' &&
-                tripTools.some((t) => t.path === from)
-                    ? from
-                    : null
-            backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
-        }
-    } else if (debtPairMatch) {
-        backHref = `/gustavo/trips/${debtPairMatch[1]}/debts`
+        const fromTool =
+            from &&
+            from !== 'expenses' &&
+            tripTools.some((t) => t.path === from)
+                ? from
+                : null
+        backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
     } else if (tripEditMatch) {
         backHref = `/gustavo/trips/${tripEditMatch[1]}/details`
     }

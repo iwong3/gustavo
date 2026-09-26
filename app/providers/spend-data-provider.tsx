@@ -28,6 +28,8 @@ type SpendDataValue = {
     totalSpend: number
     /** userId → userId → gross amount owed, net of recorded settlements. */
     debtMap: Map<number, Map<number, number>>
+    /** The same from expenses alone — the debts page's proof starts here. */
+    expenseDebtMap: Map<number, Map<number, number>>
     filteredTotalSpend: number
     filteredPeopleTotalSpend: number
     totalSpendByPerson: Map<number, number>     // userId → total paid amount
@@ -231,10 +233,11 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
         return filtered
     }, [expenses, filterMaps, sortField, sortDir, searchInput, blendedRates])
 
-    const { totalSpend, debtMap } = useMemo(() => {
+    const { totalSpend, debtMap, expenseDebtMap } = useMemo(() => {
         const computed = computeDebtMap(expenses, participants.length)
         return {
             totalSpend: computed.totalSpend,
+            expenseDebtMap: computed.debtMap,
             // Recorded payments offset debts everywhere debts are shown
             debtMap: applySettlements(computed.debtMap, settlementRecords),
         }
@@ -256,11 +259,12 @@ export function SpendDataProvider({ children }: { children: React.ReactNode }) {
             searchInput,
             totalSpend,
             debtMap,
+            expenseDebtMap,
             participants,
             getUsdValue,
             ...summaries,
         }),
-        [expenses, settlementRecords, filteredExpenses, isSearching, searchInput, totalSpend, debtMap, participants, getUsdValue, summaries]
+        [expenses, settlementRecords, filteredExpenses, isSearching, searchInput, totalSpend, debtMap, expenseDebtMap, participants, getUsdValue, summaries]
     )
 
     return (

@@ -115,6 +115,7 @@ settlements -- recorded debt payments between trip participants (00038)
   from_user_id BIGINT FK -> users -- the payer (debtor)
   to_user_id BIGINT FK -> users   -- the receiver (creditor); CHECK <> from_user_id
   amount_usd NUMERIC(12,2) -- CHECK > 0; debts are USD-only
+  plan TEXT -- 'fewest' | 'direct' (00041); NULL = legacy, treated as 'fewest'
   note TEXT
   settled_on DATE (default CURRENT_DATE)
   created_by BIGINT FK -> users
@@ -387,8 +388,14 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 - **Home currency** — always USD for debt calculation.
 - **Settlements (00038)** — a recorded payment from_user → to_user offsets the
   debt map as a reverse-direction gross debt (`applySettlements` in `lib/debt.ts`),
-  so all debt views (settle-up list, money map, pair drill-down) reflect it. Any
-  trip participant can record one; delete is soft (undo on the debts page).
+  so every debt view reflects it. Only the payer, the receiver, or a trip
+  owner/admin (or site admin) can record or undo one; delete is soft (undo on
+  the debts page).
+- **Settle plans (00041)** — each payment records the plan it was made under
+  (`fewest` = simplifyDebts, `direct` = pay who you owe, `lib/debt-proof.ts`).
+  A trip never mixes plans: the API rejects a payment in a different plan than
+  the trip's live payments (409), so the first settle locks the trip and undoing
+  every payment unlocks it.
 - **Audit log** — Postgres triggers write to `audit_log`; user attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`). Join tables with composite PKs (trip_countries, trip_currencies, food_group_members) have NO audit triggers — `audit_trigger_func()` reads `NEW.id` and blows up without an `id` column (00036).
 - **Workout weight (00024)** — `weight_lbs` lives on `workout_exercises` (one weight per exercise per session); sets track reps only.
 - **Muscle groups (00026)** — "Back" split into "Upper Back" (targets: Lats, Rhomboids, Traps, Rear Delts) and standalone "Lower Back". Group vs. target is implicit via `muscle_group_parents`.

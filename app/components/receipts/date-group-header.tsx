@@ -10,6 +10,8 @@ import { FormattedMoney } from 'utils/currency'
 interface DateGroupHeaderProps {
     date: string // ISO YYYY-MM-DD
     dayTotal: number // USD total for the day
+    /** Replaces the formatted total, e.g. a signed "−$242.00" in its tone. */
+    totalLabel?: React.ReactNode
     dayNumber: number | null // Day X of the trip (null if outside trip range)
     totalDays: number | null
     expenseCount: number
@@ -20,6 +22,7 @@ interface DateGroupHeaderProps {
 export const DateGroupHeader = ({
     date,
     dayTotal,
+    totalLabel,
     dayNumber,
     totalDays,
     expenseCount,
@@ -97,7 +100,7 @@ export const DateGroupHeader = ({
                     fontWeight: 700,
                     color: colors.primaryBlack,
                 }}>
-                {FormattedMoney('USD', 0).format(dayTotal)}
+                {totalLabel ?? FormattedMoney('USD', 0).format(dayTotal)}
             </Typography>
         </Box>
     )

@@ -13,7 +13,6 @@ import {
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
 import {
     ActivitySkeleton,
-    DebtPairSkeleton,
     DebtsSkeleton,
     ExpenseDetailSkeleton,
     ExpensesPageSkeleton,
@@ -60,7 +59,6 @@ export default function LoadingGallery() {
                 <Specimen label="expenses"><Frame><ExpensesPageSkeleton /></Frame></Specimen>
                 <Specimen label="expense detail"><Frame><ExpenseDetailSkeleton /></Frame></Specimen>
                 <Specimen label="debts"><Frame><DebtsSkeleton /></Frame></Specimen>
-                <Specimen label="debt pair"><Frame><DebtPairSkeleton /></Frame></Specimen>
                 <Specimen label="graphs"><Frame><GraphsSkeleton /></Frame></Specimen>
                 <Specimen label="activity"><Frame><ActivitySkeleton /></Frame></Specimen>
                 <Specimen label="links"><Frame><LinksSkeleton /></Frame></Specimen>

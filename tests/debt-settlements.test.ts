@@ -45,6 +45,7 @@ function payment(
         fromUserId: fromUserId as unknown as number,
         toUserId: toUserId as unknown as number,
         amountUsd,
+        plan: 'fewest',
         note: null,
         settledOn: '2026-07-14',
         createdBy: fromUserId as unknown as number,

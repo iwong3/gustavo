@@ -24,6 +24,9 @@ interface SwipeableRowProps {
     canDelete: boolean
     onEdit: () => void
     onDelete: () => void
+    /** The swipe-left action's name and icon — Delete / trash by default. */
+    deleteLabel?: string
+    deleteIcon?: React.ReactNode
     backgroundColor?: string
     showBottomBorder?: boolean
     borderRadius?: string | number
@@ -47,6 +50,8 @@ export const SwipeableRow = ({
     canDelete,
     onEdit,
     onDelete,
+    deleteLabel = 'Delete',
+    deleteIcon,
     backgroundColor = colors.primaryWhite,
     showBottomBorder = false,
     borderRadius,
@@ -259,7 +264,7 @@ export const SwipeableRow = ({
                 <Box
                     component="button"
                     type="button"
-                    aria-label="Delete"
+                    aria-label={deleteLabel}
                     tabIndex={offset < 0 ? 0 : -1}
                     onClick={fire(onDelete)}
                     sx={{
@@ -267,7 +272,7 @@ export const SwipeableRow = ({
                         right: 0,
                         backgroundColor: colors.primaryRed,
                     }}>
-                    <IconTrash size={22} color={colors.primaryWhite} />
+                    {deleteIcon ?? <IconTrash size={22} color={colors.primaryWhite} />}
                 </Box>
             )}
 

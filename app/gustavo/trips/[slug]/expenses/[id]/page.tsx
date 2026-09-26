@@ -53,7 +53,7 @@ export default function ExpenseDetailPage() {
     const [deleting, setDeleting] = useState(false)
     const [deleteError, setDeleteError] = useState<string | null>(null)
 
-    // Same place the header ← goes — honours ?from=graphs / ?from=debts&pair
+    // Same place the header ← goes — honours ?from=graphs / ?from=debts
     const backHref =
         getBackHref(pathname, searchParams) ??
         `/gustavo/trips/${trip.slug}/expenses`

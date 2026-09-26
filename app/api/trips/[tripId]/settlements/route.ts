@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, getTripAccess, canAddSettlement, canViewTrip } from '@/lib/permissions'
+import { getUserTripRole, getTripAccess, canSettlePayment, canViewTrip } from '@/lib/permissions'
+import { isSettlePlan, planOf } from '@/lib/debt-proof'
 
 export async function GET(
     _request: NextRequest,
@@ -26,7 +27,7 @@ export async function GET(
     }
 
     const res = await pool.query(
-        `SELECT id, from_user_id, to_user_id, amount_usd, note, settled_on, created_by, created_at
+        `SELECT id, from_user_id, to_user_id, amount_usd, plan, note, settled_on, created_by, created_at
          FROM settlements
          WHERE trip_id = $1 AND deleted_at IS NULL
          ORDER BY settled_on DESC, created_at DESC`,
@@ -39,6 +40,7 @@ export async function GET(
             fromUserId: r.from_user_id,
             toUserId: r.to_user_id,
             amountUsd: parseFloat(r.amount_usd),
+            plan: planOf(r),
             note: r.note,
             settledOn:
                 typeof r.settled_on === 'string'
@@ -66,14 +68,22 @@ export async function POST(
     }
     const { userId, isAdmin } = authUser
 
-    const { role } = await getUserTripRole(userId, id)
-    if (!canAddSettlement(role) && !isAdmin) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const body = await request.json()
     const fromUserId = String(body.fromUserId ?? '')
     const toUserId = String(body.toUserId ?? '')
+    const plan = body.plan
+    if (!isSettlePlan(plan)) {
+        return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    }
+
+    const { role } = await getUserTripRole(userId, id)
+    const isInvolved = String(userId) === fromUserId || String(userId) === toUserId
+    if (!canSettlePayment(role, isAdmin, isInvolved)) {
+        return NextResponse.json(
+            { error: 'Only the payer, the receiver or a trip admin can settle this' },
+            { status: 403 }
+        )
+    }
     const amountUsd = Number(body.amountUsd)
     const note = typeof body.note === 'string' && body.note.trim() !== '' ? body.note.trim() : null
     const settledOn =
@@ -106,14 +116,29 @@ export async function POST(
 
     try {
         const created = await withAuditUser(userId, async (client) => {
+            // A trip never mixes plans. Lock the trip row so two people
+            // settling at once under different plans can't both get in.
+            await client.query('SELECT 1 FROM trips WHERE id = $1 FOR UPDATE', [id])
+            const live = await client.query(
+                `SELECT COALESCE(plan, 'fewest') AS plan FROM settlements
+                 WHERE trip_id = $1 AND deleted_at IS NULL LIMIT 1`,
+                [id]
+            )
+            if (live.rows.length > 0 && live.rows[0].plan !== plan) return null
             const ins = await client.query(
-                `INSERT INTO settlements (trip_id, from_user_id, to_user_id, amount_usd, note, settled_on, created_by)
-                 VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), $7)
+                `INSERT INTO settlements (trip_id, from_user_id, to_user_id, amount_usd, plan, note, settled_on, created_by)
+                 VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::date, CURRENT_DATE), $8)
                  RETURNING id`,
-                [id, fromUserId, toUserId, amountUsd.toFixed(2), note, settledOn, userId]
+                [id, fromUserId, toUserId, amountUsd.toFixed(2), plan, note, settledOn, userId]
             )
             return ins.rows[0]
         })
+        if (!created) {
+            return NextResponse.json(
+                { error: 'This trip already settles with the other plan. Undo its payments to switch.' },
+                { status: 409 }
+            )
+        }
         return NextResponse.json({ id: created.id }, { status: 201 })
     } catch (err) {
         console.error('Error creating settlement:', err)

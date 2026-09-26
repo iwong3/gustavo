@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, canDeleteSettlement } from '@/lib/permissions'
+import { getUserTripRole, canSettlePayment } from '@/lib/permissions'
 
 export async function DELETE(
     _request: NextRequest,
@@ -22,7 +22,7 @@ export async function DELETE(
     const { userId, isAdmin } = authUser
 
     const res = await pool.query(
-        `SELECT from_user_id, to_user_id, created_by FROM settlements
+        `SELECT from_user_id, to_user_id FROM settlements
          WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL`,
         [sid, id]
     )
@@ -32,10 +32,9 @@ export async function DELETE(
     const s = res.rows[0]
 
     const { role } = await getUserTripRole(userId, id)
-    const isCreator = String(s.created_by) === String(userId)
     const isInvolved =
         String(s.from_user_id) === String(userId) || String(s.to_user_id) === String(userId)
-    if (!canDeleteSettlement(role, isAdmin, isCreator, isInvolved)) {
+    if (!canSettlePayment(role, isAdmin, isInvolved)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
