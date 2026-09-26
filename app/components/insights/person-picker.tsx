@@ -15,7 +15,7 @@ const RING = 5
 // One avatar's worth of strip: the collapsed width
 const SLOT = SIZE + RING * 2
 const EASE = 'cubic-bezier(0.2, 0.9, 0.3, 1)'
-const DURATION = 220
+const DURATION = 150
 
 function Avatar({
     person,
@@ -57,7 +57,7 @@ function Avatar({
                 'transition': 'outline-color 0.15s, opacity 0.15s, transform 0.1s ease-out',
                 '&:active': pressIconSx['&:active'],
                 ...(appear && {
-                    'animation': 'slotIn 160ms ease-out',
+                    'animation': 'slotIn 110ms ease-out',
                     '@keyframes slotIn': { from: { opacity: 0 }, to: { opacity: 1 } },
                 }),
             }}>
@@ -208,7 +208,7 @@ export function PersonPicker({
                                     // Fade in left→right as the strip widens
                                     opacity: open ? 1 : 0,
                                     transform: open ? 'none' : 'translateX(-8px)',
-                                    transition: `opacity 160ms ease-out ${open ? 40 + i * 25 : 0}ms, transform ${DURATION}ms ${EASE}`,
+                                    transition: `opacity 110ms ease-out ${open ? 20 + i * 15 : 0}ms, transform ${DURATION}ms ${EASE}`,
                                     pointerEvents: open ? 'auto' : 'none',
                                 }}>
                                 <Avatar
@@ -235,7 +235,7 @@ export function PersonPicker({
                         gap: 0.75,
                         overflow: 'hidden',
                         opacity: open ? 0 : 1,
-                        transition: `opacity ${open ? 100 : 180}ms ease-out ${open ? 0 : 60}ms`,
+                        transition: `opacity ${open ? 70 : 120}ms ease-out ${open ? 0 : 40}ms`,
                         pointerEvents: open ? 'none' : 'auto',
                     }}>
                     {children}

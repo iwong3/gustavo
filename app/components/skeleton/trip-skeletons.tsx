@@ -402,13 +402,17 @@ export function GraphsSkeleton() {
                 <TextBone fontSize={14} width={110} />
             </Box>
             <ChromeBox height={33} />
-            {/* Chart card: big number, summary line, stacked bar, legend */}
-            <Box sx={{ ...cardSx, padding: 1.5 }}>
-                <TextBone fontSize={28} lineHeight={1.1} width={120} />
-                <TextBone fontSize={12} width="70%" sx={{ marginTop: 0.25, marginBottom: 1.25 }} />
-                <Bone height={22} />
+            {/* Chart card: big number, summary line, stacked bar, legend.
+                Same geometry as the page: top padding only, full-width rows
+                with their own 12px inset, 5.2px below the last row. */}
+            <Box sx={{ ...cardSx, paddingTop: 1.5, paddingBottom: '5.2px' }}>
+                <Box sx={{ paddingX: 1.5 }}>
+                    <TextBone fontSize={28} lineHeight={1.1} width={120} />
+                    <TextBone fontSize={12} width="70%" sx={{ marginTop: 0.25, marginBottom: 1.25 }} />
+                    <Bone height={22} />
+                </Box>
                 {[0, 1, 2, 3].map((i) => (
-                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingY: 0.85, borderBottom: i < 3 ? ROW_DIVIDER : 'none', marginTop: i === 0 ? 0.75 : 0 }}>
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 1.5, paddingY: 0.85, borderBottom: i < 3 ? ROW_DIVIDER : 'none', marginTop: i === 0 ? 0.75 : 0 }}>
                         <TextBone fontSize={13} width="36%" />
                         <Bone height={8} sx={{ flex: 1 }} />
                         <TextBone fontSize={13} width={54} />

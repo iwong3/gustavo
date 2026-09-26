@@ -192,14 +192,20 @@ export default function MySpendPage() {
             />
 
             {/* The chart card: summary on top, the view below */}
-            <Box sx={{ ...cardSx, padding: 1.5 }}>
-                <Typography
-                    sx={{ fontFamily: 'var(--font-serif)', fontSize: 28, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-                    <RollingUsd value={totalShare} />
-                </Typography>
-                <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginTop: 0.25, marginBottom: 1.25 }}>
-                    {summaryLine}
-                </Typography>
+            {/* Only top padding: the views span the full width and inset
+                their own parts, so tapped rows can highlight edge to edge.
+                overflow: hidden keeps a highlighted last row inside the
+                rounded corners. */}
+            <Box sx={{ ...cardSx, paddingTop: 1.5, overflow: 'hidden' }}>
+                <Box sx={{ paddingX: 1.5 }}>
+                    <Typography
+                        sx={{ fontFamily: 'var(--font-serif)', fontSize: 28, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+                        <RollingUsd value={totalShare} />
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginTop: 0.25, marginBottom: 1.25 }}>
+                        {summaryLine}
+                    </Typography>
+                </Box>
                 {/* Height eases between views; the new view fades in. Same
                     view + new person/filter keeps the element, so its bars
                     animate to the new values instead. */}

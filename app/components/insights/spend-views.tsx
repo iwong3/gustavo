@@ -3,14 +3,17 @@
 import { Box, Typography } from '@mui/material'
 import dayjs from 'dayjs'
 
-import { colors, pressRowSx } from '@/lib/colors'
+import { colors } from '@/lib/colors'
 import type { MySpendChartDatum } from 'hooks/useMySpendData'
 import { formatUsd } from 'utils/currency'
 
 // The three Insights views, one shape per kind of data: bars for
 // categories, a calendar for days, a route for places. Each takes the hook's
 // chart data, highlights `selectedKey`, and reports taps via `onSelect`
-// (the page toggles the filter). Values animate to their new sizes when the
+// (the page toggles the filter). The views span the card's full width (the
+// card has no side/bottom padding of its own): each part insets itself, and
+// the tappable rows run edge to edge so a selected row's highlight has room
+// on all four sides. Values animate to their new sizes when the
 // person or filters change — elements are keyed by category/day/place so
 // the same bar grows or shrinks rather than being replaced.
 
@@ -21,6 +24,17 @@ type ViewProps = {
 }
 
 const RULE = `1px solid ${colors.primaryBlack}1a`
+// Filter rows: the highlight IS the tap feedback, so no pressed tint (phones
+// hold :active a beat past a quick tap, which read as the highlight lingering
+// after unselecting). Eases in, drops instantly.
+const toggleRowSx = (selected: boolean) => ({
+    transition: selected ? 'background-color 0.1s' : 'none',
+})
+// The card's content inset (12px) — applied by each part of a view, since
+// the rows run full width
+const INSET = 1.5
+// Below the last row: its own 6.8px bottom padding + this = the card's 12px
+const SAFE_BOTTOM = '5.2px'
 const GROW = 'cubic-bezier(0.2, 0.9, 0.3, 1)'
 const VALUE_TRANSITION = `width 320ms ${GROW}, opacity 0.15s`
 
@@ -33,11 +47,12 @@ export function CategoryBreakdown({ data, selectedKey, onSelect }: ViewProps) {
     const total = data.reduce((s, d) => s + d.value, 0)
     if (data.length === 0) return <EmptyView />
     return (
-        <Box>
+        <Box sx={{ paddingBottom: SAFE_BOTTOM }}>
             {/* The whole, split by category */}
             <Box
                 sx={{
                     display: 'flex',
+                    marginX: INSET,
                     height: 22,
                     border: `1.5px solid ${colors.primaryBlack}`,
                     borderRadius: '3px',
@@ -59,8 +74,9 @@ export function CategoryBreakdown({ data, selectedKey, onSelect }: ViewProps) {
                 ))}
             </Box>
             {/* One row per category — its own bar in its own colour, so
-                nothing needs matching back to the overview */}
-            <Box sx={{ marginTop: 0.75, marginX: -1.5 }}>
+                nothing needs matching back to the overview. Full-width rows,
+                text inset, equal padding above and below. */}
+            <Box sx={{ marginTop: 0.75 }}>
                 {data.map((d, i) => {
                     const selected = selectedKey === d.key
                     const share = pct(d.value, total)
@@ -69,15 +85,12 @@ export function CategoryBreakdown({ data, selectedKey, onSelect }: ViewProps) {
                             key={d.key}
                             onClick={() => onSelect(d.key)}
                             sx={{
-                                ...pressRowSx,
+                                ...toggleRowSx(selected),
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
                                 paddingX: 1.5,
                                 paddingY: 0.85,
-                                // Last row: the card's own padding is the
-                                // bottom margin — no double gap
-                                ...(i === data.length - 1 && { paddingBottom: 0 }),
                                 borderBottom: i < data.length - 1 ? RULE : 'none',
                                 cursor: 'pointer',
                                 backgroundColor: selected ? `${colors.primaryYellow}40` : 'transparent',
@@ -146,7 +159,7 @@ export function DayCalendar({ data, selectedKey, onSelect }: ViewProps) {
     // Pad to the first day's weekday so columns are Sun…Sat
     const leading = first.day()
     return (
-        <Box>
+        <Box sx={{ paddingX: INSET, paddingBottom: INSET }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((w, i) => (
                     <Typography
@@ -174,8 +187,12 @@ export function DayCalendar({ data, selectedKey, onSelect }: ViewProps) {
                                 borderRadius: '3px',
                                 backgroundColor: HEAT[level],
                                 color: level === 4 ? colors.primaryWhite : colors.primaryBlack,
-                                outline: selected ? `2px solid ${colors.primaryBlack}` : 'none',
-                                outlineOffset: '1px',
+                                // Selection marks sit inside the cell (folded
+                                // corner + underlined date) — nothing outside
+                                // it for the card's clip to cut off
+                                position: 'relative',
+                                overflow: 'hidden',
+                                borderWidth: selected ? '1.5px' : '1px',
                                 opacity: selectedKey && !selected ? 0.55 : 1,
                                 cursor: level > 0 ? 'pointer' : 'default',
                                 padding: '2px 3px',
@@ -185,9 +202,34 @@ export function DayCalendar({ data, selectedKey, onSelect }: ViewProps) {
                                 transition: 'background-color 280ms ease, color 280ms ease, opacity 0.15s, transform 0.1s',
                                 ...(level > 0 && { '&:active': { transform: 'scale(0.92)' } }),
                             }}>
-                            <Typography sx={{ fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>
+                            <Typography
+                                sx={{
+                                    fontSize: 9.5,
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                    alignSelf: 'flex-start',
+                                    // Underline in the text's own colour: black
+                                    // on most days, white on the darkest
+                                    ...(selected && {
+                                        borderBottom: '2.5px solid currentColor',
+                                        paddingBottom: '1px',
+                                    }),
+                                }}>
                                 {date.date()}
                             </Typography>
+                            {/* Folded corner, like a bookmarked page */}
+                            {selected && (
+                                <Box
+                                    aria-hidden
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        borderTop: `10px solid ${colors.primaryBlack}`,
+                                        borderLeft: '10px solid transparent',
+                                    }}
+                                />
+                            )}
                             {showMonth && (
                                 <Typography sx={{ fontSize: 7, fontWeight: 700, lineHeight: 1, textTransform: 'uppercase', opacity: 0.8 }}>
                                     {date.format('MMM')}
@@ -219,7 +261,8 @@ export function PlaceRoute({ data, selectedKey, onSelect }: ViewProps) {
     const stops = [...data].sort((a, b) => ((a.firstDate ?? '') < (b.firstDate ?? '') ? -1 : 1))
     const max = Math.max(...data.map((d) => d.value))
     return (
-        <Box>
+        // Full-width rows like the category list
+        <Box sx={{ paddingBottom: SAFE_BOTTOM }}>
             {stops.map((d, i) => {
                 const selected = selectedKey === d.key
                 // Stop dot scales with spend: 10–20px
@@ -229,11 +272,11 @@ export function PlaceRoute({ data, selectedKey, onSelect }: ViewProps) {
                         key={d.key}
                         onClick={() => onSelect(d.key)}
                         sx={{
-                            ...pressRowSx,
+                            ...toggleRowSx(selected),
                             display: 'flex',
                             alignItems: 'stretch',
                             cursor: 'pointer',
-                            borderRadius: '4px',
+                            paddingX: 1.5,
                             backgroundColor: selected ? `${colors.primaryYellow}40` : 'transparent',
                             opacity: selectedKey && !selected ? 0.45 : 1,
                         }}>
@@ -261,7 +304,7 @@ export function PlaceRoute({ data, selectedKey, onSelect }: ViewProps) {
                                 }}
                             />
                         </Box>
-                        <Box sx={{ flex: 1, minWidth: 0, paddingY: 0.85, paddingRight: 0.5, ...(i === stops.length - 1 && { paddingBottom: 0 }) }}>
+                        <Box sx={{ flex: 1, minWidth: 0, paddingY: 0.85 }}>
                             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
                                 <Typography noWrap sx={{ fontSize: 13, fontWeight: 700, minWidth: 0 }}>
                                     {d.label}
@@ -294,7 +337,7 @@ export function PlaceRoute({ data, selectedKey, onSelect }: ViewProps) {
 
 function EmptyView() {
     return (
-        <Typography sx={{ fontSize: 13, color: colors.primaryBrown, textAlign: 'center', paddingY: 2 }}>
+        <Typography sx={{ fontSize: 13, color: colors.primaryBrown, textAlign: 'center', paddingY: 2, paddingX: INSET }}>
             Nothing to show yet.
         </Typography>
     )
