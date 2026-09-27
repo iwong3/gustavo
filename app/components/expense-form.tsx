@@ -633,9 +633,10 @@ export default function ExpenseForm({
                       ? 'Failed to update expense'
                       : 'Failed to add expense'
             )
-        } finally {
             setSubmitting(false)
         }
+        // No reset on success: the page is navigating away, and re-enabling
+        // the button in the meantime lets a second tap save a duplicate.
     }
 
     // Any manual pick clears the late-night default.
