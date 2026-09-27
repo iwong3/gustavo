@@ -19,17 +19,18 @@ export const SplitBetweenInitials = ({
     const participants = trip.participants
 
     const coveredIds = useMemo(
-        () => new Set(expense.coveredParticipants.map((p) => p.id)),
+        () => new Set(expense.coveredParticipants.map((p) => String(p.id))),
         [expense.coveredParticipants]
     )
 
+    // Keyed by user id (as a string), not first name: two people can share one
     const getInitialState = () => {
         const filters = new Map<
             string,
             { active: boolean; user: UserSummary }
         >()
         participants.forEach((p) => {
-            filters.set(p.firstName, { active: false, user: p })
+            filters.set(String(p.id), { active: false, user: p })
         })
         return filters
     }
@@ -45,9 +46,9 @@ export const SplitBetweenInitials = ({
             })
         } else {
             expense.splitBetween.forEach((person) => {
-                const existing = newSplitters.get(person.firstName)
+                const existing = newSplitters.get(String(person.id))
                 if (existing) {
-                    newSplitters.set(person.firstName, {
+                    newSplitters.set(String(person.id), {
                         ...existing,
                         active: true,
                     })
@@ -87,7 +88,7 @@ export const SplitBetweenInitials = ({
             {Array.from(splitters.entries()).map(
                 ([name, { active: isSplitter, user }], index) => {
                     const size = 24
-                    const isCovered = isSplitter && coveredIds.has(user.id)
+                    const isCovered = isSplitter && coveredIds.has(String(user.id))
                     const customSx = !isSplitter
                         ? { color: 'black', backgroundColor: 'lightgray' }
                         : {}

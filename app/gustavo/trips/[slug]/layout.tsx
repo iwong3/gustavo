@@ -76,7 +76,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
         resetKeyRef.current = key
         if (!tripChanged) return
 
-        const participantNames = trip.participants.map((p) => p.firstName)
+        const participantIds = trip.participants.map((p) => String(p.id))
         const categoryNames = Array.from(
             new Set(expensesQuery.data.map((e) => e.categoryName ?? 'Other'))
         )
@@ -87,7 +87,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
                     .filter((l): l is string => l != null)
             )
         )
-        resetAllFilterStores({ participantNames, categoryNames, locationNames })
+        resetAllFilterStores({ participantIds, categoryNames, locationNames })
         resetSearchBarStore()
         useSortStore.getState().reset()
         // A fresh trip shouldn't open onto the refine panel.

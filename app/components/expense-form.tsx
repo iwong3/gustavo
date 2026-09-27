@@ -2,31 +2,37 @@
 
 import {
     Box,
+    ButtonBase,
     FormControl,
+    Menu,
     MenuItem,
     Select,
     TextField,
     Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 
 import { fetchExpenseCategories } from 'utils/api'
 import { queryKeys, staleTimes } from '@/lib/query-keys'
 
-import { colors } from '@/lib/colors'
+import { colors, pressTextSx } from '@/lib/colors'
+import { findPossibleDuplicates } from '@/lib/expense-duplicates'
 import { derivePlaceCity } from '@/lib/place-display'
 import type { PlaceDetails } from '@/lib/types'
 import {
+    adornedErrorFieldSx,
     adornedFieldSx,
+    errorFieldSx,
+    errorLabelSx,
     fieldShadow,
     fieldSx,
     labelSx,
     prefilledFieldSx,
     selectMenuProps,
 } from '@/lib/form-styles'
-import { IconCheck } from '@tabler/icons-react'
+import { IconCheck, IconChevronDown, IconCopy } from '@tabler/icons-react'
 import { CategoryPicker } from 'components/category-picker'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
@@ -148,6 +154,9 @@ const toPlaceDetails = (expense: Expense | undefined): PlaceDetails | null =>
           }
         : null
 
+// Required inputs the submit check can flag, in on-screen order
+type InvalidField = 'name' | 'cost' | 'localReceived'
+
 type Props = {
     mode: 'add' | 'edit'
     expense?: Expense
@@ -163,10 +172,13 @@ export default function ExpenseForm({
 }: Props) {
     const { trip, expenses } = useTripData()
 
-    const people = trip.participants.map((p) => p.firstName)
-    const currentUserName =
-        trip.participants.find((p) => p.id === trip.currentUserId)?.firstName ??
-        ''
+    // People are tracked by user id (as a string — BIGINT ids arrive as
+    // strings), never by first name: two people can share one. Names are
+    // only for display.
+    const people = trip.participants.map((p) => String(p.id))
+    const currentUserKey = people.includes(String(trip.currentUserId))
+        ? String(trip.currentUserId)
+        : ''
 
     const queryClient = useQueryClient()
 
@@ -203,13 +215,13 @@ export default function ExpenseForm({
         expense?.categoryId ?? ''
     )
     const [paidBy, setPaidBy] = useState(
-        expense?.paidBy.firstName ?? currentUserName
+        expense ? String(expense.paidBy.id) : currentUserKey
     )
     const [splitBetween, setSplitBetween] = useState<string[]>(
         expense
             ? expense.isEveryone
                 ? ['Everyone']
-                : expense.splitBetween.map((u) => u.firstName)
+                : expense.splitBetween.map((u) => String(u.id))
             : ['Everyone']
     )
     const [location, setLocation] = useState(expense?.locationName ?? '')
@@ -218,13 +230,28 @@ export default function ExpenseForm({
         expense?.localCurrencyReceived?.toFixed(2) ?? ''
     )
     const [coveredParticipants, setCoveredParticipants] = useState<string[]>(
-        expense?.coveredParticipants.map((u) => u.firstName) ?? []
+        expense?.coveredParticipants.map((u) => String(u.id)) ?? []
     )
     const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(() =>
         toPlaceDetails(expense)
     )
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    // Required fields that failed the last submit — outlined red until edited
+    const [fieldErrors, setFieldErrors] = useState<
+        Partial<Record<InvalidField, boolean>>
+    >({})
+    const nameInputRef = useRef<HTMLInputElement>(null)
+    const costInputRef = useRef<HTMLInputElement>(null)
+    const localReceivedInputRef = useRef<HTMLInputElement>(null)
+    const [currencyMenuAnchor, setCurrencyMenuAnchor] =
+        useState<HTMLElement | null>(null)
+
+    const clearFieldError = (field: InvalidField) => {
+        if (!fieldErrors[field]) return
+        setFieldErrors((prev) => ({ ...prev, [field]: false }))
+        setError('')
+    }
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
 
@@ -337,14 +364,14 @@ export default function ExpenseForm({
             setCost(expense.costOriginal.toFixed(2))
             setCurrency(expense.currency)
             setCategoryId(expense.categoryId ?? '')
-            setPaidBy(expense.paidBy.firstName)
+            setPaidBy(String(expense.paidBy.id))
             if (expense.isEveryone) {
                 setSplitBetween(['Everyone'])
             } else {
-                setSplitBetween(expense.splitBetween.map((u) => u.firstName))
+                setSplitBetween(expense.splitBetween.map((u) => String(u.id)))
             }
             setCoveredParticipants(
-                expense.coveredParticipants.map((u) => u.firstName)
+                expense.coveredParticipants.map((u) => String(u.id))
             )
             setLocation(expense.locationName ?? '')
             setGooglePlace(toPlaceDetails(expense))
@@ -437,19 +464,19 @@ export default function ExpenseForm({
     const coverableParticipants = useMemo(() => {
         const splitSet = isEveryone ? new Set(people) : new Set(splitBetween)
         return trip.participants.filter(
-            (p) => p.firstName !== paidBy && splitSet.has(p.firstName)
+            (p) => String(p.id) !== paidBy && splitSet.has(String(p.id))
         )
     }, [trip.participants, splitBetween, isEveryone, paidBy, people])
 
     const allCovered =
         coverableParticipants.length > 0 &&
         coverableParticipants.every((p) =>
-            coveredParticipants.includes(p.firstName)
+            coveredParticipants.includes(String(p.id))
         )
 
     const toggleTreatAll = () => {
         setCoveredParticipants(
-            allCovered ? [] : coverableParticipants.map((p) => p.firstName)
+            allCovered ? [] : coverableParticipants.map((p) => String(p.id))
         )
     }
 
@@ -463,28 +490,64 @@ export default function ExpenseForm({
             ? ` · ${currencyMeta.symbol}${(costNum / includedCount).toFixed(currencyMeta.decimals)}${includedCount > 1 ? ' each' : ''}`
             : '')
 
+    // Same amount + currency within a day of an existing expense — someone
+    // may have logged this bill already. A hint only; never blocks saving.
+    const possibleDuplicates = useMemo(
+        () =>
+            isCurrencyExchange
+                ? []
+                : findPossibleDuplicates(expenses, {
+                      cost: parseFloat(cost),
+                      currency,
+                      date,
+                      excludeId: expense?.id,
+                  }),
+        [expenses, cost, currency, date, expense?.id, isCurrencyExchange]
+    )
+
+    // Currency lives in the cost field's symbol (tap to switch) — most
+    // expenses are card charges in USD, so a full picker is wasted space.
+    // Currency Exchange keeps its explicit "To currency" picker instead.
+    const canPickCurrency =
+        !isCurrencyExchange && availableCurrencies.length > 1
+
     const handleSubmit = async () => {
-        if (!name.trim() || !date || !cost || !paidBy) {
-            setError('Please fill in all required fields.')
-            return
-        }
         const costNum = parseFloat(cost)
-        if (isNaN(costNum) || costNum <= 0) {
-            setError('Please enter a valid cost.')
-            return
-        }
-        if (isCurrencyExchange && !localCurrencyReceived) {
-            setError('Please enter the local currency amount received.')
-            return
-        }
         const localReceivedNum = localCurrencyReceived
             ? parseFloat(localCurrencyReceived)
             : undefined
-        if (
-            isCurrencyExchange &&
-            (isNaN(localReceivedNum!) || localReceivedNum! <= 0)
-        ) {
-            setError('Please enter a valid local currency amount.')
+
+        // Flag every bad required field, then jump to the first one. Focus
+        // runs synchronously inside the Add tap, so iOS raises the keyboard.
+        const invalid: Record<InvalidField, boolean> = {
+            name: !name.trim(),
+            cost: !(costNum > 0),
+            localReceived: isCurrencyExchange && !(localReceivedNum! > 0),
+        }
+        const messages: Record<InvalidField, string> = {
+            name: 'Add a name for this expense.',
+            cost: cost ? 'Enter a valid cost.' : 'Enter the cost.',
+            localReceived: 'Enter the local currency amount received.',
+        }
+        const refs: Record<InvalidField, RefObject<HTMLInputElement | null>> = {
+            name: nameInputRef,
+            cost: costInputRef,
+            localReceived: localReceivedInputRef,
+        }
+        const firstInvalid = (Object.keys(invalid) as InvalidField[]).find(
+            (f) => invalid[f]
+        )
+        setFieldErrors(invalid)
+        if (firstInvalid) {
+            setError(messages[firstInvalid])
+            const input = refs[firstInvalid].current
+            input?.focus({ preventScroll: true })
+            input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return
+        }
+        // Always set in practice (date defaults, payer defaults to you)
+        if (!date || !paidBy) {
+            setError('Please fill in all required fields.')
             return
         }
 
@@ -497,9 +560,11 @@ export default function ExpenseForm({
             cost: costNum,
             currency,
             category_id: categoryId || undefined,
-            paid_by: paidBy,
-            split_between: splitBetween,
-            covered_participants:
+            // Ids, resolved against this trip's participants server-side
+            paid_by_id: paidBy,
+            split_everyone: isEveryone || undefined,
+            split_between_ids: isEveryone ? undefined : splitBetween,
+            covered_participant_ids:
                 coveredParticipants.length > 0
                     ? coveredParticipants
                     : undefined,
@@ -684,39 +749,61 @@ export default function ExpenseForm({
                 <PlaceAutocomplete
                     value={googlePlace}
                     onChange={handlePlaceChange}
+                    fallbackRegionCode={trip.countries?.[0]}
+                    // The place fills name + category, so cost is usually
+                    // the only thing left to type — go straight to it
+                    onPick={() => {
+                        if (!cost) costInputRef.current?.focus()
+                    }}
                 />
             </Box>
 
             {/* 3. Expense name */}
             <Box>
-                <Typography sx={labelSx}>Expense name *</Typography>
+                <Typography sx={fieldErrors.name ? errorLabelSx : labelSx}>
+                    Expense name *
+                </Typography>
                 <TextField
                     placeholder="e.g. Lunch at cafe"
                     value={name}
                     onChange={(e) => {
                         setName(e.target.value)
+                        clearFieldError('name')
                         if (prefilled.name) setPrefilled((p) => ({ ...p, name: false }))
                     }}
                     required
                     fullWidth
                     size="small"
+                    inputRef={nameInputRef}
                     slotProps={{ htmlInput: { maxLength: 200 } }}
-                    sx={prefilled.name ? prefilledFieldSx : fieldSx}
+                    sx={
+                        fieldErrors.name
+                            ? errorFieldSx
+                            : prefilled.name
+                              ? prefilledFieldSx
+                              : fieldSx
+                    }
                 />
             </Box>
 
-            {/* 4. Cost + Currency + Paid by */}
+            {/* 4. Cost (currency in its symbol) + Paid by. Currency
+                Exchange adds an explicit "To currency" picker. */}
             <Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
-                        <Typography sx={labelSx}>
+                        <Typography
+                            sx={fieldErrors.cost ? errorLabelSx : labelSx}>
                             {isCurrencyExchange ? 'USD paid *' : 'Cost *'}
                         </Typography>
                         <TextField
                             value={cost}
+                            inputRef={costInputRef}
                             onChange={(e) => {
                                 const v = e.target.value
-                                if (v === '' || /^\d*\.?\d*$/.test(v)) setCost(v)
+                                if (v === '' || /^\d*\.?\d*$/.test(v)) {
+                                    setCost(v)
+                                    clearFieldError('cost')
+                                }
                             }}
                             onBlur={() => {
                                 const n = parseFloat(cost)
@@ -738,7 +825,43 @@ export default function ExpenseForm({
                                     inputMode: 'decimal',
                                 },
                                 input: {
-                                    startAdornment: (
+                                    startAdornment: canPickCurrency ? (
+                                        // Tap the symbol to switch currency.
+                                        // Stretches to the field's full
+                                        // height (negative margins eat the
+                                        // root padding) for a real tap target;
+                                        // mousedown is swallowed so it doesn't
+                                        // focus the input and raise the keyboard.
+                                        <ButtonBase
+                                            aria-label={`Currency: ${currency}. Change`}
+                                            onMouseDown={(e) =>
+                                                e.preventDefault()
+                                            }
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setCurrencyMenuAnchor(
+                                                    e.currentTarget
+                                                )
+                                            }}
+                                            sx={{
+                                                ...pressTextSx,
+                                                alignSelf: 'stretch',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '2px',
+                                                flexShrink: 0,
+                                                margin: '-8.5px 0 -8.5px -14px',
+                                                paddingLeft: '14px',
+                                                paddingRight: '8px',
+                                                borderRight: `1px solid ${colors.primaryBlack}22`,
+                                                fontSize: 'inherit',
+                                                fontWeight: 600,
+                                                color: colors.primaryBlack,
+                                            }}>
+                                            {currencyMeta.symbol}
+                                            <IconChevronDown size={12} />
+                                        </ButtonBase>
+                                    ) : (
                                         <Box
                                             component="span"
                                             sx={{
@@ -751,43 +874,57 @@ export default function ExpenseForm({
                                             }}>
                                             {isCurrencyExchange
                                                 ? '$'
-                                                : getCurrencyMeta(currency)
-                                                      .symbol}
+                                                : currencyMeta.symbol}
                                         </Box>
                                     ),
                                 },
                             }}
-                            sx={adornedFieldSx}
+                            sx={
+                                fieldErrors.cost
+                                    ? adornedErrorFieldSx
+                                    : adornedFieldSx
+                            }
                         />
+                        <Menu
+                            {...selectMenuProps}
+                            anchorEl={currencyMenuAnchor}
+                            open={currencyMenuAnchor !== null}
+                            onClose={() => setCurrencyMenuAnchor(null)}>
+                            {availableCurrencies.map((c) => (
+                                <MenuItem
+                                    key={c}
+                                    selected={c === currency}
+                                    onClick={() => {
+                                        setCurrency(c)
+                                        setCurrencyMenuAnchor(null)
+                                    }}>
+                                    {formatCurrencyLabel(c)}
+                                </MenuItem>
+                            ))}
+                        </Menu>
                     </Box>
-                    {/* Currency picker. For Currency Exchange the picker
-                      * shows only foreign currencies (the local-received
-                      * side of the exchange). */}
-                    <Box sx={{ minWidth: 100 }}>
-                        <Typography sx={labelSx}>
-                            {isCurrencyExchange
-                                ? 'To currency *'
-                                : 'Currency *'}
-                        </Typography>
-                        <FormControl size="small" fullWidth>
-                            <Select
-                                value={currency}
-                                onChange={(e) =>
-                                    setCurrency(e.target.value)
-                                }
-                                MenuProps={selectMenuProps}
-                                sx={fieldSx}>
-                                {(isCurrencyExchange
-                                    ? foreignCurrencies
-                                    : availableCurrencies
-                                ).map((c) => (
-                                    <MenuItem key={c} value={c}>
-                                        {formatCurrencyLabel(c)}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
+                    {/* Currency Exchange: the local-received side — only
+                      * foreign currencies. */}
+                    {isCurrencyExchange && (
+                        <Box sx={{ minWidth: 100 }}>
+                            <Typography sx={labelSx}>To currency *</Typography>
+                            <FormControl size="small" fullWidth>
+                                <Select
+                                    value={currency}
+                                    onChange={(e) =>
+                                        setCurrency(e.target.value)
+                                    }
+                                    MenuProps={selectMenuProps}
+                                    sx={fieldSx}>
+                                    {foreignCurrencies.map((c) => (
+                                        <MenuItem key={c} value={c}>
+                                            {formatCurrencyLabel(c)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
+                    )}
                     <Box>
                         <Typography sx={labelSx}>Paid by *</Typography>
                         <FormControl size="small">
@@ -807,7 +944,7 @@ export default function ExpenseForm({
                                 }}
                                 renderValue={(val) => {
                                     const p = trip.participants.find(
-                                        (u) => u.firstName === val
+                                        (u) => String(u.id) === val
                                     )
                                     return p ? (
                                         <InitialsIcon
@@ -835,7 +972,7 @@ export default function ExpenseForm({
                                 {trip.participants.map((p) => (
                                     <MenuItem
                                         key={p.id}
-                                        value={p.firstName}
+                                        value={String(p.id)}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -860,6 +997,50 @@ export default function ExpenseForm({
                 </Box>
             </Box>
 
+            {/* Possible duplicate — informational, never blocks: two equal
+                charges can be legit, so adding stays one tap */}
+            {possibleDuplicates.length > 0 &&
+                (() => {
+                    const [first] = possibleDuplicates
+                    const more = possibleDuplicates.length - 1
+                    return (
+                        <Box
+                            role="status"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 1,
+                                paddingX: '10px',
+                                paddingY: 1,
+                                backgroundColor: colors.secondaryYellow,
+                                border: `1px solid ${colors.primaryBlack}`,
+                                borderRadius: '4px',
+                            }}>
+                            <IconCopy
+                                size={16}
+                                color={colors.primaryBlack}
+                                style={{ flexShrink: 0, marginTop: 1 }}
+                            />
+                            <Typography
+                                sx={{
+                                    fontSize: 12,
+                                    lineHeight: 1.4,
+                                    color: colors.primaryBlack,
+                                    minWidth: 0,
+                                }}>
+                                Same amount as{' '}
+                                <Box component="span" sx={{ fontWeight: 600 }}>
+                                    {first.name}
+                                </Box>{' '}
+                                ({first.paidBy.firstName},{' '}
+                                {dayjs(first.date).format('MMM D')})
+                                {more > 0 && ` and ${more} more`}. Already
+                                logged?
+                            </Typography>
+                        </Box>
+                    )
+                })()}
+
             {/* 5. Local currency received (currency exchange only) */}
             {isCurrencyExchange &&
                 (() => {
@@ -868,13 +1049,19 @@ export default function ExpenseForm({
                         <Box>
                             <Typography
                                 sx={
-                                    labelSx
+                                    fieldErrors.localReceived
+                                        ? errorLabelSx
+                                        : labelSx
                                 }>{`Local currency received (${currency}) *`}</Typography>
                             <TextField
                                 value={localCurrencyReceived}
+                                inputRef={localReceivedInputRef}
                                 onChange={(e) => {
                                     const v = e.target.value
-                                    if (v === '' || /^\d*\.?\d*$/.test(v)) setLocalCurrencyReceived(v)
+                                    if (v === '' || /^\d*\.?\d*$/.test(v)) {
+                                        setLocalCurrencyReceived(v)
+                                        clearFieldError('localReceived')
+                                    }
                                 }}
                                 onBlur={() => {
                                     const n = parseFloat(
@@ -909,7 +1096,11 @@ export default function ExpenseForm({
                                         ),
                                     },
                                 }}
-                                sx={adornedFieldSx}
+                                sx={
+                                    fieldErrors.localReceived
+                                        ? adornedErrorFieldSx
+                                        : adornedFieldSx
+                                }
                             />
                         </Box>
                     )
@@ -979,15 +1170,15 @@ export default function ExpenseForm({
                     </Box>
                     {trip.participants.map((p, i) => {
                         const included =
-                            isEveryone || splitBetween.includes(p.firstName)
-                        const isPayer = p.firstName === paidBy
+                            isEveryone || splitBetween.includes(String(p.id))
+                        const isPayer = String(p.id) === paidBy
                         const isCovered = coveredParticipants.includes(
-                            p.firstName
+                            String(p.id)
                         )
                         return (
                             <Box
                                 key={p.id}
-                                onClick={() => toggleRow(p.firstName)}
+                                onClick={() => toggleRow(String(p.id))}
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1049,7 +1240,7 @@ export default function ExpenseForm({
                                 {included &&
                                     !isPayer &&
                                     treatPill(isCovered, 'Treat', () =>
-                                        toggleCovered(p.firstName)
+                                        toggleCovered(String(p.id))
                                     )}
                             </Box>
                         )

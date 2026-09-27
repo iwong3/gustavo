@@ -3,7 +3,9 @@
 // They were four near-identical files, each pairing a store with a component
 // that nothing rendered any more. One factory replaces the lot; the options a
 // filter offers come from trip data, so every store is the same shape:
-// `option name → selected`, insertion-ordered to match the data.
+// `option key → selected` (user ids for the person filters — two people can
+// share a first name — names for category and location), insertion-ordered
+// to match the data.
 //
 // Leaf module (no component imports) — the refine panel and the spend-data
 // provider both read these, and utils must never import components.
@@ -13,7 +15,7 @@ import { create } from 'zustand'
 import { countActive, selectedOptions } from 'utils/expense-filters'
 
 export type FilterState = {
-    /** option name → selected. Insertion order is the display order. */
+    /** option key → selected. Insertion order is the display order. */
     filters: Map<string, boolean>
 }
 
@@ -80,31 +82,33 @@ export const useFilterSpendTypeStore = createFilterStore()
 export const useFilterLocationStore = createFilterStore()
 
 export type FilterOptionNames = {
-    participantNames: string[]
+    /** Person options are user ids (strings), not names: two people can
+     *  share a first name. Labels come from utils/person-labels. */
+    participantIds: string[]
     categoryNames: string[]
     locationNames: string[]
 }
 
 /** Fresh trip → drop every selection and rebuild the options. */
 export const resetAllFilterStores = ({
-    participantNames,
+    participantIds,
     categoryNames,
     locationNames,
 }: FilterOptionNames) => {
-    useFilterPaidByStore.getState().reset(participantNames)
-    useFilterSplitBetweenStore.getState().reset(participantNames)
+    useFilterPaidByStore.getState().reset(participantIds)
+    useFilterSplitBetweenStore.getState().reset(participantIds)
     useFilterSpendTypeStore.getState().reset(categoryNames)
     useFilterLocationStore.getState().reset(locationNames)
 }
 
 /** Same trip, new data → keep selections, refresh the options. */
 export const syncAllFilterStores = ({
-    participantNames,
+    participantIds,
     categoryNames,
     locationNames,
 }: FilterOptionNames) => {
-    useFilterPaidByStore.getState().sync(participantNames)
-    useFilterSplitBetweenStore.getState().sync(participantNames)
+    useFilterPaidByStore.getState().sync(participantIds)
+    useFilterSplitBetweenStore.getState().sync(participantIds)
     useFilterSpendTypeStore.getState().sync(categoryNames)
     useFilterLocationStore.getState().sync(locationNames)
 }

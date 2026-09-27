@@ -11,7 +11,8 @@ import { AnimatedHeight } from 'components/animated-height'
 import { MySpendList } from 'components/insights/my-spend-list'
 import { PersonPicker } from 'components/insights/person-picker'
 import { CategoryBreakdown, DayCalendar, PlaceRoute } from 'components/insights/spend-views'
-import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
+import { InsightsHelp } from 'components/insights/insights-help'
+import { PageInfo } from 'components/page-info'
 import { PageTitleRow } from 'components/page-title-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import type { MySpendDimension } from 'hooks/useMySpendData'
@@ -102,21 +103,7 @@ export default function MySpendPage() {
             }}>
             <PageTitleRow title="Spending">
                 <PageInfo title="How this page works">
-                    <PageInfoSection title="Shares, not payments">
-                        Every amount here is a person&apos;s share of each
-                        expense, not what they paid: a $90 dinner split three
-                        ways counts as $30.
-                    </PageInfoSection>
-                    <PageInfoSection title="Whose spending">
-                        Tap the avatar to switch to anyone on the trip.
-                    </PageInfoSection>
-                    <PageInfoSection title="Views and filters">
-                        Category, Day and Place slice the same spending. Tap a
-                        category, a day or a stop to filter the list; filters
-                        stack across views and show as chips next to the
-                        avatar — tap × to clear one.
-                    </PageInfoSection>
-                    <PageInfoNote>Tap an expense to open it.</PageInfoNote>
+                    <InsightsHelp />
                 </PageInfo>
             </PageTitleRow>
 

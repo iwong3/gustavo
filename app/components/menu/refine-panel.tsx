@@ -29,6 +29,7 @@ import {
     type FilterMaps,
 } from 'utils/expense-filters'
 import { getColorForCategory, getIconFromCategory, InitialsIcon } from 'utils/icons'
+import { personLabels } from 'utils/person-labels'
 
 import type { Expense, ParticipantSummary } from '@/lib/types'
 
@@ -116,11 +117,14 @@ export function RefinePanel({ expenses, participants, getUsdValue, closing = fal
     const sortIsDefault = useSortStore((s) => s.isDefault)()
     const spec = sortSpec(sortField)
 
-    const participantByName = useMemo(() => {
+    // Person options are user ids; these give each one its avatar and a
+    // display name that tells same-first-name people apart
+    const participantById = useMemo(() => {
         const m = new Map<string, ParticipantSummary>()
-        for (const p of participants) m.set(p.firstName, p)
+        for (const p of participants) m.set(String(p.id), p)
         return m
     }, [participants])
+    const personLabel = useMemo(() => personLabels(participants), [participants])
 
     // How tall the panel would be with every section open.
     const expandedHeight = useMemo(() => {
@@ -250,7 +254,8 @@ export function RefinePanel({ expenses, participants, getUsdValue, closing = fal
                         maps={maps}
                         expenses={expenses}
                         getUsdValue={getUsdValue}
-                        participantByName={participantByName}
+                        participantById={participantById}
+                        personLabel={personLabel}
                         open={openSections.has(facet.key)}
                         onToggle={() => toggleSection(facet.key)}
                     />
@@ -448,7 +453,8 @@ function FacetSection({
     maps,
     expenses,
     getUsdValue,
-    participantByName,
+    participantById,
+    personLabel,
     open,
     onToggle,
 }: {
@@ -456,7 +462,10 @@ function FacetSection({
     maps: FilterMaps
     expenses: Expense[]
     getUsdValue: (exp: Expense) => number
-    participantByName: Map<string, ParticipantSummary>
+    participantById: Map<string, ParticipantSummary>
+    /** Person option id → display name (other facets' options are their
+     *  own label). */
+    personLabel: Map<string, string>
     open: boolean
     onToggle: () => void
 }) {
@@ -466,8 +475,10 @@ function FacetSection({
 
     const options = Array.from(filters.keys())
     const chosen = selectedOptions(filters)
+    const labelOf = (option: string) =>
+        facet.kind === 'person' ? (personLabel.get(option) ?? option) : option
     const summary = chosen.length
-        ? `${chosen[0]}${chosen.length > 1 ? ` +${chosen.length - 1}` : ''}`
+        ? `${labelOf(chosen[0])}${chosen.length > 1 ? ` +${chosen.length - 1}` : ''}`
         : 'All'
 
     if (options.length === 0) return null
@@ -576,9 +587,9 @@ function FacetSection({
                                     }}>
                                     {facet.kind === 'person' ? (
                                         <InitialsIcon
-                                            name={option}
-                                            initials={participantByName.get(option)?.initials}
-                                            iconColor={participantByName.get(option)?.iconColor}
+                                            name={labelOf(option)}
+                                            initials={participantById.get(option)?.initials}
+                                            iconColor={participantById.get(option)?.iconColor}
                                             sx={{
                                                 width: AVATAR,
                                                 height: AVATAR,
@@ -612,7 +623,7 @@ function FacetSection({
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                 }}>
-                                {option}
+                                {labelOf(option)}
                             </Typography>
                             <Typography
                                 sx={{

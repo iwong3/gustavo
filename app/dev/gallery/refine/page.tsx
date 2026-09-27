@@ -23,7 +23,7 @@ import { expenses, trip } from '../fixtures'
 const getUsdValue = (exp: (typeof expenses)[number]) =>
     Number.isFinite(exp.costConvertedUsd) ? (exp.costConvertedUsd ?? 0) : 0
 
-const participantNames = trip.participants.map((p) => p.firstName)
+const participantIds = trip.participants.map((p) => String(p.id))
 const categoryNames = Array.from(
     new Set(expenses.map((e) => e.categoryName ?? 'Other'))
 )
@@ -38,7 +38,7 @@ export default function RefineGallery() {
     // No accompanying state: writing to a Zustand store notifies its subscribers
     // below, so the seeded options render on the next pass by themselves.
     useEffect(() => {
-        resetAllFilterStores({ participantNames, categoryNames, locationNames })
+        resetAllFilterStores({ participantIds, categoryNames, locationNames })
         useSortStore.getState().reset()
     }, [])
 

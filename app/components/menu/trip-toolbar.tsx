@@ -14,8 +14,8 @@ import { useTripData } from 'providers/trip-data-provider'
 export const TripToolbar = () => {
     const { trip, expenses } = useTripData()
 
-    const participantNames = useMemo(
-        () => trip.participants.map((p) => p.firstName),
+    const participantIds = useMemo(
+        () => trip.participants.map((p) => String(p.id)),
         [trip.participants]
     )
     const categoryNames = useMemo(
@@ -38,8 +38,8 @@ export const TripToolbar = () => {
     // a category or location), preserving what's already selected. The layout
     // does the hard reset when the trip itself changes.
     useEffect(() => {
-        syncAllFilterStores({ participantNames, categoryNames, locationNames })
-    }, [participantNames, categoryNames, locationNames])
+        syncAllFilterStores({ participantIds, categoryNames, locationNames })
+    }, [participantIds, categoryNames, locationNames])
 
     const refineCount = useRefineCount()
     const refineOpen = useRefineStore((s) => s.open)

@@ -155,6 +155,19 @@ export const errorFieldSx = {
     },
 } as const
 
+/** Error variant of adornedFieldSx — keeps the adornment padding. */
+export const adornedErrorFieldSx = {
+    ...errorFieldSx,
+    '& .MuiOutlinedInput-root': {
+        boxShadow: errorShadow,
+        padding: '8.5px 14px',
+        gap: '6px',
+    },
+    '& .MuiOutlinedInput-input': {
+        padding: 0,
+    },
+} as const
+
 // ── Dropdown menu styles ─────────────────────────────────────────────────────
 
 /** Paper/container for Select and Autocomplete dropdown menus. */

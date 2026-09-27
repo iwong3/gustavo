@@ -2,6 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 import { IconX } from '@tabler/icons-react'
+import { useMemo } from 'react'
 
 import { colors } from '@/lib/colors'
 import {
@@ -14,6 +15,7 @@ import { resetRefine, useRefineStore } from 'components/menu/refine-store'
 import { sortSpec, useSortStore } from 'components/menu/sort/sort-store'
 import { useSpendData } from 'providers/spend-data-provider'
 import { selectedOptions } from 'utils/expense-filters'
+import { personLabels } from 'utils/person-labels'
 
 // One line saying what's on, under the search row.
 //
@@ -31,7 +33,9 @@ type Part = { key: string; label: string; extra: number }
 
 export function ActiveFilterLine() {
     const showPanel = useRefineStore((s) => s.show)
-    const { filteredExpenses, expenses } = useSpendData()
+    const { filteredExpenses, expenses, participants } = useSpendData()
+    // Person filters hold user ids; show names that tell duplicates apart
+    const personLabel = useMemo(() => personLabels(participants), [participants])
 
     const sortField = useSortStore((s) => s.field)
     const sortDir = useSortStore((s) => s.dir)
@@ -61,7 +65,9 @@ export function ActiveFilterLine() {
     ] as const) {
         const chosen = selectedOptions(filters)
         if (chosen.length === 0) continue
-        parts.push({ key, label: chosen[0], extra: chosen.length - 1 })
+        const isPerson = key === 'paid' || key === 'split'
+        const label = isPerson ? (personLabel.get(chosen[0]) ?? chosen[0]) : chosen[0]
+        parts.push({ key, label, extra: chosen.length - 1 })
     }
 
     // Nothing on — don't reserve the row.

@@ -165,7 +165,7 @@ function computeSummaries(
                 )
             }
 
-            if (isSplitFilterActive && !splitBetweenFilters.get(participant.firstName)) {
+            if (isSplitFilterActive && !splitBetweenFilters.get(String(participant.id))) {
                 continue
             }
             filteredPeopleTotalSpend += splitCost

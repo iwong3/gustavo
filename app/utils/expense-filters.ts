@@ -11,7 +11,8 @@ import type { Expense } from '@/lib/types'
 
 export type FacetKey = 'split' | 'paidBy' | 'spendType' | 'location'
 
-/** option name → selected. Options are rebuilt from trip data; see filter-stores. */
+/** option key → selected (a user id for Paid by / Split with, the name for
+ *  category and location). Options are rebuilt from trip data; see filter-stores. */
 export type FilterMaps = Record<FacetKey, Map<string, boolean>>
 
 export const FACET_KEYS: FacetKey[] = ['split', 'paidBy', 'spendType', 'location']
@@ -21,7 +22,7 @@ export const FACET_KEYS: FacetKey[] = ['split', 'paidBy', 'spendType', 'location
 const anyActive = (filters: Map<string, boolean>) =>
     Array.from(filters.values()).includes(true)
 
-/** Selected option names, in the map's (trip-data) order. */
+/** Selected option keys, in the map's (trip-data) order. */
 export const selectedOptions = (filters: Map<string, boolean>) =>
     Array.from(filters.entries())
         .filter(([, on]) => on)
@@ -41,10 +42,10 @@ function matchesFacet(
             // isEveryone expenses have an empty splitBetween but include everyone.
             return (
                 exp.isEveryone ||
-                exp.splitBetween.some((u) => filters.get(u.firstName) === true)
+                exp.splitBetween.some((u) => filters.get(String(u.id)) === true)
             )
         case 'paidBy':
-            return filters.get(exp.paidBy.firstName) === true
+            return filters.get(String(exp.paidBy.id)) === true
         case 'spendType':
             return filters.get(exp.categoryName ?? 'Other') === true
         case 'location':

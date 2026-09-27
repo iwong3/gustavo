@@ -13,18 +13,52 @@ import {
     dropdownPopperProps,
 } from '@/lib/form-styles'
 import { searchPlaces, getPlaceDetails } from 'utils/api'
+import {
+    getCachedCoords,
+    isGeolocationGranted,
+    requestCoords,
+} from 'utils/geolocation'
 
 type Props = {
     value: PlaceDetails | null
     onChange: (place: PlaceDetails | null) => void
+    /** ISO country code to favour when the device position isn't available
+     *  (permission denied) — e.g. the trip's country. */
+    fallbackRegionCode?: string
+    /** Fires synchronously when an option is picked, before the details
+     *  fetch — still inside the tap, so it can move focus (iOS only raises
+     *  the keyboard for focus changes made during a user gesture). */
+    onPick?: () => void
 }
 
-export default function PlaceAutocomplete({ value, onChange }: Props) {
+const formatDistance = (m: number) =>
+    m < 1000
+        ? `${Math.round(m)} m`
+        : m < 10_000
+          ? `${(m / 1000).toFixed(1)} km`
+          : `${Math.round(m / 1000).toLocaleString('en-US')} km`
+
+export default function PlaceAutocomplete({
+    value,
+    onChange,
+    fallbackRegionCode,
+    onPick,
+}: Props) {
     const [inputValue, setInputValue] = useState('')
     const [options, setOptions] = useState<PlacePrediction[]>([])
     const [loading, setLoading] = useState(false)
     const sessionTokenRef = useRef(crypto.randomUUID())
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+    // Warm the position up front when access was already granted (no
+    // prompt), so the first search is already biased. First-time users get
+    // the permission prompt on focus instead, when it's clear why it's asked.
+    useEffect(() => {
+        if (value) return
+        isGeolocationGranted().then((granted) => {
+            if (granted) requestCoords()
+        })
+    }, [value])
 
     // Sync input display with external value
     useEffect(() => {
@@ -45,11 +79,16 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
 
         setLoading(true)
         debounceRef.current = setTimeout(async () => {
-            const results = await searchPlaces(query, sessionTokenRef.current)
+            const coords = getCachedCoords()
+            const results = await searchPlaces(
+                query,
+                sessionTokenRef.current,
+                coords ?? { regionCode: fallbackRegionCode }
+            )
             setOptions(results)
             setLoading(false)
         }, 300)
-    }, [])
+    }, [fallbackRegionCode])
 
     const handleSelect = async (_: unknown, prediction: string | PlacePrediction | null) => {
         if (!prediction || typeof prediction === 'string') {
@@ -57,6 +96,7 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
             return
         }
 
+        onPick?.()
         const details = await getPlaceDetails(prediction.placeId)
         if (details) {
             onChange(details)
@@ -168,7 +208,7 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
                     <li key={option.placeId} {...rest}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
                             <IconMapPin size={16} color={colors.primaryBlack} style={{ marginTop: 2, flexShrink: 0 }} />
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
                                 <Typography sx={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
                                     {option.name}
                                 </Typography>
@@ -176,6 +216,19 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
                                     {option.address}
                                 </Typography>
                             </Box>
+                            {option.distanceMeters != null && (
+                                <Typography
+                                    sx={{
+                                        fontSize: 11,
+                                        color: 'text.secondary',
+                                        lineHeight: 1.3,
+                                        marginTop: '1px',
+                                        flexShrink: 0,
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                    {formatDistance(option.distanceMeters)}
+                                </Typography>
+                            )}
                         </Box>
                     </li>
                 )
@@ -184,6 +237,11 @@ export default function PlaceAutocomplete({ value, onChange }: Props) {
                 <TextField
                     {...params}
                     placeholder="Search places..."
+                    // First focus is where the one-time location prompt
+                    // appears; later focuses reuse the cached position
+                    onFocus={() => {
+                        requestCoords()
+                    }}
                     sx={{
                         ...adornedFieldSx,
                         // Autocomplete injects its own padding — override to match selected chip

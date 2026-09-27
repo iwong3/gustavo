@@ -4,6 +4,13 @@ import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { getUserTripRole, getTripAccess, canAddExpense, canViewTrip } from '@/lib/permissions'
 import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
+import {
+    effectiveCovered,
+    ExpensePeopleError,
+    loadTripRoster,
+    resolveExpensePeople,
+    type ExpensePeopleInput,
+} from '@/lib/expense-people'
 
 export async function GET(
     _request: NextRequest,
@@ -29,19 +36,19 @@ export async function GET(
     return NextResponse.json(await loadTripExpenses(id))
 }
 
-type CreateExpenseBody = PlaceUpsertBody & {
-    name: string
-    date: string // YYYY-MM-DD
-    cost: number
-    currency: string
-    category_id?: number
-    paid_by: string // first name
-    split_between: string[] // first names, or ["Everyone"]
-    covered_participants?: string[] // first names of participants whose cost is covered by payer
-    location?: string // location name
-    notes?: string
-    local_currency_received?: number
-}
+// People (payer, split, covered) are user ids — or first names from older
+// clients — resolved against this trip only: see lib/expense-people.ts
+type CreateExpenseBody = PlaceUpsertBody &
+    ExpensePeopleInput & {
+        name: string
+        date: string // YYYY-MM-DD
+        cost: number
+        currency: string
+        category_id?: number
+        location?: string // location name
+        notes?: string
+        local_currency_received?: number
+    }
 
 export async function POST(
     request: NextRequest,
@@ -65,21 +72,20 @@ export async function POST(
     const body: CreateExpenseBody = await request.json()
 
     // Validate required fields
-    if (!body.name || !body.date || !body.cost || !body.currency || !body.paid_by) {
+    const hasPayer = body.paid_by_id !== undefined || body.paid_by !== undefined
+    const hasSplit =
+        body.split_everyone || body.split_between_ids !== undefined || body.split_between !== undefined
+    if (!body.name || !body.date || !body.cost || !body.currency || !hasPayer || !hasSplit) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     try {
         const expenseId = await withAuditUser(reporterId, async (client) => {
-            // Resolve paid_by first name → user ID
-            const payerRes = await client.query(
-                `SELECT id FROM users WHERE split_part(name, ' ', 1) = $1 LIMIT 1`,
-                [body.paid_by]
-            )
-            if (payerRes.rows.length === 0) {
-                throw new Error(`Unknown payer: ${body.paid_by}`)
-            }
-            const payerId = payerRes.rows[0].id
+            // Payer, split and covered — only ever people on this trip
+            const people = resolveExpensePeople(await loadTripRoster(client, id), body)
+            const payerId = people.payerId!
+            const participantIds = people.participantIds!
+            const coveredIds = effectiveCovered(people.coveredIds ?? new Set(), participantIds, payerId)
 
             // Resolve location name → location ID (optional)
             let locationId: number | null = null
@@ -105,34 +111,6 @@ export async function POST(
             )
             const expId = expenseRes.rows[0].id
 
-            // Resolve split_between → user IDs
-            let participantIds: number[]
-            if (body.split_between.length === 1 && body.split_between[0] === 'Everyone') {
-                const tpRes = await client.query(
-                    `SELECT user_id FROM trip_participants WHERE trip_id = $1 AND left_at IS NULL`,
-                    [id]
-                )
-                participantIds = tpRes.rows.map((r: { user_id: number }) => r.user_id)
-            } else {
-                const placeholders = body.split_between.map((_, i) => `$${i + 1}`).join(', ')
-                const usersRes = await client.query(
-                    `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${placeholders})`,
-                    body.split_between
-                )
-                participantIds = usersRes.rows.map((r: { id: number }) => r.id)
-            }
-
-            // Resolve covered participants → user IDs
-            const coveredIds = new Set<number>()
-            if (body.covered_participants && body.covered_participants.length > 0) {
-                const covPlaceholders = body.covered_participants.map((_, i) => `$${i + 1}`).join(', ')
-                const covRes = await client.query(
-                    `SELECT id FROM users WHERE split_part(name, ' ', 1) IN (${covPlaceholders})`,
-                    body.covered_participants
-                )
-                for (const r of covRes.rows) coveredIds.add(r.id)
-            }
-
             // Insert expense_participants (with covered_by for covered participants)
             for (const userId of participantIds) {
                 await client.query(
@@ -148,6 +126,9 @@ export async function POST(
         const [expense] = await loadTripExpenses(id, [expenseId])
         return NextResponse.json(expense ?? { id: expenseId }, { status: 201 })
     } catch (err) {
+        if (err instanceof ExpensePeopleError) {
+            return NextResponse.json({ error: err.message }, { status: 400 })
+        }
         console.error('Error creating expense:', err)
         const message = err instanceof Error ? err.message : 'Failed to create expense'
         return NextResponse.json({ error: message }, { status: 500 })

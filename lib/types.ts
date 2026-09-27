@@ -186,6 +186,8 @@ export type PlacePrediction = {
     placeId: string
     name: string
     address: string
+    /** Metres from the device; null when the search had no device position. */
+    distanceMeters?: number | null
 }
 
 export type PlaceDetails = {

@@ -129,9 +129,15 @@ export type AddExpenseData = {
     cost: number
     currency: string
     category_id?: number
-    paid_by: string // first name
-    split_between: string[] // first names, or ["Everyone"]
-    covered_participants?: string[] // first names of participants whose cost is covered by payer
+    // People are user ids (strings — BIGINT), checked against the trip's
+    // participants server-side (lib/expense-people.ts). Never first names:
+    // two people can share one.
+    paid_by_id: string
+    /** Everyone on the trip; otherwise `split_between_ids`. */
+    split_everyone?: boolean
+    split_between_ids?: string[]
+    /** Participants whose share the payer covers ("treat"). */
+    covered_participant_ids?: string[]
     location?: string // location name
     notes?: string
     google_place_id?: string
@@ -258,11 +264,18 @@ export const deleteSettlement = async (
 
 // ── Google Places ──
 
-export const searchPlaces = async (query: string, sessionToken?: string): Promise<PlacePrediction[]> => {
+/** Ranking hint for place search: device position, or a country fallback. */
+export type PlaceSearchBias = { lat?: number; lng?: number; regionCode?: string }
+
+export const searchPlaces = async (
+    query: string,
+    sessionToken?: string,
+    bias?: PlaceSearchBias
+): Promise<PlacePrediction[]> => {
     const res = await fetch('/api/places/autocomplete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, sessionToken }),
+        body: JSON.stringify({ query, sessionToken, ...bias }),
     })
     if (!res.ok) return []
     const data = await res.json()
