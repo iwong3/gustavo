@@ -299,38 +299,52 @@ export function DebtsSkeleton() {
             </Box>
             <ChromeBox height={33} />
             <Box sx={{ ...cardSx, border: `1.5px solid ${colors.primaryBlack}`, boxShadow: `3px 3px 0px ${colors.primaryBlack}`, overflow: 'hidden' }}>
-                {/* Headline + ⓘ */}
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingX: 1.5, paddingTop: 1.25, paddingBottom: 1 }}>
-                    <Box>
-                        <TextBone fontSize={11} width={56} />
-                        <TextBone fontSize={28} lineHeight={1.1} width={120} />
-                    </Box>
-                    <Circle size={30} />
+                {/* Headline */}
+                <Box sx={{ paddingX: 1.5, paddingTop: 1.25, paddingBottom: 1 }}>
+                    <TextBone fontSize={11} width={56} />
+                    <TextBone fontSize={28} lineHeight={1.1} width={120} />
                 </Box>
                 {/* Waterfall rows: 16px bars, 5px above and below, faint dividers,
-                    a 14px chevron column */}
+                    then the amount column and a 14px chevron column */}
                 {[0.55, 0.2, 0.3].map((w, i) => (
                     <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 1.5, paddingY: '5px', borderTop: i > 0 ? `1px solid ${colors.primaryBlack}1a` : 'none' }}>
-                        <Box sx={{ width: 84, flexShrink: 0 }}>
+                        <Box sx={{ width: 80, flexShrink: 0 }}>
                             <TextBone fontSize={12} width={44} />
                         </Box>
                         <Box sx={{ flex: 1, height: 16, display: 'flex', justifyContent: 'flex-end' }}>
                             <Bone height={16} sx={{ width: `${w * 100}%`, marginRight: `${i * 12}%` }} />
+                        </Box>
+                        <Box sx={{ width: 66, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                            <TextBone fontSize={11.5} width={48} />
                         </Box>
                         <Box sx={{ width: 14, flexShrink: 0 }} />
                     </Box>
                 ))}
                 {/* Result bar */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, paddingX: 1.5, paddingTop: 1, paddingBottom: 1.25, marginTop: 0.5, borderTop: `1px solid ${colors.primaryBlack}` }}>
-                    <Box sx={{ width: 84, flexShrink: 0 }}>
-                        <TextBone fontSize={12} width={36} />
+                    <Box sx={{ width: 80, flexShrink: 0 }}>
+                        <TextBone fontSize={12} width={40} />
                     </Box>
                     <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
                         <Bone height={22} sx={{ width: '60%' }} />
                     </Box>
+                    <Box sx={{ width: 66, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                        <TextBone fontSize={12.5} width={52} />
+                    </Box>
                     <Box sx={{ width: 14, flexShrink: 0 }} />
                 </Box>
-                {/* One payment */}
+            </Box>
+            {/* Payments (components/debt/payments-card): title line above
+                the card, then the "Yours" label and one payment */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <TextBone fontSize={11} width={64} />
+                <TextBone fontSize={12} width={60} />
+            </Box>
+            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
+                <Box sx={{ paddingX: 1.5, paddingTop: 1.25, paddingBottom: 0.5 }}>
+                    <TextBone fontSize={10.5} width={40} />
+                </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, paddingX: 1.5, paddingY: 1, borderTop: ROW_DIVIDER }}>
                     <Circle size={30} />
                     <Box sx={{ flex: 1 }}>
@@ -341,10 +355,6 @@ export function DebtsSkeleton() {
                     <Bone width={58} height={30} radius="4px" />
                 </Box>
             </Box>
-            {/* Everyone else (folded) */}
-            <Box sx={{ ...cardSx, display: 'flex', alignItems: 'center', gap: 1.25, paddingX: 1.5, height: 46 }}>
-                <Circle size={24} />
-                <TextBone fontSize={13.5} width="50%" />
             </Box>
         </Box>
     )

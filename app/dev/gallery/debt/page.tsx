@@ -80,10 +80,10 @@ export default function DebtGallery() {
     return (
         <GalleryPage title="Debt">
             <SpecimenGroup title="Debts page (real providers + fixture expenses)">
-                <Specimen label="Nothing settled yet — plan toggle, reroutes (tap Why these people?), tap a row for its expenses">
+                <Specimen label="Nothing settled yet — plan toggle, the math popover, tap a row for its expenses">
                     <Page id={901} exp={rerouteExpenses} settlements={[]} />
                 </Specimen>
-                <Specimen label="Payments recorded — locked to Fewest payments, grey paid rows, Settled list (swipe to undo)">
+                <Specimen label="Payments recorded — locked to Fewest payments, hatched payments made at the bottom, Settled list (swipe to undo)">
                     <Page id={902} exp={expenses} settlements={settlementRecords} />
                 </Specimen>
                 <Specimen label="Locked to Pay who you owe">
@@ -92,7 +92,7 @@ export default function DebtGallery() {
                 <Specimen label="Eight people — every row shown">
                     <Page id={904} t={bigTrip} exp={bigExpenses} settlements={[]} />
                 </Specimen>
-                <Specimen label="All square, big group — every payment settled; grey paid rows bring it to $0">
+                <Specimen label="All square, big group — every payment settled; hatched rows bring it to $0">
                     <Page id={906} t={bigTrip} exp={bigExpenses} settlements={settledAll(bigExpenses, bigGroup)} />
                 </Specimen>
                 <Specimen label="No expenses">

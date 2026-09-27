@@ -12,6 +12,8 @@ interface DateGroupHeaderProps {
     dayTotal: number // USD total for the day
     /** Replaces the formatted total, e.g. a signed "−$242.00" in its tone. */
     totalLabel?: React.ReactNode
+    /** Right padding (theme units); 1.5 lines the total up with 12px-padded rows. */
+    paddingRight?: number
     dayNumber: number | null // Day X of the trip (null if outside trip range)
     totalDays: number | null
     expenseCount: number
@@ -23,6 +25,7 @@ export const DateGroupHeader = ({
     date,
     dayTotal,
     totalLabel,
+    paddingRight = 2,
     dayNumber,
     totalDays,
     expenseCount,
@@ -41,7 +44,8 @@ export const DateGroupHeader = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                px: 2,
+                pl: 2,
+                pr: paddingRight,
                 py: 1,
                 cursor: 'pointer',
                 borderBottom: `1px solid ${colors.primaryBlack}`,

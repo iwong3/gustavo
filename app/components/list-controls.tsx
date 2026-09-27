@@ -26,25 +26,31 @@ export const LIST_SORT_OPTIONS: {
     { id: 'amount-asc', label: '$ low', menuLabel: 'Amount · lowest first' },
 ]
 
+export type SortOption<T extends string> = { id: T; label: string; menuLabel: string }
+
 /**
  * Search field + one-tap sort menu on a single 34px row — the pattern
- * introduced on the insights page, shared with the debt detail page.
+ * introduced on the insights page, shared with the debts page (which
+ * passes its own `options`).
  */
-export function ListControls({
+export function ListControls<T extends string = ListSort>({
     search,
     onSearchChange,
     sort,
     onSortChange,
+    options = LIST_SORT_OPTIONS as SortOption<T>[],
     placeholder = 'Search expenses…',
 }: {
     search: string
     onSearchChange: (search: string) => void
-    sort: ListSort
-    onSortChange: (sort: ListSort) => void
+    sort: T
+    onSortChange: (sort: T) => void
+    /** The sort menu; defaults to the four date/amount sorts. */
+    options?: SortOption<T>[]
     placeholder?: string
 }) {
     const [sortMenuOpen, setSortMenuOpen] = useState(false)
-    const activeSort = LIST_SORT_OPTIONS.find((o) => o.id === sort)!
+    const activeSort = options.find((o) => o.id === sort) ?? options[0]
 
     return (
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -146,7 +152,7 @@ export function ListControls({
                                 boxShadow: `3px 3px 0px ${colors.primaryBlack}`,
                                 overflow: 'hidden',
                             }}>
-                            {LIST_SORT_OPTIONS.map((option, i) => {
+                            {options.map((option, i) => {
                                 const isActive = option.id === sort
                                 return (
                                     <Box
@@ -170,7 +176,7 @@ export function ListControls({
                                                 : colors.primaryWhite,
                                             'borderBottom':
                                                 i <
-                                                LIST_SORT_OPTIONS.length - 1
+                                                options.length - 1
                                                     ? `1px solid ${colors.primaryBlack}20`
                                                     : 'none',
                                             '&:active': {

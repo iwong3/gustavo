@@ -9,15 +9,19 @@ import { CategoryIcon, InitialsIcon } from 'utils/icons'
 import { FormattedMoney } from 'utils/currency'
 
 import type { Expense } from '@/lib/types'
+import type { ReactNode } from 'react'
 
 interface ExpenseRowProps {
     expense: Expense
     onTap: (expense: Expense) => void
     /** When true, hides the date from the subtext (shown above the card instead). */
     hideDate?: boolean
+    /** Extra column after the price + payer (the debts page adds each
+     *  expense's effect on a balance). Spans the row's full height. */
+    trailing?: ReactNode
 }
 
-export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps) => {
+export const ExpenseRow = ({ expense, onTap, hideDate = false, trailing }: ExpenseRowProps) => {
     // Area, e.g. "Shibuya, Tokyo" — the neighborhood is how anyone actually
     // remembers a place, and the city anchors it. Beats the old street fragment
     // ("1-22-7 Jinnan"), which told you nothing. Falls back to the trip location
@@ -103,6 +107,7 @@ export const ExpenseRow = ({ expense, onTap, hideDate = false }: ExpenseRowProps
                     sx={{ width: 20, height: 20, fontSize: 9 }}
                 />
             </Box>
+            {trailing}
         </Box>
     )
 }

@@ -12,7 +12,6 @@ import {
     balanceSteps,
     expenseBalanceEffects,
     lockedPlan,
-    planHandoffs,
     planNetCents,
     planSettlements,
     roundToTotal,
@@ -22,11 +21,12 @@ import { queryKeys } from '@/lib/query-keys'
 import type { Expense, SettlementRecord, SettlePlan, UserSummary } from '@/lib/types'
 import { BalanceCard, type PlanPaymentRow } from 'components/debt/balance-card'
 import { useDebtsView } from 'components/debt/debts-view-store'
-import { handoffLine } from 'components/debt/handoff-text'
+import { DebtsHelp } from 'components/debt/debts-help'
+import { PlanPopover } from 'components/debt/plan-popover'
 import { ProofList, type ProofRow } from 'components/debt/proof-list'
-import { EveryoneElseCard, SettledCard, type OtherPaymentRow } from 'components/debt/trip-payments'
+import { PaymentsCard, type OtherPaymentRow } from 'components/debt/payments-card'
 import { PersonPicker } from 'components/insights/person-picker'
-import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
+import { PageInfo } from 'components/page-info'
 import { PageTitleRow } from 'components/page-title-row'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { showToast } from 'components/toast-store'
@@ -72,21 +72,22 @@ export default function DebtsPage() {
     const plan: SettlePlan = locked ?? view.plan
 
     const payments = useMemo(() => planSettlements(plan, debtMap, participants), [plan, debtMap, participants])
+    // The sheet explains what's left; once everything is paid it walks through
+    // the plan as it stood before anyone paid, marking the payments made
+    const allPaid = payments.length === 0 && settlementRecords.length > 0
+    const sheetDebtMap = allPaid ? expenseDebtMap : debtMap
+    const sheetPayments = useMemo(
+        () => (allPaid ? planSettlements(plan, expenseDebtMap, participants) : payments),
+        [allPaid, plan, expenseDebtMap, participants, payments]
+    )
     const totalCents = planNetCents(payments, personId)
     const steps = useMemo(
         () => balanceSteps(personId, expenseDebtMap, settlementRecords, participants, totalCents),
         [personId, expenseDebtMap, settlementRecords, participants, totalCents]
     )
-    const whyLines = useMemo(
-        () =>
-            planHandoffs(personId, debtMap, payments, participants).map((h) =>
-                handoffLine(h, { currentUserId: trip.currentUserId, nameOf })
-            ),
-        [personId, debtMap, payments, participants, trip.currentUserId, nameOf]
-    )
-
     // ── Settling ────────────────────────────────────────────────────────────
     const [pending, setPending] = useState<string | null>(null)
+    const [planOpen, setPlanOpen] = useState(false)
     const settlementsKey = queryKeys.trips.settlements(trip.id)
     const canSettle = (s: Settlement) =>
         canSettlePayment(
@@ -233,24 +234,16 @@ export default function DebtsPage() {
                 ? personSteps.reduce((t, s) => t + s.cents, 0)
                 : (personSteps.find((s) => String(s.userId) === deferredSelected)?.cents ?? 0)
         const cents = roundToTotal(effects.map((e) => e.value), target)
-        const rows: ProofRow[] = effects.map((e, i) => {
-            const payer = same(e.expense.paidBy.id, trip.currentUserId) ? 'You' : e.expense.paidBy.firstName
-            const treated = e.expense.coveredParticipants.length
-            return {
-                expense: e.expense,
-                cents: cents[i],
-                subline: [
-                    `${payer} paid ${formatUsd(e.usd, 2)}`,
-                    `split ${e.splitCount} ${e.splitCount === 1 ? 'way' : 'ways'}`,
-                    treated > 0 ? `${treated} treated` : null,
-                ]
-                    .filter(Boolean)
-                    .join(' · '),
-            }
-        })
+        const rows: ProofRow[] = effects.map((e, i) => ({
+            expense: e.expense,
+            cents: cents[i],
+            usd: e.usd,
+            splitCount: e.splitCount,
+            treated: e.expense.coveredParticipants.length > 0,
+        }))
         const title = deferredSelected === 'all' ? 'Every expense' : `With ${nameOf(deferredSelected as unknown as number)}`
         return { rows, target, title }
-    }, [deferredSelected, expenses, getUsdValue, personId, participants.length, steps, trip.currentUserId, nameOf])
+    }, [deferredSelected, expenses, getUsdValue, personId, participants.length, steps, nameOf])
 
     // ?from=debts brings the header back button here (see utils/back-href.ts)
     const expenseHref = useCallback(
@@ -282,33 +275,7 @@ export default function DebtsPage() {
             }}>
             <PageTitleRow title="Debts">
                 <PageInfo title="How debts work">
-                    <PageInfoSection title="Two ways to settle">
-                        <b>Fewest payments</b> settles the whole group in as few
-                        transfers as possible, so you might pay someone you never
-                        borrowed from. <b>Pay who you owe</b> only ever pays people
-                        you owe, and cancels out loops (you owe Jenny, Jenny owes
-                        Sam, Sam owes you). Both land everyone on exactly the same
-                        balance.
-                    </PageInfoSection>
-                    <PageInfoSection title="One plan per trip">
-                        Anyone can switch plans until the first payment is settled.
-                        After that the trip stays on that plan, so the two never mix.
-                        Undo every payment to switch again.
-                    </PageInfoSection>
-                    <PageInfoSection title="Checking the math">
-                        The chart builds your total from everything between you and
-                        each person. Tap a row for the expenses behind it, and tap an
-                        expense to open it. <b>Why these people?</b> explains any
-                        payment that goes to someone you don&apos;t owe directly.
-                    </PageInfoSection>
-                    <PageInfoSection title="Settling">
-                        Tap <b>Settle</b> once the money has actually moved. It&apos;s
-                        recorded for the whole group straight away; <b>Undo</b> on
-                        the message, or swipe the payment in <b>Settled</b>, takes it
-                        back. Only the payer, the receiver or a trip admin can settle
-                        or undo a payment.
-                    </PageInfoSection>
-                    <PageInfoNote>Tap the avatar to see anyone&apos;s debts.</PageInfoNote>
+                    <DebtsHelp />
                 </PageInfo>
             </PageTitleRow>
 
@@ -349,8 +316,21 @@ export default function DebtsPage() {
                 payments={mine}
                 selected={selected}
                 onSelect={view.setSelected}
+                onHowItWorks={() => setPlanOpen(true)}
+                viewKey={`${personId}:${plan}`}
+            />
+
+            {/* Every payment, above the expenses a tapped row opens — so
+                nothing in it moves when they do */}
+            <PaymentsCard
+                mine={mine}
+                others={others}
+                settled={settled}
+                isYou={isYou}
+                personName={personName}
+                youId={trip.currentUserId}
                 onSettle={settle}
-                whyLines={whyLines}
+                onUndo={undo}
             />
 
             {proof && (
@@ -367,7 +347,6 @@ export default function DebtsPage() {
                     <ProofList
                         title={proof.title}
                         rows={proof.rows}
-                        totalCents={proof.target}
                         onTap={openExpense}
                         hrefOf={expenseHref}
                         tripStartDate={trip.startDate}
@@ -376,8 +355,18 @@ export default function DebtsPage() {
                 </Box>
             )}
 
-            {others.length > 0 && <EveryoneElseCard payments={others} youId={trip.currentUserId} onSettle={settle} />}
-            {settled.length > 0 && <SettledCard records={settled} youId={trip.currentUserId} onUndo={undo} />}
+
+            <PlanPopover
+                open={planOpen}
+                onClose={() => setPlanOpen(false)}
+                plan={plan}
+                payments={sheetPayments}
+                debtMap={sheetDebtMap}
+                settled={allPaid ? settlementRecords : undefined}
+                participants={participants}
+                currentUserId={trip.currentUserId}
+            />
+
         </Box>
     )
 }

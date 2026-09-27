@@ -198,8 +198,8 @@ export type BalanceStep =
 
 /**
  * One person's balance as a waterfall: expense nets per counterparty
- * (largest first, the direction of the result leading), then recorded
- * payments. The steps sum to exactly `totalCents` — pass the plan's net for
+ * (largest first, the direction of the result leading), then the payments
+ * already made. The steps sum to exactly `totalCents` — pass the plan's net for
  * the person (planNetCents) so the chart ends where the payments start.
  */
 export function balanceSteps(
@@ -236,7 +236,11 @@ export function balanceSteps(
         const lead = Number(Math.sign(b.usd) === sign) - Number(Math.sign(a.usd) === sign)
         return lead !== 0 ? lead : Math.abs(b.usd) - Math.abs(a.usd)
     })
-    const all = [...raw, ...Array.from(paid.values())]
+    // Payments made come after every expense row, as their own group: under
+    // Fewest payments they often go to someone other than who the expenses
+    // say (paying Joanna $478.59 against a $180.49 debt), so pairing them
+    // with a person's row would read as a mistake
+    const all: Raw[] = [...raw, ...Array.from(paid.values())]
     const cents = roundToTotal(all.map((r) => r.usd), totalCents)
     return all.map((r, i) =>
         r.kind === 'person'

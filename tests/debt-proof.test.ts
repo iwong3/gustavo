@@ -186,6 +186,17 @@ describe('proof layers add up', () => {
     })
 })
 
+describe('balanceSteps order', () => {
+    it('lists expense rows first, then every payment made', () => {
+        // you(1) owe Jenny(2) 30 and Marco(3) 50 from expenses
+        const map = new Map([[id(1), new Map([[id(2), 30], [id(3), 50]])]])
+        const who = [{ id: id(1) }, { id: id(2) }, { id: id(3) }, { id: id(4) }]
+        const records = [record(1, 2, 30), record(1, 4, 5)]
+        const steps = balanceSteps(id(1), map, records, who, -4500)
+        expect(steps.map((s) => `${s.kind}:${s.userId}`)).toEqual(['person:3', 'person:2', 'paid:2', 'paid:4'])
+    })
+})
+
 describe('planHandoffs', () => {
     it('explains a reroute: you pay Sam part of what you owe Jenny', () => {
         // you(1) owe Jenny(2) 23; Jenny owes Sam(4) 23 → fewest: you pay Sam
