@@ -14,24 +14,26 @@ import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
+import { useToday } from 'hooks/use-today'
+import { localDateString } from 'utils/time'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function getLocalDate(): string {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
+// The workout/rest-day counts cover this many days, today included
+const STATS_WINDOW_DAYS = 30
 
-function getDateDaysAgo(days: number): string {
-    const d = new Date()
+/** The local date `days` before a YYYY-MM-DD date. */
+function daysBefore(date: string, days: number): string {
+    const d = new Date(date + 'T00:00:00')
     d.setDate(d.getDate() - days)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localDateString(d)
 }
 
 function computeWorkoutStats(workouts: Workout[], today: string) {
     const workoutDates = new Set(workouts.map((w) => w.date))
     const workoutDays = workoutDates.size
-    const restDays = 30 - workoutDays
+    // Never negative: the fetch window is exactly STATS_WINDOW_DAYS long
+    const restDays = Math.max(0, STATS_WINDOW_DAYS - workoutDays)
 
     let streak = 0
     const d = new Date(today + 'T00:00:00')
@@ -57,8 +59,9 @@ const fetchJson = async <T,>(url: string): Promise<T> => {
 // ── Page Component ───────────────────────────────────────────────────────────
 
 export default function HealthPage() {
-    const today = useMemo(() => getLocalDate(), [])
-    const thirtyDaysAgo = useMemo(() => getDateDaysAgo(30), [])
+    // Kept current: the hub can sit open overnight in the PWA
+    const today = useToday()
+    const windowStart = useMemo(() => daysBefore(today, STATS_WINDOW_DAYS - 1), [today])
     const queryClient = useQueryClient()
 
     const queries = useQueries({
@@ -68,8 +71,8 @@ export default function HealthPage() {
                 queryFn: () => fetchJson<import('@/lib/health-types').DaysSince[]>(`/api/health/workouts/days-since?today=${today}`),
             },
             {
-                queryKey: [...queryKeys.health.workouts.list(), { startDate: thirtyDaysAgo, endDate: today }],
-                queryFn: () => fetchJson<Workout[]>(`/api/health/workouts?startDate=${thirtyDaysAgo}&endDate=${today}`),
+                queryKey: [...queryKeys.health.workouts.list(), { startDate: windowStart, endDate: today }],
+                queryFn: () => fetchJson<Workout[]>(`/api/health/workouts?startDate=${windowStart}&endDate=${today}`),
             },
             {
                 queryKey: queryKeys.health.presets.byType('workout'),
@@ -145,7 +148,8 @@ export default function HealthPage() {
             const res = await fetch(`/api/health/presets/${presetId}/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: today }),
+                // Read the clock at tap time, not the last render
+                body: JSON.stringify({ date: localDateString() }),
             })
             if (!res.ok) throw new Error('Apply failed')
             return presetId

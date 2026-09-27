@@ -11,7 +11,9 @@ import { getTablerIcon } from 'utils/icons'
 import { fetchTrips } from 'utils/api'
 
 import DeparturesBoard from 'components/departures-board'
-import TrainingGrid, { isoDaysAgo, localDateIso } from 'components/health/training-grid'
+import TrainingGrid from 'components/health/training-grid'
+import { useToday } from 'hooks/use-today'
+import { localDateString } from 'utils/time'
 
 /**
  * Matches the health page's own workout window so the two share a query cache
@@ -177,8 +179,13 @@ function TripsSection() {
  * first-run call to action.
  */
 function HealthSection() {
-    const today = useMemo(() => localDateIso(), [])
-    const from = useMemo(() => isoDaysAgo(HEALTH_FETCH_DAYS), [])
+    // Kept current: the home page can sit open overnight in the PWA
+    const today = useToday()
+    const from = useMemo(() => {
+        const d = new Date(today + 'T00:00:00')
+        d.setDate(d.getDate() - HEALTH_FETCH_DAYS)
+        return localDateString(d)
+    }, [today])
 
     const [daysSinceQ, workoutsQ] = useQueries({
         queries: [

@@ -461,6 +461,11 @@ function ExerciseCard({
           ? `${we.weightLbs} lbs`
           : null
 
+    // Weights are decimals (e.g. 47.5), so raw subtraction leaves float noise
+    // ("+2.3000000000000007") — round to the hundredth, which also makes a
+    // noise-only difference count as no change
+    const weightDelta = (a: number, b: number) => Math.round((a - b) * 100) / 100
+
     // Build unified rows: current workout + history, each with delta vs previous
     const rows: {
         date: string | null
@@ -474,7 +479,7 @@ function ExerciseCard({
     // Current workout row — delta vs most recent history entry
     const currentDelta =
         we.weightLbs && history.length > 0 && history[0].weightLbs
-            ? we.weightLbs - history[0].weightLbs
+            ? weightDelta(we.weightLbs, history[0].weightLbs)
             : null
     rows.push({
         date: null,
@@ -497,7 +502,7 @@ function ExerciseCard({
         const nextEntry = history[i + 1]
         const delta =
             h.weightLbs && nextEntry?.weightLbs
-                ? h.weightLbs - nextEntry.weightLbs
+                ? weightDelta(h.weightLbs, nextEntry.weightLbs)
                 : null
         rows.push({
             date: h.date,

@@ -12,3 +12,10 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
     if (days < 7) return `${days}d ago`
     return new Date(then).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
+
+/** A Date as YYYY-MM-DD in the device's local time zone — "today" as the
+ *  person holding the phone sees it. Never `toISOString().slice(0, 10)`:
+ *  that's the UTC date, a day ahead on US evenings. */
+export function localDateString(d: Date = new Date()): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
