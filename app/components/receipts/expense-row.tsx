@@ -28,6 +28,12 @@ export const ExpenseRow = ({ expense, onTap, hideDate = false, trailing }: Expen
     // name for places saved before migration 00039.
     const locationDisplay = expenseAreaLabel(expense.place, expense.locationName)
 
+    // Currency-exchange rows store the USD PAID in costOriginal while `currency`
+    // names the currency RECEIVED (see drawer-receipt.tsx) — format as USD, or
+    // $200 would print as "¥200".
+    const amountCurrency =
+        expense.categorySlug === 'currency_exchange' ? 'USD' : expense.currency
+
     const expenseDate = dayjs(expense.date + 'T00:00:00')
 
     return (
@@ -98,7 +104,7 @@ export const ExpenseRow = ({ expense, onTap, hideDate = false, trailing }: Expen
                             ? colors.primaryRed
                             : colors.primaryBlack,
                     }}>
-                    {FormattedMoney(expense.currency, 0).format(expense.costOriginal)}
+                    {FormattedMoney(amountCurrency, 0).format(expense.costOriginal)}
                 </Typography>
                 <InitialsIcon
                     name={expense.paidBy.firstName}
