@@ -17,8 +17,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { userId, isAdmin } = authUser
 
-    // Cannot change your own role
-    if (userId === targetUserId) {
+    // Cannot change your own role (userId is a BIGINT string at runtime)
+    if (String(userId) === String(targetUserId)) {
         return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
     }
 

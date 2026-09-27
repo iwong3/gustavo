@@ -28,6 +28,9 @@ const mapCity = (
     lat,
     lng,
     totalSpendUsd: spend,
+    // Japan in yen alongside USD; elsewhere USD only
+    totalSpendLocal: countryCode === 'JP' ? { JPY: spend * 150 } : ({} as Record<string, number>),
+    unconverted: false,
     placeCount: 1,
     trips: tripIds.map((id) => ({
         id,
@@ -36,6 +39,8 @@ const mapCity = (
         startDate: `2025-0${(Number(id) % 9) + 1}-03`,
         endDate: `2025-0${(Number(id) % 9) + 1}-12`,
         spendUsd: Math.round(spend / tripIds.length),
+        spendLocal: countryCode === 'JP' ? { JPY: Math.round((spend * 150) / tripIds.length) } : ({} as Record<string, number>),
+        unconverted: false,
     })),
 })
 

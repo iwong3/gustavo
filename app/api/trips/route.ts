@@ -218,8 +218,12 @@ export async function GET(request: NextRequest) {
         settlementsByTrip.set(r.trip_id, list)
     }
 
-    // Server UTC date — good enough for the "today" spend bucket.
-    const todayIso = new Date().toISOString().slice(0, 10)
+    // "Today" for the spend bucket is the caller's local date (sent by the
+    // client); the server's UTC date is a day off on US evenings / Asia mornings.
+    const todayParam = request.nextUrl.searchParams.get('today')
+    const todayIso = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam)
+        ? todayParam
+        : new Date().toISOString().slice(0, 10)
 
     function tripStats(tripId: number): TripStats {
         const rows = expensesByTrip.get(tripId) ?? []
@@ -302,6 +306,11 @@ type CreateTripBody = {
     endDate: string   // YYYY-MM-DD
     description?: string
     participantIds?: number[]
+    /** Chosen roles by user id (admin/editor/viewer); anyone unlisted gets the
+     *  creator's default role. Set here, in the create transaction, so a trip
+     *  never exists half-configured (a failed follow-up call used to leave the
+     *  form open, and saving again created a duplicate trip). */
+    participantRoles?: Record<string, string>
     visibility?: 'participants' | 'all_users'
     /** ISO 3166-1 alpha-2 country codes. Currencies are derived in code. */
     countries?: string[]
@@ -313,6 +322,9 @@ type CreateTripBody = {
      *  while migrating callers to `currencies`. */
     currency?: string
 }
+
+// Roles a trip's creator (its owner) can hand out — never a second owner
+const GRANTABLE_ROLES = new Set(['admin', 'editor', 'viewer'])
 
 function slugify(name: string): string {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -381,15 +393,17 @@ export async function POST(request: NextRequest) {
                 [newTripId, creatorId, 'owner']
             )
 
-            // Add additional participants with default role
+            // Add the other participants with their chosen (else default) role.
+            // Ids are BIGINT strings at runtime — compare as strings.
             if (body.participantIds) {
                 for (const uid of body.participantIds) {
-                    if (uid !== creatorId) {
-                        await client.query(
-                            'INSERT INTO trip_participants (trip_id, user_id, role) VALUES ($1, $2, $3)',
-                            [newTripId, uid, defaultRole]
-                        )
-                    }
+                    if (String(uid) === String(creatorId)) continue
+                    const chosen = body.participantRoles?.[String(uid)]
+                    const role = chosen && GRANTABLE_ROLES.has(chosen) ? chosen : defaultRole
+                    await client.query(
+                        'INSERT INTO trip_participants (trip_id, user_id, role) VALUES ($1, $2, $3)',
+                        [newTripId, uid, role]
+                    )
                 }
             }
 

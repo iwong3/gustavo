@@ -46,7 +46,8 @@ import type { Expense } from '@/lib/types'
 
 // Legacy trips that still use the manual Location dropdown.
 // All other trips auto-derive location from Google Places.
-const LEGACY_TRIP_IDS = new Set([1, 2, 3, 4])
+// Ids are BIGINT strings at runtime — compare as strings
+const LEGACY_TRIP_IDS = new Set(['1', '2', '3', '4'])
 
 // Google Places type → app category name mapping.
 // First match wins, so order matters (more specific types first).
@@ -255,7 +256,7 @@ export default function ExpenseForm({
     // Track which fields were auto-filled from Google Place (blue highlight until edited)
     const [prefilled, setPrefilled] = useState<{ name: boolean; category: boolean }>({ name: false, category: false })
 
-    const isLegacyTrip = LEGACY_TRIP_IDS.has(trip.id)
+    const isLegacyTrip = LEGACY_TRIP_IDS.has(String(trip.id))
 
     // Handle Google Place selection — auto-derive location, pre-fill name + category
     const handlePlaceChange = async (place: PlaceDetails | null) => {

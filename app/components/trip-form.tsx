@@ -10,7 +10,7 @@ import {
     Typography,
 } from '@mui/material'
 import { IconCirclePlus, IconCheck, IconSearch, IconX } from '@tabler/icons-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { colors } from '@/lib/colors'
@@ -25,7 +25,11 @@ import {
     selectMenuProps,
 } from '@/lib/form-styles'
 import type { TripRole, TripSummary, UserSummary } from '@/lib/types'
+import dayjs from 'dayjs'
+import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
 import { FormPage } from 'components/form-page'
+import { formatUsd } from 'utils/currency'
+import { localDateString } from 'utils/time'
 import {
     PageInfo,
     PageInfoNote,
@@ -49,7 +53,8 @@ import { InitialsIcon } from 'utils/icons'
 import { canManageRoles } from 'utils/permissions'
 import { fetchCachedUserPreferences } from 'hooks/useUserPreferences'
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
+// The device's local date (not UTC — a day ahead on US evenings)
+const todayISO = () => localDateString()
 
 // ── Location item for local state ───────────────────────────────────────────
 
@@ -183,17 +188,31 @@ function RowRemove({
     )
 }
 
+/** What removing a participant affects. The edit page supplies it (it has
+ *  the trip's expenses and debts); the form warns before saving. */
+export type RemovalImpact = {
+    /** Expenses they paid for or are in the split of, newest first. */
+    expenses: { id: number; name: string; date: string; usd: number; paid: boolean }[]
+    /** Their unsettled balance under the trip's plan, in cents:
+     *  + owed to them, − they owe. Dropped from the debts once removed. */
+    netCents: number
+}
+
 type Props = {
     mode: 'create' | 'edit'
     trip?: TripSummary
     onCancel: () => void
     /** Awaited — the form stays in its saving state until it resolves. */
     onSuccess: () => void | Promise<void>
+    /** Edit mode: warn about removals that touch expenses or debts. */
+    describeRemoval?: (userId: number) => RemovalImpact
 }
+
+type RemovalWarning = RemovalImpact & { userId: number; firstName: string }
 
 // Page-style trip form (create + edit) — same shell as ExpenseForm: title,
 // fields, PageActionBar. Replaces the old FormDrawer-based TripFormDialog.
-export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
+export default function TripForm({ mode, trip, onCancel, onSuccess, describeRemoval }: Props) {
     const currentUser = useCurrentUser()
     const queryClient = useQueryClient()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
@@ -221,6 +240,14 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [attempted, setAttempted] = useState(false)
+    // Create mode: set once the trip exists, so a retried Save finishes it
+    const createdTripRef = useRef<{ id: number; slug: string } | null>(null)
+    // Edit mode: removals that touch expenses/debts, awaiting confirmation;
+    // and the set of removals already confirmed (ids joined), so a retried
+    // Save doesn't ask again unless the removals changed
+    const [removalWarning, setRemovalWarning] = useState<RemovalWarning[] | null>(null)
+    const confirmedRemovalsRef = useRef<string | null>(null)
+    const pendingRemovalsRef = useRef<string | null>(null)
 
     // ── Location state ──────────────────────────────────────────────────────
     const [locations, setLocations] = useState<LocalLocation[]>([])
@@ -359,6 +386,24 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
             return
         }
 
+        // Removing someone drops them from the trip's debts — say what that
+        // touches before saving (ids are BIGINT strings: compare as strings)
+        if (mode === 'edit' && trip && describeRemoval) {
+            const keep = new Set(selectedUserIds.map(String))
+            const removing = trip.participants.filter((p) => !keep.has(String(p.id)))
+            const key = removing.map((p) => String(p.id)).sort().join(',')
+            if (removing.length > 0 && confirmedRemovalsRef.current !== key) {
+                const warnings = removing
+                    .map((p) => ({ userId: p.id, firstName: p.firstName, ...describeRemoval(p.id) }))
+                    .filter((w) => w.expenses.length > 0 || w.netCents !== 0)
+                if (warnings.length > 0) {
+                    pendingRemovalsRef.current = key
+                    setRemovalWarning(warnings)
+                    return
+                }
+            }
+        }
+
         setSubmitting(true)
         setError('')
 
@@ -405,22 +450,22 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                     }
                 }
 
-                // Add/remove participants
+                // Add/remove participants. Surface a refusal (e.g. an editor
+                // removing an admin) instead of reporting success.
+                const participantCall = async (method: 'POST' | 'DELETE', userId: number) => {
+                    const res = await fetch(`/api/trips/${trip.id}/participants`, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId }),
+                    })
+                    if (!res.ok) {
+                        const body = await res.json().catch(() => null)
+                        throw new Error(body?.error ?? 'Failed to update participants')
+                    }
+                }
                 await Promise.all([
-                    ...toAdd.map((userId) =>
-                        fetch(`/api/trips/${trip.id}/participants`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId }),
-                        })
-                    ),
-                    ...toRemove.map((userId) =>
-                        fetch(`/api/trips/${trip.id}/participants`, {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId }),
-                        })
-                    ),
+                    ...toAdd.map((userId) => participantCall('POST', userId)),
+                    ...toRemove.map((userId) => participantCall('DELETE', userId)),
                     ...roleChanges,
                 ])
 
@@ -443,32 +488,34 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 // Save location changes
                 await saveLocations(trip.id)
             } else {
-                const created = await createTrip({
-                    name: name.trim(),
-                    startDate,
-                    endDate,
-                    description: description.trim() || undefined,
-                    participantIds:
-                        selectedUserIds.length > 0
-                            ? selectedUserIds
-                            : undefined,
-                    visibility,
-                    countries: countryCodes,
-                    currencies: derivedCurrencies,
-                })
-
-                // Apply any non-default role assignments
-                const roleUpdates: Promise<void>[] = []
+                // Roles go in the create request (one transaction), and only
+                // for people still selected — a role left behind by someone
+                // removed from the list used to fail a follow-up call.
+                const roles: Record<string, string> = {}
                 participantRoles.forEach((role, userId) => {
-                    if (role !== 'viewer' && role !== 'owner') {
-                        roleUpdates.push(
-                            updateParticipantRole(created.id, userId, role)
-                        )
+                    if (role !== 'owner' && selectedUserIds.includes(userId)) {
+                        roles[String(userId)] = role
                     }
                 })
-                if (roleUpdates.length > 0) {
-                    await Promise.all(roleUpdates)
-                }
+                // A retry after a later step failed (locations) reuses the
+                // trip already created instead of creating a duplicate
+                const created =
+                    createdTripRef.current ??
+                    (await createTrip({
+                        name: name.trim(),
+                        startDate,
+                        endDate,
+                        description: description.trim() || undefined,
+                        participantIds:
+                            selectedUserIds.length > 0
+                                ? selectedUserIds
+                                : undefined,
+                        participantRoles: roles,
+                        visibility,
+                        countries: countryCodes,
+                        currencies: derivedCurrencies,
+                    }))
+                createdTripRef.current = created
 
                 // Create locations for the new trip
                 await saveLocations(created.id)
@@ -880,6 +927,11 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                               const canEditRole =
                                   !isOwner &&
                                   (showRoleManagement || !isEdit)
+                              // Removing an admin is role management (owner/
+                              // admin only); the owner is never removable
+                              const canRemove =
+                                  !isOwner &&
+                                  (canEditRole || currentRole !== 'admin')
                               const isLast =
                                   i === selectedParticipants.length - 1
                               return (
@@ -911,7 +963,7 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                                               currentRole,
                                               canEditRole
                                           )}
-                                          {isOwner ? (
+                                          {!canRemove ? (
                                               <Box sx={{ width: 26 }} />
                                           ) : (
                                               <RowRemove
@@ -1204,6 +1256,67 @@ export default function TripForm({ mode, trip, onCancel, onSuccess }: Props) {
                 />
             </Box>
 
+            <ConfirmDeleteDialog
+                open={removalWarning !== null}
+                title={
+                    removalWarning?.length === 1
+                        ? `Remove ${removalWarning[0].firstName}?`
+                        : 'Remove these people?'
+                }
+                confirmLabel="Remove & save"
+                onClose={() => setRemovalWarning(null)}
+                onConfirm={() => {
+                    confirmedRemovalsRef.current = pendingRemovalsRef.current
+                    setRemovalWarning(null)
+                    void handleSubmit()
+                }}>
+                <Typography sx={{ fontSize: 14, marginBottom: 1.5 }}>
+                    They&apos;ll stay on past expenses, but drop out of the
+                    trip&apos;s debts — anything they owe or are owed stops
+                    being tracked.
+                </Typography>
+                {removalWarning?.map((w) => (
+                    <Box key={w.userId} sx={{ marginBottom: 1.5 }}>
+                        <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
+                            {w.firstName}
+                            {' · '}
+                            {w.netCents > 0
+                                ? `is owed ${formatUsd(w.netCents / 100, 2)}`
+                                : w.netCents < 0
+                                  ? `owes ${formatUsd(-w.netCents / 100, 2)}`
+                                  : 'settled up'}
+                        </Typography>
+                        {w.expenses.length > 0 && (
+                            <>
+                                <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginBottom: 0.5 }}>
+                                    On {w.expenses.length}{' '}
+                                    {w.expenses.length === 1 ? 'expense' : 'expenses'}:
+                                </Typography>
+                                <Box sx={{ maxHeight: 180, overflowY: 'auto' }}>
+                                    {w.expenses.map((e) => (
+                                        <Box
+                                            key={e.id}
+                                            sx={{ display: 'flex', gap: 1, fontSize: 12, paddingY: 0.25 }}>
+                                            <Box sx={{ flexShrink: 0, width: 44, color: colors.primaryBrown }}>
+                                                {dayjs(e.date).format('MMM D')}
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {e.name}
+                                                {e.paid && (
+                                                    <Box component="span" sx={{ color: colors.primaryBrown }}>
+                                                        {' '}· paid
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                            <Box sx={{ flexShrink: 0 }}>{formatUsd(e.usd)}</Box>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            </>
+                        )}
+                    </Box>
+                ))}
+            </ConfirmDeleteDialog>
             </FormPage>
     )
 }

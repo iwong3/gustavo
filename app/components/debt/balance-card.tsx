@@ -455,7 +455,9 @@ export const BalanceCard = memo(function BalanceCard({
                                 isPaid &&
                                 (i === 0 || steps[i - 1].kind !== 'paid')
                             return (
-                                <Fragment key={`${s.kind}:${s.userId}`}>
+                                // Direction in the key: "Paid X" and "From X"
+                                // are separate rows for the same person
+                                <Fragment key={`${s.kind}:${s.userId}:${s.cents > 0 ? 'out' : 'in'}`}>
                                     <Box
                                         onClick={
                                             isPaid

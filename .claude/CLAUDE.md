@@ -47,6 +47,10 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Leaving a page (cancel, save, delete, back) → `exitTo`** from `useExitTo()`,
   never a bare `router.push`/`router.replace` — otherwise swipe-back returns to the
   page you just left. See `.claude/docs/code-guide.md` § Navigation Chrome.
+- **"Today" is the device's local date**: `localDateString()` (`utils/time`),
+  or `useToday()` (`hooks/use-today`) in components that can sit open overnight.
+  Never `new Date().toISOString().slice(0, 10)` — that's UTC, a day ahead on US
+  evenings. Servers can't know the device's date; the client sends it.
 - **Gate loading UI on `isPending`, never `isLoading`** — during the persisted
   cache restore `isLoading` is false with no data, so pages flash their empty
   state. See code-guide § Loading, Caching & Refresh.
@@ -97,7 +101,10 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Idea/todo lists** → `.claude/docs/todos/`
 
 ## Key locations
-- API routes: `app/api/` (App Router route handlers); auth: `app/auth.ts` (`ALLOWED_EMAILS`)
+- API routes: `app/api/` (App Router route handlers); auth: `app/auth.ts` checks the
+  `allowed_emails` table at sign-in, and `requireAuthWithUserId` (`lib/api-helpers.ts`)
+  re-checks it on every API request. Sign out only via `useSignOut()` (wipes the
+  persisted query cache), never a bare `signOut()`.
 - Debt calculation: `lib/debt.ts` + `lib/debt-proof.ts` (plans, proof math); debt UI: `app/components/debt/`
 - Types: `lib/types.ts` (expenses), `lib/health-types.ts` (health)
 - Migrations: `database/migrations/` (numbered SQL, runner `scripts/db/migrate.js`)

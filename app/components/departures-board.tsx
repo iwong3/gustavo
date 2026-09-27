@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { colors } from '@/lib/colors'
 import type { TripSummary } from '@/lib/types'
+import { localDateString } from 'utils/time'
 
 type PassState = 'upcoming' | 'travelling' | 'complete'
 
@@ -244,7 +245,7 @@ export default function DeparturesBoard({
     todayIso,
     href = '/gustavo/trips',
 }: DeparturesBoardProps) {
-    const today = todayIso ?? new Date().toISOString().slice(0, 10)
+    const today = todayIso ?? localDateString()
     const ordered = useMemo(() => orderTrips(trips, today), [trips, today])
     const count = ordered.length
 

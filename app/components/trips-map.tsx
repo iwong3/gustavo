@@ -34,7 +34,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 import { colors, hardShadow } from '@/lib/colors'
 import { getCountry } from '@/lib/countries'
-import type { TripMapCity, TripMapSummary } from '@/lib/trip-map'
+import type { LocalSpend, TripMapCity, TripMapSummary } from '@/lib/trip-map'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { FormattedMoney } from 'utils/currency'
 
@@ -140,6 +140,20 @@ function computeInitialFit(
 
 const cityTitle = (c: TripMapCity) =>
     c.countryCode ? `${c.city} · ${c.countryCode}` : c.city
+
+/** Spend at a place: USD, with the local currency it was paid in alongside —
+ *  "¥6,200 (~$42)". When the trip has no exchange rate for that currency,
+ *  the local amount alone (plus any USD spend) rather than a misleading $0. */
+const formatMapSpend = (usd: number, local: LocalSpend, unconverted: boolean) => {
+    const dollars = FormattedMoney('USD', 0).format(Number.isFinite(usd) ? usd : 0)
+    const locals = Object.entries(local)
+        .filter(([, amt]) => Number.isFinite(amt) && amt > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cur, amt]) => FormattedMoney(cur, 0).format(amt))
+    if (locals.length === 0) return dollars
+    if (unconverted) return usd >= 0.5 ? `${locals.join(' + ')} + ${dollars}` : locals.join(' + ')
+    return `${locals.join(' + ')} (~${dollars})`
+}
 
 /** Compact trip date for a card row, e.g. "Nov '25". */
 const monthYear = (iso: string) => {
@@ -339,7 +353,7 @@ const controlBtnSx = {
  *  measured so the morph can animate to an exact height. */
 function CityCardBody({ city, onClose }: { city: TripMapCity; onClose: () => void }) {
     const country = city.countryCode ? getCountry(city.countryCode) : null
-    const spend = FormattedMoney('USD', 0).format(city.totalSpendUsd)
+    const spend = formatMapSpend(city.totalSpendUsd, city.totalSpendLocal, city.unconverted)
     const meta = [
         country?.name ?? city.countryCode,
         `${spend} spent`,
@@ -385,7 +399,7 @@ function CityCardBody({ city, onClose }: { city: TripMapCity; onClose: () => voi
                                 {t.name}
                             </Typography>
                             <Typography sx={{ fontSize: 11, color: 'text.secondary', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {[monthYear(t.startDate), FormattedMoney('USD', 0).format(t.spendUsd)].filter(Boolean).join(' · ')}
+                                {[monthYear(t.startDate), formatMapSpend(t.spendUsd, t.spendLocal, t.unconverted)].filter(Boolean).join(' · ')}
                             </Typography>
                         </Box>
                         <IconChevronRight size={16} stroke={2} style={{ flexShrink: 0, opacity: 0.4 }} />

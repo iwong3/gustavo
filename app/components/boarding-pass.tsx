@@ -20,7 +20,7 @@ import { getCountry } from '@/lib/countries'
 import type { TripStats, TripSummary } from '@/lib/types'
 import { FormattedMoney } from 'utils/currency'
 import { InitialsIcon } from 'utils/icons'
-import { formatRelativeTime } from 'utils/time'
+import { formatRelativeTime, localDateString } from 'utils/time'
 
 // Strip colors per state — same family as the home page app tiles.
 const STRIP_SAGE = '#e8edca'
@@ -325,7 +325,7 @@ type BoardingPassProps = {
 }
 
 export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
-    const today = todayIso ?? new Date().toISOString().slice(0, 10)
+    const today = todayIso ?? localDateString()
     const state = getPassState(trip, today)
     const stats = trip.stats
 

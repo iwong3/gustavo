@@ -52,6 +52,8 @@ const place = (over: Partial<TripMapPlace>): TripMapPlace => ({
     tripEnd: '2025-01-05',
     locationName: null,
     spendUsd: 0,
+    spendLocal: {},
+    unconverted: false,
     ...over,
 })
 

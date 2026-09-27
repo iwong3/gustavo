@@ -7,7 +7,7 @@ import { IconEdit, IconTrash } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteTrip } from 'utils/api'
 import { deleteErrorMessage } from 'utils/delete-error'
@@ -19,6 +19,8 @@ import DeleteTripDialog from 'components/delete-trip-dialog'
 import { PageActionBar, PageActionButton } from 'components/page-action-bar'
 
 import { queryKeys } from '@/lib/query-keys'
+import { lockedPlan, planSettlements } from '@/lib/debt-proof'
+import { useDebtsView } from 'components/debt/debts-view-store'
 
 const formatDateRange = (start: string, end: string, tripName?: string) => {
     const s = new Date(start + 'T00:00:00')
@@ -41,7 +43,8 @@ const formatDateRange = (start: string, end: string, tripName?: string) => {
 
 export default function TripDetailsPage() {
     const { trip } = useTripData()
-    const { totalSpend, debtMap } = useSpendData()
+    const { totalSpend, debtMap, participants, settlementRecords } = useSpendData()
+    const debtsView = useDebtsView(trip.id)
     const router = useRouter()
     const exitTo = useExitTo()
     const queryClient = useQueryClient()
@@ -77,13 +80,15 @@ export default function TripDetailsPage() {
         deleteMutation.mutate()
     }
 
-    // Count total outstanding debts
-    let totalDebts = 0
-    debtMap.forEach((owes) => {
-        owes.forEach((amount) => {
-            if (amount > 0.01) totalDebts++
-        })
-    })
+    // Outstanding debts = the payments still left under the trip's settle plan,
+    // the same count the Debts page shows. (debtMap folds payments in as
+    // reverse entries, so counting its raw entries went UP after a payment.)
+    const plan = lockedPlan(settlementRecords) ?? debtsView.plan
+    const totalDebts = useMemo(
+        () => planSettlements(plan, debtMap, participants).length,
+        [plan, debtMap, participants]
+    )
+    const allSettled = totalDebts === 0 && settlementRecords.length > 0
 
     return (
         <Box
@@ -169,9 +174,9 @@ export default function TripDetailsPage() {
                                 fontSize: 16,
                                 color: colors.primaryBlack,
                             }}>
-                            {totalDebts}
+                            {allSettled ? '✓' : totalDebts}
                         </Box>
-                        <Box>{totalDebts === 1 ? 'debt' : 'debts'}</Box>
+                        <Box>{allSettled ? 'all settled' : totalDebts === 1 ? 'debt' : 'debts'}</Box>
                     </Box>
                 </Box>
             </Box>

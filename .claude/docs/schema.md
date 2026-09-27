@@ -341,9 +341,11 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 ## Permissions Model
 
 ### Trip roles
-- **owner** — exactly one per trip (the creator). Can edit trip, manage participants/roles, delete trip.
-- **editor** — can add/edit/delete any expense, manage locations.
+- **owner** — exactly one per trip (the creator). Everything an admin can do, plus delete the trip. Can never be removed or have their role changed.
+- **admin** — edit the trip, manage roles (grant/change admin/editor/viewer), add/remove anyone but the owner.
+- **editor** — edit the trip, add/edit/delete any expense, manage locations, add/remove editors and viewers. No role management: can't grant admin, remove an admin, or change roles.
 - **viewer** — can add expenses and edit/delete only their own (where `reported_by = current user`).
+- Nobody can change their own role (role route). New participants get admin/editor/viewer only — never `owner`. Enforced server-side in `participants/route.ts` + `participants/[userId]/role/route.ts`; the trip form hides what the server would refuse.
 
 ### Trip visibility
 - **participants** (default) — only trip participants can see the trip.
@@ -356,12 +358,12 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 | Function | Access granted to |
 |----------|-------------------|
 | `canViewTrip` | admin, any participant, or anyone when visibility = all_users. Every trip-scoped GET checks it via `getTripAccess` (404 missing trip, 403 not visible) |
-| `canEditTrip` | admin, owner, editor |
+| `canEditTrip` | admin, owner, trip admin, editor |
 | `canDeleteTrip` | admin, owner |
 | `canAddExpense` | owner, editor, viewer (any participant) |
 | `canEditExpense` | admin, owner, editor, or reporter |
 | `canDeleteExpense` | same as canEditExpense |
-| `canManageRoles` | admin, owner |
+| `canManageRoles` | admin, owner, trip admin |
 | `canManageLocations` | admin, owner, editor |
 | `canEditCategory` | admin, or category creator |
 | `canDeleteCategory` | admin, or category creator |

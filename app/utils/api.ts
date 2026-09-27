@@ -5,6 +5,7 @@
 
 import type { TripSummary, UserSummary, Expense, ExpenseCategory, ExpenseCategoryWithMeta, Location, UserPreferences, TripRole, PlacePrediction, PlaceDetails, SettlementRecord, SettlePlan } from '@/lib/types'
 import type { TripMapResponse } from '@/lib/trip-map'
+import { localDateString } from 'utils/time'
 
 /** Thrown when a PUT/DELETE fails because the row's updated_at no longer
  *  matches the version the client read. Caller should refresh and retry. */
@@ -26,7 +27,8 @@ export class NotFoundError extends Error {
 // ── Trips ──
 
 export const fetchTrips = async (): Promise<TripSummary[]> => {
-    const res = await fetch('/api/trips')
+    // The device's date, for the per-trip "spent today" figure
+    const res = await fetch(`/api/trips?today=${localDateString()}`)
     if (!res.ok) throw new Error(`Failed to fetch trips: ${res.status}`)
     return res.json()
 }
@@ -52,6 +54,8 @@ export type CreateTripData = {
     endDate: string
     description?: string
     participantIds?: number[]
+    /** Create only: chosen roles by user id (admin/editor/viewer). */
+    participantRoles?: Record<string, string>
     visibility?: 'participants' | 'all_users'
     /** ISO 3166-1 alpha-2 country codes. */
     countries?: string[]

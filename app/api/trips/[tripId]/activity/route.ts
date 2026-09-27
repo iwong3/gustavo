@@ -19,8 +19,8 @@ const FIELD_LABELS: Record<string, string> = {
     exchange_rate: 'Exchange rate',
     category_id: 'Category',
     location_id: 'Location',
-    paid_by_user_id: 'Paid by',
-    reported_by_user_id: 'Reported by',
+    paid_by: 'Paid by',
+    reported_by: 'Reported by',
     date: 'Date',
     notes: 'Notes',
     receipt_image_url: 'Receipt',
@@ -304,7 +304,7 @@ function resolveIdFields(
     const resolved = { ...data }
 
     // Resolve user IDs (BIGINT may arrive as number or string from JSONB)
-    const userIdFields = ['paid_by_user_id', 'reported_by_user_id', 'user_id', 'covered_by', 'changed_by', 'from_user_id', 'to_user_id', 'created_by']
+    const userIdFields = ['paid_by', 'reported_by', 'user_id', 'covered_by', 'changed_by', 'from_user_id', 'to_user_id', 'created_by']
     for (const field of userIdFields) {
         const key = toNumericKey(resolved[field])
         if (key !== null) {

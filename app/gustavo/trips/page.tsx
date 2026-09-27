@@ -12,6 +12,7 @@ import { PullToRefresh } from 'components/pull-to-refresh'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { prefetchTripData } from 'utils/trip-prefetch'
 import { fetchTrips } from 'utils/api'
+import { useToday } from 'hooks/use-today'
 
 import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
@@ -69,7 +70,8 @@ export default function TripsPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.trips.all })
     }, [queryClient])
 
-    const now = new Date().toISOString().slice(0, 10)
+    // Local date, kept current (UTC would move trips a day early on US evenings)
+    const now = useToday()
     const myTrips = trips.filter((t) => t.userRole !== null)
     const otherTrips = trips.filter((t) => t.userRole === null)
     const travellingTrips = myTrips.filter((t) => t.startDate <= now && t.endDate >= now)

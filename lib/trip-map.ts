@@ -40,6 +40,22 @@ export type TripMapPlace = {
     tripStart: string
     tripEnd: string
     spendUsd: number
+    /** Non-USD spend in its own currencies (e.g. { JPY: 6200 }), shown beside
+     *  the USD figure. */
+    spendLocal: LocalSpend
+    /** Some local spend had no exchange rate (nobody on the trip logged a
+     *  currency exchange), so spendUsd leaves it out — show local only. */
+    unconverted: boolean
+}
+
+/** currency code → amount spent in it. */
+export type LocalSpend = Record<string, number>
+
+/** Add b's local amounts into a (mutates a). */
+function addLocal(a: LocalSpend, b: LocalSpend): void {
+    for (const [cur, amt] of Object.entries(b)) {
+        if (Number.isFinite(amt)) a[cur] = (a[cur] ?? 0) + amt
+    }
 }
 
 /** A trip that touched a given city, with what was spent there on that trip —
@@ -51,6 +67,8 @@ export type TripMapCityTrip = {
     startDate: string
     endDate: string
     spendUsd: number
+    spendLocal: LocalSpend
+    unconverted: boolean
 }
 
 /** A city dot on the map: one per distinct city across all the user's trips. */
@@ -62,6 +80,8 @@ export type TripMapCity = {
     lat: number
     lng: number
     totalSpendUsd: number
+    totalSpendLocal: LocalSpend
+    unconverted: boolean
     placeCount: number
     trips: TripMapCityTrip[]
 }
@@ -117,6 +137,8 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
         lngSum: number
         placeIds: Set<string>
         totalSpendUsd: number
+        totalSpendLocal: LocalSpend
+        unconverted: boolean
         trips: Map<string, TripMapCityTrip>
     }
     const buckets = new Map<string, Acc>()
@@ -138,6 +160,8 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
                 lngSum: 0,
                 placeIds: new Set(),
                 totalSpendUsd: 0,
+                totalSpendLocal: {},
+                unconverted: false,
                 trips: new Map(),
             }
             buckets.set(key, acc)
@@ -151,9 +175,13 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
         }
         const finiteSpend = Number.isFinite(r.spendUsd) ? r.spendUsd : 0
         acc.totalSpendUsd += finiteSpend
+        addLocal(acc.totalSpendLocal, r.spendLocal)
+        acc.unconverted ||= r.unconverted
         const existingTrip = acc.trips.get(r.tripId)
         if (existingTrip) {
             existingTrip.spendUsd += finiteSpend
+            addLocal(existingTrip.spendLocal, r.spendLocal)
+            existingTrip.unconverted ||= r.unconverted
         } else {
             acc.trips.set(r.tripId, {
                 id: r.tripId,
@@ -162,6 +190,8 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
                 startDate: r.tripStart,
                 endDate: r.tripEnd,
                 spendUsd: finiteSpend,
+                spendLocal: { ...r.spendLocal },
+                unconverted: r.unconverted,
             })
         }
     }
@@ -176,6 +206,8 @@ export function aggregateTripMapCities(rows: TripMapPlace[]): TripMapCity[] {
                 lat: a.latSum / placeCount,
                 lng: a.lngSum / placeCount,
                 totalSpendUsd: a.totalSpendUsd,
+                totalSpendLocal: a.totalSpendLocal,
+                unconverted: a.unconverted,
                 placeCount,
                 trips: sortTripsByDateDesc(a.trips),
             }
@@ -195,6 +227,8 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
         lat: number
         lng: number
         totalSpendUsd: number
+        totalSpendLocal: LocalSpend
+        unconverted: boolean
         trips: Map<string, TripMapCityTrip>
     }
     const buckets = new Map<string, Acc>()
@@ -209,15 +243,21 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
                 lat: r.lat,
                 lng: r.lng,
                 totalSpendUsd: 0,
+                totalSpendLocal: {},
+                unconverted: false,
                 trips: new Map(),
             }
             buckets.set(r.googlePlaceId, acc)
         }
         const finiteSpend = Number.isFinite(r.spendUsd) ? r.spendUsd : 0
         acc.totalSpendUsd += finiteSpend
+        addLocal(acc.totalSpendLocal, r.spendLocal)
+        acc.unconverted ||= r.unconverted
         const existingTrip = acc.trips.get(r.tripId)
         if (existingTrip) {
             existingTrip.spendUsd += finiteSpend
+            addLocal(existingTrip.spendLocal, r.spendLocal)
+            existingTrip.unconverted ||= r.unconverted
         } else {
             acc.trips.set(r.tripId, {
                 id: r.tripId,
@@ -226,6 +266,8 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
                 startDate: r.tripStart,
                 endDate: r.tripEnd,
                 spendUsd: finiteSpend,
+                spendLocal: { ...r.spendLocal },
+                unconverted: r.unconverted,
             })
         }
     }
@@ -238,6 +280,8 @@ export function aggregateTripMapPlaces(rows: TripMapPlace[]): TripMapCity[] {
             lat: a.lat,
             lng: a.lng,
             totalSpendUsd: a.totalSpendUsd,
+            totalSpendLocal: a.totalSpendLocal,
+            unconverted: a.unconverted,
             placeCount: 1,
             trips: sortTripsByDateDesc(a.trips),
         }))

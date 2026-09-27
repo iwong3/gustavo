@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
-import { getUserTripRole, canEditTrip } from '@/lib/permissions'
+import { getUserTripRole, canEditTrip, canManageRoles } from '@/lib/permissions'
 
 type RouteParams = { params: Promise<{ tripId: string }> }
+
+const GRANTABLE_ROLES = new Set(['admin', 'editor', 'viewer'])
 
 // ── POST: Add participant to trip ──
 
@@ -35,6 +37,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         [id]
     )
     const defaultRole = body.role ?? prefsRes.rows[0]?.default_participant_role ?? 'viewer'
+    // Never a second owner; granting admin is role management (owner/admin only)
+    if (!GRANTABLE_ROLES.has(defaultRole)) {
+        return NextResponse.json({ error: 'Role must be "admin", "editor", or "viewer"' }, { status: 400 })
+    }
+    if (defaultRole === 'admin' && !canManageRoles(currentRole, authUser.isAdmin)) {
+        return NextResponse.json({ error: 'Only the owner or an admin can add an admin' }, { status: 403 })
+    }
 
     try {
         await withAuditUser(currentUserId, async (client) => {
@@ -93,21 +102,39 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     try {
         await withAuditUser(currentUserId, async (client) => {
-            const res = await client.query(
-                `UPDATE trip_participants SET left_at = NOW()
+            // The owner can't be removed; removing an admin is role
+            // management (owner/admin only). Row-locked so a concurrent role
+            // change can't slip past the check.
+            const target = await client.query(
+                `SELECT role FROM trip_participants
                  WHERE trip_id = $1 AND user_id = $2 AND left_at IS NULL
-                 RETURNING id`,
+                 FOR UPDATE`,
                 [id, body.userId]
             )
-            if (res.rows.length === 0) {
-                throw new Error('NOT_FOUND')
+            if (target.rows.length === 0) throw new Error('NOT_FOUND')
+            const targetRole = target.rows[0].role
+            if (targetRole === 'owner') throw new Error('OWNER')
+            if (targetRole === 'admin' && !canManageRoles(currentRole, authUser.isAdmin)) {
+                throw new Error('ADMIN')
             }
+
+            await client.query(
+                `UPDATE trip_participants SET left_at = NOW()
+                 WHERE trip_id = $1 AND user_id = $2 AND left_at IS NULL`,
+                [id, body.userId]
+            )
         })
 
         return NextResponse.json({ success: true })
     } catch (err) {
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
+        }
+        if (err instanceof Error && err.message === 'OWNER') {
+            return NextResponse.json({ error: "The trip's owner can't be removed" }, { status: 403 })
+        }
+        if (err instanceof Error && err.message === 'ADMIN') {
+            return NextResponse.json({ error: 'Only the owner or an admin can remove an admin' }, { status: 403 })
         }
         console.error('Error removing participant:', err)
         return NextResponse.json({ error: 'Failed to remove participant' }, { status: 500 })
