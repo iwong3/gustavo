@@ -27,10 +27,10 @@ import {
 } from 'components/page-action-bar'
 import { ToastHost } from 'components/toast-host'
 import { TripHeaderControls } from 'components/trip-header-controls'
-import { FabProvider, useFab } from 'providers/fab-provider'
+import { FabProvider, useFabClick } from 'providers/fab-provider'
 
 function ContentFab() {
-    const { onClick } = useFab()
+    const onClick = useFabClick()
     if (!onClick) return null
     return (
         <Box

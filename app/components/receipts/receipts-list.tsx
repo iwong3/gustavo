@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Collapse, Typography } from '@mui/material'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 
@@ -76,13 +76,27 @@ const ListRow = memo(function ListRow({
 })
 
 export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
-    const { filteredExpenses, getUsdValue, isSearching } = useSpendData()
+    const { filteredExpenses, getUsdValue, isSearching: liveIsSearching } = useSpendData()
     const { trip } = useTripData()
     const { onRefresh } = useRefresh()
     const queryClient = useQueryClient()
     const router = useRouter()
 
-    const sortField = useSortStore((s) => s.field)
+    const liveSortField = useSortStore((s) => s.field)
+
+    // Deferred, so whatever changed the list (a refine tap — the list stays
+    // mounted, hidden, while the panel is open — a search keystroke, a filter
+    // chip) paints first and the rows catch up in an interruptible render.
+    // Bundled so rows, view and sort always switch together.
+    const live = useMemo(
+        () => ({
+            data: expenses || filteredExpenses,
+            isSearching: liveIsSearching,
+            sortField: liveSortField,
+        }),
+        [expenses, filteredExpenses, liveIsSearching, liveSortField]
+    )
+    const { data: displayData, isSearching, sortField } = useDeferredValue(live)
     const spec = sortSpec(sortField)
 
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
@@ -106,7 +120,6 @@ export const ReceiptsList = ({ expenses }: ReceiptsListProps) => {
         [queryClient, trip.id, onRefresh]
     )
 
-    const displayData = expenses || filteredExpenses
     // Two ways the date grouping steps aside, and they look different:
     //
     // - Sorted by anything but date: re-grouping would discard the order the

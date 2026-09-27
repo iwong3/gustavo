@@ -62,7 +62,7 @@ export const TripToolbar = () => {
                 // below rather than 6 / 16. Animated in step with the line's
                 // own collapse so the toolbar never jumps mid refine open/close.
                 paddingBottom: showFilterLine ? 1.25 : 2,
-                transition: 'padding-bottom 140ms cubic-bezier(0.2, 0, 0, 1)',
+                transition: 'padding-bottom 100ms cubic-bezier(0.2, 0, 0, 1)',
             }}>
             {/* Row 1: search + refine button */}
             <Box
@@ -92,7 +92,7 @@ export const TripToolbar = () => {
                     sx={{
                         display: 'grid',
                         gridTemplateRows: showFilterLine ? '1fr' : '0fr',
-                        transition: 'grid-template-rows 140ms cubic-bezier(0.2, 0, 0, 1)',
+                        transition: 'grid-template-rows 100ms cubic-bezier(0.2, 0, 0, 1)',
                         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                     }}>
                     <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
@@ -142,9 +142,15 @@ const RefineButton = ({
             'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
             'cursor': 'pointer',
             'flexShrink': 0,
-            '&:active': { boxShadow: 'none', transform: 'translate(2px, 2px)' },
-            'transition':
-                'transform 0.1s, box-shadow 0.1s, background-color 0.14s',
+            // Presses in instantly (no transition INTO :active — a quick tap is
+            // shorter than 100ms, so it never looked pressed); only the release
+            // animates. The colour swaps instantly too, landing with the panel.
+            '&:active': {
+                boxShadow: 'none',
+                transform: 'translate(2px, 2px)',
+                transition: 'none',
+            },
+            'transition': 'transform 0.1s, box-shadow 0.1s',
         }}>
         <IconAdjustmentsHorizontal size={16} />
         {/* The badge stays up while the panel is open — the count is still true,

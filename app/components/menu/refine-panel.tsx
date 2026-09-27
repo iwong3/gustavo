@@ -6,7 +6,8 @@ import {
     IconChevronDown,
     IconCurrencyDollar,
 } from '@tabler/icons-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 
 import { colors } from '@/lib/colors'
 import {
@@ -87,7 +88,59 @@ const cardHeight = (optionCount: number, rowHeight: number) =>
     (optionCount - 1) // hairlines between rows
 const sectionHeight = (bodyHeight: number) => H_HEAD + 2 + bodyHeight + SECTION_GAP
 
-export function RefinePanel({ expenses, participants, getUsdValue, closing = false }: Props) {
+/** How long the exit fade runs — the page keeps the panel shown this long. */
+export const REFINE_EXIT_MS = 100
+
+export function RefinePanel({ closing = false, ...bodyProps }: Props) {
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+                flex: 1,
+                // Opaque, matching the page: while closing, the page renders the
+                // rows underneath and this panel fades out OVER them — the fade
+                // is a crossfade to the rows, not a fade to a blank screen.
+                backgroundColor: colors.secondaryYellow,
+                // Enter slides WITHOUT an opacity ramp: the rows hide the
+                // same frame this appears, so any transparent moment shows the
+                // bare page background as a blank flash — opaque throughout,
+                // the panel covers the rows' spot from its first frame. (The
+                // 8px offset reveals only page-colored background: invisible.)
+                // Exit keeps the fade — the rows are already back underneath,
+                // so it's a true crossfade — and is quicker.
+                //
+                // Both ease OUT (fast start): the change lands the frame after
+                // the tap and only the tail slows. The exit used to ease in,
+                // which spent its first ~40ms barely moving — read as lag
+                // after Done. The page's linger timeout matches REFINE_EXIT_MS.
+                '@keyframes refineIn': {
+                    from: { transform: 'translateY(-8px)' },
+                    to: { transform: 'translateY(0)' },
+                },
+                '@keyframes refineOut': {
+                    from: { opacity: 1, transform: 'translateY(0)' },
+                    to: { opacity: 0, transform: 'translateY(-6px)' },
+                },
+                animation: closing
+                    ? `refineOut ${REFINE_EXIT_MS}ms cubic-bezier(0.2, 0, 0, 1) forwards`
+                    : 'refineIn 120ms cubic-bezier(0.2, 0, 0, 1)',
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }}>
+            <RefineBody {...bodyProps} />
+        </Box>
+    )
+}
+
+// Memoized apart from the animated shell: tapping Done flips `closing`, and
+// re-rendering every option row (each re-counting its expenses) just to swap
+// in the exit animation cost a noticeable slice of that tap.
+const RefineBody = memo(function RefineBody({
+    expenses,
+    participants,
+    getUsdValue,
+}: Omit<Props, 'closing'>) {
     // Paid by opens so the row anatomy is visible — an all-collapsed menu is
     // four mystery rows and teaches nothing. The rest depends on the room
     // available; see the measuring ref below.
@@ -151,119 +204,105 @@ export function RefinePanel({ expenses, participants, getUsdValue, closing = fal
     // expanding a frame later. A layout effect would do the same but trips the
     // repo's set-state-in-effect rule. Changing `expandedHeight` re-creates the
     // callback, which is what re-runs it once the options do land.
+    //
+    // The Expenses page pre-mounts the panel hidden (display: none — no height
+    // to measure), so then the decision waits for the first open: a
+    // ResizeObserver fires after that layout but still before paint, and
+    // flushSync applies the result in the same frame.
     const decided = useRef(false)
     const measureBody = useCallback(
         (el: HTMLDivElement | null) => {
             if (!el || decided.current || !optionsReady) return
-            decided.current = true
-            // Measured while collapsed, so clientHeight is the room available
-            // rather than the room already taken.
-            if (expandedHeight <= el.clientHeight) {
-                setOpenSections(new Set(FACETS.map((f) => f.key)))
+            const decide = (sync: boolean) => {
+                if (decided.current || el.clientHeight === 0) return false
+                decided.current = true
+                // Measured while collapsed, so clientHeight is the room
+                // available rather than the room already taken.
+                if (expandedHeight <= el.clientHeight) {
+                    const openAll = () =>
+                        setOpenSections(new Set(FACETS.map((f) => f.key)))
+                    if (sync) flushSync(openAll)
+                    else openAll()
+                }
+                return true
             }
+            if (decide(false)) return
+            const observer = new ResizeObserver(() => {
+                if (decide(true)) observer.disconnect()
+            })
+            observer.observe(el)
+            return () => observer.disconnect()
         },
         [expandedHeight, optionsReady]
     )
 
     return (
         <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                flex: 1,
-                // Opaque, matching the page: while closing, the page renders the
-                // rows underneath and this panel fades out OVER them — the fade
-                // is a crossfade to the rows, not a fade to a blank screen.
-                backgroundColor: colors.secondaryYellow,
-                // Enter slides WITHOUT an opacity ramp: the rows unmount the
-                // same frame this mounts, so any transparent moment shows the
-                // bare page background as a blank flash — opaque throughout,
-                // the panel covers the rows' spot from its first frame. (The
-                // 8px offset reveals only page-colored background: invisible.)
-                // Exit keeps the fade — the rows are already back underneath,
-                // so it's a true crossfade — and is quicker, easing in
-                // (accelerating away).
-                '@keyframes refineIn': {
-                    from: { transform: 'translateY(-8px)' },
-                    to: { transform: 'translateY(0)' },
-                },
-                '@keyframes refineOut': {
-                    from: { opacity: 1, transform: 'translateY(0)' },
-                    to: { opacity: 0, transform: 'translateY(-8px)' },
-                },
-                animation: closing
-                    ? 'refineOut 120ms cubic-bezier(0.4, 0, 1, 1) forwards'
-                    : 'refineIn 140ms cubic-bezier(0.2, 0, 0, 1)',
-                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-            }}>
-            <Box
-                ref={measureBody}
-                sx={{ flex: 1, minHeight: 0, paddingX: 2, paddingBottom: 1.5 }}>
-                {/* No title row: the ⚙ that opened this closes it, and Reset /
-                    Done live in the app's action bar (the page mounts it, taking
-                    over the tab bar's slot while this is open).
+            ref={measureBody}
+            sx={{ flex: 1, minHeight: 0, paddingX: 2, paddingBottom: 1.5 }}>
+            {/* No title row: the ⚙ that opened this closes it, and Reset /
+                Done live in the app's action bar (the page mounts it, taking
+                over the tab bar's slot while this is open).
 
-                    Sort doesn't collapse — it's a single 38px row, so a chevron
-                    would cost a tap to save nothing. */}
-                <Box sx={{ marginBottom: 1.5 }}>
-                    <Box
+                Sort doesn't collapse — it's a single 38px row, so a chevron
+                would cost a tap to save nothing. */}
+            <Box sx={{ marginBottom: 1.5 }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        height: H_HEAD,
+                        paddingX: 0.25,
+                    }}>
+                    <Typography
                         sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            height: H_HEAD,
-                            paddingX: 0.25,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            color: colors.primaryBrown,
+                            flexShrink: 0,
                         }}>
-                        <Typography
-                            sx={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                                color: colors.primaryBrown,
-                                flexShrink: 0,
-                            }}>
-                            Sort by
-                        </Typography>
-                        <Typography
-                            sx={{
-                                flex: 1,
-                                minWidth: 0,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: sortIsDefault
-                                    ? colors.primaryBrown
-                                    : colors.primaryBlack,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                            }}>
-                            {spec.label} · {spec.hint[sortDir]}
-                        </Typography>
-                    </Box>
-                    <Box sx={{ paddingTop: '2px' }}>
-                        <SortGlyphs />
-                    </Box>
+                        Sort by
+                    </Typography>
+                    <Typography
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: sortIsDefault
+                                ? colors.primaryBrown
+                                : colors.primaryBlack,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}>
+                        {spec.label} · {spec.hint[sortDir]}
+                    </Typography>
                 </Box>
-
-                {FACETS.map((facet) => (
-                    <FacetSection
-                        key={facet.key}
-                        facet={facet}
-                        maps={maps}
-                        expenses={expenses}
-                        getUsdValue={getUsdValue}
-                        participantById={participantById}
-                        personLabel={personLabel}
-                        open={openSections.has(facet.key)}
-                        onToggle={() => toggleSection(facet.key)}
-                    />
-                ))}
+                <Box sx={{ paddingTop: '2px' }}>
+                    <SortGlyphs />
+                </Box>
             </Box>
+
+            {FACETS.map((facet) => (
+                <FacetSection
+                    key={facet.key}
+                    facet={facet}
+                    maps={maps}
+                    expenses={expenses}
+                    getUsdValue={getUsdValue}
+                    participantById={participantById}
+                    personLabel={personLabel}
+                    open={openSections.has(facet.key)}
+                    onToggle={() => toggleSection(facet.key)}
+                />
+            ))}
         </Box>
     )
-}
+})
 
 // ── Section shell ─────────────────────────────────────────────────────────────
 // The label row is the collapse toggle. Sections collapse independently rather
@@ -329,7 +368,7 @@ function Section({
                         flexShrink: 0,
                         color: colors.primaryBrown,
                         transform: open ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 140ms cubic-bezier(0.2, 0, 0, 1)',
+                        transition: 'transform 120ms cubic-bezier(0.2, 0, 0, 1)',
                     }}
                 />
             </Box>
@@ -340,7 +379,7 @@ function Section({
                     // content's height in JS, which a variable-length option list
                     // would otherwise force.
                     gridTemplateRows: open ? '1fr' : '0fr',
-                    transition: 'grid-template-rows 140ms cubic-bezier(0.2, 0, 0, 1)',
+                    transition: 'grid-template-rows 120ms cubic-bezier(0.2, 0, 0, 1)',
                     '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                 }}>
                 <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
@@ -406,12 +445,14 @@ function SortGlyphs() {
                                 ? `2px 2px 0px ${colors.primaryBlack}`
                                 : 'none',
                             'opacity': active ? 1 : 0.6,
+                            // Instant press-in, animated release (see
+                            // RefineButton); the selection swaps instantly.
                             '&:active': {
                                 boxShadow: 'none',
                                 transform: 'translate(2px, 2px)',
+                                transition: 'none',
                             },
-                            'transition':
-                                'background-color 0.1s, box-shadow 0.1s, opacity 0.1s, transform 0.1s',
+                            'transition': 'box-shadow 0.1s, transform 0.1s',
                         }}>
                         {SORT_GLYPH[f.field]}
                         {/* lineHeight 1, like PageActionButton's label: without
@@ -522,7 +563,6 @@ function FacetSection({
                                 ? colors.primaryYellow
                                 : colors.primaryWhite,
                         borderBottom: `1px solid ${colors.primaryBlack}`,
-                        transition: 'background-color 0.15s',
                     }}>
                     <Checkbox checked={chosen.length === 0} />
                     <Typography sx={{ fontSize: ROW_FONT, fontWeight: 600 }}>
@@ -569,7 +609,9 @@ function FacetSection({
                                       : colors.primaryWhite,
                                 borderBottom:
                                     i < options.length - 1 ? HAIRLINE : 'none',
-                                transition: 'background-color 0.15s',
+                                // No background-color transition: the ✓ lands
+                                // instantly, so a 150ms yellow fade trailing it
+                                // read as the tap lagging.
                             }}>
                             <Checkbox checked={selected} />
                             {/* Locations get no lead. They have no visual

@@ -2,12 +2,12 @@
 
 import { Box } from '@mui/material'
 import { IconCheck, IconRestore } from '@tabler/icons-react'
-import { useCallback, useEffect, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { colors } from '@/lib/colors'
 import { TripToolbar } from 'components/menu/trip-toolbar'
-import { RefinePanel } from 'components/menu/refine-panel'
+import { REFINE_EXIT_MS, RefinePanel } from 'components/menu/refine-panel'
 import {
     resetRefine,
     useRefineCount,
@@ -29,35 +29,48 @@ export default function ExpensesPage() {
     const { expenses, getUsdValue } = useSpendData()
     const router = useRouter()
     const queryClient = useQueryClient()
-    const handlePullRefresh = () =>
-        queryClient.invalidateQueries({
-            queryKey: queryKeys.trips.expenses(trip.id),
-        })
+    const handlePullRefresh = useCallback(
+        () =>
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.expenses(trip.id),
+            }),
+        [queryClient, trip.id]
+    )
     const showAddExpense = canAddExpense(trip.userRole)
 
     const refineOpen = useRefineStore((s) => s.open)
     const closeRefine = useRefineStore((s) => s.close)
     const refineCount = useRefineCount()
 
-    // Keep the panel mounted through its exit animation: on close, refineOpen
-    // flips false at once but the panel lingers for one quick fade-out before
-    // the rows return. `closing` (mounted but not open) drives that animation.
+    // The panel is pre-mounted, hidden, just after the page first paints — in
+    // a transition, so it never blocks a scroll or tap — and then stays
+    // mounted. Mounting it on the ⚙ tap cost a long frame (every option row
+    // counting its expenses), so the tap now only flips visibility. Set during
+    // render if refine opens before the pre-mount lands: same commit as hiding
+    // the rows, never a blank frame between.
     const [panelMounted, setPanelMounted] = useState(refineOpen)
+    if (refineOpen && !panelMounted) setPanelMounted(true)
     useEffect(() => {
-        if (refineOpen) {
-            setPanelMounted(true)
-            return
-        }
-        if (!panelMounted) return
-        const t = setTimeout(() => setPanelMounted(false), 150)
+        const t = setTimeout(() => startTransition(() => setPanelMounted(true)), 0)
         return () => clearTimeout(t)
-    }, [refineOpen, panelMounted])
+    }, [])
+
+    // Keep the panel showing through its exit animation: on close, refineOpen
+    // flips false at once but the panel lingers for one quick fade-out over
+    // the returning rows. `closing` (shown but not open) drives that animation.
+    const [panelShown, setPanelShown] = useState(refineOpen)
+    if (refineOpen && !panelShown) setPanelShown(true)
+    useEffect(() => {
+        if (refineOpen || !panelShown) return
+        const t = setTimeout(() => setPanelShown(false), REFINE_EXIT_MS)
+        return () => clearTimeout(t)
+    }, [refineOpen, panelShown])
 
     const fabCallback = useCallback(
         () => router.push(`/gustavo/trips/${trip.slug}/expenses/new`),
         [router, trip.slug]
     )
-    // No FAB while refining. Gated on refineOpen, not panelMounted: the FAB
+    // No FAB while refining. Gated on refineOpen, not panelShown: the FAB
     // (like the tab bar) should be back the instant Done is tapped, not after
     // the panel's exit fade.
     useRegisterFab(showAddExpense && !refineOpen ? fabCallback : null)
@@ -67,6 +80,23 @@ export default function ExpensesPage() {
         if (!showAddExpense) return
         router.prefetch(`/gustavo/trips/${trip.slug}/expenses/new`)
     }, [router, trip.slug, showAddExpense])
+
+    // The list stays mounted while refining — hidden, not unmounted. Remounting
+    // 150 rows on Done blocked the tap for a long frame (and a second one when
+    // the progressive mount filled in the rest), so the ⚙ toggle felt laggy.
+    // Memoized so toggling refine doesn't re-render it either; it follows the
+    // filters itself, through context.
+    const list = useMemo(
+        () => (
+            /* Pull-to-refresh covers everything below the toolbar */
+            <PullToRefresh onRefresh={handlePullRefresh} sx={{ flex: 1 }}>
+                <Box sx={{ maxWidth: 450, width: '100%' }}>
+                    <ReceiptsList />
+                </Box>
+            </PullToRefresh>
+        ),
+        [handlePullRefresh]
+    )
 
     return (
         <Box
@@ -92,14 +122,14 @@ export default function ExpensesPage() {
                     flex: 1,
                     minHeight: 0,
                 }}>
-                {!refineOpen && (
-                    /* Pull-to-refresh covers everything below the toolbar */
-                    <PullToRefresh onRefresh={handlePullRefresh} sx={{ flex: 1 }}>
-                        <Box sx={{ maxWidth: 450, width: '100%' }}>
-                            <ReceiptsList />
-                        </Box>
-                    </PullToRefresh>
-                )}
+                <Box
+                    sx={{
+                        display: refineOpen ? 'none' : 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                    }}>
+                    {list}
+                </Box>
                 {panelMounted && (
                     // While open, the panel takes the rows' place rather than
                     // covering them: no scrim, no portal, and no position:fixed
@@ -110,7 +140,7 @@ export default function ExpensesPage() {
                     // when it decides how many sections to open.
                     <Box
                         sx={{
-                            display: 'flex',
+                            display: panelShown ? 'flex' : 'none',
                             flexDirection: 'column',
                             paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
                             ...(refineOpen
@@ -131,7 +161,7 @@ export default function ExpensesPage() {
                 the same trade expense detail and the forms make. Reset dims
                 rather than disappears: a two-slot bar that reflows would move
                 Done out from under your thumb. Gated on refineOpen (not
-                panelMounted) so the tab bar is back the instant Done is tapped
+                panelShown) so the tab bar is back the instant Done is tapped
                 rather than after the exit fade. */}
             {refineOpen && (
                 <PageActionBar>

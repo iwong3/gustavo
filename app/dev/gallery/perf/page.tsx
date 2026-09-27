@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Gallery: render-cost harness. The Insights page and the Expenses list over
+ * Gallery: render-cost harness. The Insights page, the Expenses list and the
+ * whole Expenses page (toolbar + refine toggle) over
  * a realistic 150-expense trip, wrapped in a React Profiler that logs every
  * commit to `window.__perf` — for measuring tap → commit cost without auth.
  *
@@ -19,6 +20,7 @@ import { RefreshProvider } from 'providers/refresh-provider'
 import { SpendDataProvider } from 'providers/spend-data-provider'
 import { TripDataProvider } from 'providers/trip-data-provider'
 
+import ExpensesPage from '../../../gustavo/trips/[slug]/expenses/page'
 import MySpendPage from '../../../gustavo/trips/[slug]/graphs/page'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
 import { ivan, jenny, makeExpense, marco, participants, priya, trip } from '../fixtures'
@@ -88,12 +90,12 @@ const onRender: ProfilerOnRenderCallback = (id, phase, actualDuration) => {
 }
 
 export default function PerfGalleryPage() {
-    const [view, setView] = useState<'none' | 'insights' | 'expenses'>('none')
+    const [view, setView] = useState<'none' | 'insights' | 'expenses' | 'expenses-page'>('none')
     return (
         <GalleryPage title="Perf harness">
             <SpecimenGroup title="150 expenses — mount a view, then measure with window.__perf">
                 <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    {(['none', 'insights', 'expenses'] as const).map((v) => (
+                    {(['none', 'insights', 'expenses', 'expenses-page'] as const).map((v) => (
                         <Button key={v} data-view={v} variant={view === v ? 'contained' : 'outlined'} onClick={() => setView(v)}>
                             {v}
                         </Button>
@@ -106,6 +108,8 @@ export default function PerfGalleryPage() {
                                 <RefreshProvider onRefresh={() => {}}>
                                     {view === 'insights' && <MySpendPage />}
                                     {view === 'expenses' && <ReceiptsList />}
+                                    {/* Whole page: toolbar + refine toggle (the ⚙ button) */}
+                                    {view === 'expenses-page' && <ExpensesPage />}
                                 </RefreshProvider>
                             </SpendDataProvider>
                         </TripDataProvider>
