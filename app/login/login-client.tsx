@@ -6,6 +6,8 @@ import { signIn } from 'next-auth/react'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
+import { clearPersistedCache } from 'utils/query-persist'
+
 const ERROR_MESSAGES: Record<string, string> = {
     OAuthSignin:
         'There was a problem starting the sign-in process. Please try again.',
@@ -28,6 +30,13 @@ export default function LoginClient({ error }: { error?: string }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isWaiting, setIsWaiting] = useState(false)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    // Anyone here is signed out (page.tsx redirects sessions away), so the
+    // cached data belongs to whoever was here before — wipe it before the next
+    // person signs in. Covers expired/revoked sessions that skip useSignOut.
+    useEffect(() => {
+        void clearPersistedCache()
+    }, [])
 
     const errorMessage = error
         ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default)

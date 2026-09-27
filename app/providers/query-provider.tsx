@@ -7,6 +7,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { del, get, set } from 'idb-keyval'
 
 import { showToast } from 'components/toast-store'
+import { PERSIST_KEY } from 'utils/query-persist'
 
 // Bump when cached data shapes change (API responses / types) so old persisted
 // caches are discarded on the next load instead of rehydrating a wrong shape.
@@ -22,7 +23,7 @@ const PERSIST_MAX_AGE = 1000 * 60 * 60 * 24 // 24h
 // caches lean expense data for every trip, so the blob can get chunky.
 function createIDBPersister() {
     return createAsyncStoragePersister({
-        key: 'gustavo-rq-cache',
+        key: PERSIST_KEY,
         throttleTime: 1000,
         storage: {
             getItem: (key) => get<string>(key).then((v) => v ?? null),

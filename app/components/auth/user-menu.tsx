@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signOut, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import {
     Avatar,
     Box,
@@ -12,9 +12,12 @@ import {
     Typography,
 } from '@mui/material'
 
+import { useSignOut } from 'hooks/use-sign-out'
+
 export default function UserMenu() {
     const { data: session } = useSession()
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+    const signOutAndClear = useSignOut()
 
     if (!session?.user) return null
 
@@ -50,7 +53,7 @@ export default function UserMenu() {
                 </Box>
                 <Divider />
                 <MenuItem
-                    onClick={() => signOut({ callbackUrl: '/login' })}
+                    onClick={signOutAndClear}
                     sx={{ color: 'error.main' }}>
                     Log out
                 </MenuItem>

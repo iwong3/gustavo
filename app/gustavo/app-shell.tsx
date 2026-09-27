@@ -17,6 +17,7 @@ import { colors, hardShadow, pressIconSx } from '@/lib/colors'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
+import { useAccessGuard } from 'hooks/use-access-guard'
 import { useExitTo, useTrackPreviousPath } from 'hooks/use-exit-to'
 import { scrollMainToTop, useScrollRestoration } from 'hooks/use-scroll-restoration'
 import { getBackHref } from 'utils/back-href'
@@ -268,6 +269,8 @@ export default function AppShell({
 }) {
     const pathname = usePathname()
     useTrackPreviousPath()
+    // Removed from the allowlist / session expired → sign out + wipe cache
+    useAccessGuard()
     const isHome = pathname === '/gustavo'
 
     // Header top-left corner — empty on home (the page already shows a big

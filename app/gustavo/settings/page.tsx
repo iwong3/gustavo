@@ -10,7 +10,7 @@ import {
     Typography,
 } from '@mui/material'
 import { IconChevronRight, IconPencil } from '@tabler/icons-react'
-import { signOut, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
@@ -26,6 +26,7 @@ import type { UserPreferences } from '@/lib/types'
 import { ConfirmDeleteDialog } from 'components/confirm-delete-dialog'
 import { SlidingToggle } from 'components/sliding-toggle'
 import { Circle, TextBone } from 'components/skeleton/bones'
+import { useSignOut } from 'hooks/use-sign-out'
 import { useUserPreferences } from 'hooks/useUserPreferences'
 import { InitialsIcon, getContrastText } from 'utils/icons'
 
@@ -69,6 +70,7 @@ export default function SettingsPage() {
     const { prefs, update: updatePrefs, updateAsync } = useUserPreferences()
     const [iconDialogOpen, setIconDialogOpen] = useState(false)
     const [logoutOpen, setLogoutOpen] = useState(false)
+    const signOutAndClear = useSignOut()
 
     const handlePrefChange = (field: keyof UserPreferences, value: string) =>
         updatePrefs({ [field]: value } as Partial<UserPreferences>)
@@ -241,7 +243,7 @@ export default function SettingsPage() {
                 title="Log out?"
                 confirmLabel="Log out"
                 onClose={() => setLogoutOpen(false)}
-                onConfirm={() => signOut({ callbackUrl: '/login' })}>
+                onConfirm={signOutAndClear}>
                 You&apos;ll need to sign in with Google again.
             </ConfirmDeleteDialog>
 

@@ -24,10 +24,21 @@ export async function requireAuthWithUserId(): Promise<{ email: string; userId: 
     if (!session?.user?.email) return null
     const email = session.user.email
 
-    // Look up existing user
-    const res = await pool.query('SELECT id, is_admin FROM users WHERE email = $1 LIMIT 1', [email])
-    if (res.rows.length > 0) {
-        return { email, userId: res.rows[0].id, isAdmin: res.rows[0].is_admin }
+    // Re-check the allowlist on every request, not just at sign-in (auth.ts):
+    // the JWT session renews itself, so removing an email must revoke access
+    // here. Same round trip as the user lookup.
+    const res = await pool.query(
+        `SELECT EXISTS (SELECT 1 FROM allowed_emails WHERE LOWER(email) = LOWER($1)) AS allowed,
+                u.id, u.is_admin
+         FROM (SELECT 1) AS one
+         LEFT JOIN users u ON u.email = $1
+         LIMIT 1`,
+        [email]
+    )
+    const row0 = res.rows[0]
+    if (!row0.allowed) return null
+    if (row0.id !== null) {
+        return { email, userId: row0.id, isAdmin: row0.is_admin }
     }
 
     // Auto-provision: user passed allowlist (auth.ts) but has no users row yet
