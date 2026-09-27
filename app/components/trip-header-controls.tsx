@@ -3,13 +3,14 @@
 import { Box, ClickAwayListener, Typography } from '@mui/material'
 import { IconChevronDown } from '@tabler/icons-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { getTablerIcon } from 'utils/icons'
 
 import { useTripBySlug } from 'hooks/use-trip-by-slug'
 import { colors, hardShadow, pressTextSx } from '@/lib/colors'
 import { getActiveTripTool, getTripSlug, tripTools } from '@/lib/trip-tools'
 import { tripHasLinks } from 'utils/links'
+import { canEditTrip } from 'utils/permissions'
 
 // Font-size / line-count steps tried in order until the trip name fits without
 // truncating. 3 lines at 12.5px (~45px) still fits the 56px header row.
@@ -20,14 +21,15 @@ const TITLE_FIT_STEPS = [
 ]
 
 // Trip name that steps down in font size and wraps onto more lines until the
-// whole name is visible; only the last step still ellipsizes.
+// whole name is visible; only the last step still ellipsizes. Tappable only
+// with an onClick (the trip's editors — it opens Edit Trip).
 // Exported for the dev gallery.
 export const FitTripName = ({
     name,
     onClick,
 }: {
     name: string
-    onClick: () => void
+    onClick?: () => void
 }) => {
     const ref = useRef<HTMLElement | null>(null)
     const [step, setStep] = useState(0)
@@ -71,6 +73,7 @@ export const FitTripName = ({
         <Typography
             ref={ref}
             onClick={onClick}
+            role={onClick ? 'button' : undefined}
             sx={{
                 fontSize: TITLE_FIT_STEPS[step].fontSize,
                 fontFamily: 'var(--font-serif)',
@@ -83,8 +86,7 @@ export const FitTripName = ({
                 overflowWrap: 'anywhere',
                 minWidth: 0,
                 flexShrink: 1,
-                cursor: 'pointer',
-                ...pressTextSx,
+                ...(onClick && { cursor: 'pointer', ...pressTextSx }),
             }}>
             {name}
         </Typography>
@@ -122,6 +124,12 @@ export const TripHeaderControls = () => {
         setMenuOpen(false)
     }
 
+    // Warm Edit Trip so tapping the name opens it instantly
+    const editable = trip != null && canEditTrip(trip.userRole, trip.isAdmin)
+    useEffect(() => {
+        if (editable && slug) router.prefetch(`/gustavo/trips/${slug}/edit`)
+    }, [editable, slug, router])
+
     if (!slug || !activeTool) return null
 
     const handleSelect = (path: string) => {
@@ -140,11 +148,20 @@ export const TripHeaderControls = () => {
                 minWidth: 0,
                 flex: 1,
             }}>
-            {/* Trip name — taps through to the trip details page */}
+            {/* Trip name — opens Edit Trip for its editors (?from brings
+                Cancel / Save / back to this page); plain text for everyone
+                else. Edit also holds Delete. */}
             {trip && (
                 <FitTripName
                     name={trip.name}
-                    onClick={() => handleSelect('details')}
+                    onClick={
+                        editable
+                            ? () =>
+                                  router.push(
+                                      `/gustavo/trips/${slug}/edit?from=${activeTool.path}`
+                                  )
+                            : undefined
+                    }
                 />
             )}
 

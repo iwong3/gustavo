@@ -206,13 +206,22 @@ type Props = {
     onSuccess: () => void | Promise<void>
     /** Edit mode: warn about removals that touch expenses or debts. */
     describeRemoval?: (userId: number) => RemovalImpact
+    /** Below the last field — the edit page's Delete trip. */
+    footer?: ReactNode
 }
 
 type RemovalWarning = RemovalImpact & { userId: number; firstName: string }
 
 // Page-style trip form (create + edit) — same shell as ExpenseForm: title,
 // fields, PageActionBar. Replaces the old FormDrawer-based TripFormDialog.
-export default function TripForm({ mode, trip, onCancel, onSuccess, describeRemoval }: Props) {
+export default function TripForm({
+    mode,
+    trip,
+    onCancel,
+    onSuccess,
+    describeRemoval,
+    footer,
+}: Props) {
     const currentUser = useCurrentUser()
     const queryClient = useQueryClient()
     const [allUsers, setAllUsers] = useState<UserSummary[]>([])
@@ -719,8 +728,8 @@ export default function TripForm({ mode, trip, onCancel, onSuccess, describeRemo
                     </PageInfoSection>
                     <PageInfoNote>
                         Countries drive currencies; locations organize your
-                        expenses. You can change any of this later from Trip
-                        Details.
+                        expenses. You can change any of this later — tap the
+                        trip&apos;s name at the top of any of its pages.
                     </PageInfoNote>
                 </PageInfo>
             }>
@@ -1255,6 +1264,8 @@ export default function TripForm({ mode, trip, onCancel, onSuccess, describeRemo
                     sx={fieldSx}
                 />
             </Box>
+
+            {footer}
 
             <ConfirmDeleteDialog
                 open={removalWarning !== null}

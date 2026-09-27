@@ -258,9 +258,10 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
   (tap → Home), ← everywhere deeper. Its target is `getBackHref()` in
   `utils/back-href.ts` — add a rule there for new routes.
 - **Trip header** (`components/trip-header-controls.tsx`): the trip name
-  (tap → trip details) and the tool pill, a dropdown of the trip's pages
-  (`lib/trip-tools.ts`: Expenses, Debts, Graphs, Links, Activity, Details) —
-  each tool is its own route under `trips/[slug]/`.
+  (tap → Edit Trip, editors only — the form also holds Delete trip; there's
+  no trip details page) and the tool pill, a dropdown of the trip's pages
+  (`lib/trip-tools.ts`: Expenses, Debts, Insights, Links, Activity) — each
+  tool is its own route under `trips/[slug]/`.
 - **Expenses toolbar** (`components/menu/trip-toolbar.tsx`): search + the
   refine button, which swaps the list for `RefinePanel` (sort + filters;
   state in `refine-store.ts` / `filter-stores.ts` / `sort-store.ts`).

@@ -17,7 +17,8 @@ import { useToday } from 'hooks/use-today'
 import { queryKeys } from '@/lib/query-keys'
 import type { TripSummary } from '@/lib/types'
 
-// Trip edit/delete live inside the trip (details page) — passes just navigate.
+// Trip edit/delete live inside the trip (tap its name in the header → Edit
+// Trip) — passes just navigate.
 function TripSection({ title, trips }: { title: string; trips: TripSummary[] }) {
     const queryClient = useQueryClient()
     if (trips.length === 0) return null

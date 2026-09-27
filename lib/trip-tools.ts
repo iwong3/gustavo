@@ -40,12 +40,6 @@ export const tripTools: TripTool[] = [
         icon: 'IconLayoutList',
         bg: '#cdbfdb',
     },
-    {
-        name: 'Trip Details',
-        path: 'details',
-        icon: 'IconLuggage',
-        bg: '#f7cd83',
-    },
 ]
 
 // Resolve the active tool from a pathname like /gustavo/trips/<slug>/<tool>[/...]

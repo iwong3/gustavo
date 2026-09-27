@@ -36,23 +36,22 @@ export function getBackHref(
     const healthSubListMatch = pathname.match(
         /^(\/gustavo\/health\/[^/]+)\/(?:routines|manage|groups)$/
     )
-    // /gustavo/trips/<slug>/edit → trip details
+    // /gustavo/trips/<slug>/edit → the trip page it was opened from (the
+    // header's trip name passes ?from=<tool>), else expenses
     const tripEditMatch = pathname.match(
         /^\/gustavo\/trips\/([^/]+)\/edit$/
     )
+    // A ?from naming a real trip tool, or null
+    const fromTool = () => {
+        const from = searchParams.get('from')
+        return from && tripTools.some((t) => t.path === from) ? from : null
+    }
     if (expenseEditMatch) {
         backHref = `/gustavo/trips/${expenseEditMatch[1]}/expenses/${expenseEditMatch[2]}`
     } else if (expenseDetailMatch) {
-        const from = searchParams.get('from')
-        const fromTool =
-            from &&
-            from !== 'expenses' &&
-            tripTools.some((t) => t.path === from)
-                ? from
-                : null
-        backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool ?? 'expenses'}`
+        backHref = `/gustavo/trips/${expenseDetailMatch[1]}/${fromTool() ?? 'expenses'}`
     } else if (tripEditMatch) {
-        backHref = `/gustavo/trips/${tripEditMatch[1]}/details`
+        backHref = `/gustavo/trips/${tripEditMatch[1]}/${fromTool() ?? 'expenses'}`
     }
     // /gustavo/trips/map (world map) → trips list. Explicit so it doesn't rely
     // on the legacy hub-URL branch treating "map" as a trip slug.

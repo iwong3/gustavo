@@ -1,16 +1,24 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useMemo } from 'react'
+import { Box, Button, Typography } from '@mui/material'
+import { IconTrash } from '@tabler/icons-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useCallback, useMemo, useState } from 'react'
 
 import { useDebtsView } from 'components/debt/debts-view-store'
+import DeleteTripDialog from 'components/delete-trip-dialog'
 import TripForm, { type RemovalImpact } from 'components/trip-form'
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
-import { canEditTrip } from 'utils/permissions'
+import { deleteTrip } from 'utils/api'
+import { getBackHref } from 'utils/back-href'
+import { deleteErrorMessage } from 'utils/delete-error'
+import { canDeleteTrip, canEditTrip } from 'utils/permissions'
 
+import { colors, toneColors } from '@/lib/colors'
 import { lockedPlan, planNetCents, planSettlements } from '@/lib/debt-proof'
+import { secondaryButtonSx } from '@/lib/form-styles'
 import { queryKeys } from '@/lib/query-keys'
 import { useExitTo } from 'hooks/use-exit-to'
 
@@ -21,7 +29,33 @@ export default function EditTripPage() {
     const { expenses, debtMap, participants, settlementRecords, getUsdValue } = useSpendData()
     const debtsView = useDebtsView(trip.id)
 
-    const detailsUrl = `/gustavo/trips/${trip.slug}/details`
+    // Back to the trip page this was opened from (?from, set by the header's
+    // trip name), else the expenses list
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+    const backUrl =
+        getBackHref(pathname, searchParams) ??
+        `/gustavo/trips/${trip.slug}/expenses`
+
+    // Delete lives here, at the bottom of the form — there's no trip details
+    // page any more, and deleting a trip is rare enough to sit a level deep
+    const showDelete = canDeleteTrip(trip.userRole, trip.isAdmin)
+    const [deleteOpen, setDeleteOpen] = useState(false)
+    const deleteMutation = useMutation({
+        mutationFn: () => deleteTrip(trip.id, trip.updatedAt),
+        onSuccess: () => {
+            setDeleteOpen(false)
+            // Inactive only: refetching this (now deleted) trip's own active
+            // queries would 404 and flash the not-found state before we leave
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.trips.all,
+                refetchType: 'inactive',
+            })
+            // Pop back to the list so the deleted trip sits ahead in history,
+            // not behind it where swipe-back would land on it
+            exitTo('/gustavo/trips')
+        },
+    })
 
     // Removing someone drops them from the debts: the form warns with their
     // expenses and their balance under the trip's plan (as the Debts page shows)
@@ -81,7 +115,7 @@ export default function EditTripPage() {
                 mode="edit"
                 trip={trip}
                 describeRemoval={describeRemoval}
-                onCancel={() => exitTo(detailsUrl)}
+                onCancel={() => exitTo(backUrl)}
                 onSuccess={async () => {
                     // Refresh before leaving (the form keeps showing
                     // "Saving…") so we land on up-to-date data, not a stale
@@ -95,8 +129,71 @@ export default function EditTripPage() {
                             queryKey: queryKeys.trips.list(),
                         }),
                     ])
-                    exitTo(detailsUrl)
+                    exitTo(backUrl)
                 }}
+                footer={
+                    showDelete && (
+                        // Its own section under a divider: a rare, separate
+                        // action, not one of the edits Save applies
+                        <Box
+                            sx={{
+                                borderTop: `1px solid ${colors.primaryBlack}20`,
+                                marginTop: 1,
+                                paddingTop: 3,
+                                // + the form's 16px bottom padding = 24px,
+                                // matching the 24px between divider and button
+                                paddingBottom: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 1,
+                            }}>
+                            {/* Full width like the fields above; soft red
+                                fill (opaque — the page is yellow underneath)
+                                in the house border + hard shadow */}
+                            <Button
+                                fullWidth
+                                onClick={() => setDeleteOpen(true)}
+                                startIcon={<IconTrash size={18} stroke={2} />}
+                                sx={{
+                                    ...secondaryButtonSx,
+                                    'height': 40,
+                                    'fontSize': 14,
+                                    'fontWeight': 700,
+                                    'color': colors.primaryRed,
+                                    'backgroundColor': toneColors.negativeBg,
+                                    '&:hover': {
+                                        backgroundColor: toneColors.negativeBg,
+                                    },
+                                }}>
+                                Delete trip
+                            </Button>
+                            <Typography
+                                sx={{
+                                    fontSize: 12,
+                                    color: colors.primaryBrown,
+                                    textAlign: 'center',
+                                }}>
+                                Removes the trip and all its expenses for
+                                everyone on it.
+                            </Typography>
+                        </Box>
+                    )
+                }
+            />
+            <DeleteTripDialog
+                open={deleteOpen}
+                trip={trip}
+                onClose={() => {
+                    setDeleteOpen(false)
+                    deleteMutation.reset()
+                }}
+                onConfirm={() => deleteMutation.mutate()}
+                busy={deleteMutation.isPending}
+                error={
+                    deleteMutation.error
+                        ? deleteErrorMessage(deleteMutation.error, 'trip')
+                        : null
+                }
             />
         </Box>
     )

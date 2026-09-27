@@ -18,7 +18,6 @@ import {
     ExpensesPageSkeleton,
     GraphsSkeleton,
     LinksSkeleton,
-    TripDetailsSkeleton,
     TripsListSkeleton,
     TripsMapSkeleton,
 } from 'components/skeleton/trip-skeletons'
@@ -62,7 +61,6 @@ export default function LoadingGallery() {
                 <Specimen label="graphs"><Frame><GraphsSkeleton /></Frame></Specimen>
                 <Specimen label="activity"><Frame><ActivitySkeleton /></Frame></Specimen>
                 <Specimen label="links"><Frame><LinksSkeleton /></Frame></Specimen>
-                <Specimen label="trip details"><Frame><TripDetailsSkeleton /></Frame></Specimen>
                 <Specimen label="expense / trip form"><Frame><FormSkeleton /></Frame></Specimen>
             </SpecimenGroup>
             <SpecimenGroup title="Controls">

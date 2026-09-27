@@ -490,34 +490,6 @@ export function LinksSkeleton() {
     )
 }
 
-/** Mirrors trip details (app/gustavo/trips/[slug]/details/page.tsx) —
- *  its Edit / Delete live in the bottom action bar, not the page. */
-export function TripDetailsSkeleton() {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 450, paddingX: 4, paddingY: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 3, width: '100%' }}>
-                <TextBone fontSize={24} width="60%" />
-                <TextBone fontSize={13} width="45%" sx={{ marginBottom: 1.5 }} />
-                <Box sx={{ display: 'flex', marginBottom: 2 }}>
-                    {[0, 1, 2, 3].map((i) => (
-                        <Box key={i} sx={{ marginLeft: i === 0 ? 0 : '-4px' }}>
-                            <Circle size={32} />
-                        </Box>
-                    ))}
-                </Box>
-                <Box sx={{ display: 'flex', gap: 3 }}>
-                    {[0, 1].map((i) => (
-                        <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <TextBone fontSize={16} width={64} />
-                            <TextBone fontSize={13} width={48} />
-                        </Box>
-                    ))}
-                </Box>
-            </Box>
-        </Box>
-    )
-}
-
 // ── Chooser ─────────────────────────────────────────────────────────────────
 
 /**
@@ -534,7 +506,6 @@ export function TripPageSkeleton({ pathname }: { pathname: string }) {
     if (sub.startsWith('graphs')) return <GraphsSkeleton />
     if (sub.startsWith('activity')) return <ActivitySkeleton />
     if (sub.startsWith('links')) return <LinksSkeleton />
-    if (sub.startsWith('details')) return <TripDetailsSkeleton />
     return <ExpensesPageSkeleton />
 }
 
