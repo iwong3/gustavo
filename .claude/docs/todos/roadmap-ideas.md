@@ -8,9 +8,9 @@ Captured wants, not yet scheduled:
 - **Tab memory** (Sept 2026, deferred) — re-tapping a tab returns to where you
   last were inside it (native tab-stack behaviour) instead of the tab root.
 
-- **DB backup** — on-demand and/or automated `pg_dump` of the Neon prod DB,
-  stored securely (Ivan's PC or Google Drive). Neon free tier only keeps ~1 day
-  of restore history.
+- **DB backup** — on-demand is done (`pnpm db:backup:prod` → `backups/` on
+  Ivan's PC). Still wanted: automated and off-PC (e.g. Google Drive). Neon free
+  tier only keeps ~1 day of restore history.
 - **In-app bug reporting** — a way for users to report bugs from inside the app
   and track them, ideally capturing context about the table/mechanism involved.
 - **UX snappiness audit** — the PWA has a "slight clunkiness, like a mobile

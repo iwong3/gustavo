@@ -229,6 +229,8 @@ Sessions are signed JWT cookies — no session table. To add a user: edit
 | `pnpm docker:up` / `docker:down` / `docker:logs` | Local Docker stack |
 | `pnpm db:migrate` | Run pending migrations (local) |
 | `pnpm db:migrate:prod` | Run pending migrations against Neon (manual, deliberate) |
+| `pnpm db:backup:prod` | pg_dump Neon → `backups/prod-<ts>.dump` (read-only; needs PG 17 client tools on PATH) |
+| `pnpm db:pull-prod` | Backup prod, then replace local `gustavo_dev` with it + run local migrations (destructive locally; prompts, `--yes` skips) |
 | `pnpm db:create-migration <name>` | Create new migration file |
 | `pnpm db:reset` | Reset local DB (destructive) |
 | `pnpm db:seed` | Seed local data |

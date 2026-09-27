@@ -106,3 +106,6 @@ postgres_data/
 
 # One-off geocode review file (scripts/db/backfill-location-geo.js --fetch)
 scripts/db/location-geo-results.json
+
+# Prod DB dumps (pnpm db:backup:prod)
+backups/

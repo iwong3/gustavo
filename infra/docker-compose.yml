@@ -24,7 +24,9 @@ services:
             - gustavo-network
 
     metabase:
-        image: metabase/metabase:latest
+        # Pinned on purpose: `latest` is never re-pulled once cached, so it silently
+        # froze on a 2025 build. Bump deliberately; check the changelog for app-DB migrations.
+        image: metabase/metabase:v0.63.13
         container_name: gustavo-metabase
         environment:
             # Metabase application database configuration
@@ -37,7 +39,7 @@ services:
             # Additional settings for proper persistence
             MB_ENCRYPTION_SECRET_KEY: gustavo-metabase-secret-key-2024
         ports:
-            - '3001:3000'
+            - '127.0.0.1:3001:3000' # localhost only — never expose BI to the LAN
         volumes:
             - metabase_data:/metabase-data
         depends_on:

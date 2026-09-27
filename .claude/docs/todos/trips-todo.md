@@ -110,7 +110,7 @@
 - [ ] Trip recap "boarding pass" share image (concretizes end-of-trip report)
 - [ ] Group superlatives/leaderboard tab on graphs page
 - [ ] Automated Neon pg_dump backup (GH Action cron → private repo/Drive) —
-      do first, closes the data-loss hole
+      closes the data-loss hole (on-demand `pnpm db:backup:prod` exists)
 
 ## Tech Debt
 
