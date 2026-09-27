@@ -420,7 +420,23 @@ persisted to IndexedDB, so revisits and cold opens render from cache. Rules:
 - **Warm the next screen**: `PrefetchOnVisible` on every `router.push` tap
   target (its `onVisible` can `prefetchQuery` the destination's data too —
   the trips list warms each visible trip's expenses/settlements);
-  `router.prefetch` for action-bar destinations (edit, duplicate).
+  `router.prefetch` for action-bar destinations (edit, duplicate). **Exception —
+  long lists of same-route rows** (expenses, Insights): not one per row (that
+  fired ~10 requests/s while scrolling) — use `usePressPrefetch`
+  (`hooks/use-press-prefetch.ts`): the first row once, then the pressed row on
+  pointerdown, via a `data-href` on each row.
+- **Long lists stay cheap** (a 150-row list costs ~100ms+ per render on a phone):
+  - memoize rows (`memo`) and pass them stable `useCallback` handlers, so a
+    filter, collapse or refetch only re-renders rows that changed;
+  - `useProgressiveCount` (`hooks/use-progressive-count.ts`) mounts the first
+    screenful now and the rest after paint — on a back navigation it renders
+    enough rows to reach the restored scroll spot;
+  - when a tap changes both a small control and the list, feed the list
+    `useDeferredValue(rows)` so the control paints first (Insights page);
+  - keep per-frame animation state (`useTweenedNumber`, rAF loops) in a leaf
+    component — in a page it re-renders the whole page every frame.
+  - Measure with `/dev/gallery/perf` (150 fixture expenses under a React
+    Profiler): `__perf.reset()`, click, `await __perf.settle()`.
 - **Refresh**: inside a trip, `useRefresh().onRefresh()` invalidates the
   trip's `queryKeys.trips.detail(id)` subtree (expenses, settlements,
   activity, …) — put new per-trip queries under that key.
@@ -689,6 +705,37 @@ Reference implementations: `swipeable-row.tsx` (horizontal, rules 1–4) and
 - **Leaving after a delete → `exitTo(getBackHref(...))`** so the deleted page
   sits ahead in history, not behind. A missing record renders `GoneState`
   (calm message + a way out), never a bare "no longer exists" line.
+- **Reversible one-tap actions → Undo toast, not a confirm dialog.** Update
+  the query cache optimistically, fire the request, then
+  `showToast(msg, 'success', { label: 'Undo', onClick })`; roll back + error
+  toast on failure. Reference: settle/undo in the debts page. Custom swipe
+  actions: `SwipeableRow` `deleteLabel` / `deleteIcon` (e.g. "Undo payment").
+
+### Opt-in props on shared components
+
+Added for the debts page; reuse them rather than forking the component:
+
+| Component | Prop | Does |
+|---|---|---|
+| `SlidingToggle` | `locked`, `onLockedTap` | Stuck on its value (lock icon, others faded); tapping another option explains why |
+| `ListControls` | `options` | Custom sort menu (defaults to the 4 date/amount sorts) |
+| `ExpenseRow` | `trailing` | Extra column after price + payer (the debts page's debt column) |
+| `DateGroupHeader` | `totalLabel`, `paddingRight` | Custom/signed day total; right padding to line up with 12px rows |
+| `SwipeableRow` | `deleteLabel`, `deleteIcon` | Rename/re-icon the swipe-left action |
+| toast store | `showToast(msg, tone, action)` | `'success'` tone + an action button (Undo) |
+
+Sizing/positioning gotchas that bit the debts page:
+- **Charts: position in `%`, not measured px.** A width measured in
+  `useLayoutEffect` can be 0 on first paint, drawing every bar as a sliver.
+  Use measurements only for secondary decisions (where a label fits).
+- **Size a numeric column from its widest value** with canvas
+  `measureText` (`800 14px <body font>`), not "px per character" — digits,
+  `.` and `,` differ enough to waste ~8px.
+- **MUI `Dialog` / `Drawer` paper is a flex column**: tall content shrinks
+  and gets clipped (by any `overflow: hidden` child) instead of scrolling —
+  give the paper `'& > *': { flexShrink: 0 }`. Pin a title row with
+  `position: sticky; top: 0` + a background (and move the paper's top
+  padding into it).
 
 ---
 

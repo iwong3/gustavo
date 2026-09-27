@@ -15,9 +15,10 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Costs**: $0/month is the goal (not strict). ALWAYS check with Ivan before
   anything that could accrue a cost (paid APIs, tier upgrades). Google Places API
   usage must stay within free credit.
-- **Backups**: Neon's built-in restore (~1 day window) is the current story.
-  Wanted: on-demand or automated pg_dump stored somewhere safe (PC or Google
-  Drive) — not yet built.
+- **Backups**: Neon's built-in restore (~1 day window), plus on-demand
+  `pnpm db:backup:prod` (pg_dump → gitignored `backups/` on Ivan's PC;
+  `pnpm db:pull-prod` also restores it into local dev). Still wanted: an
+  automated/off-PC copy (e.g. Google Drive).
 - **UX priorities, in order**: (1) fast/snappy/native-feeling — the app should
   never feel like a mobile website; (2) minimal friction for data entry (fewer
   taps, less typing, but stay intuitive); (3) consistent neo-brutalist theme.
@@ -49,6 +50,11 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Gate loading UI on `isPending`, never `isLoading`** — during the persisted
   cache restore `isLoading` is false with no data, so pages flash their empty
   state. See code-guide § Loading, Caching & Refresh.
+- **`/gustavo` is force-static** (`app/gustavo/layout.tsx`; the client shell is
+  `app-shell.tsx`) so every page, `[slug]`/`[id]` routes included, is CDN-cached.
+  Never call `cookies()`/`headers()`/`auth()` in a server component under it —
+  they silently come back empty — and per-user data must never reach a cached
+  page. Middleware does the auth gating.
 - **State**: trip data lives in React state + Context (`app/providers/`); Zustand is for UI state only (filters, sort, view settings). Never `store.get()` inside computations.
 
 ## Branches & deploying
@@ -64,6 +70,8 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   (`preview_start {url: "http://localhost:3000"}` — HMR already reflects your edits).
   Only if nothing is on 3000, start the `gustavo-dev` launch config (runs on **3100**).
   Never run both dev servers at once — they share `.next` and corrupt each other.
+  He can start his mid-session, so re-check 3000 right before any `pnpm build` or
+  dev-server start, not just at the start of the task.
 - Verify: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build`
   - `pnpm lint` has ~25 files of pre-existing errors (React Compiler rules etc.)
     and Vercel builds skip lint (`ignoreDuringBuilds`) — before a push, lint the
@@ -83,12 +91,13 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Repo structure, build, deployment detail** → `.claude/docs/repo-overview.md`
 - **How the code is organized (App Router, patterns)** → `.claude/docs/code-guide.md`
 - **Activity feed (audit timeline, intent, card merging)** → `.claude/docs/activity-feed.md`
+- **Debts page (plans, proof math, settle lock, UI decisions)** → `.claude/docs/debts.md`
 - **Permissions model** → schema.md § Permissions + `lib/permissions.ts` / `app/utils/permissions.ts`
 - **Historical design plans** (point-in-time, may be stale) → `.claude/docs/plans/`
 - **Idea/todo lists** → `.claude/docs/todos/`
 
 ## Key locations
 - API routes: `app/api/` (App Router route handlers); auth: `app/auth.ts` (`ALLOWED_EMAILS`)
-- Debt calculation: `lib/debt.ts`; debt UI: `app/components/debt/`
+- Debt calculation: `lib/debt.ts` + `lib/debt-proof.ts` (plans, proof math); debt UI: `app/components/debt/`
 - Types: `lib/types.ts` (expenses), `lib/health-types.ts` (health)
 - Migrations: `database/migrations/` (numbered SQL, runner `scripts/db/migrate.js`)
