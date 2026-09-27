@@ -61,7 +61,18 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
         (Boolean(trip) && expensesQuery.isPending) ||
         (Boolean(trip) && !expensesQuery.data && !expensesQuery.isError) ||
         (Boolean(trip) && !settlementsQuery.data && !settlementsQuery.isError)
-    const error = tripQuery.isError || expensesQuery.isError || settlementsQuery.isError
+    // A failed background refetch keeps its cached data (TanStack v5 still
+    // flags isError) — only a query with nothing to show is a load failure.
+    // Otherwise one flaky focus refetch would swap the whole trip, and any
+    // half-filled form under it, for the error screen. A 404 always wins:
+    // the trip was deleted or access revoked.
+    const failedWithoutData = (q: { isError: boolean; data: unknown }) =>
+        q.isError && q.data === undefined
+    const error =
+        tripQuery.error instanceof NotFoundError ||
+        failedWithoutData(tripQuery) ||
+        failedWithoutData(expensesQuery) ||
+        failedWithoutData(settlementsQuery)
 
     // Reset menu/search stores once per loaded (trip, expenses) pair so
     // sub-pages mount into clean filter state. Keyed by trip.id + expenses
