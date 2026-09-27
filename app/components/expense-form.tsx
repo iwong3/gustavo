@@ -568,10 +568,13 @@ export default function ExpenseForm({
                 coveredParticipants.length > 0
                     ? coveredParticipants
                     : undefined,
-            location: location || undefined,
-            notes: notes.trim() || undefined,
-            local_currency_received: localReceivedNum || undefined,
-            google_place_id: googlePlace?.placeId || undefined,
+            // Cleared fields go as null/'' (not undefined) — the PUT only
+            // writes fields present in the body, so undefined would keep the
+            // old value and an edit could never clear them
+            location: location || null,
+            notes: notes.trim(),
+            local_currency_received: isCurrencyExchange ? localReceivedNum : null,
+            google_place_id: googlePlace?.placeId ?? null,
             google_place_name: googlePlace?.name || undefined,
             google_place_address: googlePlace?.address || undefined,
             google_place_lat: googlePlace?.lat || undefined,

@@ -138,9 +138,10 @@ export type AddExpenseData = {
     split_between_ids?: string[]
     /** Participants whose share the payer covers ("treat"). */
     covered_participant_ids?: string[]
-    location?: string // location name
+    location?: string | null // location name; null clears it on update
     notes?: string
-    google_place_id?: string
+    local_currency_received?: number | null
+    google_place_id?: string | null // null clears the place on update
     google_place_name?: string
     google_place_address?: string
     google_place_lat?: number
