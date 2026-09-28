@@ -51,6 +51,9 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   or `useToday()` (`hooks/use-today`) in components that can sit open overnight.
   Never `new Date().toISOString().slice(0, 10)` — that's UTC, a day ahead on US
   evenings. Servers can't know the device's date; the client sends it.
+  **Daily check-offs (supplements) use the log day instead**: `logDateString()` /
+  `useLogDay()` — before 6am (`NIGHT_CUTOFF_HOUR`) it's still yesterday, so a 1am
+  dose counts for last night.
 - **Gate loading UI on `isPending`, never `isLoading`** — during the persisted
   cache restore `isLoading` is false with no data, so pages flash their empty
   state. See code-guide § Loading, Caching & Refresh.
@@ -80,7 +83,8 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   - `pnpm lint` has ~25 files of pre-existing errors (React Compiler rules etc.)
     and Vercel builds skip lint (`ignoreDuringBuilds`) — before a push, lint the
     changed files (`pnpm exec eslint <files>`) and don't fix unrelated debt.
-  - Don't run `pnpm build` while a dev server is up — it shares `.next`.
+  - Don't run `pnpm build` in the main checkout while a dev server is up — it
+    shares `.next`. Build in a throwaway worktree instead (deploy skill, step 1).
 - Tests: `pnpm test` (Vitest, `tests/`) — DB-backed tests hit local docker Postgres, so `pnpm docker:up` first. Run at checkpoints when touching tested logic (OCC, and future real-logic suites).
 - DB: localhost:5432, user `gus`, pass `yellow_shirt_dev`, db `gustavo_dev` (DBeaver); Metabase localhost:3001
 - **Component gallery**: `localhost:3000/dev/gallery` — renders components/forms in
@@ -96,6 +100,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **How the code is organized (App Router, patterns)** → `.claude/docs/code-guide.md`
 - **Activity feed (audit timeline, intent, card merging)** → `.claude/docs/activity-feed.md`
 - **Debts page (plans, proof math, settle lock, UI decisions)** → `.claude/docs/debts.md`
+- **Supplements (daily stack, runs/Day X, calendar, 6am rule, pages)** → `.claude/docs/supplements.md`
 - **Permissions model** → schema.md § Permissions + `lib/permissions.ts` / `app/utils/permissions.ts`
 - **Historical design plans** (point-in-time, may be stale) → `.claude/docs/plans/`
 - **Idea/todo lists** → `.claude/docs/todos/`

@@ -12,7 +12,21 @@ Jenny daily (health), friends/family during trips (expenses). Don't ship broken.
 
 1. **Verify locally** (all must pass):
    - `pnpm tsc --noEmit`
-   - `pnpm build` (the real gate — Vercel runs this; lint is skipped during builds)
+   - `pnpm build` (the real gate — Vercel runs this; lint is skipped during builds).
+     **Ivan's dev server usually holds `.next` on :3000 — never build in the main
+     checkout while it's up, and don't ask him to stop it.** Build the exact commit
+     in a throwaway worktree on D: with its own `.next`:
+     ```powershell
+     $b = "D:\Repos\gustavo-build"
+     git worktree add --detach $b HEAD
+     New-Item -ItemType Junction -Path "$b\node_modules" -Target "D:\Repos\gustavo\node_modules"
+     Get-ChildItem D:\Repos\gustavo -Filter ".env*" -File | ? Name -notlike "*.production*" | Copy-Item -Destination $b
+     # then: cd $b; pnpm build; pnpm check:cycles
+     cmd /c rmdir "$b\node_modules"   # remove the junction FIRST, or the delete follows it
+     git worktree remove --force $b; git worktree prune
+     ```
+     Commit first (the worktree builds HEAD). Keep it on D: — a copy on C: borrowing
+     D:'s node_modules fails to build.
    - `pnpm check:cycles` (circular imports crash on hard refresh, not in dev nav)
    - `pnpm lint` has pre-existing repo-wide errors (react-hooks rules) and is NOT a
      deploy gate — only treat new errors in files you touched as blockers.
