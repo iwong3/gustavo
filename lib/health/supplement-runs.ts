@@ -3,7 +3,8 @@
  * run history, and the calendar's stack-change badges. Derived from the
  * explicit stack changes (supplement_events, 00043) plus the dose logs:
  *
- *  - a `started` event opens a run on its date; `stopped` closes it;
+ *  - a `started` event opens a run on its date; `stopped` closes it (the day
+ *    before, unless a dose was taken that day);
  *  - inside a run, RUN_GAP_DAYS days in a row with no dose end it, at the
  *    last dose (so you never have to remember to tap "Stop");
  *  - a dose outside any run opens a new one (a restart after a break).
@@ -96,8 +97,10 @@ export function computeRuns(events: RunEvent[], doseDates: string[], today: stri
             if (open && brokenBy(p.day)) close(gapEnd(), 'gap')
             if (open) open.last = Math.max(open.last ?? p.day, p.day)
             else open = { start: p.day, last: p.day, trust: p.day }
-        } else {
-            close(p.day, 'stopped')
+        } else if (open) {
+            // Stopping today means you don't take it today — the run ends
+            // yesterday, unless you already took a dose today
+            close(Math.max(open.start, open.last ?? open.start, p.day - 1), 'stopped')
         }
     }
 

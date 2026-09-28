@@ -418,7 +418,10 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
   the run (backdated starts; the seed recorded every existing supplement's first
   log as its start, so older sparse logs don't split runs). Editing "Started"
   moves the latest `started` event. The supplements API writes all events;
-  dose taps never do.
+  dose taps never do. Runs follow **daily-stack membership** only: `daily_doses`
+  going 0 → n is `started`, n → 0 is `stopped` (0× is how you stop one — the
+  form has no Active toggle; `is_active` is legacy), n → m is `dose_changed`.
+  Doses taken while off the stack (as needed) don't make runs.
 - **Muscle groups (00026)** — "Back" split into "Upper Back" (targets: Lats, Rhomboids, Traps, Rear Delts) and standalone "Lower Back". Group vs. target is implicit via `muscle_group_parents`.
 
 ## Common Query Patterns

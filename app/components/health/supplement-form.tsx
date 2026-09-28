@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Checkbox, TextField, Typography } from '@mui/material'
+import { Box, TextField, Typography } from '@mui/material'
 import { IconMinus, IconPlus } from '@tabler/icons-react'
 import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -27,9 +27,9 @@ type Props = {
 
 /**
  * Page-style New / Edit Supplement form: name, dosage, how many times a day
- * it's in your daily stack (the home page's check-off card), and (when
- * editing) an Active toggle — inactive supplements stay in history but drop
- * out of the log checklist and the stack. Owns the request; the page owns navigation.
+ * it's in your daily stack (the home page's check-off card; 0 = as needed,
+ * which is also how you stop one — the calendar records it). Owns the
+ * request; the page owns navigation.
  */
 export default function SupplementForm({
     mode,
@@ -42,7 +42,6 @@ export default function SupplementForm({
 
     const [name, setName] = useState(supplement?.name ?? '')
     const [dosage, setDosage] = useState(supplement?.dosage ?? '')
-    const [isActive, setIsActive] = useState(supplement?.isActive ?? true)
     // Doses/day in the daily stack; 0 = as needed (not in the stack)
     const [daily, setDaily] = useState(supplement?.dailyDoses ?? 0)
     const [attempted, setAttempted] = useState(false)
@@ -73,7 +72,9 @@ export default function SupplementForm({
                     dailyDoses: daily === 0 ? null : daily,
                     // The day any stack change (start/stop/dose) is dated
                     eventDate: logDateString(),
-                    ...(isEdit ? { isActive } : {}),
+                    // No Active toggle any more (0× is "stopped"): saving
+                    // revives a supplement left inactive by the old form
+                    ...(isEdit ? { isActive: true } : {}),
                 }),
             })
             if (!res.ok) {
@@ -95,7 +96,7 @@ export default function SupplementForm({
         } finally {
             setSaving(false)
         }
-    }, [name, dosage, daily, isActive, isEdit, supplement, queryClient, onSuccess])
+    }, [name, dosage, daily, isEdit, supplement, queryClient, onSuccess])
 
     return (
         <FormPage
@@ -137,32 +138,9 @@ export default function SupplementForm({
                 <DosesStepper value={daily} onChange={setDaily} />
                 <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginTop: 0.75 }}>
                     How many times a day you take it — daily ones get a check-off
-                    on Home. Tap − down to 0 for as needed.
+                    on Home. 0 = as needed, or stopped.
                 </Typography>
             </Box>
-
-            {isEdit && (
-                <Box
-                    onClick={() => setIsActive(!isActive)}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        cursor: 'pointer',
-                    }}>
-                    <Checkbox
-                        checked={isActive}
-                        size="small"
-                        sx={{
-                            'padding': 0,
-                            'color': colors.primaryBlack,
-                            '&.Mui-checked': { color: colors.primaryBlack },
-                        }}
-                        tabIndex={-1}
-                    />
-                    <Typography sx={{ fontSize: 14 }}>Active</Typography>
-                </Box>
-            )}
         </FormPage>
     )
 }

@@ -88,6 +88,31 @@ describe('buildSupplementHistory', () => {
         expect(history.summaryOn('2026-09-05').badge).toBe('±')
     })
 
+    it('treats 0× as leaving the stack (−) and back to 1× as a fresh run (+)', () => {
+        // Creatine 1× from Sep 1, set to 0 on Sep 10, back to 1× on Sep 20
+        const h = buildSupplementHistory({
+            supplements: [supp(1, 'Creatine', 1)],
+            events: [
+                ev(1, '2026-09-01', 'started'),
+                ev(1, '2026-09-10', 'dose_changed', null),
+                ev(1, '2026-09-20', 'dose_changed', 1),
+            ],
+            logs: [
+                ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => log(1, `2026-09-0${d}`)),
+                log(1, '2026-09-12'), // taken as needed — not due, no run
+                log(1, '2026-09-20'),
+            ],
+            today: '2026-09-21',
+            recordedOn: (iso) => iso.slice(0, 10),
+        })
+        // Stopped on the 10th without a dose that day: the run ends the 9th
+        expect(h.changesOn('2026-09-09')).toEqual([{ kind: 'remove', text: 'Stopped Creatine' }])
+        expect(h.summaryOn('2026-09-10').status).toBe('idle')
+        expect(h.summaryOn('2026-09-12').status).toBe('idle')
+        expect(h.changesOn('2026-09-20')).toEqual([{ kind: 'add', text: 'Restarted Creatine' }])
+        expect(h.dayOfRun(1, '2026-09-21')).toBe(2)
+    })
+
     it('gives Day X for the run on any day', () => {
         expect(history.dayOfRun(1, '2026-09-07')).toBe(7)
         expect(history.firstDay).toBe('2026-09-01')

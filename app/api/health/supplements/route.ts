@@ -63,11 +63,15 @@ export async function POST(request: NextRequest) {
                 [authUser.userId, name.trim(), dosage || null, dailyDoses ?? null]
             )
             const row = res.rows[0]
-            await client.query(
-                `INSERT INTO supplement_events (user_id, supplement_id, date, kind, daily_doses)
-                 VALUES ($1, $2, COALESCE($3::date, CURRENT_DATE), 'started', $4)`,
-                [authUser.userId, row.id, startedOn ?? eventDate ?? null, row.daily_doses]
-            )
+            // Added straight into the daily stack = started (as-needed ones
+            // start when they join it)
+            if (row.daily_doses !== null) {
+                await client.query(
+                    `INSERT INTO supplement_events (user_id, supplement_id, date, kind, daily_doses)
+                     VALUES ($1, $2, COALESCE($3::date, CURRENT_DATE), 'started', $4)`,
+                    [authUser.userId, row.id, startedOn ?? eventDate ?? null, row.daily_doses]
+                )
+            }
             return row
         })
 

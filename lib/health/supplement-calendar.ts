@@ -12,7 +12,7 @@
  * tests/supplement-calendar.test.ts.
  */
 import type { Supplement, SupplementEvent, SupplementLog } from '@/lib/health-types'
-import { badgeFor, computeRuns, dayOfRun, type Run } from './supplement-runs'
+import { badgeFor, computeRuns, dayOfRun, type Run, type RunEvent } from './supplement-runs'
 
 export type DayStatus = 'full' | 'part' | 'none' | 'idle'
 
@@ -47,7 +47,7 @@ type Entry = {
     doses: Map<string, number>
 }
 
-const fmtDoses = (n: number | null) => (n === null ? 'as needed' : `${n}× a day`)
+const fmtDoses = (n: number) => `${n}× a day`
 
 export type SupplementHistory = ReturnType<typeof buildSupplementHistory>
 
@@ -76,14 +76,32 @@ export function buildSupplementHistory({
         if (q > 0) entries.get(Number(l.supplementId))?.doses.set(l.date, q)
     }
 
-    /** Doses/day in effect on `date`, from the latest event on or before it. */
+    /** Doses/day in the daily stack on `date`, from the latest event on or
+     *  before it (stopped / 0 = not in the stack); before any event, today's. */
     const dosesPerDayOn = (e: Entry, date: string): number | null => {
         let n: number | null | undefined
         for (const ev of e.events) {
             if (ev.date > date) break
-            if (ev.kind !== 'stopped') n = ev.dailyDoses
+            n = ev.kind === 'stopped' ? null : ev.dailyDoses
         }
         return n === undefined ? e.s.dailyDoses : n
+    }
+
+    /** Runs follow daily-stack membership only: joining the stack (0 → n)
+     *  starts one, leaving it (n → 0, or a legacy `stopped`) ends it. */
+    const stackRunEvents = (e: Entry): RunEvent[] => {
+        const out: RunEvent[] = []
+        let inStack = false
+        for (const ev of e.events) {
+            const next = ev.kind !== 'stopped' && ev.dailyDoses !== null
+            if (!inStack && next) {
+                out.push({ date: ev.date, kind: 'started', trustedThrough: recordedOn(ev.recordedAt) })
+            } else if (inStack && !next) {
+                out.push({ date: ev.date, kind: 'stopped' })
+            }
+            inStack = next
+        }
+        return out
     }
 
     const changes = new Map<string, DayChange[]>()
@@ -95,36 +113,31 @@ export function buildSupplementHistory({
 
     for (const e of Array.from(entries.values())) {
         e.events.sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+        // Doses taken while off the stack (as needed) don't make runs
         e.runs = computeRuns(
-            e.events.map((ev) => ({
-                date: ev.date,
-                kind: ev.kind,
-                trustedThrough: ev.kind === 'started' ? recordedOn(ev.recordedAt) : undefined,
-            })),
-            Array.from(e.doses.keys()),
+            stackRunEvents(e),
+            Array.from(e.doses.keys()).filter((d) => dosesPerDayOn(e, d) !== null),
             today
         )
         const name = e.s.name
         e.runs.forEach((run, i) => {
-            if (dosesPerDayOn(e, run.start) !== null) {
-                addChange(run.start, { kind: 'add', text: `${i === 0 ? 'Started' : 'Restarted'} ${name}` })
-            }
-            if (run.end && dosesPerDayOn(e, run.end) !== null) {
+            addChange(run.start, { kind: 'add', text: `${i === 0 ? 'Started' : 'Restarted'} ${name}` })
+            if (run.end) {
                 addChange(run.end, {
                     kind: 'remove',
                     text: run.endReason === 'stopped' ? `Stopped ${name}` : `${name}: last dose before a break`,
                 })
             }
         })
-        let prev: number | null | undefined
+        // Dose changes within the stack (1× → 2×); joining/leaving it are the
+        // run starts/ends above
+        let prev: number | null = null
         for (const ev of e.events) {
-            if (ev.kind === 'dose_changed' && prev !== undefined && prev !== ev.dailyDoses) {
-                addChange(ev.date, {
-                    kind: 'change',
-                    text: `${name}: ${fmtDoses(prev)} → ${fmtDoses(ev.dailyDoses)}`,
-                })
+            const next = ev.kind === 'stopped' ? null : ev.dailyDoses
+            if (prev !== null && next !== null && prev !== next) {
+                addChange(ev.date, { kind: 'change', text: `${name}: ${fmtDoses(prev)} → ${fmtDoses(next)}` })
             }
-            if (ev.kind !== 'stopped') prev = ev.dailyDoses
+            prev = next
         }
     }
 

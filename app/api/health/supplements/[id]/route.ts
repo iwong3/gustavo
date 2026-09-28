@@ -58,13 +58,17 @@ export async function PUT(
             )
             const after = res.rows[0]
 
-            // Record the stack change, if any (feeds runs + calendar badges)
+            // Record the daily-stack change, if any (feeds runs + calendar
+            // badges): joining it (0 → n) starts, leaving it (n → 0, or
+            // deactivating) stops, n → m is a dose change
+            const wasIn = before.is_active && before.daily_doses !== null
+            const isIn = after.is_active && after.daily_doses !== null
             const kind =
-                before.is_active && !after.is_active
-                    ? 'stopped'
-                    : !before.is_active && after.is_active
-                      ? 'started'
-                      : after.is_active && before.daily_doses !== after.daily_doses
+                !wasIn && isIn
+                    ? 'started'
+                    : wasIn && !isIn
+                      ? 'stopped'
+                      : isIn && before.daily_doses !== after.daily_doses
                         ? 'dose_changed'
                         : null
             if (kind) {
@@ -77,7 +81,7 @@ export async function PUT(
 
             // Re-anchor the current run: move its latest `started` event.
             // The edit bumps updated_at, so the stretch since is vouched for.
-            if (startedOn && after.is_active) {
+            if (startedOn && isIn) {
                 const moved = await client.query(
                     `UPDATE supplement_events SET date = $1
                      WHERE id = (SELECT id FROM supplement_events
