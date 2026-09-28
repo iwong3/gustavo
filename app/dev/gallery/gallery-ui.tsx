@@ -20,6 +20,7 @@ export const sections = [
     { slug: 'forms', title: 'Forms', description: 'Page-style forms (expense, trip, workout, routine) + delete dialogs — quick-switch to compare' },
     { slug: 'activity', title: 'Activity', description: 'Audit-log rows — diffs, participant lifecycle, restores' },
     { slug: 'loading', title: 'Loading skeletons', description: 'Every page skeleton (trips, health hub, workouts) — compare with the loaded pages' },
+    { slug: 'supplements', title: 'Supplements', description: 'Today tiles with Day X, calendar + stack-change badges, day panel, 1am state' },
     { slug: 'health', title: 'Health', description: 'Workout detail page; training grid — 14-day log, freshness dials, empty states' },
 ] as const
 

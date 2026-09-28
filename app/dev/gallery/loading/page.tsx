@@ -6,6 +6,7 @@ import { colors } from '@/lib/colors'
 import { HealthHubSkeleton } from 'components/health/health-dashboard-v2'
 import {
     RoutinesSkeleton,
+    SupplementsSkeleton,
     WorkoutDetailSkeleton,
     WorkoutFormSkeleton,
     WorkoutsListSkeleton,
@@ -98,6 +99,7 @@ export default function LoadingGallery() {
                 <Specimen label="workout detail"><Frame><WorkoutDetailSkeleton /></Frame></Specimen>
                 <Specimen label="workout form"><Frame><WorkoutFormSkeleton /></Frame></Specimen>
                 <Specimen label="routines"><Frame><RoutinesSkeleton /></Frame></Specimen>
+                <Specimen label="supplements (compare with /dev/gallery/supplements)"><Frame><SupplementsSkeleton /></Frame></Specimen>
             </SpecimenGroup>
         </GalleryPage>
     )

@@ -18,65 +18,21 @@
  * props (see lib/health/supplement-stack.ts).
  */
 import { Box, Typography } from '@mui/material'
-import { IconArrowBackUp, IconCheck, IconMoon, IconPill } from '@tabler/icons-react'
+import { IconArrowBackUp, IconCheck, IconPill } from '@tabler/icons-react'
 
-import { colors, healthColors, pressRowSx, pressTextSx, toneColors } from '@/lib/colors'
+import { colors, healthColors, pressRowSx, supplementColors, toneColors } from '@/lib/colors'
 import { isDone, type StackItem } from '@/lib/health/supplement-stack'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
+import { Capsules } from 'components/health/supplements/capsules'
+import { NightLine, type NightNote } from 'components/health/supplements/night-line'
 import BoardCard, { StripText, stripNumSx, stripWordSx } from './board-card'
 
 /** Hairline between rows — MUI's theme 'divider', which SwipeableRow draws
  *  between rows, so the line above the first row matches the rest. */
 const RULE = 'rgba(0, 0, 0, 0.12)'
-/** Capsule / meter purple (healthColors.supplements, deepened for fills). */
-const FILL = '#8f7bab'
-const FILL_LIGHT = '#efe7f6'
-const EMPTY_BORDER = '#b7a8c9'
-/** Beyond this many doses a day, show "2/5" instead of capsules. */
-const MAX_CAPSULES = 4
+const { fill: FILL, fillLight: FILL_LIGHT, edge: EMPTY_BORDER, deep: DEEP } = supplementColors
 /** Beyond this many doses in the whole day, the meter is one continuous bar. */
 const MAX_SEGMENTS = 24
-
-function Capsules({ item }: { item: StackItem }) {
-    const done = isDone(item)
-    if (item.dosesPerDay > MAX_CAPSULES) {
-        return (
-            <Typography
-                sx={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    color: done ? toneColors.positive : colors.primaryBrown,
-                    flexShrink: 0,
-                }}>
-                {Math.min(item.taken, item.dosesPerDay)}/{item.dosesPerDay}
-            </Typography>
-        )
-    }
-    return (
-        <Box
-            sx={{ display: 'flex', gap: '4px', flexShrink: 0 }}
-            aria-hidden="true">
-            {Array.from({ length: item.dosesPerDay }, (_, i) => (
-                <Box
-                    key={i}
-                    sx={{
-                        width: 24,
-                        height: 12,
-                        borderRadius: 6,
-                        border: `1.5px solid ${colors.primaryBlack}`,
-                        // Taken: a two-tone capsule; left to take: an empty shell
-                        background:
-                            i < item.taken
-                                ? `linear-gradient(90deg, ${FILL} 50%, ${FILL_LIGHT} 50%)`
-                                : colors.primaryWhite,
-                        transition: 'background 0.15s',
-                    }}
-                />
-            ))}
-        </Box>
-    )
-}
 
 /** Every dose in the day as a segment; one bar when there are too many. */
 function DayMeter({ taken, total }: { taken: number; total: number }) {
@@ -102,59 +58,12 @@ function DayMeter({ taken, total }: { taken: number; total: number }) {
                         height: 8,
                         borderRadius: '2px',
                         backgroundColor: i < taken ? FILL : FILL_LIGHT,
-                        border: `1px solid ${i < taken ? '#6f5c8d' : EMPTY_BORDER}`,
+                        border: `1px solid ${i < taken ? DEEP : EMPTY_BORDER}`,
                         transition:
                             'background-color 0.15s, border-color 0.15s',
                     }}
                 />
             ))}
-        </Box>
-    )
-}
-
-export type NightNote = {
-    /** e.g. "Counting for Monday until 6 AM." */
-    text: string
-    /** The switch, e.g. "Log for Tue". */
-    action: string
-    onAction: () => void
-}
-
-/** Late-night explainer: which day the taps count for, and a switch. Blue
- *  underline = "the app picked this", like the expense form's "Use today?". */
-function NightLine({ note }: { note: NightNote }) {
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.75,
-                flexWrap: 'wrap',
-                fontSize: 12,
-                lineHeight: 1.3,
-                color: colors.primaryBrown,
-            }}>
-            <IconMoon size={14} stroke={2} style={{ flexShrink: 0 }} />
-            <span>{note.text}</span>
-            <Box
-                component="button"
-                type="button"
-                onClick={note.onAction}
-                sx={{
-                    font: 'inherit',
-                    fontWeight: 600,
-                    color: colors.primaryBlue,
-                    textDecoration: 'underline',
-                    textUnderlineOffset: '2px',
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    ...pressTextSx,
-                }}>
-                {note.action}
-            </Box>
         </Box>
     )
 }
@@ -204,7 +113,7 @@ export default function SupplementsCard({
                 ) : (
                     <StripText label={`${taken} of ${total} doses taken today`}>
                         <Box component="span" sx={stripNumSx}>
-                            <Box component="span" sx={{ color: '#6f5c8d' }}>
+                            <Box component="span" sx={{ color: DEEP }}>
                                 {taken}
                             </Box>
                             {/* A spaced, muted slash — like the dot between
@@ -292,7 +201,7 @@ export default function SupplementsCard({
                                     }}>
                                     {item.name}
                                 </Typography>
-                                <Capsules item={item} />
+                                <Capsules taken={item.taken} dosesPerDay={item.dosesPerDay} />
                             </Box>
                         </SwipeableRow>
                     )

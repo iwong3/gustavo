@@ -61,6 +61,15 @@ export const healthColors = {
     weight: '#b3e5fc',
 } as const
 
+/** Supplements' purple family (healthColors.supplements, deepened for fills):
+ *  capsules, the day meter, calendar days, Day X. One family per surface. */
+export const supplementColors = {
+    fill: '#8f7bab',
+    fillLight: '#efe7f6',
+    edge: '#b7a8c9',
+    deep: '#6f5c8d',
+} as const
+
 // Reusable hard-shadow border — the signature look used on cards, buttons, etc.
 export const hardShadow = {
     border: `1px solid ${colors.primaryBlack}`,

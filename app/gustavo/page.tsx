@@ -8,19 +8,13 @@ import type {
     Workout,
     WorkoutPreset,
 } from '@/lib/health-types'
-import {
-    addDose,
-    buildStack,
-    isDone,
-    removeDose,
-    type StackItem,
-} from '@/lib/health/supplement-stack'
+import { buildStack } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
 import type { HomeActivityEntry } from '@/lib/types'
 import { Box, Typography } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { getTablerIcon } from 'utils/icons'
 import { fetchTrips } from 'utils/api'
 
@@ -40,10 +34,12 @@ import {
     tripWhenLabel,
 } from 'components/home/home-utils'
 import { FlapScaleButton, ReceiptButton } from 'components/home/quick-actions'
-import SupplementsCard, { type NightNote } from 'components/home/supplements-card'
+import SupplementsCard from 'components/home/supplements-card'
 import WorkoutsCard from 'components/home/workouts-card'
 import { showToast } from 'components/toast-store'
-import { useLogDay, useToday } from 'hooks/use-today'
+import { useToday } from 'hooks/use-today'
+import { useStackDay } from 'hooks/use-stack-day'
+import { useDoseTaps } from 'hooks/use-supplement-dose'
 import { localDateString } from 'utils/time'
 import { allSupplementsKey } from 'hooks/useSupplementData'
 import { useWeightLogs } from 'hooks/useWeightLogs'
@@ -299,110 +295,27 @@ function WorkoutsSection({ today }: { today: string }) {
     )
 }
 
-type DoseVars = { item: StackItem; delta: 1 | -1 }
-
-const weekdayOf = (iso: string, weekday: 'long' | 'short') =>
-    new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday })
-
 /** Today's daily stack, one tap per dose, with Undo. */
-function SupplementsSection({ today }: { today: string }) {
-    const queryClient = useQueryClient()
-    // Before 6am taps count for yesterday (a 1am dose is last night's).
-    // "Log for Tue" overrides that until the calendar day changes.
-    const logDay = useLogDay()
-    const [newDayPick, setNewDayPick] = useState<string | null>(null)
-    const date = newDayPick === today ? today : logDay
-    const dayKey = queryKeys.health.supplementLogs.byDate(date)
+function SupplementsSection() {
+    // Before 6am taps count for yesterday; the note says so (useStackDay)
+    const { date, nightNote } = useStackDay()
     const supplementsQ = useQuery({
         queryKey: allSupplementsKey,
         queryFn: () =>
             fetchJson<Supplement[]>('/api/health/supplements?all=true'),
     })
     const logsQ = useQuery({
-        queryKey: dayKey,
+        queryKey: queryKeys.health.supplementLogs.byDate(date),
         queryFn: () =>
             fetchJson<SupplementLog[]>(
                 `/api/health/supplement-logs?date=${date}`
             ),
     })
-    // Refetch only once every tap has landed — a refetch between two quick
-    // taps would briefly roll the second one back
-    const inFlight = useRef(0)
-
-    const dose = useMutation({
-        mutationFn: async ({ item, delta }: DoseVars) => {
-            const res = await fetch('/api/health/supplement-logs/dose', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    supplementId: item.supplementId,
-                    date,
-                    delta,
-                }),
-            })
-            if (!res.ok) throw new Error('Dose failed')
-        },
-        onMutate: async ({ item, delta }: DoseVars) => {
-            inFlight.current++
-            await queryClient.cancelQueries({ queryKey: dayKey })
-            const prev = queryClient.getQueryData<SupplementLog[]>(dayKey)
-            queryClient.setQueryData<SupplementLog[]>(dayKey, (logs = []) =>
-                delta === 1
-                    ? addDose(
-                          logs,
-                          { id: item.supplementId, name: item.name },
-                          date,
-                          -Date.now()
-                      )
-                    : removeDose(logs, item.supplementId, date)
-            )
-            return { prev }
-        },
-        onError: (_err, _vars, ctx) => {
-            if (ctx) queryClient.setQueryData(dayKey, ctx.prev)
-        },
-        onSettled: () => {
-            inFlight.current--
-            if (inFlight.current === 0) {
-                // The prefix covers the Supplements page's full log list too
-                queryClient.invalidateQueries({
-                    queryKey: queryKeys.health.supplementLogs.all,
-                })
-            }
-        },
-        meta: { errorToast: "Couldn't log that dose. Try again." },
-    })
+    const { onTap, onUndo } = useDoseTaps(date)
 
     const items = useMemo(
         () => buildStack(supplementsQ.data ?? [], logsQ.data ?? []),
         [supplementsQ.data, logsQ.data]
-    )
-
-    const onTap = useCallback(
-        (item: StackItem) => {
-            if (isDone(item)) {
-                // Tapping a finished one takes the last dose back
-                dose.mutate({ item, delta: -1 })
-                return
-            }
-            dose.mutate({ item, delta: 1 })
-            const taken = item.taken + 1
-            showToast(
-                item.dosesPerDay > 1
-                    ? `${item.name} ${taken}/${item.dosesPerDay}`
-                    : `Took ${item.name}`,
-                'success',
-                {
-                    label: 'Undo',
-                    onClick: () => dose.mutate({ item, delta: -1 }),
-                }
-            )
-        },
-        [dose]
-    )
-    const onUndo = useCallback(
-        (item: StackItem) => dose.mutate({ item, delta: -1 }),
-        [dose]
     )
 
     const stackPending = logsQ.isPending || supplementsQ.isPending
@@ -411,20 +324,6 @@ function SupplementsSection({ today }: { today: string }) {
         return hadStack ? <HomeCardSkeleton headerBg={healthColors.supplements} rows={4} meter /> : null
     }
     if (items.length === 0) return null
-    const nightNote: NightNote | undefined =
-        logDay === today
-            ? undefined
-            : date === logDay
-              ? {
-                    text: `Counting for ${weekdayOf(logDay, 'long')} until 6 AM.`,
-                    action: `Log for ${weekdayOf(today, 'short')}`,
-                    onAction: () => setNewDayPick(today),
-                }
-              : {
-                    text: `Logging for ${weekdayOf(today, 'long')}.`,
-                    action: `Back to ${weekdayOf(logDay, 'short')}`,
-                    onAction: () => setNewDayPick(null),
-                }
     return (
         <SupplementsCard
             items={items}
@@ -445,7 +344,7 @@ export default function GustavoHomePage() {
             <QuickActions today={today} />
             <LatestSection />
             <WorkoutsSection today={today} />
-            <SupplementsSection today={today} />
+            <SupplementsSection />
         </HomeLayout>
     )
 }

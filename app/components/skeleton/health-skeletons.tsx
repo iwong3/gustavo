@@ -1,13 +1,13 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { IconBarbell, IconHeartbeat } from '@tabler/icons-react'
+import { IconBarbell, IconHeartbeat, IconPill } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 
 import { cardSx, colors, healthColors } from '@/lib/colors'
 import { HealthHubSkeleton } from 'components/health/health-dashboard-v2'
 import { HealthPageHeader } from 'components/health/health-page-layout'
-import { Bone, Circle, TextBone } from 'components/skeleton/bones'
+import { Bone, ChromeBox, Circle, TextBone } from 'components/skeleton/bones'
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
 
 // Loading placeholders for the health area, mirroring the loaded pages.
@@ -183,7 +183,36 @@ export function RoutinesSkeleton() {
     )
 }
 
-/** Generic health sub-page (diet, supplements, …): header chip + cards. */
+/** Mirrors the Supplements page: header (+ list icon, ⓘ), the Today strip,
+ *  6 tiles, and the calendar card (5 weeks). */
+export function SupplementsSkeleton() {
+    return (
+        <HealthColumn fullWidth>
+            <HealthPageHeader
+                icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
+                title="Supplements"
+                color={healthColors.supplements}
+                right={
+                    <>
+                        <Circle size={30} />
+                        <Circle size={30} />
+                    </>
+                }
+            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <TextBone fontSize={11} width={80} />
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <ChromeBox key={i} height={52} />
+                    ))}
+                </Box>
+            </Box>
+            <ChromeBox height={262} />
+        </HealthColumn>
+    )
+}
+
+/** Generic health sub-page (diet, …): header chip + cards. */
 function HealthSectionSkeleton() {
     return (
         <HealthColumn>
@@ -213,5 +242,6 @@ export function HealthRouteSkeleton() {
     if (/^exercise\/\d+\/edit$/.test(sub)) return <WorkoutFormSkeleton isNew={false} />
     if (/^exercise\/\d+$/.test(sub)) return <WorkoutDetailSkeleton />
     if (sub === 'exercise/routines') return <RoutinesSkeleton />
+    if (sub === 'supplements') return <SupplementsSkeleton />
     return <HealthSectionSkeleton />
 }

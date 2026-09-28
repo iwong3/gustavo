@@ -4,6 +4,7 @@ import { useQueries } from '@tanstack/react-query'
 
 import type {
     Supplement,
+    SupplementEvent,
     SupplementLog,
     SupplementPreset,
 } from '@/lib/health-types'
@@ -25,10 +26,11 @@ export const allSupplementsKey = [
  * Everything the Supplements section reads: the supplement catalogue (incl.
  * inactive), the log history, and the supplement groups (presets). Shared by
  * the list page and its form/manage pages so navigating between them hits
- * the cache instead of refetching.
+ * the cache instead of refetching. Plus the stack-change events (00043) the
+ * list page's calendar and Day X are built from.
  */
 export function useSupplementData() {
-    const [supplements, logs, presets] = useQueries({
+    const [supplements, logs, presets, events] = useQueries({
         queries: [
             {
                 queryKey: allSupplementsKey,
@@ -47,6 +49,11 @@ export function useSupplementData() {
                         '/api/health/presets?type=supplement'
                     ),
             },
+            {
+                queryKey: queryKeys.health.supplementEvents,
+                queryFn: () =>
+                    fetchJson<SupplementEvent[]>('/api/health/supplement-events'),
+            },
         ],
     })
 
@@ -54,6 +61,9 @@ export function useSupplementData() {
         supplements: supplements.data ?? [],
         logs: logs.data ?? [],
         presets: presets.data ?? [],
+        events: events.data ?? [],
         loading: [supplements, logs, presets].some((q) => q.isPending),
+        /** What the list page renders (no groups) — gate its skeleton on this. */
+        historyPending: [supplements, logs, events].some((q) => q.isPending),
     }
 }

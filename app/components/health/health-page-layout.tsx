@@ -65,16 +65,19 @@ export function HealthPageLayout({
 /**
  * Sticky header section for health pages.
  * Renders the colored title chip and optional children (presets, legend, etc.)
+ * `right`: controls on the chip's row (action icons, then PageInfo last).
  */
 export function HealthPageHeader({
     icon,
     title,
     color,
+    right,
     children,
 }: {
     icon: ReactNode
     title: string
     color: string
+    right?: ReactNode
     children?: ReactNode
 }) {
     return (
@@ -93,29 +96,34 @@ export function HealthPageHeader({
                 flexDirection: 'column',
                 gap: 1.25,
             }}>
-            <Box
-                sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    px: 1.5,
-                    py: 0.75,
-                    backgroundColor: color,
-                    ...hardShadow,
-                    borderRadius: '4px',
-                    alignSelf: 'flex-start',
-                }}>
-                {icon}
-                <Typography
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Box
                     sx={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: colors.primaryBlack,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        px: 1.5,
+                        py: 0.75,
+                        backgroundColor: color,
+                        ...hardShadow,
+                        borderRadius: '4px',
+                        alignSelf: 'flex-start',
                     }}>
-                    {title}
-                </Typography>
+                    {icon}
+                    <Typography
+                        sx={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: colors.primaryBlack,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                        }}>
+                        {title}
+                    </Typography>
+                </Box>
+                {right && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{right}</Box>
+                )}
             </Box>
             {children}
         </Box>

@@ -94,6 +94,10 @@ export default function SupplementForm({
             queryClient.invalidateQueries({
                 queryKey: queryKeys.health.supplements,
             })
+            // A save can start/stop/change the stack (calendar + Day X)
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.health.supplementEvents,
+            })
             onSuccess()
         } catch (err) {
             console.error('Failed to save supplement:', err)

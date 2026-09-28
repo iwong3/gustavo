@@ -47,8 +47,9 @@ Health hub). Old `presets` rows (type `supplement`) stay in the DB, unused.
   else (both, or a dose change like 1× → 2×). The day panel lists each change.
 - **Tiles** (2 columns, alphabetical like Home): name, then "5 g · Day 210",
   capsules on the right; finished tiles sink (pressed look).
-- **As needed** = active with `daily_doses` NULL (no schema change). A quiet
-  "As needed" row in the day panel logs one; never counts toward completion.
+- **As needed** = active with `daily_doses` NULL (no schema change). The day
+  panel's quiet "Also took" row logs one (it also holds stack supplements that
+  weren't due that day — on a break); never counts toward completion.
 - **No** streaks, supply tracking, dose times, milestones or "yesterday"
   nudge for now (held — may revisit). No comparative stats (single user).
 - Title row: list icon → Your Stack; ⓘ `PageInfo` explains the calendar key,
@@ -104,7 +105,7 @@ every log); no new read endpoints needed beyond events.
 1. ✅ **Late-night rule** — Home card, hub, current page + form (Sept 2026).
 2. ✅ **Data** — migration + seed, events API (GET; writes inside supplements
    POST/PUT), `supplement-runs.ts` + tests, `schema.md`.
-3. **Main page (T3)** — tiles, calendar + badges, day panel (editable, as
+3. ✅ **Main page (T3)** — tiles, calendar + badges, day panel (editable, as
    needed row), night note, `PageInfo`, skeleton, gallery specimens.
 4. **Supplement page + Your Stack + form** — S1 (label, Day X, 13-week grid
    with breaks as flat lines, runs list, Stop/Start), S4 list, form (name
