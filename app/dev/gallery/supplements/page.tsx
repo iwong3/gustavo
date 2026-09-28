@@ -13,6 +13,7 @@ import { cardSx, colors } from '@/lib/colors'
 import type { Supplement, SupplementEvent, SupplementLog } from '@/lib/health-types'
 import { buildSupplementHistory } from '@/lib/health/supplement-calendar'
 import { addDose, buildStack, removeDose } from '@/lib/health/supplement-stack'
+import { AnimatedHeight } from 'components/animated-height'
 import { NightLine, type NightNote } from 'components/health/supplements/night-line'
 import { SupplementCalendar } from 'components/health/supplements/supplement-calendar'
 import { SupplementDayPanel } from 'components/health/supplements/supplement-day-panel'
@@ -132,26 +133,28 @@ function LiveSupplements({ nightNote, initialSelected = null }: { nightNote?: Ni
                 <SupplementTiles tiles={tiles} onTap={tapOn(TODAY)} />
             </Box>
             <Box sx={{ ...cardSx, borderRadius: '8px', overflow: 'hidden' }}>
-                <SupplementCalendar
-                    month={month}
-                    summaryOn={history.summaryOn}
-                    today={TODAY}
-                    selected={selected}
-                    onSelect={setSelected}
-                    onPrevMonth={month > '2026-07' ? () => setMonth(month === '2026-09' ? '2026-08' : '2026-07') : undefined}
-                    onNextMonth={month < '2026-09' ? () => setMonth(month === '2026-07' ? '2026-08' : '2026-09') : undefined}
-                />
-                {selected && (
-                    <SupplementDayPanel
-                        date={selected}
-                        isPast={selected < TODAY}
-                        summary={history.summaryOn(selected)}
-                        changes={history.changesOn(selected)}
-                        rows={history.rowsOn(selected)}
-                        onTapRow={tapOn(selected)}
-                        onEdit={() => {}}
+                <AnimatedHeight>
+                    <SupplementCalendar
+                        month={month}
+                        summaryOn={history.summaryOn}
+                        today={TODAY}
+                        selected={selected}
+                        onSelect={setSelected}
+                        onPrevMonth={month > '2026-07' ? () => setMonth(month === '2026-09' ? '2026-08' : '2026-07') : undefined}
+                        onNextMonth={month < '2026-09' ? () => setMonth(month === '2026-07' ? '2026-08' : '2026-09') : undefined}
                     />
-                )}
+                    {selected && (
+                        <SupplementDayPanel
+                            date={selected}
+                            isPast={selected < TODAY}
+                            summary={history.summaryOn(selected)}
+                            changes={history.changesOn(selected)}
+                            rows={history.rowsOn(selected)}
+                            onTapRow={tapOn(selected)}
+                            onEdit={() => {}}
+                        />
+                    )}
+                </AnimatedHeight>
             </Box>
         </Box>
     )

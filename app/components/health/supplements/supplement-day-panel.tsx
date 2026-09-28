@@ -71,13 +71,18 @@ export function SupplementDayPanel({
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.25,
+                    gap: 0.75,
                     paddingLeft: 1.5,
                     paddingRight: 1,
                     paddingY: 0.75,
                     minHeight: 44,
                 }}>
                 <Typography sx={headSx}>{dayLabel(date)}</Typography>
+                {summary.due > 0 && (
+                    <Typography aria-hidden="true" sx={{ ...headSx, color: '#a8865a' }}>
+                        ·
+                    </Typography>
+                )}
                 {summary.due > 0 && (
                     <Typography sx={headSx}>
                         <Box component="span" sx={{ color: supplementColors.deep, fontSize: 12.5 }}>

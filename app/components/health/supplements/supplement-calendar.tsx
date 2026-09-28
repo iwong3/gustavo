@@ -121,7 +121,7 @@ export function SupplementCalendar({
                 {WEEKDAYS.map((d, i) => (
                     <Typography
                         key={i}
-                        sx={{ fontSize: 9.5, fontWeight: 700, color: colors.primaryBrown, textAlign: 'center' }}>
+                        sx={{ fontSize: 9.5, fontWeight: 700, lineHeight: 1, color: colors.primaryBrown, textAlign: 'center' }}>
                         {d}
                     </Typography>
                 ))}

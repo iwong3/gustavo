@@ -10,6 +10,7 @@ import { cardSx, colors, healthColors, pressShadowSx, supplementColors } from '@
 import { buildSupplementHistory } from '@/lib/health/supplement-calendar'
 import { buildStack } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
+import { AnimatedHeight } from 'components/animated-height'
 import { HealthPageHeader, HealthPageLayout } from 'components/health/health-page-layout'
 import { NightLine } from 'components/health/supplements/night-line'
 import { SupplementCalendar } from 'components/health/supplements/supplement-calendar'
@@ -157,29 +158,32 @@ export default function SupplementsPage() {
                 )}
             </Box>
 
-            {/* History: the calendar, and the selected day under it */}
-            {/* Board frame like the Home card (8px corners) */}
+            {/* History: the calendar, and the selected day under it, in a board
+                frame like the Home card (8px corners). Opening/closing a day,
+                switching days or 5- vs 6-week months ease the height. */}
             <Box sx={{ ...cardSx, borderRadius: '8px', overflow: 'hidden' }}>
-                <SupplementCalendar
-                    month={month}
-                    summaryOn={history.summaryOn}
-                    today={today}
-                    selected={selected}
-                    onSelect={setSelected}
-                    onPrevMonth={month > firstMonth ? () => shiftMonth(-1) : undefined}
-                    onNextMonth={month < thisMonth ? () => shiftMonth(1) : undefined}
-                />
-                {selected && (
-                    <SupplementDayPanel
-                        date={selected}
-                        isPast={selected < today}
-                        summary={history.summaryOn(selected)}
-                        changes={history.changesOn(selected)}
-                        rows={history.rowsOn(selected)}
-                        onTapRow={dayTaps.onTap}
-                        onEdit={() => router.push(`${LOG_URL}?date=${selected}`)}
+                <AnimatedHeight>
+                    <SupplementCalendar
+                        month={month}
+                        summaryOn={history.summaryOn}
+                        today={today}
+                        selected={selected}
+                        onSelect={setSelected}
+                        onPrevMonth={month > firstMonth ? () => shiftMonth(-1) : undefined}
+                        onNextMonth={month < thisMonth ? () => shiftMonth(1) : undefined}
                     />
-                )}
+                    {selected && (
+                        <SupplementDayPanel
+                            date={selected}
+                            isPast={selected < today}
+                            summary={history.summaryOn(selected)}
+                            changes={history.changesOn(selected)}
+                            rows={history.rowsOn(selected)}
+                            onTapRow={dayTaps.onTap}
+                            onEdit={() => router.push(`${LOG_URL}?date=${selected}`)}
+                        />
+                    )}
+                </AnimatedHeight>
             </Box>
         </HealthPageLayout>
     )

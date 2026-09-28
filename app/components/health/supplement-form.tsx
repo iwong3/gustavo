@@ -202,6 +202,10 @@ function DosesStepper({ value, onChange }: { value: number; onChange: (n: number
                 display: 'grid',
                 gridTemplateColumns: '44px 1fr 44px',
                 alignItems: 'center',
+                // Sized to its longest reading ("As needed / not in the daily
+                // stack") — full width looked empty around "2×"
+                width: 224,
+                maxWidth: '100%',
                 height: 44,
                 backgroundColor: colors.primaryWhite,
                 ...hardShadow,
