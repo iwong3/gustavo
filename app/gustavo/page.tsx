@@ -40,10 +40,10 @@ import {
     tripWhenLabel,
 } from 'components/home/home-utils'
 import { FlapScaleButton, ReceiptButton } from 'components/home/quick-actions'
-import SupplementsCard from 'components/home/supplements-card'
+import SupplementsCard, { type NightNote } from 'components/home/supplements-card'
 import WorkoutsCard from 'components/home/workouts-card'
 import { showToast } from 'components/toast-store'
-import { useToday } from 'hooks/use-today'
+import { useLogDay, useToday } from 'hooks/use-today'
 import { localDateString } from 'utils/time'
 import { allSupplementsKey } from 'hooks/useSupplementData'
 import { useWeightLogs } from 'hooks/useWeightLogs'
@@ -301,10 +301,18 @@ function WorkoutsSection({ today }: { today: string }) {
 
 type DoseVars = { item: StackItem; delta: 1 | -1 }
 
+const weekdayOf = (iso: string, weekday: 'long' | 'short') =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday })
+
 /** Today's daily stack, one tap per dose, with Undo. */
 function SupplementsSection({ today }: { today: string }) {
     const queryClient = useQueryClient()
-    const dayKey = queryKeys.health.supplementLogs.byDate(today)
+    // Before 6am taps count for yesterday (a 1am dose is last night's).
+    // "Log for Tue" overrides that until the calendar day changes.
+    const logDay = useLogDay()
+    const [newDayPick, setNewDayPick] = useState<string | null>(null)
+    const date = newDayPick === today ? today : logDay
+    const dayKey = queryKeys.health.supplementLogs.byDate(date)
     const supplementsQ = useQuery({
         queryKey: allSupplementsKey,
         queryFn: () =>
@@ -314,7 +322,7 @@ function SupplementsSection({ today }: { today: string }) {
         queryKey: dayKey,
         queryFn: () =>
             fetchJson<SupplementLog[]>(
-                `/api/health/supplement-logs?date=${today}`
+                `/api/health/supplement-logs?date=${date}`
             ),
     })
     // Refetch only once every tap has landed — a refetch between two quick
@@ -328,7 +336,7 @@ function SupplementsSection({ today }: { today: string }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     supplementId: item.supplementId,
-                    date: today,
+                    date,
                     delta,
                 }),
             })
@@ -343,10 +351,10 @@ function SupplementsSection({ today }: { today: string }) {
                     ? addDose(
                           logs,
                           { id: item.supplementId, name: item.name },
-                          today,
+                          date,
                           -Date.now()
                       )
-                    : removeDose(logs, item.supplementId, today)
+                    : removeDose(logs, item.supplementId, date)
             )
             return { prev }
         },
@@ -403,7 +411,28 @@ function SupplementsSection({ today }: { today: string }) {
         return hadStack ? <HomeCardSkeleton headerBg={healthColors.supplements} rows={4} meter /> : null
     }
     if (items.length === 0) return null
-    return <SupplementsCard items={items} onTap={onTap} onUndo={onUndo} />
+    const nightNote: NightNote | undefined =
+        logDay === today
+            ? undefined
+            : date === logDay
+              ? {
+                    text: `Counting for ${weekdayOf(logDay, 'long')} until 6 AM.`,
+                    action: `Log for ${weekdayOf(today, 'short')}`,
+                    onAction: () => setNewDayPick(today),
+                }
+              : {
+                    text: `Logging for ${weekdayOf(today, 'long')}.`,
+                    action: `Back to ${weekdayOf(logDay, 'short')}`,
+                    onAction: () => setNewDayPick(null),
+                }
+    return (
+        <SupplementsCard
+            items={items}
+            onTap={onTap}
+            onUndo={onUndo}
+            nightNote={nightNote}
+        />
+    )
 }
 
 export default function GustavoHomePage() {

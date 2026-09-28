@@ -11,13 +11,16 @@
  * behaves like a checkbox); swiping any row left reveals Undo, which takes
  * one dose back at any time. The page adds an Undo toast after each dose.
  *
+ * Between midnight and 6am doses count for the previous day (logDateString);
+ * the page passes `nightNote` then, a one-line explainer with a switch.
+ *
  * Presentational + gallery-importable: items and the tap handler come in via
  * props (see lib/health/supplement-stack.ts).
  */
 import { Box, Typography } from '@mui/material'
-import { IconArrowBackUp, IconCheck, IconPill } from '@tabler/icons-react'
+import { IconArrowBackUp, IconCheck, IconMoon, IconPill } from '@tabler/icons-react'
 
-import { colors, healthColors, pressRowSx, toneColors } from '@/lib/colors'
+import { colors, healthColors, pressRowSx, pressTextSx, toneColors } from '@/lib/colors'
 import { isDone, type StackItem } from '@/lib/health/supplement-stack'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import BoardCard, { StripText, stripNumSx, stripWordSx } from './board-card'
@@ -109,15 +112,65 @@ function DayMeter({ taken, total }: { taken: number; total: number }) {
     )
 }
 
+export type NightNote = {
+    /** e.g. "Counting for Monday until 6 AM." */
+    text: string
+    /** The switch, e.g. "Log for Tue". */
+    action: string
+    onAction: () => void
+}
+
+/** Late-night explainer: which day the taps count for, and a switch. Blue
+ *  underline = "the app picked this", like the expense form's "Use today?". */
+function NightLine({ note }: { note: NightNote }) {
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.75,
+                flexWrap: 'wrap',
+                fontSize: 12,
+                lineHeight: 1.3,
+                color: colors.primaryBrown,
+            }}>
+            <IconMoon size={14} stroke={2} style={{ flexShrink: 0 }} />
+            <span>{note.text}</span>
+            <Box
+                component="button"
+                type="button"
+                onClick={note.onAction}
+                sx={{
+                    font: 'inherit',
+                    fontWeight: 600,
+                    color: colors.primaryBlue,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    ...pressTextSx,
+                }}>
+                {note.action}
+            </Box>
+        </Box>
+    )
+}
+
 export default function SupplementsCard({
     items,
     onTap,
     onUndo,
+    nightNote,
 }: {
     items: StackItem[]
     onTap: (item: StackItem) => void
     /** Take one dose back (swipe left → Undo). */
     onUndo: (item: StackItem) => void
+    /** Shown between midnight and 6am — see NightNote. */
+    nightNote?: NightNote
 }) {
     const total = items.reduce((n, i) => n + i.dosesPerDay, 0)
     const taken = items.reduce(
@@ -174,6 +227,7 @@ export default function SupplementsCard({
                     </StripText>
                 )
             }>
+            {nightNote && <NightLine note={nightNote} />}
             <DayMeter taken={taken} total={total} />
 
             {/* One plain row per supplement. Tap to take a dose; swipe left to

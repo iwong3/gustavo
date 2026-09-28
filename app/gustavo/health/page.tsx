@@ -15,7 +15,7 @@ import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
 import { useToday } from 'hooks/use-today'
-import { localDateString } from 'utils/time'
+import { localDateString, logDateString } from 'utils/time'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -144,12 +144,15 @@ export default function HealthPage() {
     const [appliedId, setAppliedId] = useState<number | null>(null)
 
     const applyPresetMutation = useMutation({
-        mutationFn: async ({ presetId }: { presetId: number; type: 'workout' | 'diet' | 'supplement' }) => {
+        mutationFn: async ({ presetId, type }: { presetId: number; type: 'workout' | 'diet' | 'supplement' }) => {
             const res = await fetch(`/api/health/presets/${presetId}/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Read the clock at tap time, not the last render
-                body: JSON.stringify({ date: localDateString() }),
+                // Read the clock at tap time, not the last render. Supplements
+                // before 6am count for yesterday (logDateString).
+                body: JSON.stringify({
+                    date: type === 'supplement' ? logDateString() : localDateString(),
+                }),
             })
             if (!res.ok) throw new Error('Apply failed')
             return presetId

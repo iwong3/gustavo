@@ -163,10 +163,19 @@ const initialStack: StackItem[] = [
 ]
 
 /** Tappable stack with local state, like the page's optimistic updates. */
-function LiveStack({ start }: { start: StackItem[] }) {
+function LiveStack({ start, night }: { start: StackItem[]; night?: boolean }) {
     const [items, setItems] = useState(start)
+    // Late-night note: "Log for Tue" flips to the new day and back
+    const [newDay, setNewDay] = useState(false)
     return (
         <SupplementsCard
+            nightNote={
+                !night
+                    ? undefined
+                    : newDay
+                      ? { text: 'Logging for Tuesday.', action: 'Back to Mon', onAction: () => setNewDay(false) }
+                      : { text: 'Counting for Monday until 6 AM.', action: 'Log for Tue', onAction: () => setNewDay(true) }
+            }
             items={items}
             onTap={(item) =>
                 setItems((cur) =>
@@ -381,6 +390,11 @@ export default function HomeGallery() {
                             .slice(0, 3)
                             .map((i) => ({ ...i, taken: i.dosesPerDay }))}
                     />
+                </Specimen>
+                <Specimen
+                    label="1am — doses still count for yesterday; tap the link to switch"
+                    width={HOME_WIDTH}>
+                    <LiveStack start={initialStack} night />
                 </Specimen>
             </SpecimenGroup>
         </GalleryPage>

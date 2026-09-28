@@ -19,3 +19,17 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
 export function localDateString(d: Date = new Date()): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+/** Before this hour, what you log belongs to the previous day — at 1am
+ *  you're wrapping up last night, not starting today. */
+export const NIGHT_CUTOFF_HOUR = 6
+
+/** The day a log made at `d` counts for: the local date, except before
+ *  NIGHT_CUTOFF_HOUR, when it's still yesterday. For daily check-offs
+ *  (supplements) — pickers that merely default a date keep their own UI. */
+export function logDateString(d: Date = new Date()): string {
+    if (d.getHours() >= NIGHT_CUTOFF_HOUR) return localDateString(d)
+    const prev = new Date(d)
+    prev.setDate(prev.getDate() - 1)
+    return localDateString(prev)
+}

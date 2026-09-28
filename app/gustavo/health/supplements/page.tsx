@@ -11,7 +11,6 @@ import {
     HorizontalSortableList,
 } from 'components/health/sortable-preset'
 import { useReorderSupplementPresets } from 'components/health/supplement-presets'
-import { todayIso } from 'components/health/workout-presets'
 import { useSupplementData } from 'hooks/useSupplementData'
 import { useRegisterFab } from 'providers/fab-provider'
 import { useRouter } from 'next/navigation'
@@ -19,6 +18,7 @@ import { useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/lib/query-keys'
+import { logDateString } from 'utils/time'
 
 const LIST_URL = '/gustavo/health/supplements'
 const NEW_URL = `${LIST_URL}/new`
@@ -199,7 +199,8 @@ function SupplementsPage() {
             const res = await fetch(`/api/health/presets/${presetId}/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: todayIso() }),
+                // Before 6am, still yesterday's doses
+                body: JSON.stringify({ date: logDateString() }),
             })
             if (!res.ok) throw new Error('Apply failed')
             return presetId

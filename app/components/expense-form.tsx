@@ -41,6 +41,7 @@ import { useTripData } from 'providers/trip-data-provider'
 import { addExpense, ConflictError, updateExpense } from 'utils/api'
 import { formatCurrencyLabel, getCurrencyMeta } from 'utils/currency'
 import { InitialsIcon } from 'utils/icons'
+import { NIGHT_CUTOFF_HOUR } from 'utils/time'
 
 import type { Expense } from '@/lib/types'
 
@@ -127,7 +128,6 @@ const isoDaysAgo = (days: number) =>
 // Late-night guard: an expense logged between midnight and 6am is usually from
 // the previous evening, so a NEW expense defaults to yesterday. A "Use today?"
 // link in the date header explains the backdate and undoes it in one tap.
-const NIGHT_CUTOFF_HOUR = 6
 const defaultNewExpenseDate = () =>
     isoDaysAgo(dayjs().hour() < NIGHT_CUTOFF_HOUR ? 1 : 0)
 

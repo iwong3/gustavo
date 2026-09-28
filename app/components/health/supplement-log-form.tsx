@@ -11,7 +11,7 @@ import type { Supplement, SupplementLog } from '@/lib/health-types'
 import { queryKeys } from '@/lib/query-keys'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
-import { todayIso } from 'components/health/workout-presets'
+import { logDateString } from 'utils/time'
 
 /** Selected supplement id → quantity for a date, seeded from its logs. */
 function quantitiesFor(logs: SupplementLog[], date: string) {
@@ -71,9 +71,10 @@ export default function SupplementLogForm({
     const queryClient = useQueryClient()
     const isEdit = mode === 'edit'
 
-    const [date, setDate] = useState(() => initialDate ?? todayIso())
+    // Before 6am a new log defaults to yesterday, like the Home stack
+    const [date, setDate] = useState(() => initialDate ?? logDateString())
     const [quantities, setQuantities] = useState(() =>
-        quantitiesFor(allLogs, initialDate ?? todayIso())
+        quantitiesFor(allLogs, initialDate ?? logDateString())
     )
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
