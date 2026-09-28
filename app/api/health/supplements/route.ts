@@ -4,6 +4,7 @@ import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import type { Supplement } from '@/lib/health-types'
 import { isValidDailyDoses } from '@/lib/health/supplement-stack'
+import { isOptionalIsoDate } from '@/lib/health/supplement-runs'
 
 export async function GET(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
@@ -39,13 +40,18 @@ export async function POST(request: NextRequest) {
     const authUser = await requireAuthWithUserId()
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { name, dosage, dailyDoses } = await request.json()
+    // startedOn: when you started taking it (backdating) — else eventDate,
+    // the device's log day; the server can't know the device's date
+    const { name, dosage, dailyDoses, startedOn, eventDate } = await request.json()
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
     if (!isValidDailyDoses(dailyDoses)) {
         return NextResponse.json({ error: 'dailyDoses must be null or a whole number from 1 to 12' }, { status: 400 })
+    }
+    if (!isOptionalIsoDate(startedOn) || !isOptionalIsoDate(eventDate)) {
+        return NextResponse.json({ error: 'startedOn and eventDate must be YYYY-MM-DD' }, { status: 400 })
     }
 
     try {
@@ -56,7 +62,13 @@ export async function POST(request: NextRequest) {
                  RETURNING id, name, dosage, is_active, daily_doses`,
                 [authUser.userId, name.trim(), dosage || null, dailyDoses ?? null]
             )
-            return res.rows[0]
+            const row = res.rows[0]
+            await client.query(
+                `INSERT INTO supplement_events (user_id, supplement_id, date, kind, daily_doses)
+                 VALUES ($1, $2, COALESCE($3::date, CURRENT_DATE), 'started', $4)`,
+                [authUser.userId, row.id, startedOn ?? eventDate ?? null, row.daily_doses]
+            )
+            return row
         })
 
         return NextResponse.json(

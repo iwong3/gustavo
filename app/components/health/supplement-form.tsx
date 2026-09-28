@@ -15,6 +15,7 @@ import type { Supplement } from '@/lib/health-types'
 import { queryKeys } from '@/lib/query-keys'
 import { FormPage } from 'components/form-page'
 import { SlidingToggle } from 'components/sliding-toggle'
+import { logDateString } from 'utils/time'
 
 /** Daily stack choices — 'none' = not in the stack. The API allows up to
  *  MAX_DAILY_DOSES; the picker stops at 4 (nobody takes a pill 12× a day). */
@@ -80,6 +81,8 @@ export default function SupplementForm({
                     name: name.trim(),
                     dosage: dosage.trim() || null,
                     dailyDoses: daily === 'none' ? null : Number(daily),
+                    // The day any stack change (start/stop/dose) is dated
+                    eventDate: logDateString(),
                     ...(isEdit ? { isActive } : {}),
                 }),
             })

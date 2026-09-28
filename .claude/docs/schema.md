@@ -1,6 +1,6 @@
 # Database Schema
 
-> Current through migration **00042**. When you add a migration, update this doc in the same change.
+> Current through migration **00043**. When you add a migration, update this doc in the same change.
 
 ## ER Diagram
 
@@ -219,6 +219,15 @@ supplement_logs
   created_at, updated_at
   UNIQUE(user_id, supplement_id, date)
 
+supplement_events -- stack changes you made (00043)
+  id BIGINT PK
+  user_id BIGINT FK -> users
+  supplement_id BIGINT FK -> supplements
+  date DATE -- the device's log day (before 6am = yesterday)
+  kind TEXT ('started' | 'stopped' | 'dose_changed')
+  daily_doses INT (nullable) -- new value for started/dose_changed; NULL = as needed
+  created_at, updated_at, deleted_at
+
 presets -- unified presets across features
   id BIGINT PK
   user_id BIGINT FK -> users
@@ -401,6 +410,15 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
   every payment unlocks it.
 - **Audit log** — Postgres triggers write to `audit_log`; user attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`). Join tables with composite PKs (trip_countries, trip_currencies, food_group_members) have NO audit triggers — `audit_trigger_func()` reads `NEW.id` and blows up without an `id` column (00036).
 - **Workout weight (00024)** — `weight_lbs` lives on `workout_exercises` (one weight per exercise per session); sets track reps only.
+- **Supplement runs (00043)** — "Day X" counts the current run of a supplement.
+  Runs are derived, not stored (`lib/health/supplement-runs.ts`): a `started`
+  event opens one, `stopped` closes it, and 7+ days in a row with no dose ends
+  it at the last dose; a later dose opens a new run. A `started` event's
+  `updated_at` is its "trusted through" horizon — log gaps before it don't end
+  the run (backdated starts; the seed recorded every existing supplement's first
+  log as its start, so older sparse logs don't split runs). Editing "Started"
+  moves the latest `started` event. The supplements API writes all events;
+  dose taps never do.
 - **Muscle groups (00026)** — "Back" split into "Upper Back" (targets: Lats, Rhomboids, Traps, Rear Delts) and standalone "Lower Back". Group vs. target is implicit via `muscle_group_parents`.
 
 ## Common Query Patterns

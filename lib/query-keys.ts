@@ -65,6 +65,7 @@ export const queryKeys = {
             all: ['health', 'supplement-logs'] as const,
             byDate: (date: string) => ['health', 'supplement-logs', date] as const,
         },
+        supplementEvents: ['health', 'supplement-events'] as const,
         foods: ['health', 'foods'] as const,
         foodGroups: ['health', 'food-groups'] as const,
         foodLogs: {

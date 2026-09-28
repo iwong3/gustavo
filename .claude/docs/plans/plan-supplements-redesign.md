@@ -58,7 +58,7 @@ Health hub). Old `presets` rows (type `supplement`) stay in the DB, unused.
 
 ## Data
 
-### Migration 000NN: `supplement_events`
+### Migration 00043: `supplement_events` (done)
 
 Explicit stack changes the user made. Runs are *derived* (see below), so this
 only holds what logs can't tell us.
@@ -102,7 +102,7 @@ every log); no new read endpoints needed beyond events.
 ## Phases (each deployable)
 
 1. ✅ **Late-night rule** — Home card, hub, current page + form (Sept 2026).
-2. **Data** — migration + seed, events API (GET; writes inside supplements
+2. ✅ **Data** — migration + seed, events API (GET; writes inside supplements
    POST/PUT), `supplement-runs.ts` + tests, `schema.md`.
 3. **Main page (T3)** — tiles, calendar + badges, day panel (editable, as
    needed row), night note, `PageInfo`, skeleton, gallery specimens.
@@ -113,8 +113,10 @@ every log); no new read endpoints needed beyond events.
    form, `supplement-presets.ts` if unused; update `forms-todo.md`,
    gallery; `pnpm check:cycles`.
 
-## Open questions
+## Decided
 
-- Should the Home card rows link to the supplement page (e.g. long-press)?
-- Does the form's "Started" date also apply when *editing* (re-anchoring the
-  current run), or only on create?
+- Home card rows keep logging only (no link to the supplement page).
+- Editing "Started" re-anchors the current run (moves its latest `started`
+  event), so Day X can be corrected for things taken before logging began.
+- A `started` event's `updated_at` is its "trusted through" horizon: log gaps
+  before it never end the run (see schema.md § Supplement runs).

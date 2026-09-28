@@ -62,6 +62,20 @@ export type SupplementLog = {
     createdAt: string       // ISO timestamp
 }
 
+/** A stack change you made (00043): runs, Day X and calendar badges are
+ *  derived from these plus the logs — see lib/health/supplement-runs.ts. */
+export type SupplementEvent = {
+    id: number
+    supplementId: number
+    date: string            // ISO YYYY-MM-DD (the device's log day)
+    kind: 'started' | 'stopped' | 'dose_changed'
+    /** New doses/day for 'started' / 'dose_changed'; null = as needed. */
+    dailyDoses: number | null
+    /** Last recorded/edited (ISO timestamp) — a 'started' event vouches for
+     *  the stretch up to this day, so older log gaps don't end the run. */
+    recordedAt: string
+}
+
 export type WorkoutPreset = {
     id: number
     name: string
