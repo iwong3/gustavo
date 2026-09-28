@@ -361,10 +361,29 @@ export type ActivityResponse = {
     ignoredFields: string[]
 }
 
-export const fetchActivity = async (tripId: number): Promise<ActivityResponse> => {
-    const res = await fetch(`/api/trips/${tripId}/activity`)
+/** The trip's activity feed, or with `expenseId` just that expense's history. */
+export const fetchActivity = async (
+    tripId: number,
+    expenseId?: number | string
+): Promise<ActivityResponse> => {
+    const qs = expenseId != null ? `?expenseId=${encodeURIComponent(String(expenseId))}` : ''
+    const res = await fetch(`/api/trips/${tripId}/activity${qs}`)
     if (!res.ok) throw new Error(`Failed to fetch activity: ${res.status}`)
     return res.json()
+}
+
+/** Undo a soft delete — the Activity page's Restore. */
+export const restoreExpense = async (
+    tripId: number,
+    expenseId: number | string
+): Promise<void> => {
+    const res = await fetch(`/api/trips/${tripId}/expenses/${expenseId}/restore`, {
+        method: 'POST',
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to restore expense')
+    }
 }
 
 // ── Allowed Emails (admin) ──

@@ -27,7 +27,12 @@ import { queryKeys } from '@/lib/query-keys'
 import { PageTitleRow } from 'components/page-title-row'
 import { ActivitySkeleton } from 'components/skeleton/trip-skeletons'
 import { GoneState } from 'components/gone-state'
-import { ActivityCard, buildActivityCards, formatTimestamp } from './activity-card'
+import {
+    ActivityList,
+    buildActivityCards,
+    formatTimestamp,
+} from 'components/activity/activity-card'
+import { useRestoreExpense } from 'components/activity/use-restore-expense'
 
 // ── Component ──
 
@@ -46,6 +51,7 @@ export default function ActivityPage() {
     const [collapsedDates, setCollapsedDates] = useState<Set<string>>(
         new Set()
     )
+    const { restore, restoringId, dialog: restoreDialog } = useRestoreExpense(trip.id)
 
     const toggleDate = (date: string) => {
         setCollapsedDates((prev) => {
@@ -103,7 +109,7 @@ export default function ActivityPage() {
         return filtered
     }, [data, sortNewest, filterUser])
 
-    // Group entries by date
+    // Group entries by date, then fold each day's entries into rows
     const groupedByDate = useMemo(() => {
         const groups: { date: string; entries: ActivityEntry[] }[] = []
         let currentDate = ''
@@ -116,8 +122,11 @@ export default function ActivityPage() {
                 groups[groups.length - 1].entries.push(entry)
             }
         }
-        return groups
-    }, [entries])
+        return groups.map((g) => ({
+            date: g.date,
+            models: buildActivityCards(g.entries, ignoredFields),
+        }))
+    }, [entries, ignoredFields])
 
     if (activityQuery.isPending) return <ActivitySkeleton />
 
@@ -270,8 +279,18 @@ export default function ActivityPage() {
                 width: '100%',
                 maxWidth: 450,
             }}>
-            {/* Title row — filter/sort actions on the right */}
-            <Box sx={{ paddingX: 2, paddingTop: 2, paddingBottom: 1 }}>
+            {/* Title row — filter/sort actions on the right. Pinned, so
+                they're in reach deep in a long feed (same as Health pages). */}
+            <Box
+                sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 3,
+                    backgroundColor: colors.secondaryYellow,
+                    paddingX: 2,
+                    paddingTop: 2,
+                    paddingBottom: 1,
+                }}>
                 <PageTitleRow title="Activity">{headerActions}</PageTitleRow>
             </Box>
 
@@ -339,34 +358,29 @@ export default function ActivityPage() {
                                         color: 'text.secondary',
                                         lineHeight: 1,
                                     }}>
-                                    ({group.entries.length})
+                                    ({group.models.length})
                                 </Typography>
                             </Box>
 
-                            <Collapse in={!isCollapsed}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 1,
-                                        paddingTop: 1,
-                                    }}>
-                                    {buildActivityCards(
-                                        group.entries,
-                                        ignoredFields
-                                    ).map((model) => (
-                                        <ActivityCard
-                                            key={model.key}
-                                            model={model}
-                                            fieldLabels={fieldLabels}
-                                        />
-                                    ))}
+                            <Collapse in={!isCollapsed} timeout={150}>
+                                <Box sx={{ paddingTop: 1 }}>
+                                    <ActivityList
+                                        models={group.models}
+                                        fieldLabels={fieldLabels}
+                                        context="trip"
+                                        tripSlug={trip.slug}
+                                        onRestore={restore}
+                                        restoringId={restoringId}
+                                    />
                                 </Box>
                             </Collapse>
                         </Box>
                     )
                 })}
             </Box>
+
+            {restoreDialog}
         </Box>
     )
 }
+

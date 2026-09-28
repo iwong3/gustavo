@@ -28,6 +28,7 @@ import { DrawerMapSection } from 'components/receipts/drawer/drawer-map-section'
 import { DrawerStatTiles } from 'components/receipts/drawer/drawer-stat-tiles'
 import { DrawerNotes } from 'components/receipts/drawer/drawer-notes'
 import { DrawerMetadataFooter } from 'components/receipts/drawer/drawer-metadata-footer'
+import { DrawerHistory } from 'components/receipts/drawer/drawer-history'
 
 import DeleteExpenseDialog from 'components/delete-expense-dialog'
 import { GoneState } from 'components/gone-state'
@@ -168,6 +169,9 @@ export default function ExpenseDetailPage() {
                 notes={expense.notes}
                 onEdit={canEdit ? goToEdit : undefined}
             />
+
+            {/* Who changed what — collapsed until asked for */}
+            <DrawerHistory tripId={trip.id} expenseId={expense.id} />
 
             {/* Attribution — pushed to the bottom of the content area */}
             <Box sx={{ marginTop: 'auto' }}>

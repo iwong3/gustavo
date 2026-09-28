@@ -11,7 +11,7 @@ import { PERSIST_KEY } from 'utils/query-persist'
 
 // Bump when cached data shapes change (API responses / types) so old persisted
 // caches are discarded on the next load instead of rehydrating a wrong shape.
-const PERSIST_BUSTER = 'gustavo-cache-v1'
+const PERSIST_BUSTER = 'gustavo-cache-v2'
 
 // How long a persisted cache may be restored on a cold open. Older than this and
 // the whole blob is discarded, so a stale launch never shows day-old data —

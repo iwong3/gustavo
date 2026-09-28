@@ -177,8 +177,21 @@ export type ActivityEntry = {
         iconColor: string | null
     } | null
     changedAt: string // ISO timestamp
-    summary: string   // human-readable description
     intent: 'create' | 'update' | 'delete' | 'restore' // semantic action (soft-deletes/left_at folded in)
+    /** What the row is about — the client builds its sentence from this. */
+    subject: ActivitySubject
+    /** Expense entries: the expense is deleted right now (no tap-through). */
+    recordDeleted?: boolean
+    /** On the newest delete of a still-deleted expense, when the viewer may restore it. */
+    canRestore?: boolean
+}
+
+export type ActivitySubject = {
+    kind: 'trip' | 'expense' | 'location' | 'participant' | 'payment' | 'other'
+    /** Trip/expense/location name, the participant, or a payment's payer. */
+    name: string
+    /** A payment's receiver. */
+    toName?: string
 }
 
 // Google Places API types

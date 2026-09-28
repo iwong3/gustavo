@@ -443,25 +443,35 @@ export function GraphsSkeleton() {
 export function ActivitySkeleton() {
     return (
         <Box sx={{ width: '100%', maxWidth: 450 }}>
-            {/* Title row: "Activity" + two 30px icon buttons */}
+            {/* Title row: "Activity" + filter and sort buttons */}
             <Box sx={{ paddingX: 2, paddingTop: 2, paddingBottom: 1 }}>
                 <TitleRowSkeleton width={70} controls={[]} chrome={2} />
             </Box>
             <Box sx={{ paddingX: 2, paddingBottom: 3 }}>
-                {[3, 2].map((cards, g) => (
+                {[3, 2].map((rows, g) => (
                     <Box key={g} sx={{ marginBottom: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, marginTop: 1 }}>
                             <Box sx={{ width: 14 }} />
                             <TextBone fontSize={12} lineHeight={1.2} width={96} />
                         </Box>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, paddingTop: 1 }}>
-                            {Array.from({ length: cards }, (_, i) => (
-                                <Box key={i} sx={{ ...cardSx, display: 'flex', gap: 1.25, padding: 1.5 }}>
-                                    <Circle size={28} />
+                        {/* One card per day, rows divided (ActivityList) */}
+                        <Box sx={{ ...cardSx, marginTop: 1 }}>
+                            {Array.from({ length: rows }, (_, i) => (
+                                <Box
+                                    key={i}
+                                    sx={{
+                                        display: 'flex',
+                                        gap: 1,
+                                        paddingX: 1.5,
+                                        paddingY: 1.25,
+                                        borderTop: i === 0 ? 'none' : `1px solid ${colors.primaryBlack}1f`,
+                                    }}>
+                                    <Circle size={22} />
                                     <Box sx={{ flex: 1 }}>
-                                        <TextBone fontSize={13} width="80%" />
-                                        <TextBone fontSize={11} width="40%" sx={{ marginTop: 0.25 }} />
+                                        <TextBone fontSize={13} width="75%" />
+                                        <TextBone fontSize={11} width="45%" sx={{ marginTop: 0.25 }} />
                                     </Box>
+                                    <TextBone fontSize={12.5} width={44} />
                                 </Box>
                             ))}
                         </Box>

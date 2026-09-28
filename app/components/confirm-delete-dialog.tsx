@@ -14,6 +14,7 @@ import { colors } from '@/lib/colors'
 import {
     destructiveButtonSx,
     dialogPaperSx,
+    primaryButtonSx,
     secondaryButtonSx,
 } from '@/lib/form-styles'
 
@@ -32,10 +33,15 @@ type Props = {
     /** Keep Delete disabled (e.g. until a type-to-confirm field matches). */
     confirmDisabled?: boolean
     confirmLabel?: string
+    /** Shown on the confirm button while busy. */
+    busyLabel?: string
+    /** 'constructive' for a non-destructive confirm (e.g. Restore): black
+     *  title, primary button instead of red. */
+    tone?: 'destructive' | 'constructive'
 }
 
 /**
- * The standard delete confirmation — same look as the expense/trip delete
+ * The standard delete confirmation (also a plain confirm via tone) — same look as the expense/trip delete
  * dialogs (neo-brutalist paper, Cancel | red Delete). Deletes stay dialogs
  * even though forms are pages: it's a one-tap confirmation, not data entry.
  */
@@ -49,7 +55,10 @@ export function ConfirmDeleteDialog({
     error = null,
     confirmDisabled = false,
     confirmLabel = 'Delete',
+    busyLabel = 'Deleting...',
+    tone = 'destructive',
 }: Props) {
+    const destructive = tone === 'destructive'
     return (
         <Dialog
             open={open}
@@ -60,7 +69,7 @@ export function ConfirmDeleteDialog({
             <DialogTitle
                 sx={{
                     fontWeight: 700,
-                    color: colors.primaryRed,
+                    color: destructive ? colors.primaryRed : colors.primaryBlack,
                     fontSize: 18,
                 }}>
                 {title}
@@ -96,8 +105,8 @@ export function ConfirmDeleteDialog({
                 <Button
                     onClick={onConfirm}
                     disabled={busy || confirmDisabled}
-                    sx={destructiveButtonSx}>
-                    {busy ? 'Deleting...' : confirmLabel}
+                    sx={destructive ? destructiveButtonSx : primaryButtonSx}>
+                    {busy ? busyLabel : confirmLabel}
                 </Button>
             </DialogActions>
         </Dialog>
