@@ -246,6 +246,12 @@ const Row = memo(function Row({
     )
     const step = (d: number) => {
         const n = Math.min(MAX_DAILY_DOSES, Math.max(0, value + d))
+        // Stepping to 0 is a decision (take it off the stack, with Undo) —
+        // apply it now rather than after the settle delay, which read as lag
+        if (n === 0) {
+            commit(0)
+            return
+        }
         setDraft(n)
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => commit(n), COMMIT_MS)

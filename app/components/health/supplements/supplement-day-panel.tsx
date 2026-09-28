@@ -24,8 +24,8 @@ export const dayLabel = (date: string) =>
 
 /**
  * One day, opened from the calendar just above: a lavender panel whose tab
- * points up at that day. What changed in the stack that day, then what was
- * due with its capsules — tap a row to fix it (same rules as the tiles). The
+ * points up at that day. What was due, with its capsules — tap a row to fix
+ * it (same rules as the tiles) — then what changed in the stack that day. The
  * pencil opens the day's log form for anything else (as-needed supplements,
  * one taken during a break). Day counts are as of that day. Presentational —
  * rows/changes come from supplement-calendar.ts.
@@ -119,39 +119,6 @@ export function SupplementDayPanel({
                 </Box>
             </Box>
 
-            {changes.map((c, i) => (
-                <Box
-                    key={i}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        paddingX: 1.5,
-                        paddingY: 0.75,
-                        borderTop: `1px solid ${RULE}`,
-                        fontSize: 13,
-                    }}>
-                    <Box
-                        component="span"
-                        sx={{
-                            width: 16,
-                            height: 16,
-                            flexShrink: 0,
-                            borderRadius: '50%',
-                            display: 'grid',
-                            placeItems: 'center',
-                            fontSize: 11,
-                            fontWeight: 800,
-                            lineHeight: 1,
-                            backgroundColor: c.kind === 'remove' ? colors.primaryWhite : colors.primaryYellow,
-                            border: `1.2px solid ${colors.primaryBlack}`,
-                        }}>
-                        {BADGE[c.kind]}
-                    </Box>
-                    <span>{c.text}</span>
-                </Box>
-            ))}
-
             {rows.map((row) => {
                 const done = row.taken >= row.dosesPerDay
                 const missed = isPast && row.due > 0 && row.taken < row.due
@@ -195,6 +162,39 @@ export function SupplementDayPanel({
                     </Box>
                 )
             })}
+
+            {changes.map((c, i) => (
+                <Box
+                    key={i}
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        paddingX: 1.5,
+                        paddingY: 0.75,
+                        borderTop: `1px solid ${RULE}`,
+                        fontSize: 13,
+                    }}>
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 16,
+                            height: 16,
+                            flexShrink: 0,
+                            borderRadius: '50%',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: 11,
+                            fontWeight: 800,
+                            lineHeight: 1,
+                            backgroundColor: c.kind === 'remove' ? colors.primaryWhite : colors.primaryYellow,
+                            border: `1.2px solid ${colors.primaryBlack}`,
+                        }}>
+                        {BADGE[c.kind]}
+                    </Box>
+                    <span>{c.text}</span>
+                </Box>
+            ))}
 
             {rows.length === 0 && changes.length === 0 && (
                 <Typography sx={{ fontSize: 12.5, color: colors.primaryBrown, paddingX: 1.5, paddingBottom: 1.25 }}>
