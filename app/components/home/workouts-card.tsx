@@ -2,16 +2,18 @@
 
 /**
  * WorkoutsCard — the home page's workout launcher, in a departures-board
- * frame (BoardCard) whose pill counts overdue groups.
+ * frame (BoardCard) whose strip carries "X ON · Y OFF": workout days vs
+ * rest days over the last 30 days.
  *
  * Top: a + (opens a blank workout form) and your routines (workout presets)
  * — one tap logs today's workout from the routine, exactly like the chips on
- * the Health page, and styled like them. A red dot marks routines that train
- * an overdue group.
+ * the Health page, and styled like them.
  * Below, the history strip: one row per muscle group in the Health page's
  * order (DAYS_SINCE_ORDER — fixed, never re-sorted), each with its last 14
- * days as tiny cells (filled = trained that day) and the days since, coloured
- * by the Health page's days-since scale.
+ * days as tiny cells (filled = trained that day) and the days since, on a
+ * warm cream → coral ramp. The suggested routine (recommendPreset — the one
+ * hitting your most neglected group) marks its groups' rows with a dark bar
+ * down the left edge.
  *
  * Presentational + gallery-importable: data and the apply handler come in via
  * props (the page owns the mutation + Undo toast); `today` pins the strip.
@@ -21,7 +23,7 @@ import { IconBarbell, IconPlus } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useMemo } from 'react'
 
-import { colors, healthColors, pressShadowSx } from '@/lib/colors'
+import { colors, healthColors, pressShadowSx, toneColors } from '@/lib/colors'
 import type { DaysSince, Workout, WorkoutPreset } from '@/lib/health-types'
 import {
     OVERDUE_DAYS,
@@ -35,12 +37,17 @@ import {
     getParents,
     isGroup,
 } from '@/lib/health/muscle-groups'
-import BoardCard from './board-card'
+import BoardCard, { StripText, stripNumSx, stripWordSx } from './board-card'
 import { FROM_HOME } from './home-utils'
 
-const CONTROL_H = 30
+/** The quick-log row's + circle; routine chips are CHIP_H. */
+const CONTROL_H = 26
+const CHIP_H = 24
 /** Days in the history strip. */
 const STRIP_DAYS = 14
+/** The rolling window for workout days vs rest days — the Health page's
+ *  30-day stats window, so the counts match its workout / rest pill. */
+const WINDOW_DAYS = 30
 
 /**
  * Row colours: one warm ramp (cream → peach → coral) rather than the Health
@@ -59,6 +66,45 @@ function rowTone(days: number | null) {
 function presetGroups(preset: WorkoutPreset): string[] {
     return preset.muscleGroups.flatMap((mg) =>
         isGroup(mg.name) ? [mg.name] : getParents(mg.name)
+    )
+}
+
+/**
+ * Workout days vs rest days over the last WINDOW_DAYS, as text in the header
+ * strip — "5 ON · 25 OFF", the ON count in deep orange so it's where the eye
+ * lands. No pill: one less box in the header.
+ */
+function OnOffCount({
+    workoutDays,
+    restDays,
+}: {
+    workoutDays: number
+    restDays: number
+}) {
+    return (
+        <StripText
+            label={`Last ${WINDOW_DAYS} days: ${workoutDays} on, ${restDays} off`}>
+            <Box component="span" sx={{ ...stripNumSx, color: '#d9480f' }}>
+                {workoutDays}
+            </Box>
+            <Box component="span" sx={stripWordSx}>
+                On
+            </Box>
+            <Box
+                component="span"
+                sx={{ ...stripWordSx, color: '#a8865a', marginX: '2px' }}
+                aria-hidden="true">
+                ·
+            </Box>
+            <Box
+                component="span"
+                sx={{ ...stripNumSx, color: colors.primaryBlack }}>
+                {restDays}
+            </Box>
+            <Box component="span" sx={stripWordSx}>
+                Off
+            </Box>
+        </StripText>
     )
 }
 
@@ -87,22 +133,21 @@ export default function WorkoutsCard({
         () => new Map(daysSince.map((d) => [d.muscleGroup, d.daysSince])),
         [daysSince]
     )
-    const overdue = useMemo(
-        () =>
-            new Set(
-                daysSince
-                    .filter(
-                        (d) =>
-                            d.daysSince !== null && d.daysSince >= OVERDUE_DAYS
-                    )
-                    .map((d) => d.muscleGroup)
-            ),
-        [daysSince]
-    )
     const dates = useMemo(() => windowDates(today, STRIP_DAYS), [today])
     const trained = useMemo(() => trainedDatesByGroup(workouts), [workouts])
+    const monthDates = useMemo(() => windowDates(today, WINDOW_DAYS), [today])
+    const workoutDates = useMemo(
+        () => new Set(workouts.map((w) => w.date)),
+        [workouts]
+    )
+    const workoutDays = monthDates.filter((d) => workoutDates.has(d)).length
     const busy = applyingId !== null
-    const next = useMemo(() => recommendPreset(presets, daysSince), [presets, daysSince])
+    // The routine to do next (the one hitting your most neglected group):
+    // its groups are marked with a left bar on their rows
+    const nextGroups = useMemo(() => {
+        const next = recommendPreset(presets, daysSince)
+        return new Set(next ? presetGroups(next.preset) : [])
+    }, [presets, daysSince])
 
     return (
         <BoardCard
@@ -110,14 +155,11 @@ export default function WorkoutsCard({
             headerBg={healthColors.workouts}
             icon={<IconBarbell size={14} stroke={2.3} />}
             title="Workouts"
-            pill={
-                // Suggest the routine that hits your most neglected group;
-                // without routines, fall back to the overdue count
-                next
-                    ? { label: `Next: ${next.preset.name}`, tone: next.days >= OVERDUE_DAYS ? 'alert' : 'neutral' }
-                    : presets.length === 0 && overdue.size > 0
-                      ? { label: `${overdue.size} overdue`, tone: 'alert' }
-                      : { label: 'On track', tone: 'good' }
+            right={
+                <OnOffCount
+                    workoutDays={workoutDays}
+                    restDays={WINDOW_DAYS - workoutDays}
+                />
             }>
             {/* Log row: + opens a blank workout; each routine logs today's
                 workout from it in one tap. Styled like the Health page's row. */}
@@ -162,11 +204,10 @@ export default function WorkoutsCard({
                         color: colors.primaryBlack,
                         ...pressShadowSx,
                     }}>
-                    <IconPlus size={16} stroke={2.6} />
+                    <IconPlus size={14} stroke={2.6} />
                     {presets.length === 0 && 'Log workout'}
                 </Box>
                 {presets.map((preset) => {
-                    const due = presetGroups(preset).some((g) => overdue.has(g))
                     return (
                         <Box
                             key={preset.id}
@@ -178,11 +219,11 @@ export default function WorkoutsCard({
                                 'display': 'flex',
                                 'alignItems': 'center',
                                 'gap': 0.75,
-                                'height': 28,
+                                'height': CHIP_H,
                                 'flexShrink': 0,
-                                'paddingX': 1.25,
+                                'paddingX': 1,
                                 'font': 'inherit',
-                                'fontSize': 12,
+                                'fontSize': 11.5,
                                 'fontWeight': 600,
                                 'whiteSpace': 'nowrap',
                                 'color': colors.primaryBlack,
@@ -204,19 +245,6 @@ export default function WorkoutsCard({
                                     transform: 'translate(1px, 1px)',
                                 },
                             }}>
-                            {due && (
-                                <Box
-                                    aria-label="trains an overdue group"
-                                    sx={{
-                                        width: 7,
-                                        height: 7,
-                                        borderRadius: '50%',
-                                        backgroundColor:
-                                            getDaysSinceColor(OVERDUE_DAYS),
-                                        border: `1px solid ${colors.primaryBlack}`,
-                                    }}
-                                />
-                            )}
                             {preset.name}
                         </Box>
                     )
@@ -240,6 +268,7 @@ export default function WorkoutsCard({
                     const overdueRow = days !== null && days >= OVERDUE_DAYS
                     const tone = rowTone(days)
                     const hit = trained.get(group)
+                    const suggested = nextGroups.has(group)
                     return (
                         <Box
                             key={group}
@@ -250,6 +279,12 @@ export default function WorkoutsCard({
                                 height: 32,
                                 paddingX: 1.75,
                                 backgroundColor: tone.bg,
+                                // The suggested routine's groups get a bar down
+                                // their left edge, in the app's 'good' green — cool
+                                // against the warm rows, so it reads on every tint
+                                ...(suggested && {
+                                    boxShadow: `inset 5px 0 0 ${toneColors.positive}`,
+                                }),
                             }}>
                             <Box
                                 sx={{

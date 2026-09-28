@@ -32,6 +32,8 @@ export const queryKeys = {
     home: {
         all: ['home'] as const,
         activity: ['home', 'activity'] as const,
+        /** The day's greeting quote — one per local date. */
+        quote: (day: string) => ['home', 'quote', day] as const,
     },
     expenseCategories: {
         all: ['expense-categories'] as const,

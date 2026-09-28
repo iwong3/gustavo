@@ -26,6 +26,8 @@ import {
     usePageActionBarActive,
 } from 'components/page-action-bar'
 import { ToastHost } from 'components/toast-host'
+import { useHomeHeaderStore } from 'components/home/home-header-store'
+import { HeaderQuote } from 'components/home/home-quote'
 import { TripHeaderControls } from 'components/trip-header-controls'
 import { FabProvider, useFabClick } from 'providers/fab-provider'
 
@@ -250,6 +252,39 @@ function HeaderCornerButton({ pathname }: { pathname: string }) {
     )
 }
 
+/**
+ * Home, when its content needs the room: the big Gus + greeting move up here
+ * (the page collapses its own copy — see useCompactGreeting in page.tsx).
+ * Gus sits in the corner like on the other tabs; tapping him scrolls home back
+ * to the top.
+ */
+function HomeCornerGus() {
+    return (
+        <Box
+            component="button"
+            type="button"
+            aria-label="Scroll to top"
+            onClick={() => scrollMainToTop()}
+            sx={{
+                ...cornerFadeInSx,
+                'display': 'block',
+                'padding': 0,
+                'border': 'none',
+                'background': 'none',
+                'borderRadius': '50%',
+                'cursor': 'pointer',
+                'transition': 'transform 0.1s ease-out',
+                '&:active': { transform: 'scale(0.88)' },
+            }}>
+            <img
+                src="/gus-fring.png"
+                alt=""
+                style={{ width: 36, height: 36, borderRadius: '100%', objectFit: 'cover', display: 'block' }}
+            />
+        </Box>
+    )
+}
+
 const tabs = [
     { label: 'Home', href: '/gustavo', icon: IconHome },
     { label: 'Trips', href: '/gustavo/trips', icon: IconPlaneDeparture },
@@ -272,6 +307,9 @@ export default function AppShell({
     // Removed from the allowlist / session expired → sign out + wipe cache
     useAccessGuard()
     const isHome = pathname === '/gustavo'
+    // Home's greeting lives up here while the page is in compact mode
+    const homeCompact = useHomeHeaderStore((st) => st.compact)
+    const homeInHeader = isHome && homeCompact
 
     // Header top-left corner — empty on home (the page already shows a big
     // Gus), Gus on tab roots, back arrow on deeper pages.
@@ -296,6 +334,9 @@ export default function AppShell({
         const leavingHome = prev === '/gustavo' && TAB_ROOTS.has(pathname)
         const arrivingHome = prev !== '/gustavo' && pathname === '/gustavo'
         if (!leavingHome && !arrivingHome) return
+        // Home in compact mode keeps Gus in the header corner, so there's no
+        // big avatar to fly from or to — he just stays put
+        if (useHomeHeaderStore.getState().compact) return
 
         const btn = cornerRef.current
         if (!btn || typeof btn.animate !== 'function') return
@@ -461,11 +502,15 @@ export default function AppShell({
                                     flexShrink: 0,
                                     // + the title box's 4px paddingLeft = the old 10px gap
                                     marginRight: '6px',
-                                    visibility: isHome ? 'hidden' : 'visible',
+                                    visibility: isHome && !homeInHeader ? 'hidden' : 'visible',
                                 }}>
-                                <Suspense fallback={null}>
-                                    <HeaderCornerButton pathname={pathname} />
-                                </Suspense>
+                                {homeInHeader ? (
+                                    <HomeCornerGus />
+                                ) : (
+                                    <Suspense fallback={null}>
+                                        <HeaderCornerButton pathname={pathname} />
+                                    </Suspense>
+                                )}
                             </Box>
 
                             {/* Trip name + tool switcher (trip pages) / spacer */}
@@ -480,6 +525,11 @@ export default function AppShell({
                                     paddingLeft: 0.5,
                                 }}>
                                 <TripHeaderControls />
+                                {homeInHeader && (
+                                    <Box sx={{ ...cornerFadeInSx, minWidth: 0 }}>
+                                        <HeaderQuote />
+                                    </Box>
+                                )}
                             </Box>
 
                             {/* Trips map — square button, same chrome as the

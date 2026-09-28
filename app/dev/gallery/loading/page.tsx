@@ -25,6 +25,12 @@ import {
 import { SlidingToggle } from 'components/sliding-toggle'
 
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
+import {
+    BoardSkeleton,
+    HomeCardSkeleton,
+    QuickActionsSkeleton,
+} from 'components/skeleton/home-skeletons'
+import { healthColors } from '@/lib/colors'
 
 const toggleOptions = [
     { value: 'viewer', label: 'Viewer' },
@@ -52,6 +58,19 @@ const Frame = ({ children, height }: { children: React.ReactNode; height?: numbe
 export default function LoadingGallery() {
     return (
         <GalleryPage title="Loading skeletons">
+            <SpecimenGroup title="Home">
+                <Specimen label="home — board, quick actions, Health cards (compare with /dev/gallery/home)">
+                    <Frame>
+                        <Box sx={{ width: '100%', paddingX: 4, paddingY: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <BoardSkeleton />
+                            <QuickActionsSkeleton count={2} />
+                            <HomeCardSkeleton headerBg={healthColors.workouts} rows={10} logRow />
+                            <HomeCardSkeleton headerBg={healthColors.supplements} rows={4} meter />
+                        </Box>
+                    </Frame>
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="Trips">
                 <Specimen label="trips list"><Frame><TripsListSkeleton /></Frame></Specimen>
                 <Specimen label="map"><Frame height={560}><TripsMapSkeleton /></Frame></Specimen>

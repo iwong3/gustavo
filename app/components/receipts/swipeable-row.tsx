@@ -213,6 +213,11 @@ export const SwipeableRow = ({
         )
     }
 
+    // Hidden while the row rests closed: rows often sit on fractional pixels,
+    // and the content's anti-aliased edge let the button's colour bleed into
+    // the row's border (a red-tinted line under the right end). Shown while
+    // swiping/open; on close it stays until the content has slid back over it.
+    const revealed = swiping || offset !== 0
     const actionButtonSx = {
         position: 'absolute',
         top: 0,
@@ -225,6 +230,8 @@ export const SwipeableRow = ({
         padding: 0,
         cursor: 'pointer',
         zIndex: 0,
+        opacity: revealed ? 1 : 0,
+        transition: revealed ? 'none' : 'opacity 0s linear 200ms',
     } as const
 
     return (

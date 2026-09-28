@@ -8,20 +8,23 @@
  * whole stack, filling as you go. Then one plain row per supplement with a
  * capsule per daily dose; tap the row to take a dose and a capsule fills in.
  * Tapping a finished row takes the last dose back (so a 1×-a-day item
- * behaves like a checkbox). The page adds an Undo toast after each dose.
+ * behaves like a checkbox); swiping any row left reveals Undo, which takes
+ * one dose back at any time. The page adds an Undo toast after each dose.
  *
  * Presentational + gallery-importable: items and the tap handler come in via
  * props (see lib/health/supplement-stack.ts).
  */
 import { Box, Typography } from '@mui/material'
-import { IconPill } from '@tabler/icons-react'
+import { IconArrowBackUp, IconCheck, IconPill } from '@tabler/icons-react'
 
 import { colors, healthColors, pressRowSx, toneColors } from '@/lib/colors'
 import { isDone, type StackItem } from '@/lib/health/supplement-stack'
-import BoardCard from './board-card'
+import { SwipeableRow } from 'components/receipts/swipeable-row'
+import BoardCard, { StripText, stripNumSx, stripWordSx } from './board-card'
 
-/** Hairline between rows. */
-const RULE = '#e9dfc8'
+/** Hairline between rows — MUI's theme 'divider', which SwipeableRow draws
+ *  between rows, so the line above the first row matches the rest. */
+const RULE = 'rgba(0, 0, 0, 0.12)'
 /** Capsule / meter purple (healthColors.supplements, deepened for fills). */
 const FILL = '#8f7bab'
 const FILL_LIGHT = '#efe7f6'
@@ -48,7 +51,9 @@ function Capsules({ item }: { item: StackItem }) {
         )
     }
     return (
-        <Box sx={{ display: 'flex', gap: '4px', flexShrink: 0 }} aria-hidden="true">
+        <Box
+            sx={{ display: 'flex', gap: '4px', flexShrink: 0 }}
+            aria-hidden="true">
             {Array.from({ length: item.dosesPerDay }, (_, i) => (
                 <Box
                     key={i}
@@ -95,7 +100,8 @@ function DayMeter({ taken, total }: { taken: number; total: number }) {
                         borderRadius: '2px',
                         backgroundColor: i < taken ? FILL : FILL_LIGHT,
                         border: `1px solid ${i < taken ? '#6f5c8d' : EMPTY_BORDER}`,
-                        transition: 'background-color 0.15s, border-color 0.15s',
+                        transition:
+                            'background-color 0.15s, border-color 0.15s',
                     }}
                 />
             ))}
@@ -106,12 +112,18 @@ function DayMeter({ taken, total }: { taken: number; total: number }) {
 export default function SupplementsCard({
     items,
     onTap,
+    onUndo,
 }: {
     items: StackItem[]
     onTap: (item: StackItem) => void
+    /** Take one dose back (swipe left → Undo). */
+    onUndo: (item: StackItem) => void
 }) {
     const total = items.reduce((n, i) => n + i.dosesPerDay, 0)
-    const taken = items.reduce((n, i) => n + Math.min(i.taken, i.dosesPerDay), 0)
+    const taken = items.reduce(
+        (n, i) => n + Math.min(i.taken, i.dosesPerDay),
+        0
+    )
     const allDone = taken >= total
 
     return (
@@ -120,49 +132,115 @@ export default function SupplementsCard({
             headerBg={healthColors.supplements}
             icon={<IconPill size={14} stroke={2.3} />}
             title="Supplements"
-            pill={allDone ? { label: 'All done', tone: 'good' } : { label: `${taken}/${total} doses` }}>
+            right={
+                allDone ? (
+                    <StripText label="All doses taken today">
+                        <Box
+                            component="span"
+                            sx={{
+                                ...stripWordSx,
+                                color: toneColors.positive,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                            }}>
+                            <IconCheck size={13} stroke={2.8} />
+                            All done
+                        </Box>
+                    </StripText>
+                ) : (
+                    <StripText label={`${taken} of ${total} doses taken today`}>
+                        <Box component="span" sx={stripNumSx}>
+                            <Box component="span" sx={{ color: '#6f5c8d' }}>
+                                {taken}
+                            </Box>
+                            {/* A spaced, muted slash — like the dot between
+                                ON and OFF on the Workouts card */}
+                            <Box
+                                component="span"
+                                aria-hidden="true"
+                                sx={{ color: '#a8865a', marginX: '4px' }}>
+                                /
+                            </Box>
+                            <Box
+                                component="span"
+                                sx={{ color: colors.primaryBlack }}>
+                                {total}
+                            </Box>
+                        </Box>
+                        <Box component="span" sx={stripWordSx}>
+                            Doses
+                        </Box>
+                    </StripText>
+                )
+            }>
             <DayMeter taken={taken} total={total} />
 
-            {/* One plain row per supplement on hairlines */}
-            <Box sx={{ borderTop: `1px solid ${RULE}` }}>
-                {items.map((item) => {
+            {/* One plain row per supplement. Tap to take a dose; swipe left to
+                reveal Undo (the app's SwipeableRow, like "Undo payment" on
+                Debts) — a lasting way to take one back, not just the toast.
+                Bleeds to the card edges so the revealed button meets them. */}
+            <Box
+                sx={{
+                    marginX: -1.5,
+                    marginBottom: -1.5,
+                    borderTop: `1px solid ${RULE}`,
+                }}>
+                {items.map((item, i) => {
                     const done = isDone(item)
                     return (
-                        <Box
+                        <SwipeableRow
                             key={item.supplementId}
-                            component="button"
-                            type="button"
-                            onClick={() => onTap(item)}
-                            aria-label={`${item.name}: ${Math.min(item.taken, item.dosesPerDay)} of ${item.dosesPerDay} taken`}
-                            sx={{
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'gap': 1,
-                                'width': '100%',
-                                'minHeight': 40,
-                                'paddingX': 0.25,
-                                'paddingY': 0.75,
-                                'font': 'inherit',
-                                'textAlign': 'left',
-                                'cursor': 'pointer',
-                                'border': 'none',
-                                'backgroundColor': 'transparent',
-                                'color': done ? colors.primaryBrown : colors.primaryBlack,
-                                '& + &': { borderTop: `1px solid ${RULE}` },
-                                ...pressRowSx,
-                            }}>
-                            <Typography
+                            canEdit={false}
+                            canDelete={item.taken > 0}
+                            onEdit={() => {}}
+                            onDelete={() => onUndo(item)}
+                            deleteLabel="Undo"
+                            deleteIcon={
+                                <IconArrowBackUp
+                                    size={22}
+                                    color={colors.primaryWhite}
+                                />
+                            }
+                            backgroundColor={colors.primaryWhite}
+                            showBottomBorder={i < items.length - 1}
+                            borderColor={RULE}>
+                            <Box
+                                component="button"
+                                type="button"
+                                onClick={() => onTap(item)}
+                                aria-label={`${item.name}: ${Math.min(item.taken, item.dosesPerDay)} of ${item.dosesPerDay} taken`}
                                 sx={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    fontSize: 13.5,
-                                    lineHeight: 1.25,
-                                    overflowWrap: 'anywhere',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    width: '100%',
+                                    minHeight: 40,
+                                    paddingX: 1.75,
+                                    paddingY: 0.75,
+                                    font: 'inherit',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: done
+                                        ? colors.primaryBrown
+                                        : colors.primaryBlack,
+                                    ...pressRowSx,
                                 }}>
-                                {item.name}
-                            </Typography>
-                            <Capsules item={item} />
-                        </Box>
+                                <Typography
+                                    sx={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        fontSize: 13.5,
+                                        lineHeight: 1.25,
+                                        overflowWrap: 'anywhere',
+                                    }}>
+                                    {item.name}
+                                </Typography>
+                                <Capsules item={item} />
+                            </Box>
+                        </SwipeableRow>
                     )
                 })}
             </Box>

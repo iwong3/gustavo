@@ -17,6 +17,9 @@ import type { ReactNode } from 'react'
 import { colors, toneColors } from '@/lib/colors'
 
 const HEADER_BG = '#c9a877'
+/** Strip height, and the height every right-side pill uses. */
+export const STRIP_H = 34
+export const PILL_H = 22
 const PILL_BG = '#f3ead6'
 const PILL_TEXT = '#4a3418'
 
@@ -33,6 +36,7 @@ export default function BoardCard({
     icon,
     title,
     pill,
+    right,
     headerBg = HEADER_BG,
     children,
 }: {
@@ -42,6 +46,8 @@ export default function BoardCard({
     icon: ReactNode
     title: string
     pill?: BoardPill
+    /** Custom content for the strip's right side, in place of `pill`. */
+    right?: ReactNode
     children: ReactNode
 }) {
     return (
@@ -61,8 +67,11 @@ export default function BoardCard({
                     'alignItems': 'center',
                     'justifyContent': 'space-between',
                     'gap': 1,
-                    'minHeight': 34,
-                    'paddingX': 1.75,
+                    'minHeight': STRIP_H,
+                    // Right side: the 22px pill sits 6px from the top and bottom
+                    // of the 34px strip, so 6px from the edge too
+                    'paddingLeft': 1.75,
+                    'paddingRight': `${(STRIP_H - PILL_H) / 2}px`,
                     'backgroundColor': headerBg,
                     'borderBottom': `1px solid ${colors.primaryBlack}`,
                     'color': colors.primaryBlack,
@@ -83,15 +92,19 @@ export default function BoardCard({
                     {icon}
                     {title}
                 </Typography>
-                {pill && (
+                {right}
+                {!right && pill && (
                     <Typography
                         sx={{
                             fontSize: 9,
                             fontWeight: 800,
                             letterSpacing: '0.14em',
                             textTransform: 'uppercase',
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: PILL_H,
+                            boxSizing: 'border-box',
                             paddingX: 1,
-                            paddingY: '2px',
                             borderRadius: 999,
                             border: `1.5px solid ${colors.primaryBlack}`,
                             backgroundColor: PILL_BG,
@@ -106,7 +119,60 @@ export default function BoardCard({
                     </Typography>
                 )}
             </Box>
-            <Box sx={{ padding: 1.5, display: 'flex', flexDirection: 'column', gap: 1.25 }}>{children}</Box>
+            <Box
+                sx={{
+                    padding: 1.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.25,
+                }}>
+                {children}
+            </Box>
         </Box>
+    )
+}
+
+/** Numbers in a strip count ("5 ON · 25 OFF", "7/16 DOSES"). */
+export const stripNumSx = {
+    fontSize: 13,
+    fontWeight: 800,
+    letterSpacing: 0,
+    fontVariantNumeric: 'tabular-nums',
+} as const
+/** Words in a strip count — the title's letter-spaced caps, in brown. */
+export const stripWordSx = {
+    fontSize: 10.5,
+    fontWeight: 800,
+    letterSpacing: '0.12em',
+    color: colors.primaryBrown,
+} as const
+
+/**
+ * Plain-text status for the strip's right side (`right`), instead of a pill:
+ * baseline-aligned numbers + words, inset 14px from the edge to match the
+ * title's inset on the left (the strip's own right padding is sized for pills).
+ */
+export function StripText({
+    label,
+    children,
+}: {
+    label: string
+    children: ReactNode
+}) {
+    return (
+        <Typography
+            component="span"
+            aria-label={label}
+            sx={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '4px',
+                flexShrink: 0,
+                lineHeight: 1,
+                textTransform: 'uppercase',
+                paddingRight: `${14 - (STRIP_H - PILL_H) / 2}px`,
+            }}>
+            {children}
+        </Typography>
     )
 }
