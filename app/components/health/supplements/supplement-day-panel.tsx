@@ -1,14 +1,19 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { IconPlus } from '@tabler/icons-react'
+import { IconPencil } from '@tabler/icons-react'
 
 import { colors, pressRowSx, pressShadowSx, supplementColors } from '@/lib/colors'
 import type { DayChange, DayRow, DaySummary } from '@/lib/health/supplement-calendar'
 import { Capsules } from './capsules'
+import { weekdayColumn } from './supplement-calendar'
 
-const RULE = 'rgba(0, 0, 0, 0.12)'
+const BG = supplementColors.fillLight
+/** Row dividers on lavender: the deep purple, faint. */
+const RULE = 'rgba(111, 92, 141, 0.25)'
 const BADGE = { add: '+', remove: '−', change: '±' } as const
+/** The calendar grid's side padding (12px) — the tab lines up with its columns. */
+const GRID_INSET = 12
 
 export const dayLabel = (date: string) =>
     new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -18,12 +23,12 @@ export const dayLabel = (date: string) =>
     })
 
 /**
- * One day, opened from the calendar: what changed in the stack that day,
- * then what was due with its capsules — editable, so fixing a missed dose is
- * one tap (same tap rules as the tiles). Day counts are as of that day.
- * Anything else you might have taken (as-needed, or a stack supplement on a
- * break then) sits in one quiet "Also took" row at the end.
- * Presentational — rows/changes come from supplement-calendar.ts.
+ * One day, opened from the calendar just above: a lavender panel whose tab
+ * points up at that day. What changed in the stack that day, then what was
+ * due with its capsules — tap a row to fix it (same rules as the tiles). The
+ * pencil opens the day's log form for anything else (as-needed supplements,
+ * one taken during a break). Day counts are as of that day. Presentational —
+ * rows/changes come from supplement-calendar.ts.
  */
 export function SupplementDayPanel({
     date,
@@ -31,9 +36,8 @@ export function SupplementDayPanel({
     summary,
     changes,
     rows,
-    extras,
     onTapRow,
-    onLogExtra,
+    onEdit,
 }: {
     date: string
     /** Before today — a due dose not taken reads "missed". */
@@ -41,27 +45,41 @@ export function SupplementDayPanel({
     summary: DaySummary
     changes: DayChange[]
     rows: DayRow[]
-    /** "Also took" chips: as-needed, or stack ones not due that day. */
-    extras: { supplementId: number; name: string }[]
     onTapRow: (row: DayRow) => void
-    onLogExtra: (item: { supplementId: number; name: string }) => void
+    onEdit: () => void
 }) {
+    const col = weekdayColumn(date)
     return (
-        <Box sx={{ backgroundColor: colors.secondaryYellow }}>
+        <Box sx={{ position: 'relative', backgroundColor: BG, borderTop: `1px solid ${colors.primaryBlack}` }}>
+            {/* The tab: a rotated square whose top corner pokes up through
+                the border, over the selected day's column */}
+            <Box
+                aria-hidden="true"
+                sx={{
+                    position: 'absolute',
+                    top: -8,
+                    left: `calc(${GRID_INSET}px + (100% - ${GRID_INSET * 2}px) * ${(col + 0.5) / 7})`,
+                    width: 14,
+                    height: 14,
+                    backgroundColor: BG,
+                    borderLeft: `1px solid ${colors.primaryBlack}`,
+                    borderTop: `1px solid ${colors.primaryBlack}`,
+                    transform: 'translateX(-50%) rotate(45deg)',
+                }}
+            />
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    paddingX: 1.5,
-                    paddingTop: 1.25,
-                    paddingBottom: 0.75,
+                    alignItems: 'center',
+                    gap: 1.25,
+                    paddingLeft: 1.5,
+                    paddingRight: 1,
+                    paddingY: 0.75,
+                    minHeight: 44,
                 }}>
-                <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {dayLabel(date)}
-                </Typography>
+                <Typography sx={headSx}>{dayLabel(date)}</Typography>
                 {summary.due > 0 && (
-                    <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    <Typography sx={headSx}>
                         <Box component="span" sx={{ color: supplementColors.deep, fontSize: 12.5 }}>
                             {summary.taken}
                         </Box>
@@ -71,6 +89,29 @@ export function SupplementDayPanel({
                         {summary.due} doses
                     </Typography>
                 )}
+                <Box
+                    component="button"
+                    type="button"
+                    aria-label={`Edit ${dayLabel(date)}`}
+                    onClick={onEdit}
+                    sx={{
+                        marginLeft: 'auto',
+                        width: 30,
+                        height: 30,
+                        flexShrink: 0,
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: colors.primaryBlack,
+                        backgroundColor: colors.primaryWhite,
+                        border: `1px solid ${colors.primaryBlack}`,
+                        borderRadius: '4px',
+                        boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                        ...pressShadowSx,
+                    }}>
+                    <IconPencil size={15} stroke={2.2} />
+                </Box>
             </Box>
 
             {changes.map((c, i) => (
@@ -150,49 +191,22 @@ export function SupplementDayPanel({
                 )
             })}
 
-            {extras.length > 0 && (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: 0.75,
-                        paddingX: 1.5,
-                        paddingY: 1,
-                        borderTop: `1px solid ${RULE}`,
-                    }}>
-                    <Typography sx={{ fontSize: 12, color: colors.primaryBrown, marginRight: 0.25 }}>
-                        Also took
-                    </Typography>
-                    {extras.map((a) => (
-                        <Box
-                            key={a.supplementId}
-                            component="button"
-                            type="button"
-                            onClick={() => onLogExtra(a)}
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                height: 30,
-                                paddingX: 1,
-                                font: 'inherit',
-                                fontSize: 12.5,
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                color: colors.primaryBlack,
-                                backgroundColor: colors.primaryWhite,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                borderRadius: '4px',
-                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                ...pressShadowSx,
-                            }}>
-                            <IconPlus size={13} stroke={2.4} />
-                            {a.name}
-                        </Box>
-                    ))}
-                </Box>
+            {rows.length === 0 && changes.length === 0 && (
+                <Typography sx={{ fontSize: 12.5, color: colors.primaryBrown, paddingX: 1.5, paddingBottom: 1.25 }}>
+                    Nothing was due. Tap the pencil to log something.
+                </Typography>
             )}
         </Box>
     )
 }
+
+/** Date + dose count: the strip's mono caps, like the Home card. */
+const headSx = {
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: colors.primaryBlack,
+    whiteSpace: 'nowrap',
+} as const

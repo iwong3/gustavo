@@ -74,8 +74,6 @@ describe('buildSupplementHistory', () => {
             ['Melatonin', 0, 1],
             ['Omega-3', 2, 1],
         ])
-        expect(history.extrasOn('2026-09-06')).toEqual([])
-        expect(history.extrasOn('2026-09-07')).toEqual([{ supplementId: 3, name: 'Melatonin' }])
     })
 
     it('describes stack changes, and badges only daily supplements', () => {

@@ -132,10 +132,6 @@ export function buildSupplementHistory({
 
     const dueOn = (e: Entry, date: string) =>
         dayOfRun(e.runs, date) === null ? 0 : (dosesPerDayOn(e, date) ?? 0)
-    const startedBy = (e: Entry, date: string) => {
-        const first = e.runs[0]?.start ?? e.events[0]?.date
-        return first !== undefined && first <= date
-    }
 
     /** Rows for one day: what was due, and anything logged. Alphabetical,
      *  like the Home card. */
@@ -173,21 +169,6 @@ export function buildSupplementHistory({
         return { status, badge: badgeFor(dayChanges.map((c) => c.kind)), due, taken }
     }
 
-    /** "Also took": active supplements neither due nor logged on `date` —
-     *  as-needed ones, and stack ones on a break then (or not restarted yet).
-     *  One tap logs one (a stack one then rejoins its run). */
-    function extrasOn(date: string): { supplementId: number; name: string }[] {
-        return sorted
-            .filter(
-                (e) =>
-                    e.s.isActive &&
-                    !e.doses.get(date) &&
-                    dueOn(e, date) === 0 &&
-                    (e.s.dailyDoses === null || startedBy(e, date))
-            )
-            .map((e) => ({ supplementId: e.id, name: e.s.name }))
-    }
-
     /** The earliest day with any history, for the calendar's back limit. */
     const firstDay = sorted.reduce<string | null>((min, e) => {
         const d = e.runs[0]?.start ?? e.events[0]?.date
@@ -197,7 +178,6 @@ export function buildSupplementHistory({
     return {
         rowsOn,
         summaryOn,
-        extrasOn,
         changesOn: (date: string) => changes.get(date) ?? [],
         dayOfRun: (supplementId: number, date: string) => {
             const e = entries.get(supplementId)

@@ -131,31 +131,26 @@ function LiveSupplements({ nightNote, initialSelected = null }: { nightNote?: Ni
                 {nightNote && <NightLine note={nightNote} />}
                 <SupplementTiles tiles={tiles} onTap={tapOn(TODAY)} />
             </Box>
-            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                <Box sx={{ padding: 1.5 }}>
-                    <SupplementCalendar
-                        month={month}
-                        summaryOn={history.summaryOn}
-                        today={TODAY}
-                        selected={selected}
-                        onSelect={setSelected}
-                        onPrevMonth={month > '2026-01' ? () => setMonth(month === '2026-09' ? '2026-08' : '2026-07') : undefined}
-                        onNextMonth={month < '2026-09' ? () => setMonth(month === '2026-07' ? '2026-08' : '2026-09') : undefined}
-                    />
-                </Box>
+            <Box sx={{ ...cardSx, borderRadius: '8px', overflow: 'hidden' }}>
+                <SupplementCalendar
+                    month={month}
+                    summaryOn={history.summaryOn}
+                    today={TODAY}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onPrevMonth={month > '2026-07' ? () => setMonth(month === '2026-09' ? '2026-08' : '2026-07') : undefined}
+                    onNextMonth={month < '2026-09' ? () => setMonth(month === '2026-07' ? '2026-08' : '2026-09') : undefined}
+                />
                 {selected && (
-                    <Box sx={{ borderTop: `1px solid ${colors.primaryBlack}` }}>
-                        <SupplementDayPanel
-                            date={selected}
-                            isPast={selected < TODAY}
-                            summary={history.summaryOn(selected)}
-                            changes={history.changesOn(selected)}
-                            rows={history.rowsOn(selected)}
-                            extras={history.extrasOn(selected)}
-                            onTapRow={tapOn(selected)}
-                            onLogExtra={(a) => tapOn(selected)({ ...a, taken: 0, dosesPerDay: 1 })}
-                        />
-                    </Box>
+                    <SupplementDayPanel
+                        date={selected}
+                        isPast={selected < TODAY}
+                        summary={history.summaryOn(selected)}
+                        changes={history.changesOn(selected)}
+                        rows={history.rowsOn(selected)}
+                        onTapRow={tapOn(selected)}
+                        onEdit={() => {}}
+                    />
                 )}
             </Box>
         </Box>

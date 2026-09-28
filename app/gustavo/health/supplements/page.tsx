@@ -27,6 +27,8 @@ const LIST_URL = '/gustavo/health/supplements'
 // Your Stack + the supplement form (the Manage pages until they're redesigned)
 const STACK_URL = `${LIST_URL}/manage`
 const NEW_URL = `${LIST_URL}/manage/new`
+// A day's log form (the calendar panel's pencil: `?date=`)
+const LOG_URL = `${LIST_URL}/new`
 
 const recordedOn = (iso: string) => logDateString(new Date(iso))
 
@@ -47,6 +49,7 @@ export default function SupplementsPage() {
     useEffect(() => {
         router.prefetch(STACK_URL)
         router.prefetch(NEW_URL)
+        router.prefetch(LOG_URL)
     }, [router])
     useRegisterFab(useCallback(() => router.push(NEW_URL), [router]))
 
@@ -155,31 +158,27 @@ export default function SupplementsPage() {
             </Box>
 
             {/* History: the calendar, and the selected day under it */}
-            <Box sx={{ ...cardSx, overflow: 'hidden' }}>
-                <Box sx={{ padding: 1.5 }}>
-                    <SupplementCalendar
-                        month={month}
-                        summaryOn={history.summaryOn}
-                        today={today}
-                        selected={selected}
-                        onSelect={setSelected}
-                        onPrevMonth={month > firstMonth ? () => shiftMonth(-1) : undefined}
-                        onNextMonth={month < thisMonth ? () => shiftMonth(1) : undefined}
-                    />
-                </Box>
+            {/* Board frame like the Home card (8px corners) */}
+            <Box sx={{ ...cardSx, borderRadius: '8px', overflow: 'hidden' }}>
+                <SupplementCalendar
+                    month={month}
+                    summaryOn={history.summaryOn}
+                    today={today}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onPrevMonth={month > firstMonth ? () => shiftMonth(-1) : undefined}
+                    onNextMonth={month < thisMonth ? () => shiftMonth(1) : undefined}
+                />
                 {selected && (
-                    <Box sx={{ borderTop: `1px solid ${colors.primaryBlack}` }}>
-                        <SupplementDayPanel
-                            date={selected}
-                            isPast={selected < today}
-                            summary={history.summaryOn(selected)}
-                            changes={history.changesOn(selected)}
-                            rows={history.rowsOn(selected)}
-                            extras={history.extrasOn(selected)}
-                            onTapRow={dayTaps.onTap}
-                            onLogExtra={(a) => dayTaps.onTap({ ...a, taken: 0, dosesPerDay: 1 })}
-                        />
-                    </Box>
+                    <SupplementDayPanel
+                        date={selected}
+                        isPast={selected < today}
+                        summary={history.summaryOn(selected)}
+                        changes={history.changesOn(selected)}
+                        rows={history.rowsOn(selected)}
+                        onTapRow={dayTaps.onTap}
+                        onEdit={() => router.push(`${LOG_URL}?date=${selected}`)}
+                    />
                 )}
             </Box>
         </HealthPageLayout>
