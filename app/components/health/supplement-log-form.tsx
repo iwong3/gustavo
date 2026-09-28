@@ -1,16 +1,18 @@
 'use client'
 
-import { Box, Button, Checkbox, Typography } from '@mui/material'
-import { IconMinus, IconPlus } from '@tabler/icons-react'
-import { useCallback, useState } from 'react'
+import { Box, Button, Typography } from '@mui/material'
+import { useCallback, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { cardSx, colors } from '@/lib/colors'
-import { labelSx, primaryButtonSx } from '@/lib/form-styles'
-import type { Supplement, SupplementLog } from '@/lib/health-types'
+import { colors, supplementColors } from '@/lib/colors'
+import { primaryButtonSx } from '@/lib/form-styles'
+import type { Supplement, SupplementEvent, SupplementLog } from '@/lib/health-types'
+import { buildSupplementHistory } from '@/lib/health/supplement-calendar'
 import { queryKeys } from '@/lib/query-keys'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
+import { AsNeededTiles, type AsNeededTile } from 'components/health/supplements/as-needed-tiles'
+import { SupplementTiles, type SupplementTile } from 'components/health/supplements/supplement-tiles'
 import { logDateString } from 'utils/time'
 
 /** Selected supplement id → quantity for a date, seeded from its logs. */
@@ -22,23 +24,6 @@ function quantitiesFor(logs: SupplementLog[], date: string) {
     return map
 }
 
-const roundButtonSx = {
-    'width': 24,
-    'height': 24,
-    'borderRadius': '50%',
-    'border': `1.5px solid ${colors.primaryBlack}`,
-    'boxShadow': `1px 1px 0px ${colors.primaryBlack}`,
-    'display': 'flex',
-    'alignItems': 'center',
-    'justifyContent': 'center',
-    'cursor': 'pointer',
-    'backgroundColor': colors.primaryWhite,
-    '&:active': {
-        boxShadow: 'none',
-        transform: 'translate(1px, 1px)',
-    },
-} as const
-
 type Props = {
     /** edit = the date already has logs; saving diffs against them. */
     mode: 'add' | 'edit'
@@ -47,6 +32,8 @@ type Props = {
     supplements: Supplement[]
     /** Every log, so changing the date re-syncs the selection. */
     allLogs: SupplementLog[]
+    /** Stack changes, for each tile's Day X on the chosen date. */
+    events: SupplementEvent[]
     onCancel: () => void
     onSuccess: () => void
     /** Where "Add supplements" goes when the catalogue is empty. */
@@ -54,16 +41,19 @@ type Props = {
 }
 
 /**
- * Page-style Log Supplements form: date first (week strip), then the active
- * supplements as a checklist with a quantity stepper. Saving diffs the
- * selection against the date's existing logs (create / update / delete), so
- * the same form logs a new day and edits an existing one.
+ * Page-style Log / Edit Supplements form for one day: the date (week strip),
+ * then the daily stack as tiles — tap adds a dose, tapping a full one clears
+ * it (so one tap always undoes) — and as-needed supplements as dashed tiles
+ * that toggle, with a + for more than one. Nothing saves until Save, so
+ * Cancel undoes everything. Saving diffs against the date's existing logs
+ * (create / update / delete), so the same form logs a new day and edits one.
  */
 export default function SupplementLogForm({
     mode,
     initialDate,
     supplements,
     allLogs,
+    events,
     onCancel,
     onSuccess,
     onAddSupplements,
@@ -81,6 +71,41 @@ export default function SupplementLogForm({
 
     const activeSupplements = supplements.filter((s) => s.isActive)
 
+    // Day X on the chosen date (the history's "today" is the log day)
+    const history = useMemo(
+        () =>
+            buildSupplementHistory({
+                supplements,
+                events,
+                logs: allLogs,
+                today: logDateString(),
+                recordedOn: (iso) => logDateString(new Date(iso)),
+            }),
+        [supplements, events, allLogs]
+    )
+
+    // Today's daily stack, plus anything off it that has a dose that day
+    const dailyTiles: SupplementTile[] = activeSupplements
+        .filter((s) => s.dailyDoses !== null)
+        .map((s) => ({
+            supplementId: Number(s.id),
+            name: s.name,
+            dosage: s.dosage,
+            dayOfRun: history.dayOfRun(Number(s.id), date),
+            taken: quantities.get(Number(s.id)) ?? 0,
+            dosesPerDay: s.dailyDoses as number,
+        }))
+    const asNeededTiles: AsNeededTile[] = activeSupplements
+        .filter((s) => s.dailyDoses === null)
+        .map((s) => ({
+            supplementId: Number(s.id),
+            name: s.name,
+            dosage: s.dosage,
+            taken: quantities.get(Number(s.id)) ?? 0,
+        }))
+    const due = dailyTiles.reduce((n, t) => n + t.dosesPerDay, 0)
+    const taken = dailyTiles.reduce((n, t) => n + Math.min(t.taken, t.dosesPerDay), 0)
+
     // Changing the date re-syncs the selection from that date's logs
     const handleDateChange = useCallback(
         (next: string) => {
@@ -89,15 +114,6 @@ export default function SupplementLogForm({
         },
         [allLogs]
     )
-
-    const toggle = useCallback((id: number) => {
-        setQuantities((prev) => {
-            const next = new Map(prev)
-            if (next.has(id)) next.delete(id)
-            else next.set(id, 1)
-            return next
-        })
-    }, [])
 
     const setQuantity = useCallback((id: number, qty: number) => {
         setQuantities((prev) => {
@@ -196,119 +212,65 @@ export default function SupplementLogForm({
             submitLabel={saving ? 'Saving...' : isEdit ? 'Save' : 'Log'}>
             <FormDateField value={date} onChange={handleDateChange} required />
 
-            <Box>
-                <Typography sx={labelSx}>Supplements</Typography>
-                {activeSupplements.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 3 }}>
-                        <Typography
-                            sx={{
-                                fontSize: 14,
-                                color: colors.primaryBrown,
-                                mb: 1,
-                            }}>
-                            No supplements added yet.
-                        </Typography>
-                        {onAddSupplements && (
-                            <Button
-                                onClick={onAddSupplements}
-                                size="small"
-                                sx={primaryButtonSx}>
-                                Add Supplements
-                            </Button>
-                        )}
-                    </Box>
-                ) : (
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0.75,
-                        }}>
-                        {activeSupplements.map((supp) => {
-                            const id = Number(supp.id)
-                            const qty = quantities.get(id) ?? 0
-                            const isSelected = qty > 0
-                            return (
-                                <Box
-                                    key={supp.id}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        padding: '8px 12px',
-                                        ...cardSx,
-                                        backgroundColor: isSelected
-                                            ? '#f1f8e9'
-                                            : colors.primaryWhite,
-                                        borderColor: isSelected
-                                            ? '#4caf50'
-                                            : colors.primaryBlack,
-                                        boxShadow: `2px 2px 0px ${isSelected ? '#4caf50' : colors.primaryBlack}`,
-                                        transition:
-                                            'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
-                                    }}>
-                                    <Checkbox
-                                        checked={isSelected}
-                                        onClick={() => toggle(id)}
-                                        size="small"
-                                        sx={{
-                                            'padding': 0,
-                                            'color': colors.primaryBlack,
-                                            '&.Mui-checked': { color: '#4caf50' },
-                                        }}
-                                    />
-                                    <Box
-                                        sx={{ flex: 1, cursor: 'pointer' }}
-                                        onClick={() => toggle(id)}>
-                                        <Typography
-                                            sx={{ fontSize: 14, fontWeight: 600 }}>
-                                            {supp.name}
-                                        </Typography>
-                                        {supp.dosage && (
-                                            <Typography
-                                                sx={{
-                                                    fontSize: 12,
-                                                    color: colors.primaryBrown,
-                                                }}>
-                                                {supp.dosage}
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                    {isSelected && (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
-                                                flexShrink: 0,
-                                            }}>
-                                            <Box
-                                                onClick={() => setQuantity(id, qty - 1)}
-                                                sx={roundButtonSx}>
-                                                <IconMinus size={12} stroke={2.5} />
-                                            </Box>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: 14,
-                                                    fontWeight: 700,
-                                                    minWidth: 20,
-                                                    textAlign: 'center',
-                                                }}>
-                                                {qty}
-                                            </Typography>
-                                            <Box
-                                                onClick={() => setQuantity(id, qty + 1)}
-                                                sx={roundButtonSx}>
-                                                <IconPlus size={12} stroke={2.5} />
-                                            </Box>
-                                        </Box>
-                                    )}
-                                </Box>
-                            )
-                        })}
-                    </Box>
-                )}
-            </Box>
+            {activeSupplements.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                    <Typography sx={{ fontSize: 14, color: colors.primaryBrown, mb: 1 }}>
+                        No supplements added yet.
+                    </Typography>
+                    {onAddSupplements && (
+                        <Button onClick={onAddSupplements} size="small" sx={primaryButtonSx}>
+                            Add Supplements
+                        </Button>
+                    )}
+                </Box>
+            ) : (
+                <>
+                    {dailyTiles.length > 0 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <SectionLabel
+                                label="Daily stack"
+                                right={`${taken} / ${due} doses`}
+                            />
+                            <SupplementTiles
+                                tiles={dailyTiles}
+                                // Adds a dose; a full tile clears to 0
+                                onTap={(t) =>
+                                    setQuantity(t.supplementId, t.taken >= t.dosesPerDay ? 0 : t.taken + 1)
+                                }
+                            />
+                        </Box>
+                    )}
+                    {asNeededTiles.length > 0 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <SectionLabel label="As needed" />
+                            <AsNeededTiles
+                                tiles={asNeededTiles}
+                                onToggle={(t) => setQuantity(t.supplementId, t.taken > 0 ? 0 : 1)}
+                                onAddOne={(t) => setQuantity(t.supplementId, t.taken + 1)}
+                            />
+                        </Box>
+                    )}
+                </>
+            )}
         </FormPage>
     )
 }
+
+/** A section over tiles: mono caps like the Supplements page strip. */
+function SectionLabel({ label, right }: { label: string; right?: string }) {
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingX: 0.25 }}>
+            <Typography sx={sectionSx}>{label}</Typography>
+            {right && <Typography sx={{ ...sectionSx, color: supplementColors.deep }}>{right}</Typography>}
+        </Box>
+    )
+}
+
+const sectionSx = {
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: colors.primaryBrown,
+} as const

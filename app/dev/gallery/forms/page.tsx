@@ -173,6 +173,7 @@ export default function FormsGallery() {
                         }
                         supplements={supplements}
                         allLogs={supplementLogs}
+                        events={[]}
                         onCancel={close}
                         onSuccess={close}
                         onAddSupplements={noop}

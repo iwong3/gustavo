@@ -18,6 +18,7 @@ import { NightLine, type NightNote } from 'components/health/supplements/night-l
 import { SupplementCalendar } from 'components/health/supplements/supplement-calendar'
 import { SupplementDayPanel } from 'components/health/supplements/supplement-day-panel'
 import { SupplementTiles } from 'components/health/supplements/supplement-tiles'
+import { YourStack, type StackRow } from 'components/health/supplements/your-stack'
 import type { DoseTarget } from 'hooks/use-supplement-dose'
 
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
@@ -160,6 +161,45 @@ function LiveSupplements({ nightNote, initialSelected = null }: { nightNote?: Ni
     )
 }
 
+/** Your Stack on local state: stepper changes move rows between boards. */
+function LiveStackList() {
+    const [rows, setRows] = useState<StackRow[]>(() => {
+        const history = buildSupplementHistory({
+            supplements: SUPPLEMENTS,
+            events: EVENTS,
+            logs: buildLogs(),
+            today: TODAY,
+            recordedOn: (iso) => iso.slice(0, 10),
+        })
+        return SUPPLEMENTS.map((s) => {
+            const on = s.isActive && s.dailyDoses !== null
+            const day = on ? history.dayOfRun(s.id, TODAY) : null
+            return {
+                supplementId: s.id,
+                name: s.name,
+                dosage: s.dosage,
+                dailyDoses: on ? s.dailyDoses : null,
+                dayOfRun: day,
+                since: day !== null ? new Date(Date.UTC(2026, 8, 28 - day + 1)).toISOString().slice(0, 10) : null,
+                lastTaken: s.id === 7 ? '2026-09-26' : s.id === 8 ? '2026-03-20' : TODAY,
+            }
+        }).sort((a, b) => a.name.localeCompare(b.name))
+    })
+    return (
+        <Box sx={{ padding: 2, backgroundColor: colors.secondaryYellow }}>
+            <YourStack
+                rows={rows}
+                today={TODAY}
+                onOpen={() => {}}
+                onDelete={(id) => setRows((r) => r.filter((x) => x.supplementId !== id))}
+                onSetDoses={(row, n) =>
+                    setRows((r) => r.map((x) => (x.supplementId === row.supplementId ? { ...x, dailyDoses: n } : x)))
+                }
+            />
+        </Box>
+    )
+}
+
 export default function SupplementsGallery() {
     return (
         <GalleryPage title="Supplements">
@@ -174,6 +214,11 @@ export default function SupplementsGallery() {
                     <LiveSupplements
                         nightNote={{ text: 'Counting for Monday until 6 AM.', action: 'Log for Tue', onAction: () => {} }}
                     />
+                </Specimen>
+            </SpecimenGroup>
+            <SpecimenGroup title="Your Stack (Manage)">
+                <Specimen label="tap a 1× / 0× tag for the stepper; 0 moves it off the stack">
+                    <LiveStackList />
                 </Specimen>
             </SpecimenGroup>
         </GalleryPage>

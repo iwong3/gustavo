@@ -20,7 +20,7 @@ function LogSupplementsPage() {
     const router = useRouter()
     const exitTo = useExitTo()
     const searchParams = useSearchParams()
-    const { supplements, logs, loading } = useSupplementData()
+    const { supplements, logs, events, loading } = useSupplementData()
 
     const date = searchParams.get('date')
 
@@ -40,6 +40,7 @@ function LogSupplementsPage() {
                 initialDate={date ?? undefined}
                 supplements={supplements}
                 allLogs={logs}
+                events={events}
                 onCancel={() => exitTo(LIST_URL)}
                 onSuccess={() => exitTo(LIST_URL)}
                 onAddSupplements={() => router.push(MANAGE_URL)}
