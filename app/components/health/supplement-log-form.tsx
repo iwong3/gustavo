@@ -43,8 +43,9 @@ type Props = {
 /**
  * Page-style Log / Edit Supplements form for one day: the date (week strip),
  * then the daily stack as tiles — tap adds a dose, tapping a full one clears
- * it (so one tap always undoes) — and as-needed supplements as dashed tiles
- * that toggle, with a + for more than one. Nothing saves until Save, so
+ * it (so one tap always undoes) — and as-needed supplements as tiles that
+ * count up per tap, with a − to take one back; ones already logged that day
+ * sort first. Nothing saves until Save, so
  * Cancel undoes everything. Saving diffs against the date's existing logs
  * (create / update / delete), so the same form logs a new day and edits one.
  */
@@ -95,6 +96,9 @@ export default function SupplementLogForm({
             taken: quantities.get(Number(s.id)) ?? 0,
             dosesPerDay: s.dailyDoses as number,
         }))
+    // Ones already logged that day first — sorted by the saved logs, not the
+    // live count, so tiles don't jump around while you tap
+    const savedOnDate = quantitiesFor(allLogs, date)
     const asNeededTiles: AsNeededTile[] = activeSupplements
         .filter((s) => s.dailyDoses === null)
         .map((s) => ({
@@ -103,6 +107,11 @@ export default function SupplementLogForm({
             dosage: s.dosage,
             taken: quantities.get(Number(s.id)) ?? 0,
         }))
+        .sort(
+            (a, b) =>
+                Number(savedOnDate.has(b.supplementId)) - Number(savedOnDate.has(a.supplementId)) ||
+                a.name.localeCompare(b.name)
+        )
     const due = dailyTiles.reduce((n, t) => n + t.dosesPerDay, 0)
     const taken = dailyTiles.reduce((n, t) => n + Math.min(t.taken, t.dosesPerDay), 0)
 
@@ -245,8 +254,8 @@ export default function SupplementLogForm({
                             <SectionLabel label="As needed" />
                             <AsNeededTiles
                                 tiles={asNeededTiles}
-                                onToggle={(t) => setQuantity(t.supplementId, t.taken > 0 ? 0 : 1)}
                                 onAddOne={(t) => setQuantity(t.supplementId, t.taken + 1)}
+                                onRemoveOne={(t) => setQuantity(t.supplementId, t.taken - 1)}
                             />
                         </Box>
                     )}

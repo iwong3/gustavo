@@ -25,6 +25,9 @@
 //   - Every tap target has press feedback: pressShadowSx / pressRowSx /
 //     pressIconSx (below) — never a hover-only state (hover sticks on iOS).
 //   - Don't reserve empty space for conditionally-rendered rows — collapse them.
+//   - Never give a surface that should stand apart (panel, card strip, band,
+//     tile) the page's own bg (secondaryYellow) — no contrast. Use white or
+//     the feature's tint (healthColors.*, supplementColors.fillLight).
 //   - After building, compare against a neighboring screen for spacing drift.
 //
 // ──────────────────────────────────────────────────────────────────────────────

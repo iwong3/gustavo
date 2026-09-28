@@ -49,6 +49,25 @@ type Entry = {
 
 const fmtDoses = (n: number) => `${n}× a day`
 
+const dosesAfter = (ev: SupplementEvent) => (ev.kind === 'stopped' ? null : ev.dailyDoses)
+
+/**
+ * One supplement's events (sorted) with each day netted out: only a day's
+ * last event counts, and only if it leaves the doses different from the day
+ * before — added then removed the same day (or 1× → 2× → 1×) is no change.
+ */
+function netOfDay(events: SupplementEvent[]): SupplementEvent[] {
+    const out: SupplementEvent[] = []
+    for (let i = 0; i < events.length; i++) {
+        const ev = events[i]
+        if (events[i + 1]?.date === ev.date) continue // not the day's last
+        const before = out.length ? dosesAfter(out[out.length - 1]) : null
+        if (out.length && dosesAfter(ev) === before) continue
+        out.push(ev)
+    }
+    return out
+}
+
 export type SupplementHistory = ReturnType<typeof buildSupplementHistory>
 
 export function buildSupplementHistory({
@@ -113,6 +132,7 @@ export function buildSupplementHistory({
 
     for (const e of Array.from(entries.values())) {
         e.events.sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+        e.events = netOfDay(e.events)
         // Doses taken while off the stack (as needed) don't make runs
         e.runs = computeRuns(
             stackRunEvents(e),

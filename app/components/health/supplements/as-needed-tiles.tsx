@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { IconPlus } from '@tabler/icons-react'
+import { IconMinus } from '@tabler/icons-react'
 import { memo } from 'react'
 
 import { colors, pressShadowSx, supplementColors } from '@/lib/colors'
@@ -16,23 +16,23 @@ export type AsNeededTile = {
 
 /**
  * As-needed supplements as tiles, beside the daily-stack tiles in the day
- * log form: dashed until taken. Tap to toggle (took it / didn't); once on, a
- * small + logs another (×2, ×3) and tapping the tile clears it back to 0.
- * Presentational.
+ * log form. Tapping a tile logs one more (×1, ×2…); once it has a count, a
+ * small − takes one back. Taken ones go lavender and pressed-in, like a
+ * finished daily tile. Presentational.
  */
 export function AsNeededTiles({
     tiles,
-    onToggle,
     onAddOne,
+    onRemoveOne,
 }: {
     tiles: AsNeededTile[]
-    onToggle: (tile: AsNeededTile) => void
     onAddOne: (tile: AsNeededTile) => void
+    onRemoveOne: (tile: AsNeededTile) => void
 }) {
     return (
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
             {tiles.map((t) => (
-                <Tile key={t.supplementId} tile={t} onToggle={onToggle} onAddOne={onAddOne} />
+                <Tile key={t.supplementId} tile={t} onAddOne={onAddOne} onRemoveOne={onRemoveOne} />
             ))}
         </Box>
     )
@@ -40,33 +40,33 @@ export function AsNeededTiles({
 
 const Tile = memo(function Tile({
     tile,
-    onToggle,
     onAddOne,
+    onRemoveOne,
 }: {
     tile: AsNeededTile
-    onToggle: (tile: AsNeededTile) => void
     onAddOne: (tile: AsNeededTile) => void
+    onRemoveOne: (tile: AsNeededTile) => void
 }) {
     const on = tile.taken > 0
     return (
         <Box
             sx={{
-                position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
                 minWidth: 0,
                 minHeight: 52,
-                border: on ? `1px solid ${colors.primaryBlack}` : `1px dashed ${supplementColors.edge}`,
+                border: `1px solid ${colors.primaryBlack}`,
                 borderRadius: '4px',
-                backgroundColor: on ? colors.primaryWhite : 'transparent',
-                boxShadow: on ? `2px 2px 0px ${colors.primaryBlack}` : 'none',
+                backgroundColor: on ? supplementColors.fillLight : colors.primaryWhite,
+                boxShadow: on ? 'none' : `2px 2px 0px ${colors.primaryBlack}`,
+                transform: on ? 'translate(2px, 2px)' : 'none',
+                transition: 'transform 0.1s, box-shadow 0.1s, background-color 0.15s',
             }}>
             <Box
                 component="button"
                 type="button"
-                onClick={() => onToggle(tile)}
-                aria-pressed={on}
-                aria-label={on ? `${tile.name}: taken ${tile.taken}, tap to clear` : `Log ${tile.name}`}
+                onClick={() => onAddOne(tile)}
+                aria-label={`Log ${tile.name}${on ? ` (now ${tile.taken})` : ''}`}
                 sx={{
                     'flex': 1,
                     'minWidth': 0,
@@ -82,7 +82,7 @@ const Tile = memo(function Tile({
                     'cursor': 'pointer',
                     'border': 'none',
                     'backgroundColor': 'transparent',
-                    'color': on ? colors.primaryBlack : colors.primaryBrown,
+                    'color': colors.primaryBlack,
                     'transition': 'opacity 0.1s',
                     '&:active': { opacity: 0.6 },
                 }}>
@@ -103,8 +103,8 @@ const Tile = memo(function Tile({
                 <Box
                     component="button"
                     type="button"
-                    aria-label={`Log another ${tile.name}`}
-                    onClick={() => onAddOne(tile)}
+                    aria-label={`Take one ${tile.name} back`}
+                    onClick={() => onRemoveOne(tile)}
                     sx={{
                         width: 30,
                         height: 30,
@@ -115,13 +115,13 @@ const Tile = memo(function Tile({
                         padding: 0,
                         cursor: 'pointer',
                         color: colors.primaryBlack,
-                        backgroundColor: supplementColors.fillLight,
+                        backgroundColor: colors.primaryWhite,
                         border: `1px solid ${colors.primaryBlack}`,
                         borderRadius: '4px',
                         boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
                         ...pressShadowSx,
                     }}>
-                    <IconPlus size={14} stroke={2.4} />
+                    <IconMinus size={14} stroke={2.4} />
                 </Box>
             )}
         </Box>

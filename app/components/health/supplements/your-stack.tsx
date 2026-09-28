@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Collapse, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { IconChevronRight, IconMinus, IconPlus } from '@tabler/icons-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
@@ -49,10 +49,11 @@ export function relativeDay(date: string, today: string): string {
 /**
  * Every supplement in two boards: the daily stack (with its doses a day)
  * and "Off the stack" (0× — as needed or stopped, with when you last took
- * it). Tap a row to edit it; swipe to delete. Tap a row's 1× / 0× tag to open
- * a −/+ stepper right there — the change saves once you stop tapping, and 0
- * moves it off the stack (the page offers Undo). Presentational: rows and
- * callbacks come in via props.
+ * it). Tap a row to edit it; swipe to delete. A daily row's 2× tag widens
+ * into − 2× + in place (tap the count again to close); the change saves once
+ * you stop tapping, and stepping to 0 moves it off the stack. An off-the-stack
+ * row's + puts it back at 1×. The page offers Undo for both moves.
+ * Presentational: rows and callbacks come in via props.
  */
 export function YourStack({
     rows,
@@ -130,7 +131,7 @@ export function YourStack({
                     </Typography>,
                     healthColors.supplements
                 )}
-            {off.length > 0 && board('Off the stack', off, null, colors.secondaryYellow)}
+            {off.length > 0 && board('Off the stack', off, null, supplementColors.fillLight)}
         </Box>
     )
 }
@@ -246,35 +247,89 @@ const Row = memo(function Row({
                         ))}
                     </Typography>
                 </Box>
-                <Box
-                    component="button"
-                    type="button"
-                    aria-expanded={expanded}
-                    aria-label={`${row.name}: ${onStack ? `${row.dailyDoses}× a day` : 'off the stack'} — change`}
-                    onClick={toggle}
-                    sx={{
-                        height: 26,
-                        minWidth: 36,
-                        paddingX: 0.75,
-                        flexShrink: 0,
-                        cursor: 'pointer',
-                        font: 'inherit',
-                        fontFamily: 'var(--font-mono, monospace)',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        borderRadius: '4px',
-                        color: onStack || expanded ? supplementColors.deep : colors.primaryBrown,
-                        backgroundColor: expanded
-                            ? colors.primaryYellow
-                            : onStack
-                              ? supplementColors.fillLight
-                              : 'transparent',
-                        border: onStack || expanded ? `1px solid ${supplementColors.deep}` : `1px dashed ${supplementColors.edge}`,
-                        ...pressShadowSx,
-                    }}>
-                    {onStack ? `${row.dailyDoses}×` : '0×'}
-                </Box>
+
+                {onStack ? (
+                    // The count tag; tapped, it widens into − 2× + in place
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'stretch',
+                            height: 28,
+                            flexShrink: 0,
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            border: `1px solid ${supplementColors.deep}`,
+                            backgroundColor: expanded ? colors.primaryWhite : supplementColors.fillLight,
+                            boxShadow: expanded ? `1.5px 1.5px 0px ${colors.primaryBlack}` : 'none',
+                            transition: 'box-shadow 0.15s, background-color 0.15s',
+                        }}>
+                        {expanded && (
+                            <StepButton label="Fewer doses" onClick={() => step(-1)}>
+                                <IconMinus size={13} stroke={2.6} />
+                            </StepButton>
+                        )}
+                        <Box
+                            component="button"
+                            type="button"
+                            aria-expanded={expanded}
+                            aria-label={
+                                expanded
+                                    ? `Done changing ${row.name}`
+                                    : `${row.name}: ${row.dailyDoses}× a day — change`
+                            }
+                            onClick={toggle}
+                            sx={{
+                                minWidth: 36,
+                                paddingX: 0.75,
+                                cursor: 'pointer',
+                                font: 'inherit',
+                                fontFamily: 'var(--font-mono, monospace)',
+                                fontSize: 11.5,
+                                fontWeight: 700,
+                                border: 'none',
+                                borderLeft: expanded ? `1px solid ${supplementColors.deep}` : 'none',
+                                borderRight: expanded ? `1px solid ${supplementColors.deep}` : 'none',
+                                color: supplementColors.deep,
+                                backgroundColor: expanded ? colors.primaryYellow : 'transparent',
+                                ...pressRowSx,
+                            }}>
+                            {value === 0 ? 'Off' : `${value}×`}
+                        </Box>
+                        {expanded && (
+                            <StepButton
+                                label="More doses"
+                                disabled={value === MAX_DAILY_DOSES}
+                                onClick={() => step(1)}>
+                                <IconPlus size={13} stroke={2.6} />
+                            </StepButton>
+                        )}
+                    </Box>
+                ) : (
+                    // Off the stack: one tap puts it back at 1× (Undo toast)
+                    <Box
+                        component="button"
+                        type="button"
+                        aria-label={`Add ${row.name} to the daily stack`}
+                        onClick={() => onSetDoses(row, 1)}
+                        sx={{
+                            width: 30,
+                            height: 30,
+                            flexShrink: 0,
+                            display: 'grid',
+                            placeItems: 'center',
+                            padding: 0,
+                            cursor: 'pointer',
+                            color: colors.primaryBlack,
+                            backgroundColor: colors.primaryWhite,
+                            border: `1px solid ${colors.primaryBlack}`,
+                            borderRadius: '4px',
+                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                            ...pressShadowSx,
+                        }}>
+                        <IconPlus size={15} stroke={2.4} />
+                    </Box>
+                )}
+
                 <Box
                     component="button"
                     type="button"
@@ -295,64 +350,18 @@ const Row = memo(function Row({
                     <IconChevronRight size={16} stroke={2} />
                 </Box>
             </Box>
-            <Collapse in={expanded} timeout={180} unmountOnExit>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        gap: 1.25,
-                        paddingLeft: 1.75,
-                        paddingRight: 1.5,
-                        paddingBottom: 1.25,
-                    }}>
-                    <Typography sx={{ fontSize: 12, color: colors.primaryBrown, flex: 1 }}>
-                        {value === 0 ? 'Off the daily stack' : 'In the daily stack'}
-                    </Typography>
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: '34px 84px 34px',
-                            height: 34,
-                            border: `1px solid ${colors.primaryBlack}`,
-                            borderRadius: '4px',
-                            boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                            overflow: 'hidden',
-                            backgroundColor: colors.primaryWhite,
-                        }}>
-                        <StepButton label="Fewer doses" disabled={value === 0} onClick={() => step(-1)}>
-                            <IconMinus size={14} stroke={2.4} />
-                        </StepButton>
-                        <Typography
-                            aria-live="polite"
-                            sx={{
-                                display: 'grid',
-                                placeItems: 'center',
-                                fontSize: 13,
-                                fontWeight: 700,
-                                borderLeft: `1px solid ${colors.primaryBlack}`,
-                                borderRight: `1px solid ${colors.primaryBlack}`,
-                            }}>
-                            {value === 0 ? 'Off' : `${value}× a day`}
-                        </Typography>
-                        <StepButton label="More doses" disabled={value === MAX_DAILY_DOSES} onClick={() => step(1)}>
-                            <IconPlus size={14} stroke={2.4} />
-                        </StepButton>
-                    </Box>
-                </Box>
-            </Collapse>
         </SwipeableRow>
     )
 })
 
 function StepButton({
     label,
-    disabled,
+    disabled = false,
     onClick,
     children,
 }: {
     label: string
-    disabled: boolean
+    disabled?: boolean
     onClick: () => void
     children: React.ReactNode
 }) {
@@ -364,6 +373,7 @@ function StepButton({
             disabled={disabled}
             onClick={onClick}
             sx={{
+                width: 30,
                 display: 'grid',
                 placeItems: 'center',
                 padding: 0,

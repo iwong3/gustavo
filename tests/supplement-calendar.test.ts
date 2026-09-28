@@ -113,6 +113,24 @@ describe('buildSupplementHistory', () => {
         expect(h.dayOfRun(1, '2026-09-21')).toBe(2)
     })
 
+    it('shows no change for a day whose stack changes cancel out', () => {
+        const h = buildSupplementHistory({
+            supplements: [supp(1, 'Creatine', 1), supp(2, 'Glutamine', null)],
+            events: [
+                ev(1, '2026-09-01', 'started'),
+                ev(1, '2026-09-05', 'dose_changed', 2),
+                ev(1, '2026-09-05', 'dose_changed', 1), // 1× → 2× → 1×
+                ev(2, '2026-09-05', 'started', 1),
+                ev(2, '2026-09-05', 'stopped'), // on then off
+            ],
+            logs: [1, 2, 3, 4, 5].map((d) => log(1, `2026-09-0${d}`)),
+            today: '2026-09-05',
+            recordedOn: (iso) => iso.slice(0, 10),
+        })
+        expect(h.changesOn('2026-09-05')).toEqual([])
+        expect(h.summaryOn('2026-09-05')).toMatchObject({ badge: null, due: 1, taken: 1 })
+    })
+
     it('gives Day X for the run on any day', () => {
         expect(history.dayOfRun(1, '2026-09-07')).toBe(7)
         expect(history.firstDay).toBe('2026-09-01')
