@@ -14,6 +14,12 @@ import type {
 import type { HealthSection } from '@/lib/health-section-order'
 import { getSectionOrder, saveSectionOrder } from '@/lib/health-section-order'
 import { DAYS_SINCE_ROWS } from '@/lib/health/muscle-groups'
+import {
+    formatDaysSince,
+    getDaysSinceBg,
+    getDaysSinceBorder,
+    getDaysSinceColor,
+} from '@/lib/health/days-since'
 import { Box, Chip, Typography } from '@mui/material'
 import {
     IconBarbell,
@@ -78,34 +84,6 @@ export type HealthDashboardProps = {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function getDaysSinceColor(days: number | null): string {
-    if (days === null) return '#9e9e9e'
-    if (days <= 3) return '#4caf50'
-    if (days <= 6) return '#ff9800'
-    return '#f44336'
-}
-
-function getDaysSinceBorder(days: number | null): string {
-    if (days === null) return '#9e9e9ecc'
-    if (days <= 3) return '#4caf50cc'
-    if (days <= 6) return '#ff9800cc'
-    return '#f44336cc'
-}
-
-function getDaysSinceBg(days: number | null): string {
-    if (days === null) return '#f5f5f5'
-    if (days <= 3) return '#e8f5e9'
-    if (days <= 6) return '#fff3e0'
-    return '#fce4ec'
-}
-
-function formatDaysSince(days: number | null): string {
-    if (days === null) return 'Never'
-    if (days === 0) return 'Today'
-    if (days === 1) return '1d ago'
-    return `${days}d ago`
-}
 
 function formatWeekday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')

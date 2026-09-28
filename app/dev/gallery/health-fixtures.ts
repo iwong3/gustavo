@@ -229,11 +229,11 @@ export const weightLog: WeightLog = {
 // ── Supplements ──────────────────────────────────────────────────────────────
 
 export const supplements: Supplement[] = [
-    { id: 1, name: 'Creatine', dosage: '5g', isActive: true },
-    { id: 2, name: 'Vitamin D', dosage: '2000 IU', isActive: true },
-    { id: 3, name: 'Fish Oil', dosage: '2 capsules', isActive: true },
-    { id: 4, name: 'Magnesium', dosage: '400mg', isActive: true },
-    { id: 5, name: 'Zinc', dosage: null, isActive: false },
+    { id: 1, name: 'Creatine', dosage: '5g', isActive: true, dailyDoses: 1 },
+    { id: 2, name: 'Vitamin D', dosage: '2000 IU', isActive: true, dailyDoses: 1 },
+    { id: 3, name: 'Fish Oil', dosage: '2 capsules', isActive: true, dailyDoses: 2 },
+    { id: 4, name: 'Magnesium', dosage: '400mg', isActive: true, dailyDoses: null },
+    { id: 5, name: 'Zinc', dosage: null, isActive: false, dailyDoses: null },
 ]
 
 const supLog = (

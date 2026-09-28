@@ -1,6 +1,6 @@
 # Database Schema
 
-> Current through migration **00038**. When you add a migration, update this doc in the same change.
+> Current through migration **00042**. When you add a migration, update this doc in the same change.
 
 ## ER Diagram
 
@@ -207,6 +207,7 @@ supplements
   name TEXT
   dosage TEXT
   is_active BOOLEAN (default true)
+  daily_doses INT (nullable, CHECK > 0) -- doses/day in the home page's daily stack; NULL = not in the stack (00042)
   created_at, updated_at, deleted_at
 
 supplement_logs

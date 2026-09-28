@@ -49,6 +49,8 @@ export type Supplement = {
     name: string
     dosage: string | null
     isActive: boolean
+    /** Doses per day in the daily stack (home check-off); null = not in the stack. */
+    dailyDoses: number | null
 }
 
 export type SupplementLog = {

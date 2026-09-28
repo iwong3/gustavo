@@ -235,3 +235,21 @@ export type UserPreferences = {
     isAdmin: boolean
     alphabetIndexSide: 'left' | 'right'
 }
+
+/** One row of the home page's "Latest" deck — an expense someone else added,
+ *  changed or deleted on one of your trips in the last few days
+ *  (`GET /api/home/activity`). Ids arrive as strings (BIGINT). */
+export type HomeActivityEntry = {
+    id: string // audit_log id
+    tripId: string
+    tripSlug: string
+    tripName: string
+    expenseId: string
+    intent: 'create' | 'update' | 'delete' | 'restore'
+    expenseName: string
+    /** In `currency`; null when the audit snapshot has no usable amount. */
+    costOriginal: number | null
+    currency: string
+    actor: { name: string; initials: string | null; iconColor: string | null }
+    changedAt: string // ISO timestamp
+}

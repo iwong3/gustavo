@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     const presets: SupplementPreset[] = await Promise.all(
         rows.map(async (r) => {
             const supRes = await pool.query(
-                `SELECT s.id, s.name, s.dosage, s.is_active FROM supplements s
+                `SELECT s.id, s.name, s.dosage, s.is_active, s.daily_doses FROM supplements s
                  JOIN preset_supplements ps ON ps.supplement_id = s.id
                  WHERE ps.preset_id = $1 AND s.deleted_at IS NULL
                  ORDER BY s.name`,
@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
                     name: s.name,
                     dosage: s.dosage,
                     isActive: s.is_active,
+                        dailyDoses: s.daily_doses ?? null,
                 })),
             }
         })

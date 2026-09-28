@@ -9,6 +9,7 @@ import { colors, cardSx, hardShadow } from '@/lib/colors'
 
 /** Sections shown on the gallery index. Add an entry when adding a section page. */
 export const sections = [
+    { slug: 'home', title: 'Home', description: 'Board + Add expense stub, Latest deck, workouts, weight, daily supplement stack' },
     { slug: 'header', title: 'Header', description: 'Trip name fitting, pull-to-refresh' },
     { slug: 'trips', title: 'Trips', description: 'Boarding-pass trip cards — upcoming, travelling, complete' },
     { slug: 'receipts', title: 'Receipts', description: 'Expense rows, date group headers' },

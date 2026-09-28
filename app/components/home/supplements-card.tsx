@@ -1,0 +1,171 @@
+'use client'
+
+/**
+ * SupplementsCard — the home page's daily stack check-off, in a
+ * departures-board frame (BoardCard) whose pill counts today's doses.
+ *
+ * Under the header, a segmented day meter: one segment per dose across the
+ * whole stack, filling as you go. Then one plain row per supplement with a
+ * capsule per daily dose; tap the row to take a dose and a capsule fills in.
+ * Tapping a finished row takes the last dose back (so a 1×-a-day item
+ * behaves like a checkbox). The page adds an Undo toast after each dose.
+ *
+ * Presentational + gallery-importable: items and the tap handler come in via
+ * props (see lib/health/supplement-stack.ts).
+ */
+import { Box, Typography } from '@mui/material'
+import { IconPill } from '@tabler/icons-react'
+
+import { colors, healthColors, pressRowSx, toneColors } from '@/lib/colors'
+import { isDone, type StackItem } from '@/lib/health/supplement-stack'
+import BoardCard from './board-card'
+
+/** Hairline between rows. */
+const RULE = '#e9dfc8'
+/** Capsule / meter purple (healthColors.supplements, deepened for fills). */
+const FILL = '#8f7bab'
+const FILL_LIGHT = '#efe7f6'
+const EMPTY_BORDER = '#b7a8c9'
+/** Beyond this many doses a day, show "2/5" instead of capsules. */
+const MAX_CAPSULES = 4
+/** Beyond this many doses in the whole day, the meter is one continuous bar. */
+const MAX_SEGMENTS = 24
+
+function Capsules({ item }: { item: StackItem }) {
+    const done = isDone(item)
+    if (item.dosesPerDay > MAX_CAPSULES) {
+        return (
+            <Typography
+                sx={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: done ? toneColors.positive : colors.primaryBrown,
+                    flexShrink: 0,
+                }}>
+                {Math.min(item.taken, item.dosesPerDay)}/{item.dosesPerDay}
+            </Typography>
+        )
+    }
+    return (
+        <Box sx={{ display: 'flex', gap: '4px', flexShrink: 0 }} aria-hidden="true">
+            {Array.from({ length: item.dosesPerDay }, (_, i) => (
+                <Box
+                    key={i}
+                    sx={{
+                        width: 24,
+                        height: 12,
+                        borderRadius: 6,
+                        border: `1.5px solid ${colors.primaryBlack}`,
+                        // Taken: a two-tone capsule; left to take: an empty shell
+                        background:
+                            i < item.taken
+                                ? `linear-gradient(90deg, ${FILL} 50%, ${FILL_LIGHT} 50%)`
+                                : colors.primaryWhite,
+                        transition: 'background 0.15s',
+                    }}
+                />
+            ))}
+        </Box>
+    )
+}
+
+/** Every dose in the day as a segment; one bar when there are too many. */
+function DayMeter({ taken, total }: { taken: number; total: number }) {
+    if (total > MAX_SEGMENTS) {
+        return (
+            <Box
+                sx={{
+                    height: 8,
+                    borderRadius: '2px',
+                    border: `1px solid ${EMPTY_BORDER}`,
+                    background: `linear-gradient(90deg, ${FILL} ${(taken / total) * 100}%, ${FILL_LIGHT} 0)`,
+                }}
+            />
+        )
+    }
+    return (
+        <Box sx={{ display: 'flex', gap: '3px' }} aria-hidden="true">
+            {Array.from({ length: total }, (_, i) => (
+                <Box
+                    key={i}
+                    sx={{
+                        flex: 1,
+                        height: 8,
+                        borderRadius: '2px',
+                        backgroundColor: i < taken ? FILL : FILL_LIGHT,
+                        border: `1px solid ${i < taken ? '#6f5c8d' : EMPTY_BORDER}`,
+                        transition: 'background-color 0.15s, border-color 0.15s',
+                    }}
+                />
+            ))}
+        </Box>
+    )
+}
+
+export default function SupplementsCard({
+    items,
+    onTap,
+}: {
+    items: StackItem[]
+    onTap: (item: StackItem) => void
+}) {
+    const total = items.reduce((n, i) => n + i.dosesPerDay, 0)
+    const taken = items.reduce((n, i) => n + Math.min(i.taken, i.dosesPerDay), 0)
+    const allDone = taken >= total
+
+    return (
+        <BoardCard
+            href="/gustavo/health/supplements"
+            headerBg={healthColors.supplements}
+            icon={<IconPill size={14} stroke={2.3} />}
+            title="Supplements"
+            pill={allDone ? { label: 'All done', tone: 'good' } : { label: `${taken}/${total} doses` }}>
+            <DayMeter taken={taken} total={total} />
+
+            {/* One plain row per supplement on hairlines */}
+            <Box sx={{ borderTop: `1px solid ${RULE}` }}>
+                {items.map((item) => {
+                    const done = isDone(item)
+                    return (
+                        <Box
+                            key={item.supplementId}
+                            component="button"
+                            type="button"
+                            onClick={() => onTap(item)}
+                            aria-label={`${item.name}: ${Math.min(item.taken, item.dosesPerDay)} of ${item.dosesPerDay} taken`}
+                            sx={{
+                                'display': 'flex',
+                                'alignItems': 'center',
+                                'gap': 1,
+                                'width': '100%',
+                                'minHeight': 40,
+                                'paddingX': 0.25,
+                                'paddingY': 0.75,
+                                'font': 'inherit',
+                                'textAlign': 'left',
+                                'cursor': 'pointer',
+                                'border': 'none',
+                                'backgroundColor': 'transparent',
+                                'color': done ? colors.primaryBrown : colors.primaryBlack,
+                                '& + &': { borderTop: `1px solid ${RULE}` },
+                                ...pressRowSx,
+                            }}>
+                            <Typography
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: 13.5,
+                                    lineHeight: 1.25,
+                                    overflowWrap: 'anywhere',
+                                }}>
+                                {item.name}
+                            </Typography>
+                            <Capsules item={item} />
+                        </Box>
+                    )
+                })}
+            </Box>
+        </BoardCard>
+    )
+}

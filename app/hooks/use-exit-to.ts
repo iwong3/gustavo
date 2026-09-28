@@ -43,11 +43,18 @@ function entryBehindPathname(): string | null {
  * would leave a duplicate of `url` behind us, so native swipe-back / browser
  * back would land on the same screen again. Compared by pathname, so a popped
  * entry keeps its original query (e.g. ?from=graphs).
+ *
+ * A page opened from a home shortcut (?from=home — Add expense, Log workout)
+ * exits back to home whatever `url` it asked for, so save/cancel return you
+ * to where you started.
  */
 export function useExitTo() {
     const router = useRouter()
     return useCallback(
-        (url: string) => {
+        (requested: string) => {
+            const fromHome =
+                new URLSearchParams(window.location.search).get('from') === 'home'
+            const url = fromHome ? '/gustavo' : requested
             if (entryBehindPathname() === url.split('?')[0]) router.back()
             else router.replace(url)
         },

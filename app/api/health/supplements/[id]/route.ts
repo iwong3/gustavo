@@ -3,6 +3,7 @@ import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import type { Supplement } from '@/lib/health-types'
+import { isValidDailyDoses } from '@/lib/health/supplement-stack'
 
 type Params = { id: string }
 
@@ -14,7 +15,13 @@ export async function PUT(
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
-    const { name, dosage, isActive } = await request.json()
+    const body = await request.json()
+    const { name, dosage, isActive } = body
+    // dailyDoses: absent = unchanged, null = leave the daily stack
+    const setDailyDoses = Object.prototype.hasOwnProperty.call(body, 'dailyDoses')
+    if (setDailyDoses && !isValidDailyDoses(body.dailyDoses)) {
+        return NextResponse.json({ error: 'dailyDoses must be null or a whole number from 1 to 12' }, { status: 400 })
+    }
 
     // Verify ownership
     const check = await pool.query(
@@ -31,10 +38,11 @@ export async function PUT(
                 `UPDATE supplements
                  SET name = COALESCE($1, name),
                      dosage = COALESCE($2, dosage),
-                     is_active = COALESCE($3, is_active)
+                     is_active = COALESCE($3, is_active),
+                     daily_doses = CASE WHEN $5::boolean THEN $6::int ELSE daily_doses END
                  WHERE id = $4
-                 RETURNING id, name, dosage, is_active`,
-                [name?.trim() || null, dosage, isActive, id]
+                 RETURNING id, name, dosage, is_active, daily_doses`,
+                [name?.trim() || null, dosage, isActive, id, setDailyDoses, setDailyDoses ? body.dailyDoses : null]
             )
             return res.rows[0]
         })
@@ -44,6 +52,7 @@ export async function PUT(
             name: updated.name,
             dosage: updated.dosage,
             isActive: updated.is_active,
+            dailyDoses: updated.daily_doses ?? null,
         } as Supplement)
     } catch (err) {
         console.error('Error updating supplement:', err)

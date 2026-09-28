@@ -29,6 +29,10 @@ export const queryKeys = {
         expenseHistory: (tripId: string | number, expenseId: string | number) =>
             [...queryKeys.trips.detail(tripId), 'expense-history', String(expenseId)] as const,
     },
+    home: {
+        all: ['home'] as const,
+        activity: ['home', 'activity'] as const,
+    },
     expenseCategories: {
         all: ['expense-categories'] as const,
         list: () => ['expense-categories', 'list'] as const,

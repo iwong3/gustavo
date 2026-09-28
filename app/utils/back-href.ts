@@ -5,13 +5,15 @@ import { tripTools } from '@/lib/trip-tools'
  * static URL hierarchy derived from the pathname (not browser history), so
  * back always goes "up" even after a deep link or refresh. Pages can
  * override one hop with ?from=<trip-tool-path> (e.g. the insights list
- * links expenses with ?from=graphs so back returns there). Null = no back
- * (home). Pure — unit-testable.
+ * links expenses with ?from=graphs so back returns there). ?from=home (a
+ * form opened from a home-page shortcut) goes straight back home. Null = no
+ * back (home). Pure — unit-testable.
  */
 export function getBackHref(
     pathname: string,
     searchParams: { get(name: string): string | null }
 ): string | null {
+    if (pathname !== '/gustavo' && searchParams.get('from') === 'home') return '/gustavo'
     let backHref: string | null = null
     // /gustavo/trips/<slug>/expenses/<id>/edit → expense detail
     const expenseEditMatch = pathname.match(

@@ -1,27 +1,46 @@
 'use client'
 
-import { cardSx, colors } from '@/lib/colors'
-import type { DaysSince, Workout } from '@/lib/health-types'
+import { colors } from '@/lib/colors'
+import type {
+    DaysSince,
+    Supplement,
+    SupplementLog,
+    Workout,
+    WorkoutPreset,
+} from '@/lib/health-types'
+import { addDose, buildStack, isDone, removeDose, type StackItem } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
+import type { HomeActivityEntry } from '@/lib/types'
 import { Box, Typography } from '@mui/material'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { getTablerIcon } from 'utils/icons'
 import { fetchTrips } from 'utils/api'
 
 import DeparturesBoard from 'components/departures-board'
-import TrainingGrid from 'components/health/training-grid'
+import ActivityDeck from 'components/home/activity-deck'
+import { FROM_HOME, lcdDayLabel, pickExpenseTrip, tripWhenLabel } from 'components/home/home-utils'
+import { FlapScaleButton, ReceiptButton } from 'components/home/quick-actions'
+import SupplementsCard from 'components/home/supplements-card'
+import WorkoutsCard from 'components/home/workouts-card'
+import { showToast } from 'components/toast-store'
 import { useToday } from 'hooks/use-today'
 import { localDateString } from 'utils/time'
+import { allSupplementsKey } from 'hooks/useSupplementData'
+import { useWeightLogs } from 'hooks/useWeightLogs'
 
 /**
- * Matches the health page's own workout window so the two share a query cache
- * entry — landing on /gustavo/health after the home page is then instant. The
- * grid renders 14 days and ignores the rest; if the health page ever changes its
- * range the keys simply stop matching and each fetches its own (no breakage).
+ * Home: the trips board, a row of one-tap shortcuts (Add expense while a trip
+ * is on or coming up; Track weight once you weigh in), the latest changes other
+ * people made to your trips, then cards for the Health features you use. Every section after the
+ * board only shows when it has something to do — Health sections appear once
+ * you've used that feature, so trips-only people get a short page.
+ *
+ * Queries reuse the keys (and endpoints) of the pages they link to, so their
+ * caches are shared both ways: saving a workout elsewhere updates home, and
+ * landing on Health after home is instant.
  */
-const HEALTH_FETCH_DAYS = 30
 
 function getGreeting(): string {
     const hour = new Date().getHours()
@@ -36,70 +55,22 @@ const fetchJson = async <T,>(url: string): Promise<T> => {
     return res.json()
 }
 
-/**
- * Section heading above each launcher. The cards are elaborate enough that a
- * label inside their own chrome reads as decoration — pulled out here with a
- * chevron, it's unambiguous what tapping through goes to. Both the heading and
- * the card link to the same place.
- */
-function SectionTitle({ title, href }: { title: string; href: string }) {
+/** The plain launcher row — the board's stand-in while trips load, and the
+ *  no-trips-yet state. Loading shows a placeholder bar instead of a label. */
+function StatusRow({ loading }: { loading: boolean }) {
     return (
         <Box
             component={Link}
-            href={href}
-            sx={{
-                'display': 'flex',
-                'alignItems': 'baseline',
-                'gap': 0.5,
-                'marginBottom': 0.75,
-                'paddingX': 0.25,
-                'textDecoration': 'none',
-                'color': colors.primaryBlack,
-            }}>
-            <Typography
-                sx={{
-                    fontSize: 19,
-                    fontWeight: 600,
-                    fontFamily: 'var(--font-serif)',
-                    lineHeight: 1.1,
-                }}>
-                {title}
-            </Typography>
-            <Box component="span" sx={{ fontSize: 16, lineHeight: 1.1, color: '#8a7f6e' }}>
-                ›
-            </Box>
-        </Box>
-    )
-}
-
-/**
- * The plain launcher row — the fallback while a card's data loads, and the
- * empty state for Trips. It no longer names the section (the heading above does
- * that); loading shows a placeholder bar rather than a redundant label.
- */
-function StatusRow({
-    href,
-    icon,
-    bg,
-    label,
-    loading = false,
-}: {
-    href: string
-    icon: string
-    bg: string
-    label: string
-    loading?: boolean
-}) {
-    return (
-        <Box
-            component={Link}
-            href={href}
+            href="/gustavo/trips"
             sx={{
                 'display': 'flex',
                 'alignItems': 'center',
                 'gap': 2,
                 'padding': 2,
-                ...cardSx,
+                'border': `1px solid ${colors.primaryBlack}`,
+                'borderRadius': '8px',
+                'backgroundColor': colors.primaryWhite,
+                'boxShadow': `2px 2px 0px ${colors.primaryBlack}`,
                 'textDecoration': 'none',
                 'color': colors.primaryBlack,
                 '&:active': {
@@ -116,13 +87,13 @@ function StatusRow({
                     width: 44,
                     height: 44,
                     borderRadius: '50%',
-                    backgroundColor: bg,
+                    backgroundColor: '#e8edca',
                     border: `1.5px solid ${colors.primaryBlack}`,
                     boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
                     flexShrink: 0,
                 }}>
                 {getTablerIcon({
-                    name: icon,
+                    name: 'IconPlaneDeparture',
                     size: 22,
                     stroke: 1.8,
                     color: colors.primaryBlack,
@@ -135,103 +106,238 @@ function StatusRow({
                     sx={{ height: 12, width: 132, borderRadius: '3px', backgroundColor: '#e6e0d2' }}
                 />
             ) : (
-                <Typography sx={{ fontSize: 16, fontWeight: 600 }}>{label}</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 600 }}>No trips yet</Typography>
             )}
         </Box>
     )
 }
 
-/**
- * Trips launcher. Renders the split-flap departures board once the group's own
- * trips are loaded; falls back to the plain row while loading or when there are
- * no trips yet (nothing to flap through).
- */
-function TripsSection() {
-    const { data: trips = [], isPending: isLoading } = useQuery({
+/** The group's trips (shared with the Trips page's cache). */
+function useMyTrips() {
+    const { data: trips = [], isPending } = useQuery({
         queryKey: queryKeys.trips.list(),
         queryFn: fetchTrips,
     })
-    const myTrips = trips.filter((t) => t.userRole !== null)
-    const ready = !isLoading && myTrips.length > 0
+    const myTrips = useMemo(() => trips.filter((t) => t.userRole !== null), [trips])
+    return { myTrips, isPending }
+}
 
-    return (
-        <Box>
-            <SectionTitle title="Trips" href="/gustavo/trips" />
-            {ready ? (
-                <DeparturesBoard trips={myTrips} />
-            ) : (
-                <StatusRow
-                    href="/gustavo/trips"
-                    icon="IconPlaneDeparture"
-                    bg="#e8edca"
-                    label="No trips yet"
-                    loading={isLoading}
-                />
-            )}
-        </Box>
-    )
+/** The split-flap departures board. */
+function TripsSection({ today }: { today: string }) {
+    const { myTrips, isPending } = useMyTrips()
+    if (isPending || myTrips.length === 0) return <StatusRow loading={isPending} />
+    return <DeparturesBoard trips={myTrips} todayIso={today} />
 }
 
 /**
- * Health launcher. Renders the 14-day training grid; the plain row holds the
- * space while the data loads, since showing an empty grid mid-fetch would claim
- * "no workouts" before that's known. A genuinely empty log gets the grid's own
- * first-run call to action.
+ * One-tap shortcuts, side by side: Add expense (to the ongoing trip,
+ * else the next one — hidden with neither) and Track weight (once you've
+ * weighed in). Renders nothing when neither applies.
  */
-function HealthSection() {
-    // Kept current: the home page can sit open overnight in the PWA
-    const today = useToday()
-    const from = useMemo(() => {
-        const d = new Date(today + 'T00:00:00')
-        d.setDate(d.getDate() - HEALTH_FETCH_DAYS)
-        return localDateString(d)
-    }, [today])
+function QuickActions({ today }: { today: string }) {
+    const { myTrips } = useMyTrips()
+    const target = useMemo(() => pickExpenseTrip(myTrips, today), [myTrips, today])
+    const { logs } = useWeightLogs()
+    const latest = logs[0]
+    const weightValue = latest && Number.isFinite(latest.weightLbs) ? latest.weightLbs.toFixed(1) : null
 
-    const [daysSinceQ, workoutsQ] = useQueries({
-        queries: [
-            {
-                queryKey: queryKeys.health.workouts.daysSince,
-                queryFn: () =>
-                    fetchJson<DaysSince[]>(`/api/health/workouts/days-since?today=${today}`),
-            },
-            {
-                queryKey: [
-                    ...queryKeys.health.workouts.list(),
-                    { startDate: from, endDate: today },
-                ],
-                queryFn: () =>
-                    fetchJson<Workout[]>(
-                        `/api/health/workouts?startDate=${from}&endDate=${today}`
-                    ),
-            },
-        ],
-    })
-
-    const loading = daysSinceQ.isPending || workoutsQ.isPending
-
+    if (!target && !latest) return null
     return (
-        <Box>
-            <SectionTitle title="Health" href="/gustavo/health" />
-            {loading ? (
-                <StatusRow
-                    href="/gustavo/health"
-                    icon="IconHeartbeat"
-                    bg="#f0b8b4"
-                    label="Health"
-                    loading
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+            {target && (
+                <ReceiptButton
+                    href={`/gustavo/trips/${target.slug}/expenses/new?${FROM_HOME}`}
+                    tripName={target.name}
+                    tripWhen={tripWhenLabel(target, today)}
                 />
-            ) : (
-                <TrainingGrid
-                    workouts={workoutsQ.data ?? []}
-                    daysSince={daysSinceQ.data ?? []}
-                    todayIso={today}
+            )}
+            {latest && (
+                <FlapScaleButton
+                    href={`/gustavo/health/weight/new?${FROM_HOME}`}
+                    reading={weightValue}
+                    when={lcdDayLabel(latest.date, today)}
+                    done={latest.date === today}
                 />
             )}
         </Box>
     )
 }
 
+/** What other people changed on your trips this week; hidden when nothing. */
+function LatestSection() {
+    const { data = [] } = useQuery({
+        queryKey: queryKeys.home.activity,
+        queryFn: () => fetchJson<HomeActivityEntry[]>('/api/home/activity'),
+    })
+    if (data.length === 0) return null
+    return <ActivityDeck entries={data} />
+}
+
+/**
+ * The Health page's recent-workouts window. Same key + range as that page, so
+ * the two share a cache entry (home → Health is instant, and vice versa); the
+ * history strip reads the last 14 days of it.
+ */
+const HEALTH_WINDOW_DAYS = 30
+
+/** Routines → one-tap log with Undo; muscle groups with a 14-day history strip. */
+function WorkoutsSection({ today }: { today: string }) {
+    const queryClient = useQueryClient()
+    const windowStart = useMemo(() => {
+        const d = new Date(today + 'T00:00:00')
+        d.setDate(d.getDate() - (HEALTH_WINDOW_DAYS - 1))
+        return localDateString(d)
+    }, [today])
+    const recentQ = useQuery({
+        queryKey: [...queryKeys.health.workouts.list(), { startDate: windowStart, endDate: today }],
+        queryFn: () =>
+            fetchJson<Workout[]>(`/api/health/workouts?startDate=${windowStart}&endDate=${today}`),
+    })
+    const daysSinceQ = useQuery({
+        queryKey: queryKeys.health.workouts.daysSince,
+        queryFn: () => fetchJson<DaysSince[]>(`/api/health/workouts/days-since?today=${today}`),
+    })
+    const presetsQ = useQuery({
+        queryKey: queryKeys.health.presets.byType('workout'),
+        queryFn: () => fetchJson<WorkoutPreset[]>('/api/health/presets?type=workout'),
+    })
+    const [appliedId, setAppliedId] = useState<number | null>(null)
+
+    const invalidateWorkouts = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: queryKeys.health.workouts.all }),
+        [queryClient]
+    )
+
+    const undo = useCallback(
+        async (workoutId: number, presetId: number) => {
+            setAppliedId((id) => (id === presetId ? null : id))
+            const res = await fetch(`/api/health/workouts/${workoutId}`, { method: 'DELETE' }).catch(() => null)
+            if (!res?.ok) showToast("Couldn't undo that workout. Delete it from Workouts.")
+            invalidateWorkouts()
+        },
+        [invalidateWorkouts]
+    )
+
+    const apply = useMutation({
+        mutationFn: async (preset: WorkoutPreset) => {
+            const res = await fetch(`/api/health/presets/${preset.id}/apply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: today }),
+            })
+            if (!res.ok) throw new Error('Apply failed')
+            const data = (await res.json()) as { workoutId: number }
+            return { preset, workoutId: Number(data.workoutId) }
+        },
+        onSuccess: ({ preset, workoutId }) => {
+            setAppliedId(preset.id)
+            invalidateWorkouts()
+            showToast(`Logged ${preset.name}`, 'success', {
+                label: 'Undo',
+                onClick: () => undo(workoutId, preset.id),
+            })
+        },
+        meta: { errorToast: "Couldn't log that routine. Try again." },
+    })
+
+    const daysSince = daysSinceQ.data ?? []
+    // Shows once you've ever logged a workout
+    if (!daysSince.some((d) => d.daysSince !== null)) return null
+    return (
+        <WorkoutsCard
+            daysSince={daysSince}
+            workouts={recentQ.data ?? []}
+            today={today}
+            presets={presetsQ.data ?? []}
+            applyingId={apply.isPending ? (apply.variables?.id ?? null) : null}
+            appliedId={appliedId}
+            onApplyPreset={(preset) => apply.mutate(preset)}
+        />
+    )
+}
+
+type DoseVars = { item: StackItem; delta: 1 | -1 }
+
+/** Today's daily stack, one tap per dose, with Undo. */
+function SupplementsSection({ today }: { today: string }) {
+    const queryClient = useQueryClient()
+    const dayKey = queryKeys.health.supplementLogs.byDate(today)
+    const supplementsQ = useQuery({
+        queryKey: allSupplementsKey,
+        queryFn: () => fetchJson<Supplement[]>('/api/health/supplements?all=true'),
+    })
+    const logsQ = useQuery({
+        queryKey: dayKey,
+        queryFn: () => fetchJson<SupplementLog[]>(`/api/health/supplement-logs?date=${today}`),
+    })
+    // Refetch only once every tap has landed — a refetch between two quick
+    // taps would briefly roll the second one back
+    const inFlight = useRef(0)
+
+    const dose = useMutation({
+        mutationFn: async ({ item, delta }: DoseVars) => {
+            const res = await fetch('/api/health/supplement-logs/dose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplementId: item.supplementId, date: today, delta }),
+            })
+            if (!res.ok) throw new Error('Dose failed')
+        },
+        onMutate: async ({ item, delta }: DoseVars) => {
+            inFlight.current++
+            await queryClient.cancelQueries({ queryKey: dayKey })
+            const prev = queryClient.getQueryData<SupplementLog[]>(dayKey)
+            queryClient.setQueryData<SupplementLog[]>(dayKey, (logs = []) =>
+                delta === 1
+                    ? addDose(logs, { id: item.supplementId, name: item.name }, today, -Date.now())
+                    : removeDose(logs, item.supplementId, today)
+            )
+            return { prev }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx) queryClient.setQueryData(dayKey, ctx.prev)
+        },
+        onSettled: () => {
+            inFlight.current--
+            if (inFlight.current === 0) {
+                // The prefix covers the Supplements page's full log list too
+                queryClient.invalidateQueries({ queryKey: queryKeys.health.supplementLogs.all })
+            }
+        },
+        meta: { errorToast: "Couldn't log that dose. Try again." },
+    })
+
+    const items = useMemo(
+        () => buildStack(supplementsQ.data ?? [], logsQ.data ?? []),
+        [supplementsQ.data, logsQ.data]
+    )
+
+    const onTap = useCallback(
+        (item: StackItem) => {
+            if (isDone(item)) {
+                // Tapping a finished one takes the last dose back
+                dose.mutate({ item, delta: -1 })
+                return
+            }
+            dose.mutate({ item, delta: 1 })
+            const taken = item.taken + 1
+            showToast(
+                item.dosesPerDay > 1 ? `${item.name} ${taken}/${item.dosesPerDay}` : `Took ${item.name}`,
+                'success',
+                { label: 'Undo', onClick: () => dose.mutate({ item, delta: -1 }) }
+            )
+        },
+        [dose]
+    )
+
+    if (logsQ.isPending || items.length === 0) return null
+    return <SupplementsCard items={items} onTap={onTap} />
+}
+
 export default function GustavoHomePage() {
+    // Kept current: the home page can sit open overnight in the PWA
+    const today = useToday()
+
     return (
         <Box
             sx={{
@@ -240,11 +346,10 @@ export default function GustavoHomePage() {
                 alignItems: 'center',
                 width: '100%',
                 paddingX: 4,
-                // Clearance so the Health card doesn't crowd the footer — the
-                // grid is a tall card and sat almost flush against it.
+                // Clearance so the last card doesn't crowd the tab bar
                 paddingBottom: 4,
             }}>
-            {/* Gus Fring avatar */}
+            {/* Gus Fring avatar — app-shell morphs it into the header corner */}
             <Box sx={{ paddingBottom: 1, paddingTop: 1 }}>
                 <img
                     id="home-gus-avatar"
@@ -262,7 +367,6 @@ export default function GustavoHomePage() {
                 />
             </Box>
 
-            {/* Greeting */}
             <Typography
                 sx={{
                     fontSize: 20,
@@ -273,16 +377,23 @@ export default function GustavoHomePage() {
                 Good {getGreeting()}. We have work to do.
             </Typography>
 
-            {/* Launchers — a titled section per app */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2.5,
-                    width: '100%',
-                }}>
-                <TripsSection />
-                <HealthSection />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                <TripsSection today={today} />
+                <QuickActions today={today} />
+                <LatestSection />
+                {/* A little extra air between the trips half and the health half */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        marginTop: 1,
+                        // Trips-only people: no Health sections, no leftover gap
+                        '&:empty': { display: 'none' },
+                    }}>
+                    <WorkoutsSection today={today} />
+                    <SupplementsSection today={today} />
+                </Box>
             </Box>
         </Box>
     )
