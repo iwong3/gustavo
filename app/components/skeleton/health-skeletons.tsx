@@ -183,7 +183,7 @@ export function RoutinesSkeleton() {
     )
 }
 
-/** Mirrors the Supplements page: header (+ list icon, ⓘ), the Today strip,
+/** Mirrors the Supplements page: header (tappable title, ⓘ), the Today strip,
  *  6 tiles, and the calendar card (5 weeks). */
 export function SupplementsSkeleton() {
     return (
@@ -192,12 +192,9 @@ export function SupplementsSkeleton() {
                 icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Supplements"
                 color={healthColors.supplements}
-                right={
-                    <>
-                        <Circle size={30} />
-                        <Circle size={30} />
-                    </>
-                }
+                // Same chip + › as the page (its title opens Your Stack)
+                onTitleClick={() => {}}
+                right={<Circle size={30} />}
             />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <TextBone fontSize={11} width={80} />

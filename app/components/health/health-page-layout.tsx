@@ -1,7 +1,8 @@
 'use client'
 
-import { colors, hardShadow } from '@/lib/colors'
+import { colors, hardShadow, pressShadowSx } from '@/lib/colors'
 import { Box, CircularProgress, Typography } from '@mui/material'
+import { IconChevronRight } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
 import { PullToRefresh } from 'components/pull-to-refresh'
@@ -66,18 +67,22 @@ export function HealthPageLayout({
  * Sticky header section for health pages.
  * Renders the colored title chip and optional children (presets, legend, etc.)
  * `right`: controls on the chip's row (action icons, then PageInfo last).
+ * `onTitleClick`: makes the chip a button into the section's next level
+ * (like tapping a trip's name) — it gets a › and presses in.
  */
 export function HealthPageHeader({
     icon,
     title,
     color,
     right,
+    onTitleClick,
     children,
 }: {
     icon: ReactNode
     title: string
     color: string
     right?: ReactNode
+    onTitleClick?: () => void
     children?: ReactNode
 }) {
     return (
@@ -98,6 +103,9 @@ export function HealthPageHeader({
             }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Box
+                    {...(onTitleClick
+                        ? { component: 'button' as const, type: 'button' as const, onClick: onTitleClick }
+                        : {})}
                     sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -108,6 +116,8 @@ export function HealthPageHeader({
                         ...hardShadow,
                         borderRadius: '4px',
                         alignSelf: 'flex-start',
+                        font: 'inherit',
+                        ...(onTitleClick && { cursor: 'pointer', ...pressShadowSx }),
                     }}>
                     {icon}
                     <Typography
@@ -120,6 +130,9 @@ export function HealthPageHeader({
                         }}>
                         {title}
                     </Typography>
+                    {onTitleClick && (
+                        <IconChevronRight size={16} stroke={2.4} color={colors.primaryBlack} style={{ marginLeft: -4 }} />
+                    )}
                 </Box>
                 {right && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{right}</Box>

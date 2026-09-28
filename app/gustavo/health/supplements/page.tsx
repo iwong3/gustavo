@@ -1,12 +1,12 @@
 'use client'
 
 import { Box, Typography } from '@mui/material'
-import { IconList, IconPill } from '@tabler/icons-react'
+import { IconPill } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { cardSx, colors, healthColors, pressShadowSx, supplementColors } from '@/lib/colors'
+import { cardSx, colors, healthColors, supplementColors } from '@/lib/colors'
 import { buildSupplementHistory } from '@/lib/health/supplement-calendar'
 import { buildStack } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
@@ -14,7 +14,7 @@ import { AnimatedHeight } from 'components/animated-height'
 import { HealthPageHeader, HealthPageLayout } from 'components/health/health-page-layout'
 import { NightLine } from 'components/health/supplements/night-line'
 import { SupplementCalendar } from 'components/health/supplements/supplement-calendar'
-import { dayLabel, SupplementDayPanel } from 'components/health/supplements/supplement-day-panel'
+import { SupplementDayPanel } from 'components/health/supplements/supplement-day-panel'
 import { SupplementTiles, type SupplementTile } from 'components/health/supplements/supplement-tiles'
 import { SupplementsHelp } from 'components/health/supplements/supplements-help'
 import { SupplementsSkeleton } from 'components/skeleton/health-skeletons'
@@ -102,39 +102,17 @@ export default function SupplementsPage() {
                 icon={<IconPill size={20} stroke={2} color={colors.primaryBlack} fill={colors.primaryWhite} />}
                 title="Supplements"
                 color={healthColors.supplements}
-                right={
-                    <>
-                        <Box
-                            component="button"
-                            type="button"
-                            aria-label="Your stack"
-                            onClick={() => router.push(STACK_URL)}
-                            sx={{
-                                width: 30,
-                                height: 30,
-                                padding: 0,
-                                display: 'grid',
-                                placeItems: 'center',
-                                cursor: 'pointer',
-                                color: colors.primaryBlack,
-                                backgroundColor: colors.primaryWhite,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                borderRadius: '50%',
-                                boxShadow: `1.5px 1.5px 0px ${colors.primaryBlack}`,
-                                ...pressShadowSx,
-                            }}>
-                            <IconList size={16} stroke={2.2} />
-                        </Box>
-                        <SupplementsHelp />
-                    </>
-                }
+                // The title opens Your Stack (like tapping a trip's name)
+                onTitleClick={() => router.push(STACK_URL)}
+                right={<SupplementsHelp />}
             />
 
-            {/* Today */}
+            {/* Daily stack: today's tiles */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <Typography sx={stripSx}>{nightNote ? dayLabel(today) : 'Today'}</Typography>
+                        {/* The day it counts for is in the 6am note when it isn't today */}
+                        <Typography sx={stripSx}>Daily stack</Typography>
                         {due > 0 && (
                             <Typography sx={stripSx}>
                                 <Box component="span" sx={{ color: supplementColors.deep, fontSize: 13 }}>
