@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
+import { Box, Collapse, Typography } from '@mui/material'
 import { IconChevronRight, IconMinus, IconPlus } from '@tabler/icons-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
@@ -24,6 +24,8 @@ export type StackRow = {
 }
 
 const RULE = 'rgba(0, 0, 0, 0.12)'
+/** A row moving between boards: collapse out / grow in, boards ease. */
+const MOVE_MS = 260
 /** Stepper edits settle this long before saving, so 1× → 3× is one change. */
 const COMMIT_MS = 700
 
@@ -69,69 +71,134 @@ export function YourStack({
     onSetDoses: (row: StackRow, dailyDoses: number | null) => void
 }) {
     const [expanded, setExpanded] = useState<number | null>(null)
+
+    // A row that changes boards collapses out of the old one while it grows
+    // into the new one (a "ghost" copy stays behind in the old board just
+    // long enough to animate out), so both boards ease to their new heights
+    // together. The arriving row flashes briefly.
+    const [seen, setSeen] = useState(rows)
+    const [ghosts, setGhosts] = useState<StackRow[]>([])
+    const [arrived, setArrived] = useState<ReadonlySet<number>>(() => new Set())
+    if (seen !== rows) {
+        // Adjusting state while rendering (not in an effect), so the arriving
+        // row mounts already knowing to animate in
+        const before = new Map(seen.map((r) => [r.supplementId, r]))
+        const moved = rows.filter((r) => {
+            const was = before.get(r.supplementId)
+            return was && (was.dailyDoses === null) !== (r.dailyDoses === null)
+        })
+        setSeen(rows)
+        if (moved.length > 0) {
+            const ids = new Set(moved.map((r) => r.supplementId))
+            setGhosts((g) => [
+                ...g.filter((x) => !ids.has(x.supplementId)),
+                ...moved.map((r) => before.get(r.supplementId) as StackRow),
+            ])
+            setArrived((a) => new Set([...Array.from(a), ...Array.from(ids)]))
+        }
+    }
+    // Ghosts and the arrival flash clear once the moves have played out
+    useEffect(() => {
+        if (ghosts.length === 0 && arrived.size === 0) return
+        const t = setTimeout(() => {
+            setGhosts([])
+            setArrived(new Set())
+        }, MOVE_MS + 700)
+        return () => clearTimeout(t)
+    }, [ghosts, arrived])
+
     const daily = rows.filter((r) => r.dailyDoses !== null)
     const off = rows.filter((r) => r.dailyDoses === null)
     const perDay = daily.reduce((n, r) => n + (r.dailyDoses ?? 0), 0)
 
-    const board = (title: string, list: StackRow[], strip: React.ReactNode, bg: string) => (
-        <Box
-            sx={{
-                border: `1px solid ${colors.primaryBlack}`,
-                borderRadius: '8px',
-                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                backgroundColor: colors.primaryWhite,
-                overflow: 'hidden',
-            }}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    minHeight: STRIP_H,
-                    paddingX: 1.75,
-                    backgroundColor: bg,
-                    borderBottom: `1px solid ${colors.primaryBlack}`,
-                }}>
-                <Typography sx={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                    {title}
-                </Typography>
-                {strip}
-            </Box>
-            {list.map((row, i) => (
-                <Row
-                    key={row.supplementId}
-                    row={row}
-                    today={today}
-                    last={i === list.length - 1}
-                    expanded={expanded === row.supplementId}
-                    onToggle={setExpanded}
-                    onOpen={onOpen}
-                    onDelete={onDelete}
-                    onSetDoses={onSetDoses}
-                />
-            ))}
-        </Box>
-    )
+    const board = (
+        side: 'daily' | 'off',
+        title: string,
+        list: StackRow[],
+        strip: React.ReactNode,
+        bg: string
+    ) => {
+        // Live rows + ghosts leaving this board, in name order so a leaving
+        // row collapses where it was
+        const leaving = ghosts.filter((g) => (g.dailyDoses !== null) === (side === 'daily'))
+        const items = [
+            ...list.map((row) => ({ row, ghost: false })),
+            ...leaving
+                .filter((g) => !list.some((r) => r.supplementId === g.supplementId))
+                .map((row) => ({ row, ghost: true })),
+        ].sort((a, b) => a.row.name.localeCompare(b.row.name))
+        const lastLive = [...items].reverse().find((i) => !i.ghost)?.row.supplementId
+        return (
+            // The whole board eases in/out when its first row arrives or its
+            // last one leaves
+            <Collapse in={list.length > 0} timeout={MOVE_MS} appear={false} unmountOnExit>
+                <Box
+                    sx={{
+                        border: `1px solid ${colors.primaryBlack}`,
+                        borderRadius: '8px',
+                        boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                        backgroundColor: colors.primaryWhite,
+                        overflow: 'hidden',
+                        // Keeps the gap to the other board inside the collapse
+                        marginBottom: side === 'daily' ? 2 : 0,
+                    }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            minHeight: STRIP_H,
+                            paddingX: 1.75,
+                            backgroundColor: bg,
+                            borderBottom: `1px solid ${colors.primaryBlack}`,
+                        }}>
+                        <Typography
+                            sx={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                            {title}
+                        </Typography>
+                        {strip}
+                    </Box>
+                    {items.map(({ row, ghost }) => (
+                        <Collapse
+                            key={`${side}-${row.supplementId}`}
+                            in={!ghost}
+                            timeout={MOVE_MS}
+                            appear={arrived.has(row.supplementId)}>
+                            <Row
+                                row={row}
+                                today={today}
+                                last={row.supplementId === lastLive}
+                                arrived={!ghost && arrived.has(row.supplementId)}
+                                expanded={!ghost && expanded === row.supplementId}
+                                onToggle={setExpanded}
+                                onOpen={onOpen}
+                                onDelete={onDelete}
+                                onSetDoses={onSetDoses}
+                            />
+                        </Collapse>
+                    ))}
+                </Box>
+            </Collapse>
+        )
+    }
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {daily.length > 0 &&
-                board(
-                    'Daily stack',
-                    daily,
-                    <Typography
-                        component="span"
-                        sx={{ display: 'flex', alignItems: 'baseline', gap: '4px', lineHeight: 1 }}>
-                        <Box component="span" sx={{ ...stripNumSx, color: supplementColors.deep }}>
-                            {perDay}
-                        </Box>
-                        <Box component="span" sx={stripWordSx}>
-                            DOSES / DAY
-                        </Box>
-                    </Typography>,
-                    healthColors.supplements
-                )}
-            {off.length > 0 && board('Off the stack', off, null, supplementColors.fillLight)}
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            {board(
+                'daily',
+                'Daily stack',
+                daily,
+                <Typography component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: '4px', lineHeight: 1 }}>
+                    <Box component="span" sx={{ ...stripNumSx, color: supplementColors.deep }}>
+                        {perDay}
+                    </Box>
+                    <Box component="span" sx={stripWordSx}>
+                        DOSES / DAY
+                    </Box>
+                </Typography>,
+                healthColors.supplements
+            )}
+            {board('off', 'Off the stack', off, null, supplementColors.fillLight)}
         </Box>
     )
 }
@@ -140,6 +207,7 @@ const Row = memo(function Row({
     row,
     today,
     last,
+    arrived,
     expanded,
     onToggle,
     onOpen,
@@ -149,6 +217,8 @@ const Row = memo(function Row({
     row: StackRow
     today: string
     last: boolean
+    /** Just moved into this board — flashes once. */
+    arrived: boolean
     expanded: boolean
     onToggle: (id: number | null) => void
     onOpen: (id: number) => void
@@ -206,7 +276,20 @@ const Row = memo(function Row({
             backgroundColor={colors.primaryWhite}
             showBottomBorder={!last}
             borderColor={RULE}>
-            <Box sx={{ display: 'flex', alignItems: 'center', minHeight: 52 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    minHeight: 52,
+                    ...(arrived && {
+                        '@keyframes stackArrive': {
+                            from: { backgroundColor: `${colors.primaryYellow}8c` },
+                            to: { backgroundColor: 'transparent' },
+                        },
+                        'animation': 'stackArrive 0.9s ease-out',
+                        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                    }),
+                }}>
                 <Box
                     component="button"
                     type="button"
