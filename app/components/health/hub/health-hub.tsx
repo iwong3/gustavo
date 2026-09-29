@@ -53,6 +53,7 @@ import {
     type WorkoutWindow,
 } from '@/lib/health/hub-window'
 import type { Run } from '@/lib/health/supplement-runs'
+import { AnimatedHeight } from 'components/animated-height'
 import BoardCard, { StripText, stripNumSx, stripWordSx } from 'components/home/board-card'
 import { HealthPageHeader } from 'components/health/health-page-layout'
 import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
@@ -65,11 +66,11 @@ export type HubSupplementRuns = { supplementId: number; name: string; runs: Run[
 
 const WINDOW_PHRASE: Record<HubWindow, string> = { '30d': 'the last 30 days', '90d': 'the last 90 days', '1y': 'the last year' }
 
-// Heatmap cell size per window (1Y stretches to the card's width instead)
-const HEAT_CELL: Record<HubWindow, number> = { '30d': 18, '90d': 11, '1y': 0 }
-const HEAT_GAP: Record<HubWindow, number> = { '30d': 3, '90d': 3, '1y': 1.5 }
-// Card bodies while loading — the loaded bodies' heights, so nothing jumps
-const WORKOUTS_BODY_H: Record<HubWindow, number> = { '30d': 159, '90d': 110, '1y': 100 }
+// Heatmap gaps: the 30D calendar, 90D weeks-as-columns, 1Y packed tight
+const HEAT_GAP: Record<HubWindow, number> = { '30d': 4, '90d': 3, '1y': 1.5 }
+// Card bodies while loading — about the loaded bodies' heights (AnimatedHeight
+// eases whatever difference is left)
+const WORKOUTS_BODY_H: Record<HubWindow, number> = { '30d': 226, '90d': 222, '1y': 104 }
 const WEIGHT_CHART_H = 96
 const RUN_ROW_H = 28
 
@@ -174,7 +175,6 @@ const Empty = ({ children }: { children: ReactNode }) => (
 
 function WorkoutsCard({ window, days, today, dates }: { window: HubWindow; days: number; today: string; dates: string[] | null }) {
     const win = useMemo(() => (dates ? workoutWindow(dates, today, days) : null), [dates, today, days])
-    const stacked = window === '1y'
     return (
         <BoardCard
             href={`${HEALTH}/exercise`}
@@ -182,32 +182,77 @@ function WorkoutsCard({ window, days, today, dates }: { window: HubWindow; days:
             icon={<IconBarbell size={14} stroke={2.3} />}
             title="Workouts"
             right={win ? <StripStat label={`${win.worked} of ${days} days`} num={win.worked} words={`of ${days} days`} /> : chevronOnly}>
-            {!win ? (
-                <Bone height={WORKOUTS_BODY_H[window]} radius="4px" />
-            ) : (
-                <Box sx={{ display: 'flex', flexDirection: stacked ? 'column' : 'row', gap: stacked ? 1.25 : 1.5, alignItems: stacked ? 'stretch' : 'flex-start' }}>
-                    <Heatmap win={win} window={window} />
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: stacked ? 'row' : 'column',
-                            justifyContent: 'space-between',
-                            gap: 1.25,
-                            marginLeft: stacked ? 0 : 'auto',
-                        }}>
-                        <Stat value={win.perWeek.toFixed(1)} label="per week" align={stacked ? 'start' : 'end'} />
-                        <Stat value={`${win.pct}%`} label="of days" align={stacked ? 'start' : 'end'} />
-                        <Stat value={win.worked ? `${win.longestBreak}d` : '—'} label="longest break" align={stacked ? 'start' : 'end'} />
+            <AnimatedHeight>
+                {!win ? (
+                    <Bone height={WORKOUTS_BODY_H[window]} radius="4px" />
+                ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {window === '30d' ? <MonthCalendar win={win} /> : <Heatmap win={win} window={window} />}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.25 }}>
+                            <Stat value={win.perWeek.toFixed(1)} label="per week" align="start" />
+                            <Stat value={`${win.pct}%`} label="of days" align="start" />
+                            <Stat value={win.worked ? `${win.longestBreak}d` : '—'} label="longest break" align="end" />
+                        </Box>
                     </Box>
-                </Box>
-            )}
+                )}
+            </AnimatedHeight>
         </BoardCard>
     )
 }
 
+const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const shortMonth = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })
+
+/** 30D reads as a calendar: weeks as rows, Mon–Sun across, day numbers in
+ *  the cells. Days just outside the window stay faded to keep the grid whole. */
+export function MonthCalendar({ win }: { win: WorkoutWindow }) {
+    return (
+        <Box
+            role="img"
+            aria-label={`Worked out ${win.worked} of the last ${win.days} days`}
+            sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: `${HEAT_GAP['30d']}px`, padding: '3px' }}>
+            {WEEKDAYS.map((d, i) => (
+                <Typography key={i} sx={{ ...captionSx, fontSize: 9, textAlign: 'center' }}>
+                    {d}
+                </Typography>
+            ))}
+            {win.weeks.flat().map((c) => {
+                const on = c.state === 'on'
+                const outside = c.state === 'pad' || c.state === 'future'
+                const day = Number(c.date.slice(8))
+                return (
+                    <Box
+                        key={c.date}
+                        sx={{
+                            height: 26,
+                            borderRadius: '4px',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: 11,
+                            fontWeight: on ? 700 : 500,
+                            fontVariantNumeric: 'tabular-nums',
+                            whiteSpace: 'nowrap',
+                            color: on ? colors.primaryBlack : colors.primaryBrown,
+                            backgroundColor: on ? workoutColors.fill : outside ? 'transparent' : workoutColors.empty,
+                            boxShadow: on
+                                ? `inset 0 0 0 1px ${workoutColors.deep}`
+                                : outside
+                                  ? `inset 0 0 0 1px ${workoutColors.empty}`
+                                  : undefined,
+                            opacity: outside ? 0.5 : 1,
+                            ...(c.today && { outline: `1.5px solid ${colors.primaryBlack}`, outlineOffset: 1 }),
+                        }}>
+                        {day === 1 ? `${shortMonth(c.date)} 1` : day}
+                    </Box>
+                )
+            })}
+        </Box>
+    )
+}
+
+/** 90D / 1Y: weeks as columns (Mon at the top), stretched to the card's width. */
 export function Heatmap({ win, window }: { win: WorkoutWindow; window: HubWindow }) {
     const cols = win.weeks.length
-    const cell = HEAT_CELL[window]
     const gap = HEAT_GAP[window]
     const small = window === '1y'
     const columns = `repeat(${cols}, minmax(0, 1fr))`
@@ -215,7 +260,7 @@ export function Heatmap({ win, window }: { win: WorkoutWindow; window: HubWindow
         <Box
             role="img"
             aria-label={`Worked out ${win.worked} of the last ${win.days} days`}
-            sx={{ width: small ? '100%' : cols * cell + (cols - 1) * gap, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            sx={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '3px' }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: columns, columnGap: `${gap}px`, height: 12 }}>
                 {win.monthLabels.map((m) => (
                     <Typography
@@ -238,7 +283,7 @@ export function Heatmap({ win, window }: { win: WorkoutWindow; window: HubWindow
                         key={c.date}
                         sx={{
                             aspectRatio: '1',
-                            borderRadius: small ? '1px' : '2px',
+                            borderRadius: small ? '1px' : '3px',
                             visibility: c.state === 'pad' ? 'hidden' : undefined,
                             backgroundColor:
                                 c.state === 'on' ? (small ? '#e8843f' : workoutColors.fill) : c.state === 'off' ? workoutColors.empty : 'transparent',
@@ -292,13 +337,15 @@ function WeightCard({ window, days, today, logs }: { window: HubWindow; days: nu
                     />
                 )
             }>
-            {!logs ? (
-                <Bone height={WEIGHT_CHART_H} radius="4px" />
-            ) : !series ? (
-                <Empty>{logs.length ? `No weigh-ins in ${WINDOW_PHRASE[window]}.` : 'No weigh-ins yet.'}</Empty>
-            ) : (
-                <WeightChart series={series} today={today} days={days} />
-            )}
+            <AnimatedHeight>
+                {!logs ? (
+                    <Bone height={WEIGHT_CHART_H} radius="4px" />
+                ) : !series ? (
+                    <Empty>{logs.length ? `No weigh-ins in ${WINDOW_PHRASE[window]}.` : 'No weigh-ins yet.'}</Empty>
+                ) : (
+                    <WeightChart series={series} today={today} days={days} />
+                )}
+            </AnimatedHeight>
         </BoardCard>
     )
 }
@@ -386,13 +433,15 @@ function SupplementsCard({ window, days, today, runs }: { window: HubWindow; day
             icon={<IconPill size={14} stroke={2.3} />}
             title="Supplements"
             right={rows ? <StripStat label={`${inStack} in your stack`} num={inStack} words="in stack" /> : chevronOnly}>
-            {!rows ? (
-                <Bone height={RUN_ROW_H * 4} radius="4px" />
-            ) : rows.length === 0 ? (
-                <Empty>Nothing in your daily stack in {WINDOW_PHRASE[window]}.</Empty>
-            ) : (
-                <RunsChart rows={rows} today={today} days={days} />
-            )}
+            <AnimatedHeight>
+                {!rows ? (
+                    <Bone height={RUN_ROW_H * 4} radius="4px" />
+                ) : rows.length === 0 ? (
+                    <Empty>Nothing in your daily stack in {WINDOW_PHRASE[window]}.</Empty>
+                ) : (
+                    <RunsChart rows={rows} today={today} days={days} />
+                )}
+            </AnimatedHeight>
         </BoardCard>
     )
 }

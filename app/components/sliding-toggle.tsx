@@ -52,9 +52,13 @@ export function SlidingToggle({
         }
     }, [activeIndex, hasTransition])
 
+    // Equal columns (each as wide as the widest label): the sliding
+    // indicator moves in 1/count steps, so segments must match it exactly —
+    // flex let a short label ("1Y") shrink its segment and misalign it
+    const columnsSx = { display: 'grid', gridTemplateColumns: `repeat(${count}, 1fr)` } as const
     const frameSx = {
         position: 'relative',
-        display: 'flex',
+        ...columnsSx,
         backgroundColor: colors.primaryWhite,
         border: `${borderWidth}px solid ${colors.primaryBlack}`,
         borderRadius: 1,
@@ -96,7 +100,7 @@ export function SlidingToggle({
         <Box
             sx={{
                 position: 'relative',
-                display: 'flex',
+                ...columnsSx,
                 backgroundColor: colors.primaryWhite,
                 border: `${borderWidth}px solid ${colors.primaryBlack}`,
                 borderRadius: 1,
