@@ -29,6 +29,7 @@ import { ToastHost } from 'components/toast-host'
 import { useHomeHeaderStore } from 'components/home/home-header-store'
 import { HeaderQuote } from 'components/home/home-quote'
 import { TripHeaderControls } from 'components/trip-header-controls'
+import { HeaderSlotProvider, HeaderSlotTarget } from 'components/header-slot'
 import { FabProvider, useFabClick } from 'providers/fab-provider'
 
 function ContentFab() {
@@ -459,6 +460,7 @@ export default function AppShell({
         <ClientOnly>
             <FabProvider>
                 <PageActionBarProvider>
+                <HeaderSlotProvider>
                 <ToastHost />
                 <Box
                     sx={{
@@ -525,6 +527,8 @@ export default function AppShell({
                                     paddingLeft: 0.5,
                                 }}>
                                 <TripHeaderControls />
+                                {/* Page title rows (HeaderSlot) — health pages */}
+                                <HeaderSlotTarget />
                                 {homeInHeader && (
                                     <Box sx={{ ...cornerFadeInSx, minWidth: 0 }}>
                                         <HeaderQuote />
@@ -613,6 +617,7 @@ export default function AppShell({
                         <ContentFab />
                     </Box>
                 </Box>
+                </HeaderSlotProvider>
                 </PageActionBarProvider>
             </FabProvider>
         </ClientOnly>

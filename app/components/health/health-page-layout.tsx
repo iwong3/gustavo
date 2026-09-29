@@ -5,6 +5,7 @@ import { Box, CircularProgress, Typography } from '@mui/material'
 import { IconChevronRight } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 
+import { HeaderSlot } from 'components/header-slot'
 import { PullToRefresh } from 'components/pull-to-refresh'
 
 /**
@@ -64,8 +65,9 @@ export function HealthPageLayout({
 }
 
 /**
- * Sticky header section for health pages.
- * Renders the colored title chip and optional children (presets, legend, etc.)
+ * Header for health pages. The colored title chip + `right` render up in the
+ * app header beside the back button (HeaderSlot); optional children (presets,
+ * legend, etc.) stay in a sticky strip at the top of the page.
  * `right`: controls on the chip's row (action icons, then PageInfo last).
  * `onTitleClick`: makes the chip a button into the section's next level
  * (like tapping a trip's name) — it gets a › and presses in.
@@ -86,22 +88,9 @@ export function HealthPageHeader({
     children?: ReactNode
 }) {
     return (
-        <Box
-            sx={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 10,
-                backgroundColor: colors.secondaryYellow,
-                mx: -2,
-                px: 2,
-                pt: 2,
-                pb: 1.5,
-                mt: -2,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1.25,
-            }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        <>
+            <HeaderSlot>
+            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Box
                     {...(onTitleClick
                         ? { component: 'button' as const, type: 'button' as const, onClick: onTitleClick }
@@ -138,7 +127,26 @@ export function HealthPageHeader({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{right}</Box>
                 )}
             </Box>
-            {children}
-        </Box>
+            </HeaderSlot>
+            {children && (
+                <Box
+                    sx={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 10,
+                        backgroundColor: colors.secondaryYellow,
+                        mx: -2,
+                        px: 2,
+                        pt: 2,
+                        pb: 1.5,
+                        mt: -2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1.25,
+                    }}>
+                    {children}
+                </Box>
+            )}
+        </>
     )
 }
