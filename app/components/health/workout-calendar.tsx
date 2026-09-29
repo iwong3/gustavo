@@ -17,7 +17,7 @@
  */
 import { Box, Typography } from '@mui/material'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
-import { useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import {
     cardSx,
@@ -408,7 +408,9 @@ const WINDOW_LABEL: Record<CalendarWindow, string> = {
 
 /** Month / 90D / 1Y as flat text tabs in the card's strip (a boxed toggle
  *  inside the boxed strip read as a box in a box). Full strip height, so
- *  each tab is a 38px tap target; the chosen one is bold + underlined. */
+ *  each tab is a 38px tap target. The chosen one is bold, with one underline
+ *  that slides to it (measured, since the labels differ in width); it snaps
+ *  on first paint and under reduced motion. */
 function WindowTabs({
     value,
     onChange,
@@ -416,11 +418,49 @@ function WindowTabs({
     value: CalendarWindow
     onChange: (w: CalendarWindow) => void
 }) {
+    const listRef = useRef<HTMLDivElement>(null)
+    const labelRefs = useRef<
+        Partial<Record<CalendarWindow, HTMLSpanElement | null>>
+    >({})
+    const [bar, setBar] = useState<{
+        left: number
+        width: number
+        top: number
+    } | null>(null)
+    const [animate, setAnimate] = useState(false)
+
+    useLayoutEffect(() => {
+        const measure = () => {
+            const el = labelRefs.current[value]
+            if (el)
+                setBar({
+                    left: el.offsetLeft,
+                    width: el.offsetWidth,
+                    top: el.offsetTop + el.offsetHeight,
+                })
+        }
+        measure()
+        // Web fonts landing (or a resize) move the labels
+        const ro = new ResizeObserver(measure)
+        if (listRef.current) ro.observe(listRef.current)
+        return () => ro.disconnect()
+    }, [value])
+    // Only slide once it has been placed
+    useEffect(() => {
+        if (bar && !animate) requestAnimationFrame(() => setAnimate(true))
+    }, [bar, animate])
+
     return (
         <Box
+            ref={listRef}
             role="tablist"
             aria-label="Calendar range"
-            sx={{ display: 'flex', alignSelf: 'stretch', flexShrink: 0 }}>
+            sx={{
+                position: 'relative',
+                display: 'flex',
+                alignSelf: 'stretch',
+                flexShrink: 0,
+            }}>
             {CALENDAR_WINDOWS.map((w) => {
                 const on = w === value
                 return (
@@ -443,23 +483,49 @@ function WindowTabs({
                         }}>
                         <Box
                             component="span"
+                            ref={(el: HTMLSpanElement | null) => {
+                                labelRefs.current[w] = el
+                            }}
                             sx={{
                                 fontSize: 11.5,
                                 fontWeight: on ? 800 : 600,
                                 letterSpacing: '0.04em',
                                 lineHeight: 1.2,
-                                padding: '3px 0',
+                                // Room for the underline, so the text sits where it did
+                                padding: '3px 0 5px',
                                 color: on
                                     ? colors.primaryBlack
                                     : colors.primaryBrown,
-                                borderBottom: `2px solid ${on ? colors.primaryBlack : 'transparent'}`,
-                                transition: 'color 0.15s, border-color 0.15s',
+                                transition: 'color 0.15s',
                             }}>
                             {WINDOW_LABEL[w]}
                         </Box>
                     </Box>
                 )
             })}
+            {bar && (
+                <Box
+                    aria-hidden
+                    sx={{
+                        'position': 'absolute',
+                        'left': 0,
+                        'top': bar.top - 2,
+                        'width': bar.width,
+                        'height': 2,
+                        'borderRadius': '1px',
+                        'backgroundColor': colors.primaryBlack,
+                        'transform': `translateX(${bar.left}px)`,
+                        // The app's sliding-toggle easing: fast start, soft landing
+                        'transition': animate
+                            ? 'transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), width 0.2s cubic-bezier(0.2, 0.9, 0.3, 1)'
+                            : 'none',
+                        '@media (prefers-reduced-motion: reduce)': {
+                            transition: 'none',
+                        },
+                        'pointerEvents': 'none',
+                    }}
+                />
+            )}
         </Box>
     )
 }
