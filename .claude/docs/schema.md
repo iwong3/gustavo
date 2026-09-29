@@ -1,6 +1,6 @@
 # Database Schema
 
-> Current through migration **00043**. When you add a migration, update this doc in the same change.
+> Current through migration **00044**. When you add a migration, update this doc in the same change.
 
 ## ER Diagram
 
@@ -165,6 +165,7 @@ workouts
   date DATE
   notes TEXT
   created_at, updated_at, deleted_at
+  UNIQUE(user_id, date) WHERE deleted_at IS NULL -- one workout per day (00044)
 
 workout_muscle_groups
   id BIGINT PK
@@ -409,6 +410,7 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
   the trip's live payments (409), so the first settle locks the trip and undoing
   every payment unlocks it.
 - **Audit log** — Postgres triggers write to `audit_log`; user attribution via `SET LOCAL audit.changed_by` in transactions (see `lib/db-audit.ts`). Join tables with composite PKs (trip_countries, trip_currencies, food_group_members) have NO audit triggers — `audit_trigger_func()` reads `NEW.id` and blows up without an `id` column (00036).
+- **One workout per day (00044)** — a partial unique index on `workouts (user_id, date)`. Logging a routine or saving the new-workout form on a day that already has a workout adds its groups / exercises / notes to that workout (`lib/workout-day.ts`); the apply response lists what was added so Undo (PATCH `/api/health/workouts/[id]`) removes only that. Editing a workout onto a taken date is a 409. The migration merged existing same-day pairs into the earliest one and soft-deleted the rest.
 - **Workout weight (00024)** — `weight_lbs` lives on `workout_exercises` (one weight per exercise per session); sets track reps only.
 - **Supplement runs (00043)** — "Day X" counts the current run of a supplement.
   Runs are derived, not stored (`lib/health/supplement-runs.ts`): a `started`

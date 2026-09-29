@@ -12,9 +12,9 @@ import { buildStack } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
 import type { HomeActivityEntry } from '@/lib/types'
 import { Box, Typography } from '@mui/material'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { getTablerIcon } from 'utils/icons'
 import { fetchTrips } from 'utils/api'
 
@@ -36,7 +36,7 @@ import {
 import { FlapScaleButton, ReceiptButton } from 'components/home/quick-actions'
 import SupplementsCard from 'components/home/supplements-card'
 import WorkoutsCard from 'components/home/workouts-card'
-import { showToast } from 'components/toast-store'
+import { useApplyWorkoutRoutine } from 'components/health/workout-presets'
 import { useToday } from 'hooks/use-today'
 import { useStackDay } from 'hooks/use-stack-day'
 import { useDoseTaps } from 'hooks/use-supplement-dose'
@@ -199,7 +199,6 @@ const HEALTH_WINDOW_DAYS = 30
 
 /** Routines → one-tap log with Undo; muscle groups with a 14-day history strip. */
 function WorkoutsSection({ today }: { today: string }) {
-    const queryClient = useQueryClient()
     const windowStart = useMemo(() => {
         const d = new Date(today + 'T00:00:00')
         d.setDate(d.getDate() - (HEALTH_WINDOW_DAYS - 1))
@@ -227,52 +226,7 @@ function WorkoutsSection({ today }: { today: string }) {
         queryFn: () =>
             fetchJson<WorkoutPreset[]>('/api/health/presets?type=workout'),
     })
-    const [appliedId, setAppliedId] = useState<number | null>(null)
-
-    const invalidateWorkouts = useCallback(
-        () =>
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.health.workouts.all,
-            }),
-        [queryClient]
-    )
-
-    const undo = useCallback(
-        async (workoutId: number, presetId: number) => {
-            setAppliedId((id) => (id === presetId ? null : id))
-            const res = await fetch(`/api/health/workouts/${workoutId}`, {
-                method: 'DELETE',
-            }).catch(() => null)
-            if (!res?.ok)
-                showToast(
-                    "Couldn't undo that workout. Delete it from Workouts."
-                )
-            invalidateWorkouts()
-        },
-        [invalidateWorkouts]
-    )
-
-    const apply = useMutation({
-        mutationFn: async (preset: WorkoutPreset) => {
-            const res = await fetch(`/api/health/presets/${preset.id}/apply`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: today }),
-            })
-            if (!res.ok) throw new Error('Apply failed')
-            const data = (await res.json()) as { workoutId: number }
-            return { preset, workoutId: Number(data.workoutId) }
-        },
-        onSuccess: ({ preset, workoutId }) => {
-            setAppliedId(preset.id)
-            invalidateWorkouts()
-            showToast(`Logged ${preset.name}`, 'success', {
-                label: 'Undo',
-                onClick: () => undo(workoutId, preset.id),
-            })
-        },
-        meta: { errorToast: "Couldn't log that routine. Try again." },
-    })
+    const { apply, applyingId, appliedId } = useApplyWorkoutRoutine(today)
 
     const daysSince = daysSinceQ.data ?? []
     // Shows once you've ever logged a workout
@@ -288,9 +242,9 @@ function WorkoutsSection({ today }: { today: string }) {
             workouts={recentQ.data ?? []}
             today={today}
             presets={presetsQ.data ?? []}
-            applyingId={apply.isPending ? (apply.variables?.id ?? null) : null}
+            applyingId={applyingId}
             appliedId={appliedId}
-            onApplyPreset={(preset) => apply.mutate(preset)}
+            onApplyPreset={apply}
         />
     )
 }

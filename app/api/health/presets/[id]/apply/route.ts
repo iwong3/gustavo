@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { addMuscleGroups, getOrCreateDayWorkout, nextExerciseSortOrder } from '@/lib/workout-day'
 
 type Params = { id: string }
 
@@ -61,23 +62,27 @@ async function applyWorkoutPreset(userId: number, presetId: number, date: string
             [presetId]
         )
 
-        // Create workout
-        const workoutRes = await client.query(
-            `INSERT INTO workouts (user_id, date) VALUES ($1, $2) RETURNING id`,
-            [userId, date]
+        // One workout per day: add to the day's workout if there is one.
+        // The response says what was added, so Undo removes only that.
+        const { workoutId, created } = await getOrCreateDayWorkout(client, userId, date)
+        const addedMuscleGroupIds = await addMuscleGroups(
+            client,
+            workoutId,
+            mgRes.rows.map((r) => r.muscle_group_id)
         )
-        const workoutId = workoutRes.rows[0].id
 
-        // Insert muscle groups
-        for (const mg of mgRes.rows) {
-            await client.query(
-                `INSERT INTO workout_muscle_groups (workout_id, muscle_group_id) VALUES ($1, $2)`,
-                [workoutId, mg.muscle_group_id]
-            )
-        }
+        // Exercises already in the day's workout aren't added twice
+        const haveRes = await client.query(
+            `SELECT exercise_id FROM workout_exercises WHERE workout_id = $1`,
+            [workoutId]
+        )
+        const have = new Set(haveRes.rows.map((r) => String(r.exercise_id)))
+        const offset = await nextExerciseSortOrder(client, workoutId)
+        const addedWorkoutExerciseIds: number[] = []
 
         // Insert exercises with most recent weights
         for (const ex of exRes.rows) {
+            if (have.has(String(ex.exercise_id))) continue
             // Find most recent weight for this exercise
             const weightRes = await client.query(
                 `SELECT we.weight_lbs FROM workout_exercises we
@@ -90,14 +95,15 @@ async function applyWorkoutPreset(userId: number, presetId: number, date: string
             )
             const lastWeight = weightRes.rows.length > 0 ? weightRes.rows[0].weight_lbs : null
 
-            await client.query(
+            const weRes = await client.query(
                 `INSERT INTO workout_exercises (workout_id, exercise_id, sort_order, weight_lbs)
-                 VALUES ($1, $2, $3, $4)`,
-                [workoutId, ex.exercise_id, ex.sort_order, lastWeight]
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [workoutId, ex.exercise_id, ex.sort_order + offset, lastWeight]
             )
+            addedWorkoutExerciseIds.push(Number(weRes.rows[0].id))
         }
 
-        return { workoutId: Number(workoutId) }
+        return { workoutId, created, addedMuscleGroupIds, addedWorkoutExerciseIds }
     })
 }
 

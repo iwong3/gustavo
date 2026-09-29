@@ -3,6 +3,12 @@ import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import type { Workout, WorkoutExercise } from '@/lib/health-types'
+import {
+    addMuscleGroups,
+    appendNotes,
+    getOrCreateDayWorkout,
+    nextExerciseSortOrder,
+} from '@/lib/workout-day'
 
 /** Fetch exercises + sets for a list of workout IDs. Returns a map of workoutId → WorkoutExercise[] */
 async function fetchWorkoutExercises(
@@ -171,30 +177,26 @@ export async function POST(request: NextRequest) {
 
     try {
         const workout = await withAuditUser(authUser.userId, async (client) => {
-            const res = await client.query(
-                `INSERT INTO workouts (user_id, date, notes)
-                 VALUES ($1, $2, $3)
-                 RETURNING id, date, notes, created_at`,
-                [authUser.userId, date, notes || null]
-            )
+            // One workout per day: a day that already has one gets these
+            // groups / exercises / notes added to it (lib/workout-day.ts)
+            const { workoutId } = await getOrCreateDayWorkout(client, authUser.userId, date)
+            await appendNotes(client, workoutId, notes)
+            await addMuscleGroups(client, workoutId, muscleGroupIds)
 
-            const workoutId = res.rows[0].id
-
-            // Insert muscle group associations
-            const values = muscleGroupIds
-                .map((_: number, i: number) => `($1, $${i + 2})`)
-                .join(', ')
-            const mgParams = [workoutId, ...muscleGroupIds]
-
-            await client.query(
-                `INSERT INTO workout_muscle_groups (workout_id, muscle_group_id) VALUES ${values}`,
-                mgParams
-            )
-
-            // Insert exercises + sets if provided
+            // Insert exercises + sets if provided, after any already there
             if (exercises && Array.isArray(exercises) && exercises.length > 0) {
-                await insertWorkoutExercises(client, workoutId, exercises)
+                const offset = await nextExerciseSortOrder(client, workoutId)
+                await insertWorkoutExercises(
+                    client,
+                    workoutId,
+                    (exercises as ExerciseInput[]).map((ex) => ({ ...ex, sortOrder: ex.sortOrder + offset }))
+                )
             }
+
+            const res = await client.query(
+                `SELECT id, date, notes, created_at FROM workouts WHERE id = $1`,
+                [workoutId]
+            )
 
             // Fetch the muscle groups for the response
             const mgRes = await client.query(

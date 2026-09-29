@@ -378,6 +378,12 @@ export default function WorkoutForm({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
             })
+            if (res.status === 409) {
+                // Edit moved it onto a day that already has a workout (one per day)
+                const body = (await res.json().catch(() => null)) as { error?: string } | null
+                setError(body?.error ?? 'That day already has a workout.')
+                return
+            }
             if (!res.ok) throw new Error('Save failed')
             // Seed the cached lists with the saved workout before navigating,
             // so the list/detail shows it immediately; the refetch below

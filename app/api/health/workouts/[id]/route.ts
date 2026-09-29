@@ -161,8 +161,63 @@ export async function PUT(
         if (err instanceof Error && err.message === 'NOT_FOUND') {
             return NextResponse.json({ error: 'Workout not found' }, { status: 404 })
         }
+        // uq_workouts_user_date (00044): moved onto a day that has a workout
+        if ((err as { code?: string }).code === '23505') {
+            return NextResponse.json(
+                { error: 'That day already has a workout. Edit that one instead.' },
+                { status: 409 }
+            )
+        }
         console.error('Error updating workout:', err)
         return NextResponse.json({ error: 'Failed to update workout' }, { status: 500 })
+    }
+}
+
+/**
+ * Undo a routine added to a day's existing workout (one per day, 00044):
+ * removes just the muscle groups / exercises that tap added. A routine that
+ * created the workout is undone with DELETE instead.
+ */
+export async function PATCH(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const authUser = await requireAuthWithUserId()
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { id } = await params
+    const workoutId = parseInt(id, 10)
+    if (isNaN(workoutId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+
+    const body = await request.json().catch(() => ({}))
+    const toIds = (v: unknown) => (Array.isArray(v) ? v.map(Number).filter(Number.isFinite) : [])
+    const removeMuscleGroupIds = toIds(body.removeMuscleGroupIds)
+    const removeWorkoutExerciseIds = toIds(body.removeWorkoutExerciseIds)
+
+    try {
+        await withAuditUser(authUser.userId, async (client) => {
+            const existing = await client.query(
+                `SELECT id FROM workouts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+                [workoutId, authUser.userId]
+            )
+            if (existing.rows.length === 0) throw new Error('NOT_FOUND')
+            await client.query(
+                `DELETE FROM workout_muscle_groups
+                 WHERE workout_id = $1 AND muscle_group_id = ANY($2::bigint[])`,
+                [workoutId, removeMuscleGroupIds]
+            )
+            await client.query(
+                `DELETE FROM workout_exercises WHERE workout_id = $1 AND id = ANY($2::bigint[])`,
+                [workoutId, removeWorkoutExerciseIds]
+            )
+        })
+        return NextResponse.json({ success: true })
+    } catch (err) {
+        if (err instanceof Error && err.message === 'NOT_FOUND') {
+            return NextResponse.json({ error: 'Workout not found' }, { status: 404 })
+        }
+        console.error('Error undoing routine:', err)
+        return NextResponse.json({ error: 'Failed to undo' }, { status: 500 })
     }
 }
 
