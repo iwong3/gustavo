@@ -30,7 +30,7 @@ const dimensionOptions = [
 
 export default function MySpendPage() {
     const { trip } = useTripData()
-    const { participants } = useSpendData()
+    const { participants, totalSpend } = useSpendData()
     const router = useRouter()
 
     const {
@@ -82,11 +82,12 @@ export default function MySpendPage() {
         chips.push({ kind: 'day', label: dayjs(filters.day + 'T00:00:00').format('MMM D') })
     }
 
-    // Summary line under the big number: context without extra cards
+    // Summary line under the big number: context without extra cards.
+    // Unfiltered, it carries the whole group's trip total too.
     const pctOfAll = overallTotal > 0 ? Math.round((totalShare / overallTotal) * 100) : 0
     const summaryLine = hasActiveFilters
         ? `${pctOfAll}% of ${possessive} ${formatUsd(overallTotal)} · ${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`
-        : `${possessive} share · ${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'} · ${formatUsd(overallTotal / tripDays)}/day`
+        : `${possessive} share of ${formatUsd(totalSpend)} · ${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'} · ${formatUsd(overallTotal / tripDays)}/day`
 
     const View = dimension === 'day' ? DayCalendar : dimension === 'location' ? PlaceRoute : CategoryBreakdown
 
