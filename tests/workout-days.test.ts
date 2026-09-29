@@ -11,6 +11,7 @@ import {
     groupByWeek,
     matchRoutines,
     routineRecency,
+    routineStats,
     toGroups,
 } from '../lib/health/workout-days'
 
@@ -96,5 +97,27 @@ describe('groupByWeek', () => {
     it('starts at a future-dated workout’s week', () => {
         const weeks = groupByWeek(buildWorkoutDays([w('2026-10-05', ['Legs'])], presets), '2026-09-28')
         expect(weeks.map((wk) => wk.start)).toEqual(['2026-10-04'])
+    })
+})
+
+describe('routineStats', () => {
+    const days = buildWorkoutDays(
+        [
+            w('2026-09-18', ['Upper Back', 'Biceps', 'Forearms']),
+            w('2026-09-13', ['Upper Back', 'Biceps', 'Forearms']),
+            w('2026-09-12', ['Cardio']),
+            w('2026-09-03', ['Upper Back', 'Biceps', 'Forearms']),
+            w('2026-06-01', ['Upper Back', 'Biceps', 'Forearms']),
+        ],
+        presets,
+    )
+
+    it('counts, gaps and since within the window', () => {
+        expect(routineStats(days, 2, '2026-09-28', 30)).toEqual({ times: 3, avgGap: 7.5, longestGap: 10, since: 10 })
+    })
+
+    it('since looks past the window; no gaps with fewer than two', () => {
+        expect(routineStats(days, 2, '2026-12-28', 30)).toEqual({ times: 0, avgGap: null, longestGap: null, since: 101 })
+        expect(routineStats(days, 1, '2026-09-28', 30).since).toBeNull()
     })
 })

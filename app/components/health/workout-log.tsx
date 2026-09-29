@@ -16,17 +16,41 @@
  * Model: lib/health/workout-days.ts. Ids arrive as strings at runtime.
  */
 import { Box, Typography } from '@mui/material'
-import { IconChevronRight } from '@tabler/icons-react'
-import { Fragment } from 'react'
+import { IconBolt, IconChevronRight } from '@tabler/icons-react'
+import { Fragment, type ReactNode } from 'react'
 
-import { cardSx, colors, healthColors, pressRowSx, pressShadowSx, workoutColors } from '@/lib/colors'
+import {
+    cardSx,
+    colors,
+    healthColors,
+    pressRowSx,
+    pressShadowSx,
+    workoutColors,
+} from '@/lib/colors'
 import type { WorkoutPreset } from '@/lib/health-types'
 import { getDaysSinceTextColor } from '@/lib/health/days-since'
-import { addDaysIso, type WorkoutDay, type WorkoutWeek } from '@/lib/health/workout-days'
+import {
+    addDaysIso,
+    type WorkoutDay,
+    type WorkoutWeek,
+} from '@/lib/health/workout-days'
 import { PrefetchOnVisible } from 'components/prefetch-on-visible'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MON = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+]
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const parse = (iso: string) => new Date(iso + 'T00:00:00')
 
@@ -41,6 +65,48 @@ export const captionSx = {
 
 const numSx = { fontVariantNumeric: 'tabular-nums' } as const
 
+// ── ⚡ Routines ──────────────────────────────────────────────────────────────
+
+/** ⚡ → the Routines page. Leads the routines row in both List (tiles) and
+ *  Calendar (filter chips) mode. */
+export function RoutinesButton({
+    onClick,
+    size = 34,
+}: {
+    onClick: () => void
+    size?: number
+}) {
+    return (
+        <Box
+            component="button"
+            type="button"
+            onClick={onClick}
+            aria-label="Routines"
+            sx={{
+                width: size,
+                height: size,
+                flexShrink: 0,
+                padding: 0,
+                borderRadius: '50%',
+                backgroundColor: healthColors.workouts,
+                border: `1.5px solid ${colors.primaryBlack}`,
+                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                ...pressShadowSx,
+            }}>
+            <IconBolt
+                size={size < 34 ? 14 : 16}
+                stroke={2.5}
+                fill={colors.primaryWhite}
+                color={colors.primaryBlack}
+            />
+        </Box>
+    )
+}
+
 // ── Rotation tiles ───────────────────────────────────────────────────────────
 
 export function RotationTiles({
@@ -48,7 +114,10 @@ export function RotationTiles({
     recency,
     applyingId,
     onApply,
+    leading,
 }: {
+    /** In front of the tiles (the ⚡ button). */
+    leading?: ReactNode
     presets: WorkoutPreset[]
     /** Days since each routine (by String(id)); null = never. */
     recency: Map<string, number | null>
@@ -59,90 +128,111 @@ export function RotationTiles({
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             <Typography sx={captionSx}>Rotation</Typography>
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.min(Math.max(presets.length, 1), 5)}, minmax(0, 1fr))`,
-                    gap: 1,
-                    // Room for the corner badges
-                    paddingRight: '6px',
-                    paddingBottom: '6px',
-                }}>
-                {presets.map((p) => {
-                    const days = recency.get(String(p.id)) ?? null
-                    const applying = busy && String(applyingId) === String(p.id)
-                    const done = days === 0
-                    return (
-                        <Box
-                            key={p.id}
-                            component="button"
-                            type="button"
-                            disabled={busy}
-                            aria-label={`Log ${p.name} today${days === null ? '' : done ? ' (done today)' : `, last done ${days} days ago`}`}
-                            onClick={() => onApply(p)}
-                            sx={{
-                                position: 'relative',
-                                height: 38,
-                                minWidth: 0,
-                                padding: '0 4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                font: 'inherit',
-                                color: colors.primaryBlack,
-                                cursor: busy ? 'default' : 'pointer',
-                                backgroundColor: applying
-                                    ? colors.primaryYellow
-                                    : done
-                                      ? healthColors.workouts
-                                      : colors.primaryWhite,
-                                border: `1px solid ${colors.primaryBlack}`,
-                                boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
-                                borderRadius: '4px',
-                                opacity: busy && !applying ? 0.5 : 1,
-                                transition: 'opacity 0.15s, background-color 0.15s',
-                                ...(!busy && pressShadowSx),
-                            }}>
-                            <Typography
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Lifted by the grid's badge padding so it centres on the tiles */}
+                {leading && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexShrink: 0,
+                            marginBottom: '6px',
+                        }}>
+                        {leading}
+                    </Box>
+                )}
+                <Box
+                    sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${Math.min(Math.max(presets.length, 1), 5)}, minmax(0, 1fr))`,
+                        gap: 1,
+                        // Room for the corner badges
+                        paddingRight: '6px',
+                        paddingBottom: '6px',
+                    }}>
+                    {presets.map((p) => {
+                        const days = recency.get(String(p.id)) ?? null
+                        const applying =
+                            busy && String(applyingId) === String(p.id)
+                        const done = days === 0
+                        return (
+                            <Box
+                                key={p.id}
+                                component="button"
+                                type="button"
+                                disabled={busy}
+                                aria-label={`Log ${p.name} today${days === null ? '' : done ? ' (done today)' : `, last done ${days} days ago`}`}
+                                onClick={() => onApply(p)}
                                 sx={{
-                                    fontSize: 12.5,
-                                    fontWeight: 600,
-                                    lineHeight: 1.15,
-                                    maxWidth: '100%',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
+                                    position: 'relative',
+                                    height: 38,
+                                    minWidth: 0,
+                                    padding: '0 4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    font: 'inherit',
+                                    color: colors.primaryBlack,
+                                    cursor: busy ? 'default' : 'pointer',
+                                    backgroundColor: applying
+                                        ? colors.primaryYellow
+                                        : done
+                                          ? healthColors.workouts
+                                          : colors.primaryWhite,
+                                    border: `1px solid ${colors.primaryBlack}`,
+                                    boxShadow: `2px 2px 0px ${colors.primaryBlack}`,
+                                    borderRadius: '4px',
+                                    opacity: busy && !applying ? 0.5 : 1,
+                                    transition:
+                                        'opacity 0.15s, background-color 0.15s',
+                                    ...(!busy && pressShadowSx),
                                 }}>
-                                {p.name}
-                            </Typography>
-                            {days !== null && (
-                                // Same corner badge as the rows' date blocks; the rim + number
-                                // carry Home's green / orange / red
-                                <Box
-                                    component="span"
+                                <Typography
                                     sx={{
-                                        ...numSx,
-                                        position: 'absolute',
-                                        right: -7,
-                                        bottom: -7,
-                                        minWidth: 20,
-                                        height: 17,
-                                        px: '4px',
-                                        borderRadius: '9px',
-                                        backgroundColor: done ? healthColors.workouts : colors.primaryWhite,
-                                        border: `1.5px solid ${done ? workoutColors.deep : getDaysSinceTextColor(days)}`,
-                                        color: done ? workoutColors.deep : getDaysSinceTextColor(days),
-                                        fontSize: 10,
-                                        fontWeight: 800,
-                                        lineHeight: '14px',
-                                        textAlign: 'center',
+                                        fontSize: 12.5,
+                                        fontWeight: 600,
+                                        lineHeight: 1.15,
+                                        maxWidth: '100%',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
                                     }}>
-                                    {done ? '✓' : days}
-                                </Box>
-                            )}
-                        </Box>
-                    )
-                })}
+                                    {p.name}
+                                </Typography>
+                                {days !== null && (
+                                    // Same corner badge as the rows' date blocks; the rim + number
+                                    // carry Home's green / orange / red
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            ...numSx,
+                                            position: 'absolute',
+                                            right: -7,
+                                            bottom: -7,
+                                            minWidth: 20,
+                                            height: 17,
+                                            px: '4px',
+                                            borderRadius: '9px',
+                                            backgroundColor: done
+                                                ? healthColors.workouts
+                                                : colors.primaryWhite,
+                                            border: `1.5px solid ${done ? workoutColors.deep : getDaysSinceTextColor(days)}`,
+                                            color: done
+                                                ? workoutColors.deep
+                                                : getDaysSinceTextColor(days),
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            lineHeight: '14px',
+                                            textAlign: 'center',
+                                        }}>
+                                        {done ? '✓' : days}
+                                    </Box>
+                                )}
+                            </Box>
+                        )
+                    })}
+                </Box>
             </Box>
         </Box>
     )
@@ -157,15 +247,31 @@ function weekLabel(start: string, today: string, index: number) {
         s.getMonth() === e.getMonth()
             ? `${MON[s.getMonth()]} ${s.getDate()} – ${e.getDate()}`
             : `${MON[s.getMonth()]} ${s.getDate()} – ${MON[e.getMonth()]} ${e.getDate()}`
-    const year = e.getFullYear() !== parse(today).getFullYear() ? `, ${e.getFullYear()}` : ''
+    const year =
+        e.getFullYear() !== parse(today).getFullYear()
+            ? `, ${e.getFullYear()}`
+            : ''
     const title = index === 0 ? 'This week' : index === 1 ? 'Last week' : null
     return { title, range: range + year }
 }
 
-function WeekDots({ start, days, today }: { start: string; days: WorkoutDay[]; today: string }) {
+function WeekDots({
+    start,
+    days,
+    today,
+}: {
+    start: string
+    days: WorkoutDay[]
+    today: string
+}) {
     const byDate = new Map(days.map((d) => [d.date, d]))
     return (
-        <Box sx={{ display: 'inline-grid', gridTemplateColumns: 'repeat(7, 9px)', gap: '2.5px' }}>
+        <Box
+            sx={{
+                display: 'inline-grid',
+                gridTemplateColumns: 'repeat(7, 9px)',
+                gap: '2.5px',
+            }}>
             {Array.from({ length: 7 }, (_, i) => {
                 const date = addDaysIso(start, i)
                 const day = byDate.get(date)
@@ -306,10 +412,21 @@ function DayRow({
                         backgroundColor: workoutColors.light,
                         borderRight: `1px solid ${colors.primaryBlack}1f`,
                     }}>
-                    <Typography sx={{ ...captionSx, fontSize: 9, color: colors.primaryBrown }}>
+                    <Typography
+                        sx={{
+                            ...captionSx,
+                            fontSize: 9,
+                            color: colors.primaryBrown,
+                        }}>
                         {WD[d.getDay()]}
                     </Typography>
-                    <Typography sx={{ ...numSx, fontSize: 16, fontWeight: 800, lineHeight: 1.1 }}>
+                    <Typography
+                        sx={{
+                            ...numSx,
+                            fontSize: 16,
+                            fontWeight: 800,
+                            lineHeight: 1.1,
+                        }}>
                         {d.getDate()}
                     </Typography>
                     <GapBadge gap={day.gap} />
@@ -334,7 +451,11 @@ function DayRow({
                     ))}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
-                    <IconChevronRight size={16} stroke={2} color={colors.primaryBrown} />
+                    <IconChevronRight
+                        size={16}
+                        stroke={2}
+                        color={colors.primaryBrown}
+                    />
                 </Box>
             </Box>
         </SwipeableRow>
@@ -358,7 +479,13 @@ function toBlocks(weeks: WorkoutWeek<WorkoutPreset>[]): Block[] {
         if (prev?.kind === 'off') {
             prev.from = week.start
             prev.weeks++
-        } else blocks.push({ kind: 'off', from: week.start, to: addDaysIso(week.start, 6), weeks: 1 })
+        } else
+            blocks.push({
+                kind: 'off',
+                from: week.start,
+                to: addDaysIso(week.start, 6),
+                weeks: 1,
+            })
     })
     return blocks
 }
@@ -398,11 +525,21 @@ export function WorkoutWeeks({
                                 borderRadius: '4px',
                                 backgroundColor: colors.primaryWhite,
                             }}>
-                            <Typography sx={{ fontSize: 12, fontWeight: 600, color: colors.primaryBrown }}>
-                                {b.weeks === 1 ? 'No workouts' : `${b.weeks} weeks off`}
+                            <Typography
+                                sx={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: colors.primaryBrown,
+                                }}>
+                                {b.weeks === 1
+                                    ? 'No workouts'
+                                    : `${b.weeks} weeks off`}
                                 <Box component="span" sx={{ fontWeight: 400 }}>
                                     {' · '}
-                                    {MON[f.getMonth()]} {f.getDate()} – {f.getMonth() === t.getMonth() ? '' : `${MON[t.getMonth()]} `}
+                                    {MON[f.getMonth()]} {f.getDate()} –{' '}
+                                    {f.getMonth() === t.getMonth()
+                                        ? ''
+                                        : `${MON[t.getMonth()]} `}
                                     {t.getDate()}
                                 </Box>
                             </Typography>
@@ -412,32 +549,90 @@ export function WorkoutWeeks({
                 const { week, index } = b
                 const { title, range } = weekLabel(week.start, today, index)
                 return (
-                    <Box key={week.start} sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 22 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-                                <Typography sx={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    <Box
+                        key={week.start}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                        }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                height: 22,
+                            }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    gap: 0.75,
+                                    minWidth: 0,
+                                }}>
+                                <Typography
+                                    sx={{
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap',
+                                    }}>
                                     {title ?? range}
                                 </Typography>
                                 {title && (
-                                    <Typography sx={{ ...numSx, fontSize: 11, fontWeight: 600, color: colors.primaryBrown, whiteSpace: 'nowrap' }}>
+                                    <Typography
+                                        sx={{
+                                            ...numSx,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            color: colors.primaryBrown,
+                                            whiteSpace: 'nowrap',
+                                        }}>
                                         {range}
                                     </Typography>
                                 )}
                             </Box>
                             <Box sx={{ marginLeft: 'auto', display: 'flex' }}>
-                                <WeekDots start={week.start} days={week.days} today={today} />
+                                <WeekDots
+                                    start={week.start}
+                                    days={week.days}
+                                    today={today}
+                                />
                             </Box>
-                            <Typography sx={{ ...numSx, fontSize: 13, fontWeight: 800, minWidth: 12, textAlign: 'right' }}>
+                            <Typography
+                                sx={{
+                                    ...numSx,
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    minWidth: 12,
+                                    textAlign: 'right',
+                                }}>
                                 {week.days.length}
                             </Typography>
                         </Box>
                         {week.days.length > 0 ? (
-                            <Box sx={{ ...cardSx, borderRadius: '4px', overflow: 'hidden' }}>
+                            <Box
+                                sx={{
+                                    ...cardSx,
+                                    borderRadius: '4px',
+                                    overflow: 'hidden',
+                                }}>
                                 {week.days.map((day, i) => (
                                     <Fragment key={day.date}>
-                                        {i > 0 && <Box sx={{ height: '1px', backgroundColor: `${colors.primaryBlack}1f` }} />}
+                                        {i > 0 && (
+                                            <Box
+                                                sx={{
+                                                    height: '1px',
+                                                    backgroundColor: `${colors.primaryBlack}1f`,
+                                                }}
+                                            />
+                                        )}
                                         <PrefetchOnVisible href={hrefFor(day)}>
-                                            <DayRow day={day} onOpen={onOpen} onEdit={onEdit} onDelete={onDelete} />
+                                            <DayRow
+                                                day={day}
+                                                onOpen={onOpen}
+                                                onEdit={onEdit}
+                                                onDelete={onDelete}
+                                            />
                                         </PrefetchOnVisible>
                                     </Fragment>
                                 ))}
@@ -453,7 +648,12 @@ export function WorkoutWeeks({
                                     borderRadius: '4px',
                                     backgroundColor: colors.primaryWhite,
                                 }}>
-                                <Typography sx={{ fontSize: 12, fontWeight: 600, color: colors.primaryBrown }}>
+                                <Typography
+                                    sx={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: colors.primaryBrown,
+                                    }}>
                                     Nothing yet this week
                                 </Typography>
                             </Box>

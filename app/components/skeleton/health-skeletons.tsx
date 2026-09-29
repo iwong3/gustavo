@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { cardSx, colors, healthColors, workoutColors } from '@/lib/colors'
 import { HealthHub } from 'components/health/hub/health-hub'
 import { useHubWindowStore } from 'components/health/hub/hub-window-store'
+import { useWorkoutsViewStore } from 'components/health/workouts-view-store'
 import { HealthPageHeader } from 'components/health/health-page-layout'
 import { Bone, ChromeBox, Circle, TextBone } from 'components/skeleton/bones'
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
@@ -66,16 +67,39 @@ export function HealthHubSkeleton() {
 /** Mirrors the Workouts page (app/gustavo/health/exercise/page.tsx):
  *  rotation tiles, then week headers over cards of day rows. */
 export function WorkoutsListSkeleton() {
+    const view = useWorkoutsViewStore((s) => s.view)
+    const header = <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR} right={<Bone width={132} height={34} radius="4px" />} />
+    if (view === 'calendar') {
+        return (
+            <HealthColumn fullWidth>
+                {header}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Circle size={30} />
+                        {[40, 52, 48, 50, 66].map((w, i) => (
+                            <Bone key={i} width={w} height={30} radius="15px" />
+                        ))}
+                    </Box>
+                    <Bone height={420} radius="8px" />
+                </Box>
+            </HealthColumn>
+        )
+    }
     return (
         <HealthColumn fullWidth>
-            <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR} right={<Circle size={34} />} />
+            {header}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                     <TextBone fontSize={9.5} lineHeight={1.2} width={60} />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 1, paddingRight: '6px', paddingBottom: '6px' }}>
-                        {[0, 1, 2, 3, 4].map((i) => (
-                            <Bone key={i} height={38} radius="4px" />
-                        ))}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ display: 'flex', marginBottom: '6px' }}>
+                            <Circle size={34} />
+                        </Box>
+                        <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 1, paddingRight: '6px', paddingBottom: '6px' }}>
+                            {[0, 1, 2, 3, 4].map((i) => (
+                                <Bone key={i} height={38} radius="4px" />
+                            ))}
+                        </Box>
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>

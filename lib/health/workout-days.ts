@@ -121,3 +121,33 @@ export function groupByWeek<P extends PresetLike>(days: WorkoutDay<P>[], today: 
     }
     return weeks
 }
+
+export type RoutineStats = {
+    /** Days in the window with the routine. */
+    times: number
+    /** Mean days between consecutive ones in the window (null with < 2). */
+    avgGap: number | null
+    /** Longest days between consecutive ones in the window. */
+    longestGap: number | null
+    /** Days since the last one, ever (null = never). */
+    since: number | null
+}
+
+/** A routine's rhythm over the `n` days ending today (the calendar's stats). */
+export function routineStats<P extends PresetLike>(
+    days: WorkoutDay<P>[],
+    presetId: number | string,
+    today: string,
+    n: number,
+): RoutineStats {
+    const hits = days.filter((d) => d.routines.some((r) => String(r.id) === String(presetId)))
+    const from = addDaysIso(today, -(n - 1))
+    const inWindow = hits.filter((d) => d.date >= from && d.date <= today).map((d) => d.date).reverse()
+    const gaps = inWindow.slice(1).map((d, i) => daysBetween(d, inWindow[i]))
+    return {
+        times: inWindow.length,
+        avgGap: gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null,
+        longestGap: gaps.length ? Math.max(...gaps) : null,
+        since: hits.length ? Math.max(0, daysBetween(today, hits[0].date)) : null,
+    }
+}

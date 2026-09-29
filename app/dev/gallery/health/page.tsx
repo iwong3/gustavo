@@ -8,7 +8,8 @@ import { HealthHub, type HubSupplementRuns } from 'components/health/hub/health-
 import TrainingGrid from 'components/health/training-grid'
 import type { HubWindow } from '@/lib/health/hub-window'
 import { WorkoutDetail } from 'components/health/workout-detail'
-import { RotationTiles, WorkoutWeeks } from 'components/health/workout-log'
+import { RotationTiles, RoutinesButton, WorkoutWeeks } from 'components/health/workout-log'
+import { RoutineFilterChips, WorkoutCalendarCard } from 'components/health/workout-calendar'
 import { buildWorkoutDays, groupByWeek, routineRecency } from '@/lib/health/workout-days'
 import { DAYS_SINCE_ORDER, getParents, isGroup } from '@/lib/health/muscle-groups'
 import type { DaysSince, WeightLog, Workout, WorkoutPreset } from '@/lib/health-types'
@@ -202,6 +203,7 @@ function WorkoutsLogSpecimen({ applying }: { applying?: boolean }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 2, backgroundColor: '#fefae0' }}>
             <RotationTiles
+                leading={<RoutinesButton onClick={() => {}} />}
                 presets={rotation}
                 recency={routineRecency(days, rotation, GALLERY_TODAY)}
                 applyingId={applying ? '12' : null}
@@ -214,6 +216,32 @@ function WorkoutsLogSpecimen({ applying }: { applying?: boolean }) {
                 onOpen={() => {}}
                 onEdit={() => {}}
                 onDelete={() => {}}
+            />
+        </Box>
+    )
+}
+
+/** Calendar mode with its chips and window toggle live. */
+function WorkoutsCalendarSpecimen({ initialFilter, initialWindow }: { initialFilter: string; initialWindow: HubWindow }) {
+    const [filter, setFilter] = useState(initialFilter)
+    const [window, setWindow] = useState<HubWindow>(initialWindow)
+    const days = buildWorkoutDays(logWorkouts, rotation)
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, padding: 2, backgroundColor: '#fefae0' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                <RoutinesButton onClick={() => {}} size={30} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <RoutineFilterChips presets={rotation} filter={filter} onFilter={setFilter} />
+                </Box>
+            </Box>
+            <WorkoutCalendarCard
+                days={days}
+                presets={rotation}
+                today={GALLERY_TODAY}
+                filter={filter}
+                window={window}
+                onWindowChange={setWindow}
+                onOpen={() => {}}
             />
         </Box>
     )
@@ -249,6 +277,15 @@ export default function HealthGallery() {
                 </Specimen>
                 <Specimen label="logging Pull (other tiles dimmed)" width={375}>
                     <WorkoutsLogSpecimen applying />
+                </Specimen>
+                <Specimen label="calendar · 30D · Pull (chips + window live)" width={375}>
+                    <WorkoutsCalendarSpecimen initialFilter="12" initialWindow="30d" />
+                </Specimen>
+                <Specimen label="calendar · 30D · All" width={375}>
+                    <WorkoutsCalendarSpecimen initialFilter="all" initialWindow="30d" />
+                </Specimen>
+                <Specimen label="calendar · 90D · Pull" width={375}>
+                    <WorkoutsCalendarSpecimen initialFilter="12" initialWindow="90d" />
                 </Specimen>
             </SpecimenGroup>
 
