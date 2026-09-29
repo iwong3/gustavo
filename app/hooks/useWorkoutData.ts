@@ -23,9 +23,10 @@ const fetchJson = async <T>(url: string): Promise<T> => {
  * instead of refetching.
  *
  * Pages gate on only what they render (`pending`), not all four queries.
- * Until the full workout history has loaded once, `workouts` is the Health
- * hub's cached last-30-days list (`workoutsPartial` is true meanwhile) — so
- * the Workouts page usually opens with content instead of a skeleton.
+ * Until the full workout history has loaded once, `workouts` is Home's
+ * cached last-30-days list (`workoutsPartial` is true meanwhile) — so the
+ * Workouts page and the Health hub usually open with content instead of a
+ * skeleton.
  */
 export function useWorkoutData() {
     const queryClient = useQueryClient()
@@ -42,7 +43,7 @@ export function useWorkoutData() {
             {
                 queryKey: queryKeys.health.workouts.list(),
                 queryFn: () => fetchJson<Workout[]>('/api/health/workouts'),
-                // The hub's date-ranged list shares this key prefix
+                // Home's date-ranged list shares this key prefix
                 placeholderData: () =>
                     queryClient
                         .getQueriesData<Workout[]>({

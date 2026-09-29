@@ -73,6 +73,19 @@ export const supplementColors = {
     deep: '#6f5c8d',
 } as const
 
+/** Workouts' orange family (healthColors.workouts, deepened): the Health
+ *  hub's workout-day heatmap. `empty` = a day without one. */
+export const workoutColors = {
+    fill: '#f5a25d',
+    deep: '#b8531a',
+    empty: '#f1ead9',
+} as const
+
+/** Weight's blue (healthColors.weight, deepened): trend lines. */
+export const weightColors = {
+    line: '#0288d1',
+} as const
+
 // Reusable hard-shadow border — the signature look used on cards, buttons, etc.
 export const hardShadow = {
     border: `1px solid ${colors.primaryBlack}`,

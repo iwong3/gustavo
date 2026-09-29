@@ -5,7 +5,8 @@ import { IconBarbell, IconHeartbeat, IconPill } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 
 import { cardSx, colors, healthColors } from '@/lib/colors'
-import { HealthHubSkeleton } from 'components/health/health-dashboard-v2'
+import { HealthHub } from 'components/health/hub/health-hub'
+import { useHubWindowStore } from 'components/health/hub/hub-window-store'
 import { HealthPageHeader } from 'components/health/health-page-layout'
 import { Bone, ChromeBox, Circle, TextBone } from 'components/skeleton/bones'
 import { FormSkeleton } from 'components/skeleton/form-skeleton'
@@ -41,6 +42,25 @@ function HealthColumn({ children, fullWidth }: { children: React.ReactNode; full
         </Box>
     )
     return fullWidth ? <Box sx={{ width: '100%' }}>{column}</Box> : column
+}
+
+/** Mirrors the Health hub: the real header (window toggle included) and
+ *  cards, with each card's body a bone of its loaded height. */
+export function HealthHubSkeleton() {
+    const window = useHubWindowStore((s) => s.window)
+    return (
+        <HealthColumn fullWidth>
+            <HealthHub
+                window={window}
+                onWindowChange={() => {}}
+                today=""
+                logDay=""
+                workoutDates={null}
+                weightLogs={null}
+                supplementRuns={null}
+            />
+        </HealthColumn>
+    )
 }
 
 /** Routine chips under a page header: bolt circle + 26px chips, wrapping. */

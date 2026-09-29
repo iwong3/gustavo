@@ -191,9 +191,9 @@ function LatestSection() {
 }
 
 /**
- * The Health page's recent-workouts window. Same key + range as that page, so
- * the two share a cache entry (home → Health is instant, and vice versa); the
- * history strip reads the last 14 days of it.
+ * The recent-workouts window. The Health hub shows this list at 30D until the
+ * full history loads (useWorkoutData's placeholder), so home → Health is
+ * instant; the history strip reads the last 14 days of it.
  */
 const HEALTH_WINDOW_DAYS = 30
 

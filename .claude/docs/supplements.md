@@ -59,5 +59,5 @@ Verify UI at `/dev/gallery/supplements` (live on local state, sample stack),
 ## Still to do
 
 Groups (supplement presets) are retired in the design but still exist: the
-`groups/` pages, the group form, `supplement-presets.ts`, and the Health hub's
-supplement routine chips. Remove them, then consider dropping `is_active`.
+`groups/` pages, the group form, and `supplement-presets.ts` (the Health hub no
+longer shows their chips). Remove them, then consider dropping `is_active`.

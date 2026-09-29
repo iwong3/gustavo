@@ -217,5 +217,10 @@ export function buildSupplementHistory({
             return e ? dayOfRun(e.runs, date) : null
         },
         firstDay,
+        /** Every supplement's daily-stack runs (alphabetical) — the Health
+         *  hub's runs chart. */
+        runsBySupplement: sorted
+            .filter((e) => e.runs.length > 0)
+            .map((e) => ({ supplementId: e.id, name: e.s.name, runs: e.runs })),
     }
 }

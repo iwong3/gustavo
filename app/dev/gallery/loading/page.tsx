@@ -3,8 +3,8 @@
 import { Box } from '@mui/material'
 
 import { colors } from '@/lib/colors'
-import { HealthHubSkeleton } from 'components/health/health-dashboard-v2'
 import {
+    HealthHubSkeleton,
     RoutinesSkeleton,
     SupplementsSkeleton,
     WorkoutDetailSkeleton,
@@ -94,7 +94,7 @@ export default function LoadingGallery() {
                 </Specimen>
             </SpecimenGroup>
             <SpecimenGroup title="Health">
-                <Specimen label="hub (your section order)"><Frame><HealthHubSkeleton /></Frame></Specimen>
+                <Specimen label="hub"><Frame><HealthHubSkeleton /></Frame></Specimen>
                 <Specimen label="workouts"><Frame><WorkoutsListSkeleton /></Frame></Specimen>
                 <Specimen label="workout detail"><Frame><WorkoutDetailSkeleton /></Frame></Specimen>
                 <Specimen label="workout form"><Frame><WorkoutFormSkeleton /></Frame></Specimen>

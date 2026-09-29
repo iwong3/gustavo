@@ -117,8 +117,7 @@ lib/
 ├── permissions.ts           Server-side permission checks (incl. DB lookups)
 ├── types.ts                 Expense-domain types (TripSummary, Expense, ...)
 ├── health-types.ts          Health-domain types (Workout, Exercise, ...)
-├── health/                  Health constants (muscle groups, display order)
-├── health-section-order.ts  Health landing page section order
+├── health/                  Health logic (muscle groups, supplement runs/calendar, hub windows)
 ├── debt.ts                  Debt calculation logic
 ├── colors.ts                Neo-brutalist design system (READ THE HEADER before UI work)
 ├── form-styles.ts           Shared form sx styles (fieldSx, labelSx, errorFieldSx, ...)

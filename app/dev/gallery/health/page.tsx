@@ -1,10 +1,15 @@
 'use client'
 
-/** Gallery specimens for the home Health launcher — every recency state + empty cases. */
+/** Gallery specimens for the Health hub, workout detail, and the (unused) training grid. */
+import { Box } from '@mui/material'
+import { useState } from 'react'
+
+import { HealthHub, type HubSupplementRuns } from 'components/health/hub/health-hub'
 import TrainingGrid from 'components/health/training-grid'
+import type { HubWindow } from '@/lib/health/hub-window'
 import { WorkoutDetail } from 'components/health/workout-detail'
 import { DAYS_SINCE_ORDER, getParents, isGroup } from '@/lib/health/muscle-groups'
-import type { DaysSince, Workout } from '@/lib/health-types'
+import type { DaysSince, WeightLog, Workout } from '@/lib/health-types'
 
 import { GALLERY_TODAY } from '../fixtures'
 import { workout as pushDay, workoutHistory } from '../health-fixtures'
@@ -119,12 +124,73 @@ const targetsOnly: Workout[] = [
 // the truth (20d, both in alert).
 const outOfWindow: Workout[] = [workout(20, ['Chest', 'Legs'])]
 
+// ── Health hub fixtures: ~13 months of history ending GALLERY_TODAY ──
+// Workouts most days, with a two-week trip two months back
+const hubWorkoutDates = Array.from({ length: 400 }, (_, i) => i)
+    .filter((i) => i === 0 || (i > 1 && !(i >= 60 && i < 74) && (i * 7919) % 100 < 52))
+    .map((i) => daysBefore(GALLERY_TODAY, i))
+// Weighing in ~2 days in 3, drifting down ~6 lb over the year; one null
+// reading (a conversion error) proves it's skipped
+const hubWeightLogs: WeightLog[] = Array.from({ length: 400 }, (_, i) => i)
+    .filter((i) => i === 0 || (i * 104729) % 3 !== 0)
+    .map((i) => {
+        const date = daysBefore(GALLERY_TODAY, i)
+        const lbs = 178.4 + (6.4 * i) / 365 + 0.35 * Math.sin(i * 0.3) + 0.25 * Math.sin(i * 0.09)
+        return { id: String(9000 + i) as unknown as number, date, weightLbs: Math.round(lbs * 10) / 10, createdAt: `${date}T07:30:00Z` }
+    })
+    .concat([{ id: '8999' as unknown as number, date: daysBefore(GALLERY_TODAY, 3), weightLbs: null as unknown as number, createdAt: '2026-07-11T23:00:00Z' }])
+const run = (start: string, end: string | null) => ({ start, end, endReason: end ? ('stopped' as const) : null })
+const hubRuns: HubSupplementRuns = [
+    { supplementId: 1, name: 'Creatine', runs: [run('2026-04-01', '2026-05-20'), run('2026-06-01', null)] },
+    { supplementId: 2, name: 'Fish oil', runs: [run('2026-07-05', null)] },
+    { supplementId: 3, name: 'Magnesium glycinate', runs: [run('2026-06-20', null)] },
+    { supplementId: 4, name: 'Vitamin D', runs: [run('2026-01-10', null)] },
+    { supplementId: 5, name: 'Zinc', runs: [run('2026-03-01', '2026-06-10')] },
+]
+
+/** The hub at phone width, window toggle live. The page header's negative
+ *  margins need the page column's padding around it. */
+function HubSpecimen({ initial, loading, empty }: { initial: HubWindow; loading?: boolean; empty?: boolean }) {
+    const [window, setWindow] = useState<HubWindow>(initial)
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, paddingX: 2, paddingTop: 2, paddingBottom: 2, backgroundColor: '#fefae0' }}>
+            <HealthHub
+                window={window}
+                onWindowChange={setWindow}
+                today={GALLERY_TODAY}
+                logDay={GALLERY_TODAY}
+                workoutDates={loading ? null : empty ? [] : hubWorkoutDates}
+                weightLogs={loading ? null : empty ? [] : hubWeightLogs}
+                supplementRuns={loading ? null : empty ? [] : hubRuns}
+            />
+        </Box>
+    )
+}
+
 // The width the grid renders at on the home page (content minus its padding).
 const HOME_WIDTH = 326
 
 export default function HealthGallery() {
     return (
         <GalleryPage title="Health">
+            <SpecimenGroup title="Health hub — /gustavo/health (toggle is live)">
+                <Specimen label="30D (the default)" width={375}>
+                    <HubSpecimen initial="30d" />
+                </Specimen>
+                <Specimen label="90D" width={375}>
+                    <HubSpecimen initial="90d" />
+                </Specimen>
+                <Specimen label="1Y" width={375}>
+                    <HubSpecimen initial="1y" />
+                </Specimen>
+                <Specimen label="loading" width={375}>
+                    <HubSpecimen initial="30d" loading />
+                </Specimen>
+                <Specimen label="nothing logged" width={375}>
+                    <HubSpecimen initial="30d" empty />
+                </Specimen>
+            </SpecimenGroup>
+
             <SpecimenGroup title="Workout detail — /health/exercise/[id] (action bar not shown)">
                 <Specimen label="push day · notes, cadence stats, history rows + sparkline">
                     <WorkoutDetail workout={pushDay} allWorkouts={workoutHistory} />
