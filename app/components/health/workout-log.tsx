@@ -3,9 +3,10 @@
 /**
  * The Workouts page's two blocks (presentational + gallery-importable):
  *
- *  - RotationTiles: one tile per routine with days since you last did it
- *    (Home's green / orange / red scale). Tap = log it today (the page owns
- *    the mutation + Undo toast). Done today → the workouts tint + "✓ today".
+ *  - RotationTiles: one tile per routine, its name only; days since you
+ *    last did it sit in a corner badge (the rows' badge, rimmed in Home's
+ *    green / orange / red). Tap = log it today (the page owns the mutation +
+ *    Undo toast). Done today → the workouts tint + a ✓ badge.
  *  - WorkoutWeeks: Sunday-start weeks, newest first. Each header has the
  *    range, a 7-day dot strip and the days trained; its card has one row per
  *    day: the day, then a chip per routine and a dashed chip per extra group,
@@ -57,17 +58,15 @@ export function RotationTiles({
     const busy = applyingId != null
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            <Typography sx={captionSx}>
-                Rotation{' '}
-                <Box component="span" sx={{ fontWeight: 500, letterSpacing: 0, textTransform: 'none' }}>
-                    · tap to log today
-                </Box>
-            </Typography>
+            <Typography sx={captionSx}>Rotation</Typography>
             <Box
                 sx={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${Math.min(Math.max(presets.length, 1), 5)}, minmax(0, 1fr))`,
-                    gap: 0.75,
+                    gap: 1,
+                    // Room for the corner badges
+                    paddingRight: '6px',
+                    paddingBottom: '6px',
                 }}>
                 {presets.map((p) => {
                     const days = recency.get(String(p.id)) ?? null
@@ -79,17 +78,16 @@ export function RotationTiles({
                             component="button"
                             type="button"
                             disabled={busy}
-                            aria-label={`Log ${p.name} today`}
+                            aria-label={`Log ${p.name} today${days === null ? '' : done ? ' (done today)' : `, last done ${days} days ago`}`}
                             onClick={() => onApply(p)}
                             sx={{
-                                height: 52,
+                                position: 'relative',
+                                height: 38,
                                 minWidth: 0,
                                 padding: '0 4px',
                                 display: 'flex',
-                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '3px',
                                 font: 'inherit',
                                 color: colors.primaryBlack,
                                 cursor: busy ? 'default' : 'pointer',
@@ -107,7 +105,7 @@ export function RotationTiles({
                             }}>
                             <Typography
                                 sx={{
-                                    fontSize: 12,
+                                    fontSize: 12.5,
                                     fontWeight: 600,
                                     lineHeight: 1.15,
                                     maxWidth: '100%',
@@ -117,16 +115,31 @@ export function RotationTiles({
                                 }}>
                                 {p.name}
                             </Typography>
-                            <Typography
-                                sx={{
-                                    ...numSx,
-                                    fontSize: done ? 11 : 14,
-                                    fontWeight: 800,
-                                    lineHeight: 1,
-                                    color: done ? workoutColors.deep : getDaysSinceTextColor(days),
-                                }}>
-                                {done ? '✓ today' : days === null ? '–' : `${days}d`}
-                            </Typography>
+                            {days !== null && (
+                                // Same corner badge as the day rows' chips; the rim + number
+                                // carry Home's green / orange / red
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        ...numSx,
+                                        position: 'absolute',
+                                        right: -7,
+                                        bottom: -7,
+                                        minWidth: 20,
+                                        height: 17,
+                                        px: '4px',
+                                        borderRadius: '9px',
+                                        backgroundColor: done ? healthColors.workouts : colors.primaryWhite,
+                                        border: `1.5px solid ${done ? workoutColors.deep : getDaysSinceTextColor(days)}`,
+                                        color: done ? workoutColors.deep : getDaysSinceTextColor(days),
+                                        fontSize: 10,
+                                        fontWeight: 800,
+                                        lineHeight: '14px',
+                                        textAlign: 'center',
+                                    }}>
+                                    {done ? '✓' : days}
+                                </Box>
+                            )}
                         </Box>
                     )
                 })}
