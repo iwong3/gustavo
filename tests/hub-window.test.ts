@@ -7,20 +7,23 @@ import { describe, expect, it } from 'vitest'
 
 import { runRows, weightSeries, workoutWindow } from '../lib/health/hub-window'
 
-// A Monday; its 30-day window opens on Sunday 2026-08-30
+// A Monday; its 30-day window opens on Sunday 2026-08-30 (a week's first day)
 const TODAY = '2026-09-28'
 
 describe('workoutWindow', () => {
-    it('lays the window out in Mon→Sun weeks, padded before and after', () => {
+    it('lays the window out in Sun→Sat weeks, padded before and after', () => {
         const w = workoutWindow(['2026-09-28', '2026-09-26', '2026-09-20', '2026-08-01'], TODAY, 30)
         expect(w.worked).toBe(3)
-        expect(w.weeks).toHaveLength(6)
-        expect(w.weeks[0].slice(0, 6).every((c) => c.state === 'pad')).toBe(true)
-        expect(w.weeks[0][6]).toMatchObject({ date: '2026-08-30', state: 'off' })
-        const last = w.weeks[5]
-        expect(last[0]).toMatchObject({ date: TODAY, state: 'on', today: true })
-        expect(last.slice(1).every((c) => c.state === 'future')).toBe(true)
-        expect(last[6].date).toBe('2026-10-04')
+        expect(w.weeks).toHaveLength(5)
+        expect(w.weeks[0][0]).toMatchObject({ date: '2026-08-30', state: 'off' })
+        const last = w.weeks[4]
+        expect(last[1]).toMatchObject({ date: TODAY, state: 'on', today: true })
+        expect(last.slice(2).every((c) => c.state === 'future')).toBe(true)
+        expect(last[6].date).toBe('2026-10-03')
+        // A window opening mid-week pads its first column
+        const mid = workoutWindow([], '2026-09-29', 30)
+        expect(mid.weeks[0][0]).toMatchObject({ date: '2026-08-30', state: 'pad' })
+        expect(mid.weeks[0][1]).toMatchObject({ date: '2026-08-31', state: 'off' })
         expect(w.pct).toBe(10)
         expect(w.perWeek).toBe(0.7)
     })
@@ -31,8 +34,9 @@ describe('workoutWindow', () => {
     })
 
     it('labels months where they start, dropping a crowded opening label', () => {
-        // Sep 1 is in the second column, too close to the window-opening "Aug"
-        expect(workoutWindow([], TODAY, 30).monthLabels).toEqual([{ col: 1, label: 'Sep' }])
+        // Opens Sat Aug 29; Sep 1 is in the next column, too close to "Aug"
+        expect(workoutWindow([], '2026-09-27', 30).monthLabels).toEqual([{ col: 1, label: 'Sep' }])
+        expect(workoutWindow([], TODAY, 30).monthLabels).toEqual([{ col: 0, label: 'Sep' }])
         const labels = workoutWindow([], TODAY, 90).monthLabels.map((m) => m.label)
         expect(labels).toEqual(['Jul', 'Aug', 'Sep'])
     })

@@ -29,8 +29,8 @@ const toDay = (iso: string) => {
 const toIso = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10)
 const addDays = (iso: string, n: number) => toIso(toDay(iso) + n)
 const daysBetween = (from: string, to: string) => toDay(to) - toDay(from)
-/** Monday = 0 … Sunday = 6. */
-const weekday = (iso: string) => (new Date(toDay(iso) * DAY_MS).getUTCDay() + 6) % 7
+/** Sunday = 0 … Saturday = 6 — weeks start on Sunday. */
+const weekday = (iso: string) => new Date(toDay(iso) * DAY_MS).getUTCDay()
 
 /** The window's first day (`days` days long, today included). */
 export const windowStart = (today: string, days: number) => addDays(today, -(days - 1))
@@ -60,7 +60,7 @@ export type HeatCell = {
 }
 
 export type WorkoutWindow = {
-    /** Heatmap columns, oldest first; each is one Mon→Sun week. */
+    /** Heatmap columns, oldest first; each is one Sun→Sat week. */
     weeks: HeatCell[][]
     /** Month names over the heatmap: the week column each month starts in. */
     monthLabels: { col: number; label: string }[]

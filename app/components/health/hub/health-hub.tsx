@@ -5,7 +5,7 @@
  * same rolling window (30D / 90D / 1Y in the title row, always ending today),
  * then a More row for the rarely used pages. Each card's strip opens its page.
  *
- *  - Workouts: a heatmap of the days you trained (weeks left → right, Mon–Sun
+ *  - Workouts: a heatmap of the days you trained (weeks left → right, Sun–Sat
  *    top → bottom) + per week / % of days / longest break.
  *  - Weight: the trend line (weekly averages at 1Y).
  *  - Supplements: daily-stack runs — what you were on, and when — with Day X.
@@ -56,7 +56,6 @@ import type { Run } from '@/lib/health/supplement-runs'
 import { AnimatedHeight } from 'components/animated-height'
 import BoardCard, { StripText, stripNumSx, stripWordSx } from 'components/home/board-card'
 import { HealthPageHeader } from 'components/health/health-page-layout'
-import { PageInfo, PageInfoNote, PageInfoSection } from 'components/page-info'
 import { Bone } from 'components/skeleton/bones'
 import { SlidingToggle } from 'components/sliding-toggle'
 
@@ -110,17 +109,14 @@ export function HealthHub({
                 title="Health"
                 color={colors.primaryYellow}
                 right={
-                    <>
-                        <SlidingToggle
-                            value={window}
-                            options={HUB_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
-                            onChange={(v) => onWindowChange(v as HubWindow)}
-                            borderWidth={1}
-                            fontSize={12}
-                            paddingY={0.875}
-                        />
-                        <HubHelp />
-                    </>
+                    <SlidingToggle
+                        value={window}
+                        options={HUB_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
+                        onChange={(v) => onWindowChange(v as HubWindow)}
+                        borderWidth={1}
+                        fontSize={12}
+                        paddingY={0.875}
+                    />
                 }
             />
             <WorkoutsCard window={window} days={days} today={today} dates={workoutDates} />
@@ -200,10 +196,10 @@ function WorkoutsCard({ window, days, today, dates }: { window: HubWindow; days:
     )
 }
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const shortMonth = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })
 
-/** 30D reads as a calendar: weeks as rows, Mon–Sun across, day numbers in
+/** 30D reads as a calendar: weeks as rows, Sun–Sat across, day numbers in
  *  the cells. Days just outside the window stay faded to keep the grid whole. */
 export function MonthCalendar({ win }: { win: WorkoutWindow }) {
     return (
@@ -250,7 +246,7 @@ export function MonthCalendar({ win }: { win: WorkoutWindow }) {
     )
 }
 
-/** 90D / 1Y: weeks as columns (Mon at the top), stretched to the card's width. */
+/** 90D / 1Y: weeks as columns (Sunday at the top), stretched to the card's width. */
 export function Heatmap({ win, window }: { win: WorkoutWindow; window: HubWindow }) {
     const cols = win.weeks.length
     const gap = HEAT_GAP[window]
@@ -561,31 +557,5 @@ function MoreRow() {
                 ))}
             </Box>
         </Box>
-    )
-}
-
-// ── Help ────────────────────────────────────────────────────────────────────
-
-function HubHelp() {
-    return (
-        <PageInfo title="How the Health page works">
-            <PageInfoSection title="One window for everything">
-                30D, 90D or 1Y sets how far back every card looks. It always ends today. Log from Home;
-                tap a card&apos;s header to open its page.
-            </PageInfoSection>
-            <PageInfoSection title="Workouts">
-                Each square is a day, orange if you worked out. Columns are weeks, Monday at the top, today
-                outlined. <b>Longest break</b> is the most days in a row without a workout.
-            </PageInfoSection>
-            <PageInfoSection title="Weight">
-                Your weigh-ins over the window (weekly averages at 1Y). The change is your latest weigh-in
-                against the first one in the window.
-            </PageInfoSection>
-            <PageInfoSection title="Supplements">
-                Each bar is a stretch you had it in your daily stack. <b>Day X</b> is how long the current
-                one has lasted; faded bars have ended.
-            </PageInfoSection>
-            <PageInfoNote>A break of 7+ days without a dose ends a run.</PageInfoNote>
-        </PageInfo>
     )
 }
