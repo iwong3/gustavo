@@ -101,6 +101,7 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
 - **Activity feed (audit timeline, intent, card merging)** → `.claude/docs/activity-feed.md`
 - **Debts page (plans, proof math, settle lock, UI decisions)** → `.claude/docs/debts.md`
 - **Supplements (daily stack, runs/Day X, calendar, 6am rule, pages)** → `.claude/docs/supplements.md`
+- **Workouts (one per day, routine labels, List/Calendar page)** → `.claude/docs/workouts.md`
 - **Permissions model** → schema.md § Permissions + `lib/permissions.ts` / `app/utils/permissions.ts`
 - **Historical design plans** (point-in-time, may be stale) → `.claude/docs/plans/`
 - **Idea/todo lists** → `.claude/docs/todos/`
