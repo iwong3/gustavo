@@ -42,7 +42,6 @@ import {
     type WorkoutDay,
 } from '@/lib/health/workout-days'
 import { AnimatedHeight } from 'components/animated-height'
-import { SlidingToggle } from 'components/sliding-toggle'
 import { CALENDAR_WINDOWS, type CalendarWindow } from './workouts-view-store'
 
 import { captionSx } from './workout-log'
@@ -401,10 +400,69 @@ const MONTHS = [
     'November',
     'December',
 ]
-const WINDOW_OPTIONS = CALENDAR_WINDOWS.map((w) => ({
-    value: w,
-    label: w === 'month' ? 'Month' : w === '90d' ? '90D' : '1Y',
-}))
+const WINDOW_LABEL: Record<CalendarWindow, string> = {
+    'month': 'Month',
+    '90d': '90D',
+    '1y': '1Y',
+}
+
+/** Month / 90D / 1Y as flat text tabs in the card's strip (a boxed toggle
+ *  inside the boxed strip read as a box in a box). Full strip height, so
+ *  each tab is a 38px tap target; the chosen one is bold + underlined. */
+function WindowTabs({
+    value,
+    onChange,
+}: {
+    value: CalendarWindow
+    onChange: (w: CalendarWindow) => void
+}) {
+    return (
+        <Box
+            role="tablist"
+            aria-label="Calendar range"
+            sx={{ display: 'flex', alignSelf: 'stretch', flexShrink: 0 }}>
+            {CALENDAR_WINDOWS.map((w) => {
+                const on = w === value
+                return (
+                    <Box
+                        key={w}
+                        component="button"
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => onChange(w)}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            px: 1,
+                            border: 'none',
+                            background: 'none',
+                            font: 'inherit',
+                            cursor: 'pointer',
+                            ...pressTextSx,
+                        }}>
+                        <Box
+                            component="span"
+                            sx={{
+                                fontSize: 11.5,
+                                fontWeight: on ? 800 : 600,
+                                letterSpacing: '0.04em',
+                                lineHeight: 1.2,
+                                padding: '3px 0',
+                                color: on
+                                    ? colors.primaryBlack
+                                    : colors.primaryBrown,
+                                borderBottom: `2px solid ${on ? colors.primaryBlack : 'transparent'}`,
+                                transition: 'color 0.15s, border-color 0.15s',
+                            }}>
+                            {WINDOW_LABEL[w]}
+                        </Box>
+                    </Box>
+                )
+            })}
+        </Box>
+    )
+}
 
 function NavArrow({
     dir,
@@ -542,14 +600,7 @@ export function WorkoutCalendarCard({
                     }}>
                     {preset ? preset.name : 'Every workout'}
                 </Typography>
-                <SlidingToggle
-                    value={window}
-                    options={WINDOW_OPTIONS}
-                    onChange={(v) => onWindowChange(v as CalendarWindow)}
-                    borderWidth={1}
-                    fontSize={11}
-                    paddingY={0.5}
-                />
+                <WindowTabs value={window} onChange={onWindowChange} />
             </Box>
             <Box
                 sx={{
