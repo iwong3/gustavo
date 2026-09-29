@@ -23,7 +23,7 @@ import {
 import type { WorkoutPreset } from '@/lib/health-types'
 import { queryKeys } from '@/lib/query-keys'
 import { Box, Typography } from '@mui/material'
-import { IconBarbell } from '@tabler/icons-react'
+import { IconBarbell, IconCalendar, IconList } from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     HealthPageHeader,
@@ -155,8 +155,8 @@ function ExercisePage() {
         <SlidingToggle
             value={view}
             options={[
-                { value: 'list', label: 'List' },
-                { value: 'calendar', label: 'Calendar' },
+                { value: 'list', label: 'List', icon: <IconList size={18} stroke={2} /> },
+                { value: 'calendar', label: 'Calendar', icon: <IconCalendar size={18} stroke={2} /> },
             ]}
             onChange={(v) => setView(v as WorkoutsView)}
             borderWidth={1}

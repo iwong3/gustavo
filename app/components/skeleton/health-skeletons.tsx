@@ -68,7 +68,7 @@ export function HealthHubSkeleton() {
  *  rotation tiles, then week headers over cards of day rows. */
 export function WorkoutsListSkeleton() {
     const view = useWorkoutsViewStore((s) => s.view)
-    const header = <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR} right={<Bone width={132} height={34} radius="4px" />} />
+    const header = <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR} right={<Bone width={86} height={34} radius="4px" />} />
     if (view === 'calendar') {
         return (
             <HealthColumn fullWidth>

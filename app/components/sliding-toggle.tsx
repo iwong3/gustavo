@@ -2,12 +2,13 @@
 
 import { Box } from '@mui/material'
 import { IconLock } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import { colors } from '@/lib/colors'
 import { TextBone } from 'components/skeleton/bones'
 
-export type SlidingToggleOption = { value: string; label: string }
+/** `icon` replaces the visible label (which stays as the aria-label). */
+export type SlidingToggleOption = { value: string; label: string; icon?: ReactNode }
 
 export function SlidingToggle({
     value,
@@ -131,6 +132,9 @@ export function SlidingToggle({
             {options.map((opt, i) => (
                 <Box
                     key={opt.value}
+                    role="button"
+                    aria-label={opt.icon ? opt.label : undefined}
+                    aria-pressed={value === opt.value}
                     onClick={() => {
                         if (!locked) onChange(opt.value)
                         else if (opt.value !== value) onLockedTap?.()
@@ -169,7 +173,7 @@ export function SlidingToggle({
                     {locked && value === opt.value && (
                         <IconLock size={Math.round(fontSize * 1.05)} stroke={2.2} style={{ flexShrink: 0 }} aria-label="Locked" />
                     )}
-                    {opt.label}
+                    {opt.icon ?? opt.label}
                 </Box>
             ))}
         </Box>
