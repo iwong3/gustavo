@@ -10,6 +10,7 @@ import type { HubWindow } from '@/lib/health/hub-window'
 import { WorkoutDetail } from 'components/health/workout-detail'
 import { RotationTiles, RoutinesButton, WorkoutWeeks } from 'components/health/workout-log'
 import { RoutineFilterChips, WorkoutCalendarCard } from 'components/health/workout-calendar'
+import type { CalendarWindow } from 'components/health/workouts-view-store'
 import { buildWorkoutDays, groupByWeek, routineRecency } from '@/lib/health/workout-days'
 import { DAYS_SINCE_ORDER, getParents, isGroup } from '@/lib/health/muscle-groups'
 import type { DaysSince, WeightLog, Workout, WorkoutPreset } from '@/lib/health-types'
@@ -222,9 +223,10 @@ function WorkoutsLogSpecimen({ applying }: { applying?: boolean }) {
 }
 
 /** Calendar mode with its chips and window toggle live. */
-function WorkoutsCalendarSpecimen({ initialFilter, initialWindow }: { initialFilter: string; initialWindow: HubWindow }) {
+function WorkoutsCalendarSpecimen({ initialFilter, initialWindow }: { initialFilter: string; initialWindow: CalendarWindow }) {
     const [filter, setFilter] = useState(initialFilter)
-    const [window, setWindow] = useState<HubWindow>(initialWindow)
+    const [window, setWindow] = useState<CalendarWindow>(initialWindow)
+    const [month, setMonth] = useState(GALLERY_TODAY.slice(0, 7))
     const days = buildWorkoutDays(logWorkouts, rotation)
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, padding: 2, backgroundColor: '#fefae0' }}>
@@ -241,6 +243,8 @@ function WorkoutsCalendarSpecimen({ initialFilter, initialWindow }: { initialFil
                 filter={filter}
                 window={window}
                 onWindowChange={setWindow}
+                month={month}
+                onMonthChange={setMonth}
                 onOpen={() => {}}
             />
         </Box>
@@ -278,11 +282,11 @@ export default function HealthGallery() {
                 <Specimen label="logging Pull (other tiles dimmed)" width={375}>
                     <WorkoutsLogSpecimen applying />
                 </Specimen>
-                <Specimen label="calendar · 30D · Pull (chips + window live)" width={375}>
-                    <WorkoutsCalendarSpecimen initialFilter="12" initialWindow="30d" />
+                <Specimen label="calendar · month · Pull (chips, window, ‹ › live)" width={375}>
+                    <WorkoutsCalendarSpecimen initialFilter="12" initialWindow="month" />
                 </Specimen>
-                <Specimen label="calendar · 30D · All" width={375}>
-                    <WorkoutsCalendarSpecimen initialFilter="all" initialWindow="30d" />
+                <Specimen label="calendar · month · All" width={375}>
+                    <WorkoutsCalendarSpecimen initialFilter="all" initialWindow="month" />
                 </Specimen>
                 <Specimen label="calendar · 90D · Pull" width={375}>
                     <WorkoutsCalendarSpecimen initialFilter="12" initialWindow="90d" />

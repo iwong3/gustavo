@@ -6,9 +6,10 @@
  *  - List: rotation tiles (days since each routine; tap to log it today, with
  *    Undo), then Sunday-start weeks with one row per day, labelled by routine,
  *    the date badged with days since the last workout.
- *  - Calendar: routine filter chips + the Hub's rolling window (30D square
- *    days, 90D / 1Y heatmap) with the chosen routine's days filled and its
- *    stats (components/health/workout-calendar.tsx).
+ *  - Calendar: routine filter chips + a calendar month of square days you
+ *    page through (‹ ›), or the Hub's rolling 90D / 1Y heatmap, with the
+ *    chosen routine's days filled and its stats
+ *    (components/health/workout-calendar.tsx).
  * Home does the daily logging and the Hub the long view; this page is for
  * looking back and fixing things. Model: lib/health/workout-days.ts.
  */
@@ -63,8 +64,16 @@ function ExercisePage() {
     const queryClient = useQueryClient()
     const router = useRouter()
     const today = useToday()
-    const { view, setView, window, setWindow, filter, setFilter } =
-        useWorkoutsViewStore()
+    const {
+        view,
+        setView,
+        window,
+        setWindow,
+        month,
+        setMonth,
+        filter,
+        setFilter,
+    } = useWorkoutsViewStore()
 
     // Warm the form routes so the FAB / ⚡ taps open instantly
     useEffect(() => {
@@ -250,6 +259,11 @@ function ExercisePage() {
                         filter={activeFilter}
                         window={window}
                         onWindowChange={setWindow}
+                        // null = this month, so it rolls over at midnight on the 1st
+                        month={month ?? today.slice(0, 7)}
+                        onMonthChange={(m) =>
+                            setMonth(m === today.slice(0, 7) ? null : m)
+                        }
                         onOpen={openDetail}
                     />
                 </Box>

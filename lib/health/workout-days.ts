@@ -122,6 +122,28 @@ export function groupByWeek<P extends PresetLike>(days: WorkoutDay<P>[], today: 
     return weeks
 }
 
+/** A calendar month's cells, Sun–Sat rows: days outside the month are
+ *  'pad', days after today 'future'. `month` is YYYY-MM. */
+export function monthCells(month: string, today: string, trained: Set<string>) {
+    const first = `${month}-01`
+    const d = new Date(first + 'T00:00:00')
+    const last = addDaysIso(first, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - 1)
+    const cells: { date: string; state: 'on' | 'off' | 'pad' | 'future'; today: boolean }[] = []
+    for (let date = weekStartOf(first); date <= last || cells.length % 7; date = addDaysIso(date, 1)) {
+        const state =
+            date < first || date > last ? 'pad' : date > today ? 'future' : trained.has(date) ? 'on' : 'off'
+        cells.push({ date, state, today: date === today })
+    }
+    return { first, last, cells }
+}
+
+/** YYYY-MM shifted by `n` months. */
+export function addMonths(month: string, n: number): string {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 1 + n, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 export type RoutineStats = {
     /** Days in the window with the routine. */
     times: number
@@ -133,16 +155,16 @@ export type RoutineStats = {
     since: number | null
 }
 
-/** A routine's rhythm over the `n` days ending today (the calendar's stats). */
+/** A routine's rhythm over [from, to] (the calendar's stats); `since` is
+ *  from today, whatever the range. */
 export function routineStats<P extends PresetLike>(
     days: WorkoutDay<P>[],
     presetId: number | string,
+    range: { from: string; to: string },
     today: string,
-    n: number,
 ): RoutineStats {
     const hits = days.filter((d) => d.routines.some((r) => String(r.id) === String(presetId)))
-    const from = addDaysIso(today, -(n - 1))
-    const inWindow = hits.filter((d) => d.date >= from && d.date <= today).map((d) => d.date).reverse()
+    const inWindow = hits.filter((d) => d.date >= range.from && d.date <= range.to).map((d) => d.date).reverse()
     const gaps = inWindow.slice(1).map((d, i) => daysBetween(d, inWindow[i]))
     return {
         times: inWindow.length,

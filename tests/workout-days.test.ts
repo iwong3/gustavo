@@ -12,6 +12,8 @@ import {
     matchRoutines,
     routineRecency,
     routineStats,
+    monthCells,
+    addMonths,
     toGroups,
 } from '../lib/health/workout-days'
 
@@ -113,11 +115,28 @@ describe('routineStats', () => {
     )
 
     it('counts, gaps and since within the window', () => {
-        expect(routineStats(days, 2, '2026-09-28', 30)).toEqual({ times: 3, avgGap: 7.5, longestGap: 10, since: 10 })
+        expect(routineStats(days, 2, { from: '2026-08-30', to: '2026-09-28' }, '2026-09-28')).toEqual({ times: 3, avgGap: 7.5, longestGap: 10, since: 10 })
     })
 
     it('since looks past the window; no gaps with fewer than two', () => {
-        expect(routineStats(days, 2, '2026-12-28', 30)).toEqual({ times: 0, avgGap: null, longestGap: null, since: 101 })
-        expect(routineStats(days, 1, '2026-09-28', 30).since).toBeNull()
+        expect(routineStats(days, 2, { from: '2026-11-29', to: '2026-12-28' }, '2026-12-28')).toEqual({ times: 0, avgGap: null, longestGap: null, since: 101 })
+        expect(routineStats(days, 1, { from: '2026-08-30', to: '2026-09-28' }, '2026-09-28').since).toBeNull()
+    })
+})
+
+describe('monthCells / addMonths', () => {
+    it('pads to whole Sun–Sat weeks and marks future days', () => {
+        const { cells } = monthCells('2026-09', '2026-09-28', new Set(['2026-09-28', '2026-09-01']))
+        expect(cells).toHaveLength(35) // Aug 30 – Oct 3
+        expect(cells[0]).toMatchObject({ date: '2026-08-30', state: 'pad' })
+        expect(cells.find((c) => c.date === '2026-09-01')?.state).toBe('on')
+        expect(cells.find((c) => c.date === '2026-09-28')).toMatchObject({ state: 'on', today: true })
+        expect(cells.find((c) => c.date === '2026-09-29')?.state).toBe('future')
+        expect(cells[34]).toMatchObject({ date: '2026-10-03', state: 'pad' })
+    })
+
+    it('shifts months across years', () => {
+        expect(addMonths('2026-01', -1)).toBe('2025-12')
+        expect(addMonths('2026-12', 1)).toBe('2027-01')
     })
 })

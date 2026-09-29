@@ -16,21 +16,34 @@
  * from lib/health/workout-days.ts.
  */
 import { Box, Typography } from '@mui/material'
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { useMemo } from 'react'
 
-import { cardSx, colors, healthColors, workoutColors } from '@/lib/colors'
+import {
+    cardSx,
+    colors,
+    healthColors,
+    pressShadowSx,
+    pressTextSx,
+    workoutColors,
+} from '@/lib/colors'
 import type { WorkoutPreset } from '@/lib/health-types'
 import {
-    HUB_WINDOWS,
-    WINDOW_DAYS,
-    WINDOW_LABEL,
     workoutWindow,
     type HeatCell,
     type HubWindow,
 } from '@/lib/health/hub-window'
-import { routineStats, type WorkoutDay } from '@/lib/health/workout-days'
+import {
+    addDaysIso,
+    addMonths,
+    daysBetween,
+    monthCells,
+    routineStats,
+    type WorkoutDay,
+} from '@/lib/health/workout-days'
 import { AnimatedHeight } from 'components/animated-height'
 import { SlidingToggle } from 'components/sliding-toggle'
+import { CALENDAR_WINDOWS, type CalendarWindow } from './workouts-view-store'
 
 import { captionSx } from './workout-log'
 
@@ -177,7 +190,7 @@ function SquareCalendar({
             sx={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-                gap: `${HEAT_GAP['30d']}px`,
+                gap: '4px',
                 padding: '3px',
             }}>
             {WEEKDAYS.map((d, i) => (
@@ -374,6 +387,63 @@ function Stat({ value, label }: { value: string; label: string }) {
 const fmtGap = (n: number | null) =>
     n == null ? '—' : `${Math.round(n * 10) / 10}d`
 
+const MONTHS = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+]
+const WINDOW_OPTIONS = CALENDAR_WINDOWS.map((w) => ({
+    value: w,
+    label: w === 'month' ? 'Month' : w === '90d' ? '90D' : '1Y',
+}))
+
+function NavArrow({
+    dir,
+    disabled,
+    onClick,
+}: {
+    dir: 'prev' | 'next'
+    disabled: boolean
+    onClick: () => void
+}) {
+    const Icon = dir === 'prev' ? IconChevronLeft : IconChevronRight
+    return (
+        <Box
+            component="button"
+            type="button"
+            aria-label={dir === 'prev' ? 'Previous month' : 'Next month'}
+            disabled={disabled}
+            onClick={onClick}
+            sx={{
+                width: 34,
+                height: 34,
+                padding: 0,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: '4px',
+                border: `1px solid ${colors.primaryBlack}`,
+                backgroundColor: colors.primaryWhite,
+                boxShadow: disabled
+                    ? 'none'
+                    : `1.5px 1.5px 0px ${colors.primaryBlack}`,
+                opacity: disabled ? 0.35 : 1,
+                cursor: disabled ? 'default' : 'pointer',
+                ...(!disabled && pressShadowSx),
+            }}>
+            <Icon size={16} stroke={2.4} color={colors.primaryBlack} />
+        </Box>
+    )
+}
+
 export function WorkoutCalendarCard({
     days,
     presets,
@@ -381,36 +451,70 @@ export function WorkoutCalendarCard({
     filter,
     window,
     onWindowChange,
+    month,
+    onMonthChange,
     onOpen,
 }: {
     days: Day[]
     presets: WorkoutPreset[]
     today: string
     filter: string
-    window: HubWindow
-    onWindowChange: (window: HubWindow) => void
+    window: CalendarWindow
+    onWindowChange: (window: CalendarWindow) => void
+    /** YYYY-MM on show in Month. */
+    month: string
+    onMonthChange: (month: string) => void
     onOpen: (day: Day) => void
 }) {
-    const n = WINDOW_DAYS[window]
-    const win = useMemo(
-        () =>
-            workoutWindow(
-                days.map((d) => d.date),
-                today,
-                n
-            ),
-        [days, today, n]
-    )
+    const dates = useMemo(() => days.map((d) => d.date), [days])
     const byDate = useMemo(() => new Map(days.map((d) => [d.date, d])), [days])
+    const thisMonth = today.slice(0, 7)
+    const firstMonth = days.length
+        ? days[days.length - 1].date.slice(0, 7)
+        : thisMonth
+
+    // The range on show: a calendar month (up to today), or 90 / 365 days to today
+    const monthView = useMemo(
+        () =>
+            window === 'month'
+                ? monthCells(month, today, new Set(dates))
+                : null,
+        [window, month, today, dates]
+    )
+    const range = useMemo(() => {
+        if (!monthView)
+            return {
+                from: addDaysIso(today, -((window === '90d' ? 90 : 365) - 1)),
+                to: today,
+            }
+        return {
+            from: monthView.first,
+            to: monthView.last < today ? monthView.last : today,
+        }
+    }, [monthView, window, today])
+    const n = daysBetween(range.to, range.from) + 1
+    // A month after this one has nothing to count yet
+    const future = n < 1
+    // Summary numbers (All's stats) and the heatmap layout for 90D / 1Y
+    const win = useMemo(
+        () => workoutWindow(dates, range.to, Math.max(n, 1)),
+        [dates, range.to, n]
+    )
     const cells = useMemo(
-        () => classify(win.weeks.flat(), byDate, filter),
-        [win, byDate, filter]
+        () =>
+            classify(
+                monthView ? monthView.cells : win.weeks.flat(),
+                byDate,
+                filter
+            ),
+        [monthView, win, byDate, filter]
     )
     const preset = presets.find((p) => String(p.id) === filter)
     const stats = useMemo(
-        () => (preset ? routineStats(days, preset.id, today, n) : null),
-        [preset, days, today, n]
+        () => (preset ? routineStats(days, preset.id, range, today) : null),
+        [preset, days, range, today]
     )
+    const [y, m] = month.split('-').map(Number)
 
     return (
         <Box sx={{ ...cardSx, borderRadius: '8px', overflow: 'hidden' }}>
@@ -440,11 +544,8 @@ export function WorkoutCalendarCard({
                 </Typography>
                 <SlidingToggle
                     value={window}
-                    options={HUB_WINDOWS.map((w) => ({
-                        value: w,
-                        label: WINDOW_LABEL[w],
-                    }))}
-                    onChange={(v) => onWindowChange(v as HubWindow)}
+                    options={WINDOW_OPTIONS}
+                    onChange={(v) => onWindowChange(v as CalendarWindow)}
                     borderWidth={1}
                     fontSize={11}
                     paddingY={0.5}
@@ -457,9 +558,68 @@ export function WorkoutCalendarCard({
                     gap: 1.5,
                     padding: 1.25,
                 }}>
-                {/* 30D's square days are much taller than the heatmaps */}
+                {window === 'month' && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                        }}>
+                        <NavArrow
+                            dir="prev"
+                            disabled={month <= firstMonth}
+                            onClick={() => onMonthChange(addMonths(month, -1))}
+                        />
+                        <Box
+                            component="button"
+                            type="button"
+                            // Tap the month to jump back to this one
+                            onClick={() => onMonthChange(thisMonth)}
+                            disabled={month === thisMonth}
+                            sx={{
+                                border: 'none',
+                                background: 'none',
+                                font: 'inherit',
+                                padding: '4px 8px',
+                                cursor:
+                                    month === thisMonth ? 'default' : 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                color: colors.primaryBlack,
+                                ...(month !== thisMonth && pressTextSx),
+                            }}>
+                            <Typography
+                                sx={{
+                                    fontSize: 15,
+                                    fontWeight: 800,
+                                    lineHeight: 1.2,
+                                }}>
+                                {MONTHS[m - 1]} {y}
+                            </Typography>
+                            {month !== thisMonth && (
+                                <Typography
+                                    sx={{
+                                        fontSize: 10.5,
+                                        fontWeight: 600,
+                                        color: colors.primaryBrown,
+                                        lineHeight: 1.2,
+                                    }}>
+                                    Back to this month
+                                </Typography>
+                            )}
+                        </Box>
+                        <NavArrow
+                            dir="next"
+                            disabled={month >= thisMonth}
+                            onClick={() => onMonthChange(addMonths(month, 1))}
+                        />
+                    </Box>
+                )}
+                {/* A month's square days are much taller than the heatmaps */}
                 <AnimatedHeight>
-                    {window === '30d' ? (
+                    {window === 'month' ? (
                         <SquareCalendar
                             cells={cells}
                             filter={filter}
@@ -485,7 +645,10 @@ export function WorkoutCalendarCard({
                     }}>
                     {stats ? (
                         <>
-                            <Stat value={`${stats.times}×`} label="times" />
+                            <Stat
+                                value={future ? '—' : `${stats.times}×`}
+                                label="times"
+                            />
                             <Stat
                                 value={fmtGap(stats.avgGap)}
                                 label="avg gap"
@@ -507,15 +670,23 @@ export function WorkoutCalendarCard({
                         </>
                     ) : (
                         <>
-                            <Stat value={String(win.worked)} label="days" />
                             <Stat
-                                value={win.perWeek.toFixed(1)}
+                                value={future ? '—' : String(win.worked)}
+                                label="days"
+                            />
+                            <Stat
+                                value={future ? '—' : win.perWeek.toFixed(1)}
                                 label="per week"
                             />
-                            <Stat value={`${win.pct}%`} label="of days" />
+                            <Stat
+                                value={future ? '—' : `${win.pct}%`}
+                                label="of days"
+                            />
                             <Stat
                                 value={
-                                    win.worked ? `${win.longestBreak}d` : '—'
+                                    !future && win.worked
+                                        ? `${win.longestBreak}d`
+                                        : '—'
                                 }
                                 label="longest break"
                             />
