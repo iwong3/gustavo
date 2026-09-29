@@ -77,11 +77,14 @@ export const supplementColors = {
 } as const
 
 /** Workouts' orange family (healthColors.workouts, deepened): the Health
- *  hub's workout-day heatmap. `empty` = a day without one. */
+ *  hub's workout-day heatmap, the Workouts page's weeks. `empty` = a day
+ *  without one; `light` = the day column / empty-dot tint, `emptyEdge` its rim. */
 export const workoutColors = {
     fill: '#f5a25d',
     deep: '#b8531a',
     empty: '#f1ead9',
+    light: '#fff1de',
+    emptyEdge: '#e2cfae',
 } as const
 
 /** Weight's blue (healthColors.weight, deepened): trend lines. */

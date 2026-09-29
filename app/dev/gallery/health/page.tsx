@@ -8,8 +8,10 @@ import { HealthHub, type HubSupplementRuns } from 'components/health/hub/health-
 import TrainingGrid from 'components/health/training-grid'
 import type { HubWindow } from '@/lib/health/hub-window'
 import { WorkoutDetail } from 'components/health/workout-detail'
+import { RotationTiles, WorkoutWeeks } from 'components/health/workout-log'
+import { buildWorkoutDays, groupByWeek, routineRecency } from '@/lib/health/workout-days'
 import { DAYS_SINCE_ORDER, getParents, isGroup } from '@/lib/health/muscle-groups'
-import type { DaysSince, WeightLog, Workout } from '@/lib/health-types'
+import type { DaysSince, WeightLog, Workout, WorkoutPreset } from '@/lib/health-types'
 
 import { GALLERY_TODAY } from '../fixtures'
 import { workout as pushDay, workoutHistory } from '../health-fixtures'
@@ -167,6 +169,56 @@ function HubSpecimen({ initial, loading, empty }: { initial: HubWindow; loading?
     )
 }
 
+// ── Workouts page fixtures: a Push / Pull / Legs / Jog rotation ──
+// String ids (runtime truth). Pull usually brings Lower Back along (an
+// extra); a stale same-day pair (days 40) renders as one row; days 22–41
+// hold a 3-week break → one "3 weeks off" line.
+const routine = (id: string, name: string, groups: string[]): WorkoutPreset => ({
+    id: id as unknown as number,
+    name,
+    muscleGroups: groups.map((g, i) => ({ id: String(i + 1) as unknown as number, name: g })),
+    exercises: [],
+})
+const rotation: WorkoutPreset[] = [
+    routine('11', 'Push', ['Chest', 'Shoulders', 'Triceps']),
+    routine('12', 'Pull', ['Upper Back', 'Biceps', 'Forearms']),
+    routine('13', 'Legs', ['Legs']),
+    routine('14', 'Jogging', ['Cardio', 'Jogging']),
+    routine('15', 'Core', ['Core']),
+]
+const PUSH = ['Chest', 'Shoulders', 'Triceps']
+const PULL = ['Upper Back', 'Biceps', 'Forearms', 'Lower Back']
+const JOG = ['Cardio', 'Jogging']
+const logWorkouts: Workout[] = (
+    [
+        [0, JOG], [10, PULL], [12, ['Legs']], [13, PUSH], [14, JOG], [15, PULL], [16, JOG],
+        [18, ['Legs']], [19, PUSH], [20, JOG], [21, [...PULL, ...JOG]],
+        [42, PUSH], [42, ['Core']], [44, ['Legs', 'Core']], [45, JOG], [47, PULL], [48, ['Chest']],
+    ] as [number, string[]][]
+).map(([d, g]) => ({ ...workout(d, g), id: String(7000 + d * 3 + g.length) as unknown as number }))
+
+function WorkoutsLogSpecimen({ applying }: { applying?: boolean }) {
+    const days = buildWorkoutDays(logWorkouts, rotation)
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 2, backgroundColor: '#fefae0' }}>
+            <RotationTiles
+                presets={rotation}
+                recency={routineRecency(days, rotation, GALLERY_TODAY)}
+                applyingId={applying ? '12' : null}
+                onApply={() => {}}
+            />
+            <WorkoutWeeks
+                weeks={groupByWeek(days, GALLERY_TODAY)}
+                today={GALLERY_TODAY}
+                hrefFor={() => '#'}
+                onOpen={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+            />
+        </Box>
+    )
+}
+
 // The width the grid renders at on the home page (content minus its padding).
 const HOME_WIDTH = 326
 
@@ -188,6 +240,15 @@ export default function HealthGallery() {
                 </Specimen>
                 <Specimen label="nothing logged" width={375}>
                     <HubSpecimen initial="30d" empty />
+                </Specimen>
+            </SpecimenGroup>
+
+            <SpecimenGroup title="Workouts page — /health/exercise (header + FAB not shown)">
+                <Specimen label="rotation tiles + weeks · extras, merged day, weeks off" width={375}>
+                    <WorkoutsLogSpecimen />
+                </Specimen>
+                <Specimen label="logging Pull (other tiles dimmed)" width={375}>
+                    <WorkoutsLogSpecimen applying />
                 </Specimen>
             </SpecimenGroup>
 

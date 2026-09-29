@@ -4,7 +4,7 @@ import { Box } from '@mui/material'
 import { IconBarbell, IconHeartbeat, IconPill } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 
-import { cardSx, colors, healthColors } from '@/lib/colors'
+import { cardSx, colors, healthColors, workoutColors } from '@/lib/colors'
 import { HealthHub } from 'components/health/hub/health-hub'
 import { useHubWindowStore } from 'components/health/hub/hub-window-store'
 import { HealthPageHeader } from 'components/health/health-page-layout'
@@ -63,57 +63,47 @@ export function HealthHubSkeleton() {
     )
 }
 
-/** Routine chips under a page header: bolt circle + 26px chips, wrapping. */
-function RoutineChipsSkeleton() {
-    return (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            <Circle size={30} />
-            {[76, 64, 88].map((w) => (
-                <Bone key={w} width={w} height={26} radius="4px" />
-            ))}
-        </Box>
-    )
-}
-
-/** Mirrors the Workouts list (app/gustavo/health/exercise/page.tsx). */
+/** Mirrors the Workouts page (app/gustavo/health/exercise/page.tsx):
+ *  rotation tiles, then week headers over cards of day rows. */
 export function WorkoutsListSkeleton() {
     return (
         <HealthColumn fullWidth>
-            <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR}>
-                <RoutineChipsSkeleton />
-            </HealthPageHeader>
-            {/* Timeline: 32px gutter with the line through its centre */}
-            <Box sx={{ position: 'relative' }}>
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        left: 15,
-                        top: 6,
-                        bottom: 6,
-                        width: 2,
-                        backgroundColor: `${colors.primaryBlack}25`,
-                    }}
-                />
-                {[[70, 56, 84], [64, 90], [58, 72, 60], [80, 64]].map((chips, i) => (
-                    <Box key={i} sx={{ display: 'flex', marginBottom: 1.5 }}>
-                        <Box sx={{ width: 32, display: 'flex', justifyContent: 'center', paddingTop: '1px', flexShrink: 0 }}>
-                            <Box sx={{ marginTop: '5px' }}>
-                                <Circle size={10} />
+            <HealthPageHeader icon={workoutsIcon} title="Workouts" color={WORKOUTS_COLOR} right={<Circle size={34} />} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                    <TextBone fontSize={9.5} lineHeight={1.2} width={120} />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 0.75 }}>
+                        {[0, 1, 2, 3, 4].map((i) => (
+                            <Bone key={i} height={52} radius="4px" />
+                        ))}
+                    </Box>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
+                    {[1, 3, 4].map((rows, i) => (
+                        <Box key={i} sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 22 }}>
+                                <TextBone fontSize={13} width={110} />
+                                <Bone width={86} height={9} radius="2px" />
                             </Box>
-                        </Box>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, marginBottom: 1 }}>
-                                <Bone width={34} height={18} />
-                                <TextBone fontSize={12} width={48} />
-                            </Box>
-                            <Box sx={{ ...cardSx, padding: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                {chips.map((w, j) => (
-                                    <Bone key={j} width={w} height={22} />
+                            <Box sx={{ ...cardSx, borderRadius: '4px', overflow: 'hidden' }}>
+                                {Array.from({ length: rows }, (_, j) => (
+                                    <Box
+                                        key={j}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.25,
+                                            height: 48,
+                                            borderTop: j ? `1px solid ${colors.primaryBlack}1f` : 'none',
+                                        }}>
+                                        <Box sx={{ width: 40, alignSelf: 'stretch', backgroundColor: workoutColors.light }} />
+                                        <Bone width={[52, 44, 60, 48][(i + j) % 4]} height={24} radius="3px" />
+                                    </Box>
                                 ))}
                             </Box>
                         </Box>
-                    </Box>
-                ))}
+                    ))}
+                </Box>
             </Box>
         </HealthColumn>
     )
