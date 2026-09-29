@@ -29,6 +29,7 @@ import {
     type HubWindow,
 } from '@/lib/health/hub-window'
 import { routineStats, type WorkoutDay } from '@/lib/health/workout-days'
+import { AnimatedHeight } from 'components/animated-height'
 import { SlidingToggle } from 'components/sliding-toggle'
 
 import { captionSx } from './workout-log'
@@ -456,21 +457,24 @@ export function WorkoutCalendarCard({
                     gap: 1.5,
                     padding: 1.25,
                 }}>
-                {window === '30d' ? (
-                    <SquareCalendar
-                        cells={cells}
-                        filter={filter}
-                        onOpen={onOpen}
-                    />
-                ) : (
-                    <ColumnHeatmap
-                        cells={cells}
-                        weeks={win.weeks.length}
-                        monthLabels={win.monthLabels}
-                        window={window}
-                        filter={filter}
-                    />
-                )}
+                {/* 30D's square days are much taller than the heatmaps */}
+                <AnimatedHeight>
+                    {window === '30d' ? (
+                        <SquareCalendar
+                            cells={cells}
+                            filter={filter}
+                            onOpen={onOpen}
+                        />
+                    ) : (
+                        <ColumnHeatmap
+                            cells={cells}
+                            weeks={win.weeks.length}
+                            monthLabels={win.monthLabels}
+                            window={window}
+                            filter={filter}
+                        />
+                    )}
+                </AnimatedHeight>
                 <Box
                     sx={{
                         display: 'grid',
