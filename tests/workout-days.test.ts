@@ -70,11 +70,8 @@ describe('buildWorkoutDays', () => {
         expect(jul9.extras).toEqual(['Core'])
     })
 
-    it('gaps count back to the previous routine, or the previous day with the group', () => {
-        const sep18 = days[0]
-        expect(sep18.routineGaps).toEqual([5]) // Pull on Sep 13
-        expect(sep18.extraGaps).toEqual([2]) // Lower Back on Sep 16 (a Legs day)
-        expect(days.find((d) => d.date === '2026-09-13')!.routineGaps).toEqual([null])
+    it('gap = days since the previous workout day', () => {
+        expect(days.map((d) => d.gap)).toEqual([2, 3, 66, null])
     })
 
     it('routineRecency: days since each routine, null when never', () => {

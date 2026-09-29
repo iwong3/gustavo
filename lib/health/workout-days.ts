@@ -6,9 +6,8 @@
  *    groups (targets roll up to their groups, so Lats counts as Upper Back).
  *    Groups no matched routine covers are extras ("+ Lower Back").
  *    A day matching no routine falls back to its group names.
- *  - Gaps: each label's "days since previous" — for a routine, days back to
- *    the previous day with that routine; for an extra, to the previous day
- *    that trained that group at all (whatever the routine).
+ *  - Gap: days since the previous workout day (the date's badge). Per-routine
+ *    history is for a routine calendar, not the rows.
  *  - Recency: days since each routine was last done, for the rotation tiles.
  *
  * A day has one workout (00044), but rows still group by date so a stale
@@ -27,10 +26,8 @@ export type WorkoutDay<P extends PresetLike = PresetLike> = {
     groups: string[]
     routines: P[]
     extras: string[]
-    /** Days since the previous day with routines[i] (null = first time). */
-    routineGaps: (number | null)[]
-    /** Days since the previous day that trained extras[i]. */
-    extraGaps: (number | null)[]
+    /** Days since the previous workout day (null = the first one). */
+    gap: number | null
 }
 
 export type WorkoutWeek<P extends PresetLike = PresetLike> = {
@@ -74,7 +71,7 @@ export function matchRoutines<P extends PresetLike>(
     return { routines, extras }
 }
 
-/** One row per date, newest first, with labels and gaps. */
+/** One row per date, newest first, with labels and the gap to the day before. */
 export function buildWorkoutDays<P extends PresetLike>(workouts: Workout[], presets: P[]): WorkoutDay<P>[] {
     const byDate = new Map<string, Workout[]>()
     for (const w of workouts) {
@@ -83,7 +80,7 @@ export function buildWorkoutDays<P extends PresetLike>(workouts: Workout[], pres
         else byDate.set(w.date, [w])
     }
     const dates = Array.from(byDate.keys()).sort().reverse()
-    const days = dates.map((date) => {
+    return dates.map((date, i) => {
         const list = byDate.get(date)!
         const groupSet = toGroups(list.flatMap((w) => w.muscleGroups.map((m) => m.name)))
         const { routines, extras } = matchRoutines(groupSet, presets)
@@ -93,22 +90,9 @@ export function buildWorkoutDays<P extends PresetLike>(workouts: Workout[], pres
             groups: MUSCLE_GROUPS.filter((g) => groupSet.has(g)),
             routines,
             extras,
-            routineGaps: [] as (number | null)[],
-            extraGaps: [] as (number | null)[],
+            gap: i + 1 < dates.length ? daysBetween(date, dates[i + 1]) : null,
         }
     })
-    // Oldest → newest, remembering the last date each routine / group appeared
-    const lastRoutine = new Map<string, string>()
-    const lastGroup = new Map<string, string>()
-    for (let i = days.length - 1; i >= 0; i--) {
-        const day = days[i]
-        const gap = (prev: string | undefined) => (prev ? daysBetween(day.date, prev) : null)
-        day.routineGaps = day.routines.map((r) => gap(lastRoutine.get(String(r.id))))
-        day.extraGaps = day.extras.map((g) => gap(lastGroup.get(g)))
-        day.routines.forEach((r) => lastRoutine.set(String(r.id), day.date))
-        day.groups.forEach((g) => lastGroup.set(g, day.date))
-    }
-    return days
 }
 
 /** Days since each routine was last done (null = never), keyed by preset id. */

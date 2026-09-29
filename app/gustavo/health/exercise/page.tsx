@@ -3,7 +3,8 @@
 /**
  * Workouts: the log. Rotation tiles on top (days since each routine; tap to
  * log it today, with Undo), then Sunday-start weeks with one row per day,
- * labelled by routine with "days since previous" badges. ⚡ → Routines.
+ * labelled by routine, the date badged with days since the last workout.
+ * ⚡ → Routines.
  * Home does the daily logging and the Hub the long view; this page is for
  * looking back and fixing things. Model: lib/health/workout-days.ts.
  */

@@ -4,13 +4,13 @@
  * The Workouts page's two blocks (presentational + gallery-importable):
  *
  *  - RotationTiles: one tile per routine, its name only; days since you
- *    last did it sit in a corner badge (the rows' badge, rimmed in Home's
+ *    last did it sit in a corner badge (the date blocks' badge, rimmed in Home's
  *    green / orange / red). Tap = log it today (the page owns the mutation +
  *    Undo toast). Done today → the workouts tint + a ✓ badge.
  *  - WorkoutWeeks: Sunday-start weeks, newest first. Each header has the
  *    range, a 7-day dot strip and the days trained; its card has one row per
- *    day: the day, then a chip per routine and a dashed chip per extra group,
- *    each with a "days since previous" badge. Tap a row → detail, swipe →
+ *    day: the date (with a days-since-last-workout badge after a rest), then a
+ *    chip per routine and a dashed chip per extra group. Tap a row → detail, swipe →
  *    edit / delete. A run of empty weeks collapses to one "N weeks off" line.
  *
  * Model: lib/health/workout-days.ts. Ids arrive as strings at runtime.
@@ -116,7 +116,7 @@ export function RotationTiles({
                                 {p.name}
                             </Typography>
                             {days !== null && (
-                                // Same corner badge as the day rows' chips; the rim + number
+                                // Same corner badge as the rows' date blocks; the rim + number
                                 // carry Home's green / orange / red
                                 <Box
                                     component="span"
@@ -197,34 +197,40 @@ function WeekDots({ start, days, today }: { start: string; days: WorkoutDay[]; t
     )
 }
 
-function Badge({ n }: { n: number | null }) {
-    if (n == null) return null
+/** Days since the previous workout, on the date block's corner — shown
+ *  after at least one rest day, on Home's scale (2–3 green, 4–6 orange, 7+
+ *  red = the old timeline's 1–2 / 3–5 / 6+ rest days). */
+function GapBadge({ gap }: { gap: number | null }) {
+    if (gap == null || gap < 2) return null
+    const tone = getDaysSinceTextColor(gap)
     return (
         <Box
             component="span"
+            aria-label={`${gap} days since the last workout`}
             sx={{
                 ...numSx,
                 position: 'absolute',
-                right: -7,
-                bottom: -7,
-                minWidth: 17,
-                height: 15,
+                right: -8,
+                bottom: 3,
+                zIndex: 1,
+                minWidth: 18,
+                height: 16,
                 px: '3px',
                 borderRadius: '8px',
                 backgroundColor: colors.primaryWhite,
-                border: `1px solid ${colors.primaryBlack}`,
-                fontSize: 9,
+                border: `1.5px solid ${tone}`,
+                fontSize: 9.5,
                 fontWeight: 800,
                 lineHeight: '13px',
                 textAlign: 'center',
-                color: colors.primaryBlack,
+                color: tone,
             }}>
-            {n}
+            {gap}
         </Box>
     )
 }
 
-function LabelChip({ label, gap, extra }: { label: string; gap: number | null; extra?: boolean }) {
+function LabelChip({ label, extra }: { label: string; extra?: boolean }) {
     return (
         <Box
             component="span"
@@ -252,7 +258,6 @@ function LabelChip({ label, gap, extra }: { label: string; gap: number | null; e
                       }),
             }}>
             {label}
-            <Badge n={gap} />
         </Box>
     )
 }
@@ -291,6 +296,7 @@ function DayRow({
                 }}>
                 <Box
                     sx={{
+                        position: 'relative',
                         width: 40,
                         flexShrink: 0,
                         display: 'flex',
@@ -306,6 +312,7 @@ function DayRow({
                     <Typography sx={{ ...numSx, fontSize: 16, fontWeight: 800, lineHeight: 1.1 }}>
                         {d.getDate()}
                     </Typography>
+                    <GapBadge gap={day.gap} />
                 </Box>
                 <Box
                     sx={{
@@ -314,16 +321,16 @@ function DayRow({
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignItems: 'center',
-                        gap: '10px 12px',
+                        gap: 0.75,
                         py: '8px',
-                        pl: 1.25,
+                        pl: 1.75,
                         pr: 0.5,
                     }}>
-                    {day.routines.map((r, i) => (
-                        <LabelChip key={r.id} label={r.name} gap={day.routineGaps[i]} />
+                    {day.routines.map((r) => (
+                        <LabelChip key={r.id} label={r.name} />
                     ))}
-                    {day.extras.map((g, i) => (
-                        <LabelChip key={g} label={g} gap={day.extraGaps[i]} extra={!plain} />
+                    {day.extras.map((g) => (
+                        <LabelChip key={g} label={g} extra={!plain} />
                     ))}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
