@@ -1,22 +1,21 @@
 'use client'
 
-import { Box } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionProvider } from 'next-auth/react'
 import { useState } from 'react'
 
 import { colors } from '@/lib/colors'
 import { queryKeys } from '@/lib/query-keys'
-import type { ExpenseCategoryWithMeta, UserPreferences } from '@/lib/types'
+import type { UserPreferences } from '@/lib/types'
 import { HeaderSlotProvider, HeaderSlotTarget } from 'components/header-slot'
-import { IconForm } from 'components/settings/icon-form'
+import CategoriesPage from '@/gustavo/settings/categories/page'
 import PeoplePage from '@/gustavo/settings/invite/page'
 import SettingsPage from '@/gustavo/settings/page'
 import type { AllowedEmail } from 'utils/api'
 
+import { categoriesWithMeta } from '../fixtures'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
-
-const noop = () => {}
 
 const PREFS: UserPreferences = {
     defaultTripVisibility: 'participants',
@@ -27,23 +26,7 @@ const PREFS: UserPreferences = {
     alphabetIndexSide: 'right',
 }
 
-const cat = (id: number, name: string, usageCount: number, slug: string | null = null): ExpenseCategoryWithMeta => ({
-    id,
-    name,
-    slug,
-    updatedAt: '2026-09-01T00:00:00.000Z',
-    usageCount,
-    canEdit: !slug,
-})
-const GALLERY_CATEGORIES: ExpenseCategoryWithMeta[] = [
-    cat(1, 'Food', 223),
-    cat(2, 'Shopping', 205),
-    cat(3, 'Transit', 109),
-    cat(4, 'Attraction', 28),
-    cat(5, 'Lodging', 25),
-    cat(6, 'Other', 5),
-    cat(7, 'Currency Exchange', 1, 'currency_exchange'),
-]
+const GALLERY_CATEGORIES = categoriesWithMeta
 
 const person = (
     id: number,
@@ -115,27 +98,20 @@ export default function SettingsGallery() {
         <SessionProvider session={SESSION} refetchOnWindowFocus={false}>
             <QueryClientProvider client={client}>
                 <GalleryPage title="Settings">
-                    <SpecimenGroup title="Settings + Your icon">
+                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                        The Your icon and category forms are in the Forms gallery.
+                    </Typography>
+                    <SpecimenGroup title="Pages">
                         <Specimen label="settings · admin">
                             <Screen>
                                 <SettingsPage />
                             </Screen>
                         </Specimen>
-                        <Specimen label="your icon (form)">
+                        <Specimen label="categories · tiles (the + lives in the app shell)">
                             <Screen back>
-                                <Box sx={{ width: '100%' }}>
-                                    <IconForm
-                                        name="Ivan Wong"
-                                        initials="IW"
-                                        iconColor="#fbbc04"
-                                        onCancel={noop}
-                                        onSave={async () => {}}
-                                    />
-                                </Box>
+                                <CategoriesPage />
                             </Screen>
                         </Specimen>
-                    </SpecimenGroup>
-                    <SpecimenGroup title="People">
                         <Specimen label="people · newest (swipe a row on touch)">
                             <Screen back>
                                 <PeoplePage />

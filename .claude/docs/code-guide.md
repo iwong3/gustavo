@@ -273,6 +273,14 @@ There is no nav drawer — tabs + the header corner are the whole navigation.
   toggles/actions then the `PageInfo` ⓘ on the right, 30px controls. Section
   headings inside a page are the 11px uppercase brown label (see debts,
   links, settings).
+- **Title chip in the header**: Health and Settings pages put their title up
+  in the app header instead — `HeaderTitle` (`components/header-title.tsx`,
+  a coloured chip + right controls via `HeaderSlot`); Health wraps it as
+  `HealthPageHeader`.
+- **Flat tabs**: a sort/range switch that sits inside or beside a box uses
+  `FlatTabs` (`components/flat-tabs.tsx` — bold label + sliding underline),
+  not a boxed `SlidingToggle` (box in a box). Workout calendar range,
+  Categories and People sorts.
 
 ---
 

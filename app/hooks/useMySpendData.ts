@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { useSpendData } from 'providers/spend-data-provider'
 import { useTripData } from 'providers/trip-data-provider'
-import { getColorForCategory, getLocationColor } from 'utils/icons'
+import { categoryLooksFromExpenses, getColorForCategory, getLocationColor } from 'utils/icons'
 
 import { colors } from '@/lib/colors'
 import { expenseShareForUser } from '@/lib/spend'
@@ -179,6 +179,11 @@ export function useMySpendData() {
             days.add(r.expense.date)
             dayCounts.set(key, days)
         }
+        // Categories carry their own colour on each expense
+        const looks =
+            dimension === 'category'
+                ? categoryLooksFromExpenses(chartRows.map((r) => r.expense))
+                : null
         return Array.from(totals.entries())
             .sort(([, a], [, b]) => b - a)
             .map(([name, value]) => ({
@@ -187,7 +192,7 @@ export function useMySpendData() {
                 value,
                 color:
                     dimension === 'category'
-                        ? getColorForCategory(name)
+                        ? getColorForCategory(name, looks?.get(name)?.color)
                         : getLocationColor(name),
                 firstDate: firstDates.get(name),
                 days: dayCounts.get(name)?.size ?? 0,

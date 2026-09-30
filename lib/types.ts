@@ -81,6 +81,11 @@ export type Expense = {
     categoryId: number | null
     categoryName: string | null
     categorySlug: string | null
+    /** The category's own icon (Phosphor name) + colour (00045). Optional:
+     *  expenses cached before then lack them — render through
+     *  getCategoryLook(), which falls back by name. */
+    categoryIcon?: string | null
+    categoryColor?: string | null
     locationId: number | null
     locationName: string | null
     paidBy: UserSummary
@@ -150,6 +155,10 @@ export type ExpenseCategory = {
     id: number
     name: string
     slug: string | null
+    /** Phosphor icon name from lib/category-icons.ts + '#rrggbb' (00045).
+     *  Null → the default look; render through getCategoryLook(). */
+    icon: string | null
+    color: string | null
     updatedAt: string
 }
 

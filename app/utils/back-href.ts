@@ -96,6 +96,10 @@ export function getBackHref(
     else if (pathname === '/gustavo/health') {
         backHref = '/gustavo'
     }
+    // /gustavo/settings/categories/new and /<id>/edit → categories
+    else if (/^\/gustavo\/settings\/categories\/(?:new|[^/]+\/edit)$/.test(pathname)) {
+        backHref = '/gustavo/settings/categories'
+    }
     // /gustavo/settings/<sub> → settings
     else if (/^\/gustavo\/settings\/.+$/.test(pathname)) {
         backHref = '/gustavo/settings'

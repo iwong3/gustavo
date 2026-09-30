@@ -16,10 +16,12 @@ import SupplementLogForm from 'components/health/supplement-log-form'
 import WeightForm from 'components/health/weight-form'
 import WorkoutForm from 'components/health/workout-form'
 import TripForm from 'components/trip-form'
+import { CategoryForm } from 'components/settings/category-form'
+import { IconForm } from 'components/settings/icon-form'
 import { TripDataProvider } from 'providers/trip-data-provider'
 import { colors, hardShadow } from '@/lib/colors'
 import { GusMenuButton } from '../gallery-ui'
-import { expenses, GALLERY_TODAY, trip } from '../fixtures'
+import { categoriesWithMeta, expenses, GALLERY_TODAY, trip } from '../fixtures'
 import {
     exercises,
     muscleGroups,
@@ -68,6 +70,14 @@ const GROUPS = [
             { key: 'supp-edit', label: 'Supplement · edit', kind: 'page' },
             { key: 'supp-group-new', label: 'Supp. group · new', kind: 'page' },
             { key: 'supp-group-edit', label: 'Supp. group · edit', kind: 'page' },
+        ],
+    },
+    {
+        title: 'Settings',
+        forms: [
+            { key: 'your-icon', label: 'Your icon', kind: 'page' },
+            { key: 'category-new', label: 'Category · new', kind: 'page' },
+            { key: 'category-edit', label: 'Category · edit', kind: 'page' },
         ],
     },
 ] as const
@@ -213,6 +223,28 @@ export default function FormsGallery() {
                         log={selected === 'weight-edit' ? weightLog : undefined}
                         onCancel={close}
                         onSuccess={close}
+                    />
+                )
+            case 'your-icon':
+                return (
+                    <IconForm
+                        name="Ivan Wong"
+                        initials="IW"
+                        iconColor="#fbbc04"
+                        onCancel={close}
+                        onSave={async () => close()}
+                    />
+                )
+            case 'category-new':
+            case 'category-edit':
+                return (
+                    <CategoryForm
+                        key={selected}
+                        category={selected === 'category-edit' ? categoriesWithMeta[3] : undefined}
+                        categories={categoriesWithMeta}
+                        onCancel={close}
+                        onSuccess={close}
+                        onDeleted={close}
                     />
                 )
             default:

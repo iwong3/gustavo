@@ -20,6 +20,9 @@ export type PickerCategory = {
     name: string
     /** Times used on this trip — shown right-aligned. */
     count: number
+    /** The category's own look (lib/category-icons.ts); null → by name. */
+    icon?: string | null
+    color?: string | null
 }
 
 /** Shorter than the 42px split rows above it in the form: a category row carries
@@ -94,10 +97,10 @@ export const CategoryPicker = ({
                             width: 20,
                             height: 20,
                             borderRadius: '50%',
-                            backgroundColor: getColorForCategory(c.name),
+                            backgroundColor: getColorForCategory(c.name, c.color),
                             flexShrink: 0,
                         }}>
-                        {getIconFromCategory(c.name, 12)}
+                        {getIconFromCategory(c.name, 12, c.icon)}
                     </Box>
                     <Typography
                         sx={{

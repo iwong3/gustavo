@@ -4,6 +4,7 @@ import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
 import { canEditCategory, canDeleteCategory } from '@/lib/permissions'
 import { occMatchSql } from '@/lib/occ'
+import { isCategoryIconName, isHexColor } from '@/lib/category-icons'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -33,23 +34,37 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { name, expectedUpdatedAt } = await request.json()
+    const { name, icon, color, expectedUpdatedAt } = await request.json()
     if (!name || typeof name !== 'string' || !name.trim()) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+    // icon / color: omitted = unchanged; otherwise a curated icon / #rrggbb
+    if ((icon !== undefined && !isCategoryIconName(icon)) || (color !== undefined && !isHexColor(color))) {
+        return NextResponse.json({ error: 'Invalid icon or colour' }, { status: 400 })
+    }
+
+    // A clashing name is a 409, not a unique-constraint 500 (names stay unique
+    // across deleted rows too — adding a deleted name revives that row)
+    const clash = await pool.query(
+        'SELECT 1 FROM expense_categories WHERE name = $1 AND id <> $2',
+        [name.trim(), id]
+    )
+    if (clash.rows.length > 0) {
+        return NextResponse.json({ error: 'Category already exists' }, { status: 409 })
     }
 
     try {
         await withAuditUser(userId, async (client) => {
+            const set = `name = $1, icon = COALESCE($3, icon), color = COALESCE($4, color)`
             const sql = expectedUpdatedAt
-                ? `UPDATE expense_categories SET name = $1
-                   WHERE id = $2 AND deleted_at IS NULL AND ${occMatchSql('updated_at', '$3')}
+                ? `UPDATE expense_categories SET ${set}
+                   WHERE id = $2 AND deleted_at IS NULL AND ${occMatchSql('updated_at', '$5')}
                    RETURNING id`
-                : `UPDATE expense_categories SET name = $1
+                : `UPDATE expense_categories SET ${set}
                    WHERE id = $2 AND deleted_at IS NULL
                    RETURNING id`
-            const args: unknown[] = expectedUpdatedAt
-                ? [name.trim(), id, expectedUpdatedAt]
-                : [name.trim(), id]
+            const args: unknown[] = [name.trim(), id, icon ?? null, color ?? null]
+            if (expectedUpdatedAt) args.push(expectedUpdatedAt)
             const res = await client.query(sql, args)
             if (res.rows.length === 0) {
                 if (expectedUpdatedAt) {

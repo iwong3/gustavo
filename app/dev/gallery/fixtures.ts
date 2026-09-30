@@ -5,6 +5,7 @@
 import type {
     AddressComponent,
     Expense,
+    ExpenseCategoryWithMeta,
     PlaceInfo,
     SettlementRecord,
     TripStats,
@@ -340,3 +341,32 @@ export function makePassTrip(overrides: Partial<TripSummary> = {}): TripSummary 
         ...overrides,
     }
 }
+
+/** Settings → Categories: the real categories + usage counts (local DB,
+ *  Sep 2026) with their 00045 looks. Ids are BIGINT → strings at runtime. */
+const category = (
+    id: string,
+    name: string,
+    usageCount: number,
+    icon: string,
+    color: string,
+    slug: string | null = null
+): ExpenseCategoryWithMeta => ({
+    id: asId(id),
+    name,
+    slug,
+    icon,
+    color,
+    updatedAt: '2026-09-30T00:00:00.000Z',
+    usageCount,
+    canEdit: !slug,
+})
+export const categoriesWithMeta: ExpenseCategoryWithMeta[] = [
+    category('1', 'Food', 223, 'ForkKnife', '#ffd97d'),
+    category('2', 'Shopping', 205, 'Tote', '#90be6d'),
+    category('3', 'Transit', 109, 'Train', '#aed9e0'),
+    category('4', 'Attraction', 28, 'MapPinArea', '#ff9b85'),
+    category('5', 'Lodging', 25, 'Bed', '#dac4f7'),
+    category('6', 'Other', 5, 'SquaresFour', '#d3d3d3'),
+    category('7', 'Currency Exchange', 1, 'ArrowsLeftRight', '#b8d8ba', 'currency_exchange'),
+]

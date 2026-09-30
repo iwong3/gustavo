@@ -1,15 +1,5 @@
 import { Box, SxProps, Theme } from '@mui/material'
-import {
-    ArrowsLeftRight,
-    Bed,
-    ForkKnife,
-    FunnelSimple,
-    HandCoins,
-    MapPinArea,
-    Tote,
-    Train,
-    UserCircle,
-} from '@phosphor-icons/react'
+import { FunnelSimple, HandCoins, UserCircle } from '@phosphor-icons/react'
 import {
     IconArrowsSplit2,
     IconCalendarDown,
@@ -60,7 +50,9 @@ import {
 import { MenuItem, SortItem, ToolsMenuItem } from 'components/menu/enums'
 import { defaultBackgroundColor } from 'utils/colors'
 
+import { getCategoryLook, type CategoryLook } from '@/lib/category-icons'
 import type { Expense } from '@/lib/types'
+import { CategoryGlyph } from 'utils/category-icons'
 
 export const defaultIconSize = 20
 
@@ -336,6 +328,7 @@ interface ICategoryIconProps {
 
 export const CategoryIcon = ({ expense, size = 32 }: ICategoryIconProps) => {
     const iconSize = Math.round(size * 0.55)
+    const look = getCategoryLook(expense.categoryName, expense.categoryIcon, expense.categoryColor)
     return (
         <Box
             sx={{
@@ -345,57 +338,40 @@ export const CategoryIcon = ({ expense, size = 32 }: ICategoryIconProps) => {
                 width: size,
                 height: size,
                 borderRadius: '100%',
-                backgroundColor: getColorForCategory(expense.categoryName),
+                backgroundColor: look.color,
                 border: '1px solid #090401',
                 boxShadow: '1.5px 1.5px 0px #090401',
             }}>
-            {getIconFromCategory(expense.categoryName, iconSize)}
+            <CategoryGlyph icon={look.icon} size={iconSize} />
         </Box>
     )
 }
 
-export const getIconFromCategory = (
-    category: string | null | undefined,
-    size: number = defaultIconSize
-) => {
-    switch (category) {
-        case 'Attraction':
-            return <MapPinArea size={size} />
-        case 'Currency Exchange':
-            return <ArrowsLeftRight size={size} />
-        case 'Transit':
-            return <Train size={size} />
-        case 'Food':
-            return <ForkKnife size={size} />
-        case 'Lodging':
-            return <Bed size={size} />
-        case 'Shopping':
-            return <Tote size={size} />
-        case 'Other':
-        default:
-            return getTablerIcon({ name: 'IconCategory', size })
+/**
+ * Each category's look by name, read off the expenses themselves (every row
+ * carries its category's icon + colour) — for views that only have a
+ * category's name to go on (refine filters, Insights).
+ */
+export function categoryLooksFromExpenses(expenses: readonly Expense[]): Map<string, CategoryLook> {
+    const looks = new Map<string, CategoryLook>()
+    for (const e of expenses) {
+        if (e.categoryName && !looks.has(e.categoryName))
+            looks.set(e.categoryName, getCategoryLook(e.categoryName, e.categoryIcon, e.categoryColor))
     }
+    return looks
 }
 
-export const getColorForCategory = (category: string | null | undefined) => {
-    switch (category) {
-        case 'Attraction':
-            return '#ff9b85'
-        case 'Currency Exchange':
-            return '#b8d8ba'
-        case 'Transit':
-            return '#aed9e0'
-        case 'Food':
-            return '#ffd97d'
-        case 'Lodging':
-            return '#dac4f7'
-        case 'Shopping':
-            return '#90be6d'
-        case 'Other':
-        default:
-            return 'lightgray'
-    }
-}
+/** A category's icon. Pass its stored `icon` when you have it; the name alone
+ *  falls back to the pre-00045 name mapping. */
+export const getIconFromCategory = (
+    category: string | null | undefined,
+    size: number = defaultIconSize,
+    icon?: string | null
+) => <CategoryGlyph icon={getCategoryLook(category, icon).icon} size={size} />
+
+/** A category's colour — its stored `color` when passed, else by name. */
+export const getColorForCategory = (category: string | null | undefined, color?: string | null) =>
+    getCategoryLook(category, null, color).color
 
 // --- Location icon (string-based) ---
 

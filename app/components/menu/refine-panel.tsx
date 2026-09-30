@@ -29,7 +29,12 @@ import {
     type FacetKey,
     type FilterMaps,
 } from 'utils/expense-filters'
-import { getColorForCategory, getIconFromCategory, InitialsIcon } from 'utils/icons'
+import {
+    categoryLooksFromExpenses,
+    getColorForCategory,
+    getIconFromCategory,
+    InitialsIcon,
+} from 'utils/icons'
 import { personLabels } from 'utils/person-labels'
 
 import type { Expense, ParticipantSummary } from '@/lib/types'
@@ -522,6 +527,12 @@ function FacetSection({
         ? `${labelOf(chosen[0])}${chosen.length > 1 ? ` +${chosen.length - 1}` : ''}`
         : 'All'
 
+    // Category options are names; their icon + colour come off the expenses
+    const categoryLooks = useMemo(
+        () => (facet.kind === 'category' ? categoryLooksFromExpenses(expenses) : null),
+        [facet.kind, expenses]
+    )
+
     if (options.length === 0) return null
 
     const tall = facet.kind === 'person'
@@ -645,12 +656,12 @@ function FacetSection({
                                                 height: 16,
                                                 borderRadius: '3px',
                                                 border: `1px solid ${colors.primaryBlack}`,
-                                                backgroundColor: getColorForCategory(option),
+                                                backgroundColor: getColorForCategory(option, categoryLooks?.get(option)?.color),
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                             }}>
-                                            {getIconFromCategory(option, 10)}
+                                            {getIconFromCategory(option, 10, categoryLooks?.get(option)?.icon)}
                                         </Box>
                                     )}
                                 </Box>

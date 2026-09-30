@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import { withAuditUser } from '@/lib/db-audit'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { isCategoryIconName, isHexColor } from '@/lib/category-icons'
 
 export async function GET(request: NextRequest) {
     const includeCount = request.nextUrl.searchParams.get('includeCount') === 'true'
@@ -9,12 +10,12 @@ export async function GET(request: NextRequest) {
     if (includeCount) {
         const authUser = await requireAuthWithUserId()
         const { rows } = await pool.query(
-            `SELECT ec.id, ec.name, ec.slug, ec.created_by, ec.updated_at,
+            `SELECT ec.id, ec.name, ec.slug, ec.icon, ec.color, ec.created_by, ec.updated_at,
                     COUNT(e.id)::int AS usage_count
              FROM expense_categories ec
              LEFT JOIN expenses e ON e.category_id = ec.id AND e.deleted_at IS NULL
              WHERE ec.deleted_at IS NULL
-             GROUP BY ec.id, ec.name, ec.slug, ec.created_by, ec.updated_at
+             GROUP BY ec.id
              ORDER BY ec.name`
         )
         const userId = authUser?.userId
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
             id: r.id,
             name: r.name,
             slug: r.slug,
+            icon: r.icon,
+            color: r.color,
             updatedAt: new Date(r.updated_at).toISOString(),
             usageCount: r.usage_count,
             canEdit: r.slug ? false : (isAdmin || r.created_by === userId),
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { rows } = await pool.query(
-        `SELECT id, name, slug, updated_at FROM expense_categories
+        `SELECT id, name, slug, icon, color, updated_at FROM expense_categories
          WHERE deleted_at IS NULL
          ORDER BY name`
     )
@@ -39,6 +42,8 @@ export async function GET(request: NextRequest) {
             id: r.id,
             name: r.name,
             slug: r.slug,
+            icon: r.icon,
+            color: r.color,
             updatedAt: new Date(r.updated_at).toISOString(),
         }))
     )
@@ -49,9 +54,12 @@ export async function POST(request: NextRequest) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { userId } = authUser
 
-    const { name } = await request.json()
+    const { name, icon, color } = await request.json()
     if (!name || typeof name !== 'string' || !name.trim()) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+    if ((icon != null && !isCategoryIconName(icon)) || (color != null && !isHexColor(color))) {
+        return NextResponse.json({ error: 'Invalid icon or colour' }, { status: 400 })
     }
 
     const trimmed = name.trim()
@@ -67,8 +75,8 @@ export async function POST(request: NextRequest) {
                 if (existing.rows[0].deleted_at) {
                     // Revive soft-deleted category and claim ownership
                     await client.query(
-                        `UPDATE expense_categories SET deleted_at = NULL, created_by = $2 WHERE id = $1`,
-                        [existing.rows[0].id, userId]
+                        `UPDATE expense_categories SET deleted_at = NULL, created_by = $2, icon = $3, color = $4 WHERE id = $1`,
+                        [existing.rows[0].id, userId, icon ?? null, color ?? null]
                     )
                     return { id: existing.rows[0].id, name: trimmed }
                 }
@@ -76,8 +84,8 @@ export async function POST(request: NextRequest) {
             }
 
             const res = await client.query(
-                `INSERT INTO expense_categories (name, created_by) VALUES ($1, $2) RETURNING id`,
-                [trimmed, userId]
+                `INSERT INTO expense_categories (name, created_by, icon, color) VALUES ($1, $2, $3, $4) RETURNING id`,
+                [trimmed, userId, icon ?? null, color ?? null]
             )
             return { id: res.rows[0].id, name: trimmed }
         })
