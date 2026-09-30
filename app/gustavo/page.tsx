@@ -265,7 +265,10 @@ function SupplementsSection() {
                 `/api/health/supplement-logs?date=${date}`
             ),
     })
-    const { onTap, onUndo } = useDoseTaps(date)
+    // No Undo toast: it pops up over the bottom rows, so a quick tap on the
+    // next supplement hit its Undo instead. The card shows each dose, and
+    // Undo stays one tap (done row) or a swipe away.
+    const { onTap, onUndo } = useDoseTaps(date, { undoToast: false })
 
     const items = useMemo(
         () => buildStack(supplementsQ.data ?? [], logsQ.data ?? []),

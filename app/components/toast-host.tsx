@@ -2,15 +2,18 @@
 
 import { Box } from '@mui/material'
 import { IconAlertTriangle, IconCircleCheck, IconInfoCircle } from '@tabler/icons-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { colors, toneColors } from '@/lib/colors'
-import { useToastStore } from 'components/toast-store'
+import { useToastStore, type Toast } from 'components/toast-store'
 
 const DURATION_MS = 4000
 // A toast with an action (Undo) stays a little longer so it can be caught
 const ACTION_DURATION_MS = 5500
+// Taps pass through a toast this long after it appears: one that pops up
+// under your finger mid-tapping (a list's bottom rows) mustn't take the tap
+const ARM_MS = 450
 
 /**
  * Renders the current toast from useToastStore. Mount once in the app
@@ -30,6 +33,17 @@ export function ToastHost() {
 
     if (!toast || typeof document === 'undefined') return null
 
+    // Keyed so each new toast starts unarmed
+    return createPortal(<ToastView key={toast.id} toast={toast} dismiss={dismiss} />, document.body)
+}
+
+function ToastView({ toast, dismiss }: { toast: Toast; dismiss: () => void }) {
+    const [armed, setArmed] = useState(false)
+    useEffect(() => {
+        const t = setTimeout(() => setArmed(true), ARM_MS)
+        return () => clearTimeout(t)
+    }, [])
+
     const accent =
         toast.tone === 'error'
             ? colors.primaryRed
@@ -39,12 +53,12 @@ export function ToastHost() {
     const Icon =
         toast.tone === 'error' ? IconAlertTriangle : toast.tone === 'success' ? IconCircleCheck : IconInfoCircle
 
-    return createPortal(
+    return (
         <Box
-            key={toast.id}
             role={toast.tone === 'error' ? 'alert' : 'status'}
             onClick={dismiss}
             sx={{
+                'pointerEvents': armed ? 'auto' : 'none',
                 'position': 'fixed',
                 'left': 16,
                 'right': 16,
@@ -106,7 +120,6 @@ export function ToastHost() {
                     {toast.action.label}
                 </Box>
             )}
-        </Box>,
-        document.body
+        </Box>
     )
 }

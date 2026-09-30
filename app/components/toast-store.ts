@@ -12,7 +12,7 @@ export type ToastTone = 'error' | 'info' | 'success'
 /** One tap-able action on the toast, e.g. Undo. */
 export type ToastAction = { label: string; onClick: () => void }
 
-type Toast = { id: number; message: string; tone: ToastTone; action?: ToastAction }
+export type Toast = { id: number; message: string; tone: ToastTone; action?: ToastAction }
 
 type ToastStore = {
     toast: Toast | null

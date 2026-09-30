@@ -197,9 +197,13 @@ export const SwipeableRow = ({
         action()
     }
 
+    // The two layouts are keyed apart: when canEdit/canDelete flips (e.g. the
+    // Home stack's Undo appears once a dose is taken), React would otherwise
+    // reuse the hidden red action button's DOM node for the children — which
+    // then flash red while their own background transition fades it out
     if (!canEdit && !canDelete) {
         return (
-            <Box sx={{
+            <Box key="plain" sx={{
                 ...(showBottomBorder && {
                     borderBottom: '1px solid',
                     borderColor: 'divider',
@@ -236,6 +240,7 @@ export const SwipeableRow = ({
 
     return (
         <Box
+            key="swipeable"
             ref={rootRef}
             data-swipeable-row=""
             sx={{

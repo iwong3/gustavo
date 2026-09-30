@@ -9,7 +9,8 @@
  * capsule per daily dose; tap the row to take a dose and a capsule fills in.
  * Tapping a finished row takes the last dose back (so a 1×-a-day item
  * behaves like a checkbox); swiping any row left reveals Undo, which takes
- * one dose back at any time. The page adds an Undo toast after each dose.
+ * one dose back at any time. No Undo toast here — it covered the bottom
+ * rows and ate quick taps meant for them.
  *
  * Between midnight and 6am doses count for the previous day (logDateString);
  * the page passes `nightNote` then, a one-line explainer with a switch.

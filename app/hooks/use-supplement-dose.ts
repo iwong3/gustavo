@@ -26,8 +26,11 @@ export type DoseTarget = {
  * finished one to take the last dose back. Atomic ±1 on the server
  * (/supplement-logs/dose), applied optimistically to both caches that hold
  * that day — the day's list (Home) and the full history (Supplements page).
+ *
+ * `undoToast: false` skips the toast — for lists where it would pop up over
+ * the next row you're about to tap (Home), and the list itself shows the dose.
  */
-export function useDoseTaps(date: string) {
+export function useDoseTaps(date: string, { undoToast = true }: { undoToast?: boolean } = {}) {
     const queryClient = useQueryClient()
     // Refetch only once every tap has landed — a refetch between two quick
     // taps would briefly roll the second one back
@@ -84,6 +87,7 @@ export function useDoseTaps(date: string) {
                 return
             }
             mutate({ ...vars, delta: 1 })
+            if (!undoToast) return
             const taken = t.taken + 1
             showToast(
                 t.dosesPerDay > 1 ? `${t.name} ${taken}/${t.dosesPerDay}` : `Took ${t.name}`,
@@ -91,7 +95,7 @@ export function useDoseTaps(date: string) {
                 { label: 'Undo', onClick: () => mutate({ ...vars, delta: -1 }) }
             )
         },
-        [mutate, date]
+        [mutate, date, undoToast]
     )
 
     /** Take one dose back (swipe → Undo). */
