@@ -271,7 +271,7 @@ interface IInitialsIconProps {
     sx?: SxProps<Theme>
 }
 
-function deriveInitials(name: string): string {
+export function deriveInitials(name: string): string {
     // If the name has spaces, use first letter of first two words
     const parts = name.trim().split(/\s+/)
     if (parts.length >= 2) {

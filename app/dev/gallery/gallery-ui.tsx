@@ -22,6 +22,7 @@ export const sections = [
     { slug: 'loading', title: 'Loading skeletons', description: 'Every page skeleton (trips, health hub, workouts) — compare with the loaded pages' },
     { slug: 'supplements', title: 'Supplements', description: 'Today tiles with Day X, calendar + stack-change badges, day panel, 1am state' },
     { slug: 'health', title: 'Health', description: 'Workout detail page; training grid — 14-day log, freshness dials, empty states' },
+    { slug: 'settings', title: 'Settings', description: 'Settings page, Your icon form, People, Categories tiles + edit form' },
 ] as const
 
 const PHONE_WIDTH = 390

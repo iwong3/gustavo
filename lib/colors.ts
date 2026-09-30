@@ -55,6 +55,8 @@ export const toneColors = {
     positive: '#2e7d32',
     negativeBg: '#fdf0ee',
     positiveBg: '#eef5ee',
+    /** Waiting on someone else — e.g. an invite nobody has used yet. */
+    pending: '#a85d06',
 } as const
 
 /** Health section identity colours — hub badges, page header chips, ⚡ circles. */

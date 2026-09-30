@@ -35,6 +35,10 @@ export const queryKeys = {
         /** The day's greeting quote — one per local date. */
         quote: (day: string) => ['home', 'quote', day] as const,
     },
+    /** Admin-only: the sign-in allowlist (Settings → People). */
+    allowedEmails: {
+        list: () => ['allowed-emails', 'list'] as const,
+    },
     expenseCategories: {
         all: ['expense-categories'] as const,
         list: () => ['expense-categories', 'list'] as const,
