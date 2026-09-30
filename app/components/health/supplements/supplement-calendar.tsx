@@ -8,13 +8,13 @@ import { colors, healthColors, pressShadowSx, supplementColors } from '@/lib/col
 import type { DaySummary } from '@/lib/health/supplement-calendar'
 import { STRIP_H, stripNumSx, stripWordSx } from 'components/home/board-card'
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** 'YYYY-MM' → its days as ISO dates, with Monday-first leading blanks. */
+/** 'YYYY-MM' → its days as ISO dates, with Sunday-first leading blanks. */
 function monthCells(month: string): (string | null)[] {
     const [y, m] = month.split('-').map(Number)
-    const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7
+    const lead = new Date(y, m - 1, 1).getDay()
     const count = new Date(y, m, 0).getDate()
     const cells: (string | null)[] = Array(lead).fill(null)
     for (let d = 1; d <= count; d++) cells.push(`${month}-${pad(d)}`)
@@ -22,8 +22,8 @@ function monthCells(month: string): (string | null)[] {
     return cells
 }
 
-/** Monday-first column (0–6) of an ISO date — where the day panel's tab points. */
-export const weekdayColumn = (date: string) => (new Date(date + 'T00:00:00').getDay() + 6) % 7
+/** Sunday-first column (0–6) of an ISO date — where the day panel's tab points. */
+export const weekdayColumn = (date: string) => new Date(date + 'T00:00:00').getDay()
 
 export const monthLabel = (month: string) =>
     new Date(month + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })

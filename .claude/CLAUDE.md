@@ -54,6 +54,8 @@ Stack: Next.js 15 (App Router) + React 19 + TypeScript, MUI v7, Zustand 5, Neon 
   **Daily check-offs (supplements) use the log day instead**: `logDateString()` /
   `useLogDay()` — before 6am (`NIGHT_CUTOFF_HOUR`) it's still yesterday, so a 1am
   dose counts for last night.
+- **Calendars start on Sunday** — every month grid / week row / weekday
+  header is Sunday-first (`['S','M','T','W','T','F','S']`, column = `getDay()`).
 - **Gate loading UI on `isPending`, never `isLoading`** — during the persisted
   cache restore `isLoading` is false with no data, so pages flash their empty
   state. See code-guide § Loading, Caching & Refresh.
