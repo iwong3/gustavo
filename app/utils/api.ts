@@ -395,6 +395,11 @@ export type AllowedEmail = {
     addedByName: string | null
     hasAccount: boolean
     userName: string | null
+    /** The signed-up user's custom icon (null while waiting, or if unset). */
+    userInitials: string | null
+    userIconColor: string | null
+    /** When their account was created — null while the invite is waiting. */
+    joinedAt: string | null
 }
 
 export const fetchAllowedEmails = async (): Promise<AllowedEmail[]> => {

@@ -10,7 +10,8 @@ export async function GET() {
     const res = await pool.query(
         `SELECT ae.id, ae.email, ae.created_at,
                 u.name AS added_by_name,
-                eu.id AS user_id, eu.name AS user_name
+                eu.id AS user_id, eu.name AS user_name, eu.initials AS user_initials,
+                eu.icon_color AS user_icon_color, eu.created_at AS joined_at
          FROM allowed_emails ae
          LEFT JOIN users u ON u.id = ae.added_by
          LEFT JOIN users eu ON LOWER(eu.email) = LOWER(ae.email) AND eu.deleted_at IS NULL
@@ -25,6 +26,9 @@ export async function GET() {
             addedByName: r.added_by_name,
             hasAccount: r.user_id != null,
             userName: r.user_name,
+            userInitials: r.user_initials,
+            userIconColor: r.user_icon_color,
+            joinedAt: r.joined_at,
         }))
     )
 }
@@ -62,5 +66,8 @@ export async function POST(request: NextRequest) {
         addedByName: null,
         hasAccount: false,
         userName: null,
+        userInitials: null,
+        userIconColor: null,
+        joinedAt: null,
     }, { status: 201 })
 }

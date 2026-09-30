@@ -10,6 +10,7 @@ import { queryKeys } from '@/lib/query-keys'
 import type { ExpenseCategoryWithMeta, UserPreferences } from '@/lib/types'
 import { HeaderSlotProvider, HeaderSlotTarget } from 'components/header-slot'
 import { IconForm } from 'components/settings/icon-form'
+import PeoplePage from '@/gustavo/settings/invite/page'
 import SettingsPage from '@/gustavo/settings/page'
 import type { AllowedEmail } from 'utils/api'
 
@@ -44,21 +45,30 @@ const GALLERY_CATEGORIES: ExpenseCategoryWithMeta[] = [
     cat(7, 'Currency Exchange', 1, 'currency_exchange'),
 ]
 
-const person = (id: number, email: string, createdAt: string, userName: string | null): AllowedEmail => ({
+const person = (
+    id: number,
+    email: string,
+    createdAt: string,
+    joined: { name: string; initials: string | null; color: string | null; at: string } | null
+): AllowedEmail => ({
     id,
     email,
     createdAt,
     addedByName: 'Ivan Wong',
-    hasAccount: userName !== null,
-    userName,
+    hasAccount: joined !== null,
+    userName: joined?.name ?? null,
+    userInitials: joined?.initials ?? null,
+    userIconColor: joined?.color ?? null,
+    joinedAt: joined?.at ?? null,
 })
 const GALLERY_ALLOWED: AllowedEmail[] = [
     person(6, 'sam.k@gmail.com', '2026-09-27T18:00:00Z', null),
     person(5, 'aunt.mei@gmail.com', '2026-09-20T18:00:00Z', null),
-    person(4, 'dan.park@gmail.com', '2026-09-14T18:00:00Z', 'Dan Park'),
-    person(3, 'priya.n@gmail.com', '2026-08-30T18:00:00Z', 'Priya N.'),
-    person(2, 'marco.r@gmail.com', '2026-08-12T18:00:00Z', 'Marco Rossi'),
-    person(1, 'jenny.l@gmail.com', '2025-07-02T18:00:00Z', 'Jenny'),
+    person(4, 'dan.park@gmail.com', '2026-09-13T18:00:00Z', { name: 'Dan Park', initials: null, color: '#ce93d8', at: '2026-09-14T18:00:00Z' }),
+    person(3, 'priya.n@gmail.com', '2026-08-29T18:00:00Z', { name: 'Priya N.', initials: 'PN', color: '#a5d6a7', at: '2026-08-30T18:00:00Z' }),
+    person(2, 'marco.r@gmail.com', '2026-08-10T18:00:00Z', { name: 'Marco Rossi', initials: null, color: '#81d4fa', at: '2026-08-12T18:00:00Z' }),
+    person(1, 'ivan.w@gmail.com', '2025-06-01T18:00:00Z', { name: 'Ivan Wong', initials: 'IW', color: '#fbbc04', at: '2025-06-01T18:00:00Z' }),
+    person(0, 'jenny.l@gmail.com', '2025-07-01T18:00:00Z', { name: 'Jenny', initials: 'JL', color: '#f48fb1', at: '2025-07-02T18:00:00Z' }),
 ]
 
 /** A throwaway, unpersisted cache seeded with fixtures — the gallery never
@@ -122,6 +132,13 @@ export default function SettingsGallery() {
                                         onSave={async () => {}}
                                     />
                                 </Box>
+                            </Screen>
+                        </Specimen>
+                    </SpecimenGroup>
+                    <SpecimenGroup title="People">
+                        <Specimen label="people · newest (swipe a row on touch)">
+                            <Screen back>
+                                <PeoplePage />
                             </Screen>
                         </Specimen>
                     </SpecimenGroup>
