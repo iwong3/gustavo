@@ -99,10 +99,15 @@ export function CategoryForm({
     const [deleting, setDeleting] = useState(false)
     const [deleteError, setDeleteError] = useState<string | null>(null)
 
-    const takenIcons = useMemo(
-        () => new Set(others.map((o) => getCategoryLook(o.name, o.icon, o.color).icon)),
-        [others]
-    )
+    // Icon → the other category using it (its name + color), first one wins
+    const usedBy = useMemo(() => {
+        const map = new Map<string, { name: string; color: string }>()
+        for (const o of others) {
+            const look = getCategoryLook(o.name, o.icon, o.color)
+            if (!map.has(look.icon)) map.set(look.icon, { name: o.name, color: look.color })
+        }
+        return map
+    }, [others])
     const trimmed = name.trim()
     const duplicate = others.some((o) => o.name.toLowerCase() === trimmed.toLowerCase())
     const nameInvalid = attempted && (!trimmed || duplicate)
@@ -193,60 +198,50 @@ export function CategoryForm({
             </Box>
 
             <Box>
-                <Typography sx={labelSx}>Icon</Typography>
+                <Typography sx={labelSx}>
+                    Icon
+                    {usedBy.size > 0 && (
+                        <Box component="span" sx={{ fontWeight: 400, fontSize: 12, color: 'text.secondary', marginLeft: 1 }}>
+                            Colored = used by that category
+                        </Box>
+                    )}
+                </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, paddingTop: 0.5 }}>
                     {CATEGORY_ICON_GROUPS.map((g) => (
                         <Box key={g.title}>
-                            <Typography sx={groupLabelSx}>
-                                {g.title}
-                                {g.title === 'In use now' && (
-                                    <Box component="span" sx={{ fontWeight: 400 }}>
-                                        {' · dot = used by another category'}
-                                    </Box>
-                                )}
-                            </Typography>
+                            <Typography sx={groupLabelSx}>{g.title}</Typography>
                             <Box sx={iconGridSx}>
                                 {g.icons.map((name) => {
                                     const on = name === icon
+                                    const user = on ? undefined : usedBy.get(name)
                                     return (
                                         <Box
                                             key={name}
                                             component="button"
                                             type="button"
-                                            aria-label={name}
+                                            aria-label={user ? `${name}, used by ${user.name}` : name}
                                             aria-pressed={on}
                                             onClick={() => setIcon(name)}
                                             sx={{
-                                                position: 'relative',
                                                 aspectRatio: '1',
                                                 borderRadius: '50%',
-                                                // Bordered + hard shadow like the color swatches, so the
-                                                // white circles read on the cream page; chosen = yellow
+                                                // Bordered + hard shadow like the color swatches. An icon
+                                                // another category uses takes that category's color; the
+                                                // chosen one goes black (yellow could be Food's color)
                                                 border: `1px solid ${colors.primaryBlack}`,
                                                 boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
-                                                backgroundColor: on ? colors.primaryYellow : colors.primaryWhite,
-                                                color: colors.primaryBlack,
+                                                backgroundColor: on
+                                                    ? colors.primaryBlack
+                                                    : (user?.color ?? colors.primaryWhite),
+                                                color: on ? colors.primaryWhite : colors.primaryBlack,
                                                 display: 'grid',
                                                 placeItems: 'center',
                                                 padding: 0,
                                                 cursor: 'pointer',
                                                 ...pressIconSx,
+                                                transition: 'transform 0.1s ease-out, background-color 0.12s, color 0.12s',
                                             }}>
                                             <CategoryGlyph icon={name} size={20} />
-                                            {!on && takenIcons.has(name) && (
-                                                <Box
-                                                    aria-hidden
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: '14%',
-                                                        right: '14%',
-                                                        width: 6,
-                                                        height: 6,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: colors.primaryBrown,
-                                                    }}
-                                                />
-                                            )}
                                         </Box>
                                     )
                                 })}

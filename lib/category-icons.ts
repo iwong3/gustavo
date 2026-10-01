@@ -12,14 +12,14 @@
  * Leaf file (no React) — the API validates against it too.
  */
 
+// The original category icons lead their groups (ForkKnife, Train, Bed +
+// MapPinArea, Tote + ArrowsLeftRight, SquaresFour for Other)
 export const CATEGORY_ICON_GROUPS = [
-    // Today's looks first, so every existing category's icon can be re-picked
-    { title: 'In use now', icons: ['ForkKnife', 'Tote', 'Train', 'MapPinArea', 'Bed', 'SquaresFour', 'ArrowsLeftRight'] },
-    { title: 'Food & drink', icons: ['Coffee', 'BeerStein', 'Wine', 'Martini', 'Hamburger', 'IceCream'] },
-    { title: 'Getting around', icons: ['Airplane', 'Bus', 'Car', 'Taxi', 'Boat', 'Bicycle', 'GasPump', 'Suitcase'] },
-    { title: 'Stay & do', icons: ['Tent', 'Ticket', 'Camera', 'Mountains', 'UmbrellaSimple', 'SwimmingPool', 'FilmSlate', 'Park'] },
-    { title: 'Shopping & money', icons: ['ShoppingCart', 'TShirt', 'Gift', 'Money'] },
-    { title: 'Everyday', icons: ['Pill', 'FirstAid', 'Heart', 'Phone', 'WifiHigh', 'Barbell', 'DotsThreeCircle'] },
+    { title: 'Food & drink', icons: ['ForkKnife', 'Coffee', 'BeerStein', 'Wine', 'Martini', 'Hamburger', 'IceCream'] },
+    { title: 'Getting around', icons: ['Train', 'Airplane', 'Bus', 'Car', 'Taxi', 'Boat', 'Bicycle', 'GasPump', 'Suitcase'] },
+    { title: 'Stay & do', icons: ['Bed', 'MapPinArea', 'Tent', 'Ticket', 'Camera', 'Mountains', 'UmbrellaSimple', 'SwimmingPool', 'FilmSlate', 'Park'] },
+    { title: 'Shopping & money', icons: ['Tote', 'ShoppingCart', 'TShirt', 'Gift', 'Money', 'ArrowsLeftRight'] },
+    { title: 'Everyday', icons: ['Pill', 'FirstAid', 'Heart', 'Phone', 'WifiHigh', 'Barbell', 'SquaresFour', 'DotsThreeCircle'] },
 ] as const
 
 export type CategoryIconName = (typeof CATEGORY_ICON_GROUPS)[number]['icons'][number]
