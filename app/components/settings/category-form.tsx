@@ -25,9 +25,15 @@ import { getContrastText } from 'utils/icons'
 import { deleteErrorMessage } from 'utils/delete-error'
 
 const groupLabelSx = { fontSize: 11.5, fontWeight: 600, color: 'text.secondary', marginBottom: 0.75 } as const
-// Icons 7 across (~42px circles on a phone); colors 6 across
-const iconGridSx = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 } as const
-const colorGridSx = { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1.25 } as const
+// Icon and color choices: one fixed circle size, on the same column grid
+// (as many 36px columns as fit, spread edge to edge), so they line up
+const CHOICE_SIZE = 36
+const choiceGridSx = {
+    display: 'grid',
+    gridTemplateColumns: `repeat(auto-fill, ${CHOICE_SIZE}px)`,
+    justifyContent: 'space-between',
+    gap: 1.25,
+} as const
 
 async function saveCategory(
     category: ExpenseCategoryWithMeta | undefined,
@@ -210,7 +216,7 @@ export function CategoryForm({
                     {CATEGORY_ICON_GROUPS.map((g) => (
                         <Box key={g.title}>
                             <Typography sx={groupLabelSx}>{g.title}</Typography>
-                            <Box sx={iconGridSx}>
+                            <Box sx={choiceGridSx}>
                                 {g.icons.map((name) => {
                                     const on = name === icon
                                     const user = on ? undefined : usedBy.get(name)
@@ -223,7 +229,8 @@ export function CategoryForm({
                                             aria-pressed={on}
                                             onClick={() => setIcon(name)}
                                             sx={{
-                                                aspectRatio: '1',
+                                                width: CHOICE_SIZE,
+                                                height: CHOICE_SIZE,
                                                 borderRadius: '50%',
                                                 // Bordered + hard shadow like the color swatches. An icon
                                                 // another category uses takes that category's color; the
@@ -253,7 +260,7 @@ export function CategoryForm({
 
             <Box>
                 <Typography sx={labelSx}>Color</Typography>
-                <Box sx={{ ...colorGridSx, paddingTop: 0.5 }}>
+                <Box sx={{ ...choiceGridSx, paddingTop: 0.5 }}>
                     {CATEGORY_COLORS.map((c) => {
                         const on = c === color.toLowerCase()
                         return (
@@ -265,7 +272,8 @@ export function CategoryForm({
                                 aria-pressed={on}
                                 onClick={() => setColor(c)}
                                 sx={{
-                                    aspectRatio: '1',
+                                    width: CHOICE_SIZE,
+                                    height: CHOICE_SIZE,
                                     borderRadius: '50%',
                                     border: `1px solid ${colors.primaryBlack}`,
                                     boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
@@ -279,7 +287,7 @@ export function CategoryForm({
                                 {/* A check inside, not a ring around: an
                                     offset outline reads lopsided against the
                                     swatch's hard shadow */}
-                                {on && <IconCheck size={20} stroke={3} color={getContrastText(c)} />}
+                                {on && <IconCheck size={18} stroke={3} color={getContrastText(c)} />}
                             </Box>
                         )
                     })}
