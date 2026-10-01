@@ -11,7 +11,7 @@ import { AnimatedHeight } from 'components/animated-height'
 import { FormPage } from 'components/form-page'
 import { deriveInitials, getContrastText, InitialsIcon } from 'utils/icons'
 
-/** Preset icon colours — one tap each; the last swatch opens the full picker. */
+/** Preset icon colors — one tap each; the last swatch opens the full picker. */
 export const ICON_SWATCHES = [
     '#fbbc04',
     '#f7cd83',
@@ -40,7 +40,7 @@ const swatchSx = {
 } as const
 
 /**
- * Your icon: initials + colour, with a live preview. A page-style form
+ * Your icon: initials + color, with a live preview. A page-style form
  * (Settings → tap your avatar), replacing the old dialog.
  */
 export function IconForm({
@@ -59,7 +59,7 @@ export function IconForm({
     const [editInitials, setEditInitials] = useState(initials || deriveInitials(name))
     const [editColor, setEditColor] = useState(iconColor || DEFAULT_COLOR)
     const isPreset = (ICON_SWATCHES as readonly string[]).includes(editColor.toLowerCase())
-    // The full picker opens with a custom colour already in use
+    // The full picker opens with a custom color already in use
     const [customOpen, setCustomOpen] = useState(!isPreset)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | undefined>()
@@ -123,14 +123,14 @@ export function IconForm({
             </Box>
 
             <Box>
-                <Typography sx={labelSx}>Colour</Typography>
+                <Typography sx={labelSx}>Color</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1.25, paddingTop: 0.5 }}>
                     {ICON_SWATCHES.map((c) => (
                         <Box
                             key={c}
                             component="button"
                             type="button"
-                            aria-label={`Colour ${c}`}
+                            aria-label={`Color ${c}`}
                             aria-pressed={editColor.toLowerCase() === c}
                             onClick={() => {
                                 setEditColor(c)
@@ -142,12 +142,12 @@ export function IconForm({
                             )}
                         </Box>
                     ))}
-                    {/* Custom: a rainbow +, or the custom colour with the
+                    {/* Custom: a rainbow +, or the custom color with the
                         check once one is picked */}
                     <Box
                         component="button"
                         type="button"
-                        aria-label="Custom colour"
+                        aria-label="Custom color"
                         aria-pressed={!isPreset}
                         onClick={() => setCustomOpen((o) => !o)}
                         sx={{

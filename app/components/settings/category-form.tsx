@@ -25,7 +25,9 @@ import { getContrastText } from 'utils/icons'
 import { deleteErrorMessage } from 'utils/delete-error'
 
 const groupLabelSx = { fontSize: 11.5, fontWeight: 600, color: 'text.secondary', marginBottom: 0.75 } as const
-const choiceGridSx = { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 0.75 } as const
+// Icons 7 across (~42px circles on a phone); colors 6 across
+const iconGridSx = { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 } as const
+const colorGridSx = { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1.25 } as const
 
 async function saveCategory(
     category: ExpenseCategoryWithMeta | undefined,
@@ -56,7 +58,7 @@ async function deleteCategory(category: ExpenseCategoryWithMeta) {
 
 /**
  * New / Edit category: name, icon (the curated Phosphor list, grouped —
- * today's looks first) and colour, over a live tile preview. Edit adds a
+ * today's looks first) and color, over a live tile preview. Edit adds a
  * danger-zone Delete. Saving refreshes the category list before leaving,
  * and marks trips stale so expense rows pick up the new look.
  */
@@ -83,7 +85,7 @@ export function CategoryForm({
     const start = category ? getCategoryLook(category.name, category.icon, category.color) : null
     const [name, setName] = useState(category?.name ?? '')
     const [icon, setIcon] = useState<CategoryIconName>(start?.icon ?? DEFAULT_CATEGORY_ICON)
-    // A new category starts on the first colour nobody uses yet
+    // A new category starts on the first color nobody uses yet
     const [color, setColor] = useState<string>(
         () =>
             start?.color ??
@@ -203,7 +205,7 @@ export function CategoryForm({
                                     </Box>
                                 )}
                             </Typography>
-                            <Box sx={choiceGridSx}>
+                            <Box sx={iconGridSx}>
                                 {g.icons.map((name) => {
                                     const on = name === icon
                                     return (
@@ -218,9 +220,10 @@ export function CategoryForm({
                                                 position: 'relative',
                                                 aspectRatio: '1',
                                                 borderRadius: '50%',
-                                                // Outlined so the white circles read on the cream page;
-                                                // the chosen one is yellow with a heavier edge
-                                                border: `${on ? 1.5 : 1}px solid ${colors.primaryBlack}`,
+                                                // Bordered + hard shadow like the color swatches, so the
+                                                // white circles read on the cream page; chosen = yellow
+                                                border: `1px solid ${colors.primaryBlack}`,
+                                                boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
                                                 backgroundColor: on ? colors.primaryYellow : colors.primaryWhite,
                                                 color: colors.primaryBlack,
                                                 display: 'grid',
@@ -229,7 +232,7 @@ export function CategoryForm({
                                                 cursor: 'pointer',
                                                 ...pressIconSx,
                                             }}>
-                                            <CategoryGlyph icon={name} size={22} />
+                                            <CategoryGlyph icon={name} size={20} />
                                             {!on && takenIcons.has(name) && (
                                                 <Box
                                                     aria-hidden
@@ -254,8 +257,8 @@ export function CategoryForm({
             </Box>
 
             <Box>
-                <Typography sx={labelSx}>Colour</Typography>
-                <Box sx={{ ...choiceGridSx, gap: 1.25, paddingTop: 0.5 }}>
+                <Typography sx={labelSx}>Color</Typography>
+                <Box sx={{ ...colorGridSx, paddingTop: 0.5 }}>
                     {CATEGORY_COLORS.map((c) => {
                         const on = c === color.toLowerCase()
                         return (
@@ -263,7 +266,7 @@ export function CategoryForm({
                                 key={c}
                                 component="button"
                                 type="button"
-                                aria-label={`Colour ${c}`}
+                                aria-label={`Color ${c}`}
                                 aria-pressed={on}
                                 onClick={() => setColor(c)}
                                 sx={{

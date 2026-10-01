@@ -41,7 +41,7 @@ function sortCategories(list: ExpenseCategoryWithMeta[], sort: Sort) {
 const gridSx = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 } as const
 
 /** Settings → Categories: every expense category as a tinted tile. Tap one
- *  to edit its name / icon / colour; the + adds one. */
+ *  to edit its name / icon / color; the + adds one. */
 export default function CategoriesPage() {
     const router = useRouter()
     const { data: categories, isPending } = useQuery({
@@ -81,7 +81,7 @@ export default function CategoriesPage() {
                             trip. The number on a tile is how many expenses use it.
                         </PageInfoSection>
                         <PageInfoSection title="Editing">
-                            Tap a tile to rename it or change its icon and colour — expenses and
+                            Tap a tile to rename it or change its icon and color — expenses and
                             filters everywhere follow. The + adds a new one.
                         </PageInfoSection>
                         <PageInfoSection title="Built in">

@@ -17,7 +17,7 @@ export function shareLabel(count: number, total: number) {
 }
 
 /**
- * A category as a tinted tile: its colour is the tile, its icon sits on a
+ * A category as a tinted tile: its color is the tile, its icon sits on a
  * white circle (no border — a box in a box otherwise), count top-right,
  * name + share at the bottom. Built-in categories get a lock and no shadow.
  * Presentational — the Categories page wraps it in a link, the form uses it

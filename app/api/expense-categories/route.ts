@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
     if ((icon != null && !isCategoryIconName(icon)) || (color != null && !isHexColor(color))) {
-        return NextResponse.json({ error: 'Invalid icon or colour' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid icon or color' }, { status: 400 })
     }
 
     const trimmed = name.trim()

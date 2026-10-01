@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     // icon / color: omitted = unchanged; otherwise a curated icon / #rrggbb
     if ((icon !== undefined && !isCategoryIconName(icon)) || (color !== undefined && !isHexColor(color))) {
-        return NextResponse.json({ error: 'Invalid icon or colour' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid icon or color' }, { status: 400 })
     }
 
     // A clashing name is a 409, not a unique-constraint 500 (names stay unique

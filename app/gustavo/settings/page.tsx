@@ -180,7 +180,7 @@ export default function SettingsPage() {
                     href="/gustavo/settings/profile"
                     aria-label="Edit your icon"
                     sx={{ position: 'relative', display: 'block', ...pressIconSx }}>
-                    {/* Custom initials/colour live in prefs: placeholder until they
+                    {/* Custom initials/color live in prefs: placeholder until they
                         load, rather than name-derived initials that then swap */}
                     {prefs ? (
                         <InitialsIcon

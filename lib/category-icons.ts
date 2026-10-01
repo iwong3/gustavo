@@ -1,5 +1,5 @@
 /**
- * Expense-category looks: the curated icon list + colour palette the
+ * Expense-category looks: the curated icon list + color palette the
  * Settings → Categories editor picks from, and the fallbacks.
  *
  * Icons are Phosphor component names (regular weight) — ONE library for
@@ -28,7 +28,7 @@ const ICON_NAMES = new Set<string>(CATEGORY_ICON_GROUPS.flatMap((g) => g.icons))
 export const isCategoryIconName = (v: unknown): v is CategoryIconName =>
     typeof v === 'string' && ICON_NAMES.has(v)
 
-/** The picker's swatches — the first 7 are the pre-00045 category colours. */
+/** The picker's swatches — the first 7 are the pre-00045 category colors. */
 export const CATEGORY_COLORS = [
     '#ffd97d',
     '#90be6d',
@@ -52,7 +52,7 @@ export const DEFAULT_CATEGORY_COLOR = '#d3d3d3'
 
 /**
  * The name-based looks from before migration 00045 — only a fallback for
- * data cached before the category's own icon/colour reached it.
+ * data cached before the category's own icon/color reached it.
  */
 const LEGACY_LOOKS: Record<string, { icon: CategoryIconName; color: string }> = {
     'Food': { icon: 'ForkKnife', color: '#ffd97d' },
@@ -65,7 +65,7 @@ const LEGACY_LOOKS: Record<string, { icon: CategoryIconName; color: string }> = 
 
 export type CategoryLook = { icon: CategoryIconName; color: string }
 
-/** A category's icon + colour: its own when set, else the legacy name
+/** A category's icon + color: its own when set, else the legacy name
  *  mapping, else the default ("Other") look. */
 export function getCategoryLook(
     name: string | null | undefined,
