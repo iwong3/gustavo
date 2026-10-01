@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, TextField, Typography } from '@mui/material'
-import { IconPlus } from '@tabler/icons-react'
+import { IconCheck, IconPlus } from '@tabler/icons-react'
 import { useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 
@@ -38,7 +38,6 @@ const swatchSx = {
     placeItems: 'center',
     ...pressIconSx,
 } as const
-const selectedRingSx = { outline: `2.5px solid ${colors.primaryBlack}`, outlineOffset: '2px' } as const
 
 /**
  * Your icon: initials + colour, with a live preview. A page-style form
@@ -137,14 +136,14 @@ export function IconForm({
                                 setEditColor(c)
                                 setCustomOpen(false)
                             }}
-                            sx={{
-                                ...swatchSx,
-                                backgroundColor: c,
-                                ...(editColor.toLowerCase() === c && selectedRingSx),
-                            }}
-                        />
+                            sx={{ ...swatchSx, backgroundColor: c }}>
+                            {editColor.toLowerCase() === c && (
+                                <IconCheck size={20} stroke={3} color={getContrastText(c)} />
+                            )}
+                        </Box>
                     ))}
-                    {/* Custom: shows the custom colour once picked, else a rainbow */}
+                    {/* Custom: a rainbow +, or the custom colour with the
+                        check once one is picked */}
                     <Box
                         component="button"
                         type="button"
@@ -156,13 +155,12 @@ export function IconForm({
                             background: isPreset
                                 ? 'conic-gradient(#f44336, #ffeb3b, #4caf50, #03a9f4, #9c27b0, #f44336)'
                                 : editColor,
-                            ...(!isPreset && selectedRingSx),
                         }}>
-                        <IconPlus
-                            size={16}
-                            stroke={2.6}
-                            color={isPreset ? colors.primaryWhite : getContrastText(editColor)}
-                        />
+                        {isPreset ? (
+                            <IconPlus size={16} stroke={2.6} color={colors.primaryWhite} />
+                        ) : (
+                            <IconCheck size={20} stroke={3} color={getContrastText(editColor)} />
+                        )}
                     </Box>
                 </Box>
                 <AnimatedHeight>

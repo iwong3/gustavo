@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Button, TextField, Typography } from '@mui/material'
-import { IconTrash } from '@tabler/icons-react'
+import { IconCheck, IconTrash } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 
@@ -21,6 +21,7 @@ import { FormPage } from 'components/form-page'
 import { CategoryTile, shareLabel } from 'components/settings/category-tile'
 import { CategoryGlyph } from 'utils/category-icons'
 import { ConflictError } from 'utils/api'
+import { getContrastText } from 'utils/icons'
 import { deleteErrorMessage } from 'utils/delete-error'
 
 const groupLabelSx = { fontSize: 11.5, fontWeight: 600, color: 'text.secondary', marginBottom: 0.75 } as const
@@ -217,7 +218,9 @@ export function CategoryForm({
                                                 position: 'relative',
                                                 aspectRatio: '1',
                                                 borderRadius: '50%',
-                                                border: on ? `1.5px solid ${colors.primaryBlack}` : '1.5px solid transparent',
+                                                // Outlined so the white circles read on the cream page;
+                                                // the chosen one is yellow with a heavier edge
+                                                border: `${on ? 1.5 : 1}px solid ${colors.primaryBlack}`,
                                                 backgroundColor: on ? colors.primaryYellow : colors.primaryWhite,
                                                 color: colors.primaryBlack,
                                                 display: 'grid',
@@ -271,16 +274,18 @@ export function CategoryForm({
                                     backgroundColor: c,
                                     padding: 0,
                                     cursor: 'pointer',
-                                    ...(on && { outline: `2.5px solid ${colors.primaryBlack}`, outlineOffset: '2px' }),
+                                    display: 'grid',
+                                    placeItems: 'center',
                                     ...pressIconSx,
-                                }}
-                            />
+                                }}>
+                                {/* A check inside, not a ring around: an
+                                    offset outline reads lopsided against the
+                                    swatch's hard shadow */}
+                                {on && <IconCheck size={20} stroke={3} color={getContrastText(c)} />}
+                            </Box>
                         )
                     })}
                 </Box>
-                <Typography sx={{ fontSize: 12, color: 'text.secondary', marginTop: 1 }}>
-                    The first seven are the original category colours.
-                </Typography>
             </Box>
 
             {category && (
