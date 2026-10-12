@@ -51,6 +51,19 @@ describe('buildStack', () => {
         ])
         expect(stack.map(isDone)).toEqual([false, false])
     })
+
+    it('follows the drag order, unordered ones after by name', () => {
+        const stack = buildStack(
+            [
+                supp(1, 'Zinc', 1),
+                { ...supp(2, 'Fish oil', 1), sortOrder: 1 },
+                { ...supp(3, 'Magnesium', 1), sortOrder: 0 },
+                supp(4, 'Creatine', 1),
+            ],
+            []
+        )
+        expect(stack.map((s) => s.name)).toEqual(['Magnesium', 'Fish oil', 'Creatine', 'Zinc'])
+    })
 })
 
 describe('addDose / removeDose', () => {

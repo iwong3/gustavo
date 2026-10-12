@@ -51,6 +51,9 @@ export type Supplement = {
     isActive: boolean
     /** Doses per day in the daily stack (home check-off); null = not in the stack. */
     dailyDoses: number | null
+    /** Daily-stack position (drag to reorder on Home); null = unordered, after
+     *  the ordered ones, by name. Optional: older cached data lacks it. */
+    sortOrder?: number | null
 }
 
 export type SupplementLog = {

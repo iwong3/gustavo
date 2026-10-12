@@ -201,6 +201,9 @@ function LiveStack({ start, night }: { start: StackItem[]; night?: boolean }) {
                     )
                 )
             }
+            onReorder={(ids) =>
+                setItems((cur) => ids.map((id) => cur.find((i) => i.supplementId === id)!))
+            }
         />
     )
 }

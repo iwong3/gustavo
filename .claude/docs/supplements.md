@@ -41,7 +41,7 @@ Both libs are pure and tested (`tests/supplement-runs.test.ts`,
 
 | Route | What |
 |---|---|
-| Home card (`components/home/supplements-card.tsx`) | Today's stack, tap = dose, swipe = Undo |
+| Home card (`components/home/supplements-card.tsx`) | Today's stack, tap = dose, swipe = Undo, hold-and-drag (mouse: drag) = reorder — saved as `supplements.sort_order` (00046), which every stack view sorts by (`compareStackOrder`) |
 | `/health/supplements` | Daily-stack tiles (dose + Day X), then the board-style month calendar; tap a day → lavender day panel (editable rows, changes below, pencil → log form) |
 | `/health/supplements/new?date=` | Day log form: daily tiles (tap adds, full clears) + as-needed tiles (tap adds, − removes, logged-first); explicit Save |
 | `/health/supplements/manage` | **Your Stack** — "Daily stack" and "Off the stack" boards; tap the 2× tag for an in-place − 2× + (settles 0.7s; 0 applies instantly); + restacks at 1×; rows animate between boards. Reached by tapping the page's title pill. |

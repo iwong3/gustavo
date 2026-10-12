@@ -15,11 +15,33 @@
  * Between midnight and 6am doses count for the previous day (logDateString);
  * the page passes `nightNote` then, a one-line explainer with a switch.
  *
+ * Rows reorder by drag (`onReorder`): press-and-hold then drag on touch, or
+ * just drag with a mouse. The hold keeps taps, swipes and scrolling as they
+ * were; while a row is lifted the list swallows touchmove (capture phase) so
+ * SwipeableRow and pull-to-refresh yield, and the click that ends a drag
+ * never takes a dose.
+ *
  * Presentational + gallery-importable: items and the tap handler come in via
  * props (see lib/health/supplement-stack.ts).
  */
+import { useEffect, useRef } from 'react'
 import { Box, Typography } from '@mui/material'
 import { IconArrowBackUp, IconCheck, IconPill } from '@tabler/icons-react'
+import {
+    closestCenter,
+    DndContext,
+    MouseSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+    arrayMove,
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 
 import { colors, healthColors, pressRowSx, supplementColors, toneColors } from '@/lib/colors'
 import { isDone, type StackItem } from '@/lib/health/supplement-stack'
@@ -69,19 +91,89 @@ function DayMeter({ taken, total }: { taken: number; total: number }) {
     )
 }
 
+/** A row that lifts and follows the pointer vertically while dragged. */
+function SortableStackRow({ id, children }: { id: number; children: React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+    return (
+        <Box
+            ref={setNodeRef}
+            {...attributes}
+            {...listeners}
+            // Long-press would otherwise open the browser's context menu
+            onContextMenu={(e) => e.preventDefault()}
+            sx={{
+                position: 'relative',
+                // Vertical only — a list reorder, never a sideways slide
+                transform: transform ? `translate3d(0, ${Math.round(transform.y)}px, 0)` : undefined,
+                transition,
+                zIndex: isDragging ? 10 : 'auto',
+                boxShadow: isDragging ? `2px 2px 0px ${colors.primaryBlack}` : 'none',
+                outline: isDragging ? `1px solid ${colors.primaryBlack}` : 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none',
+                cursor: isDragging ? 'grabbing' : undefined,
+            }}>
+            {children}
+        </Box>
+    )
+}
+
 export default function SupplementsCard({
     items,
     onTap,
     onUndo,
+    onReorder,
     nightNote,
 }: {
     items: StackItem[]
     onTap: (item: StackItem) => void
     /** Take one dose back (swipe left → Undo). */
     onUndo: (item: StackItem) => void
+    /** New stack order (supplement ids) after a drag. */
+    onReorder?: (supplementIds: number[]) => void
     /** Shown between midnight and 6am — see NightNote. */
     nightNote?: NightNote
 }) {
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    )
+    const draggingRef = useRef(false)
+    // Just after a drag: the click that ends it isn't a dose tap
+    const justDragged = useRef(false)
+    const listRef = useRef<HTMLDivElement>(null)
+
+    // While a row is lifted, own the touch: stops page scroll, and capture
+    // phase marks it defaultPrevented before SwipeableRow / pull-to-refresh
+    useEffect(() => {
+        const el = listRef.current
+        if (!el) return
+        const onMove = (e: TouchEvent) => {
+            if (draggingRef.current && e.cancelable) e.preventDefault()
+        }
+        el.addEventListener('touchmove', onMove, { passive: false, capture: true })
+        return () => el.removeEventListener('touchmove', onMove, { capture: true })
+    }, [])
+
+    const setDrag = (on: boolean) => {
+        draggingRef.current = on
+        if (on) justDragged.current = true
+        else setTimeout(() => (justDragged.current = false), 400)
+    }
+    const onDragEnd = ({ active, over }: DragEndEvent) => {
+        setDrag(false)
+        if (!onReorder || !over || active.id === over.id) return
+        const ids = items.map((i) => i.supplementId)
+        const from = ids.findIndex((id) => String(id) === String(active.id))
+        const to = ids.findIndex((id) => String(id) === String(over.id))
+        if (from !== -1 && to !== -1) onReorder(arrayMove(ids, from, to))
+    }
+    const tap = (item: StackItem) => {
+        if (justDragged.current) return
+        onTap(item)
+    }
+
     const total = items.reduce((n, i) => n + i.dosesPerDay, 0)
     const taken = items.reduce(
         (n, i) => n + Math.min(i.taken, i.dosesPerDay),
@@ -145,16 +237,27 @@ export default function SupplementsCard({
                 Debts) — a lasting way to take one back, not just the toast.
                 Bleeds to the card edges so the revealed button meets them. */}
             <Box
+                ref={listRef}
                 sx={{
                     marginX: -1.5,
                     marginBottom: -1.5,
                     borderTop: `1px solid ${RULE}`,
                 }}>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={() => setDrag(true)}
+                    onDragEnd={onDragEnd}
+                    onDragCancel={() => setDrag(false)}>
+                <SortableContext
+                    items={items.map((i) => i.supplementId)}
+                    strategy={verticalListSortingStrategy}
+                    disabled={!onReorder}>
                 {items.map((item, i) => {
                     const done = isDone(item)
                     return (
+                        <SortableStackRow key={item.supplementId} id={item.supplementId}>
                         <SwipeableRow
-                            key={item.supplementId}
                             canEdit={false}
                             canDelete={item.taken > 0}
                             onEdit={() => {}}
@@ -172,7 +275,7 @@ export default function SupplementsCard({
                             <Box
                                 component="button"
                                 type="button"
-                                onClick={() => onTap(item)}
+                                onClick={() => tap(item)}
                                 aria-label={`${item.name}: ${Math.min(item.taken, item.dosesPerDay)} of ${item.dosesPerDay} taken`}
                                 sx={{
                                     display: 'flex',
@@ -205,8 +308,11 @@ export default function SupplementsCard({
                                 <Capsules taken={item.taken} dosesPerDay={item.dosesPerDay} />
                             </Box>
                         </SwipeableRow>
+                        </SortableStackRow>
                     )
                 })}
+                </SortableContext>
+                </DndContext>
             </Box>
         </BoardCard>
     )

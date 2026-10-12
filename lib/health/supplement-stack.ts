@@ -24,11 +24,19 @@ export type StackItem = {
     logId: number | null
 }
 
-/** The stack for one day: active supplements with doses set, alphabetical. */
+/** Daily-stack order: the user's drag order (sortOrder), unordered ones after, by name. */
+export function compareStackOrder(a: Supplement, b: Supplement): number {
+    const ao = a.sortOrder ?? Infinity
+    const bo = b.sortOrder ?? Infinity
+    return ao !== bo ? ao - bo : a.name.localeCompare(b.name)
+}
+
+/** The stack for one day: active supplements with doses set, in stack order. */
 export function buildStack(supplements: Supplement[], dayLogs: SupplementLog[]): StackItem[] {
     const bySupp = new Map(dayLogs.map((l) => [Number(l.supplementId), l]))
     return supplements
         .filter((s) => s.isActive && s.dailyDoses !== null && s.dailyDoses > 0)
+        .sort(compareStackOrder)
         .map((s) => {
             const log = bySupp.get(Number(s.id))
             return {
@@ -39,7 +47,6 @@ export function buildStack(supplements: Supplement[], dayLogs: SupplementLog[]):
                 logId: log ? Number(log.id) : null,
             }
         })
-        .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export const isDone = (item: StackItem) => item.taken >= item.dosesPerDay

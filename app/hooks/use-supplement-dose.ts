@@ -3,10 +3,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef } from 'react'
 
-import type { SupplementLog } from '@/lib/health-types'
+import type { Supplement, SupplementLog } from '@/lib/health-types'
 import { addDose, removeDose } from '@/lib/health/supplement-stack'
 import { queryKeys } from '@/lib/query-keys'
 import { showToast } from 'components/toast-store'
+import { allSupplementsKey } from 'hooks/useSupplementData'
 
 type DoseVars = { supplementId: number; name: string; date: string; delta: 1 | -1 }
 
@@ -105,4 +106,38 @@ export function useDoseTaps(date: string, { undoToast = true }: { undoToast?: bo
     )
 
     return { onTap, onUndo }
+}
+
+/**
+ * Save a new daily-stack order (Home card drag). Optimistic: writes
+ * `sortOrder` into the supplements cache so every stack view (Home, the
+ * Supplements page tiles) re-sorts at once; rolls back on error.
+ */
+export function useReorderStack() {
+    const queryClient = useQueryClient()
+    const { mutate } = useMutation({
+        mutationFn: async (supplementIds: number[]) => {
+            const res = await fetch('/api/health/supplements/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplementIds }),
+            })
+            if (!res.ok) throw new Error('Reorder failed')
+        },
+        onMutate: async (supplementIds) => {
+            await queryClient.cancelQueries({ queryKey: allSupplementsKey })
+            const prev = queryClient.getQueryData<Supplement[]>(allSupplementsKey)
+            const pos = new Map(supplementIds.map((id, i) => [String(id), i]))
+            queryClient.setQueryData<Supplement[]>(allSupplementsKey, (list = []) =>
+                list.map((s) => (pos.has(String(s.id)) ? { ...s, sortOrder: pos.get(String(s.id)) } : s))
+            )
+            return { prev }
+        },
+        onError: (_e, _v, ctx) => {
+            if (ctx?.prev) queryClient.setQueryData(allSupplementsKey, ctx.prev)
+        },
+        onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.health.supplements }),
+        meta: { errorToast: "Couldn't save the new order. Try again." },
+    })
+    return mutate
 }

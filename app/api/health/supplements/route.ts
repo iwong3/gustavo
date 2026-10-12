@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const showAll = request.nextUrl.searchParams.get('all') === 'true'
 
     let query = `
-        SELECT id, name, dosage, is_active, daily_doses
+        SELECT id, name, dosage, is_active, daily_doses, sort_order
         FROM supplements
         WHERE user_id = $1 AND deleted_at IS NULL`
 
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         dosage: r.dosage,
         isActive: r.is_active,
         dailyDoses: r.daily_doses ?? null,
+        sortOrder: r.sort_order ?? null,
     }))
 
     return NextResponse.json(supplements)

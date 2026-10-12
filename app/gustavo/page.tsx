@@ -39,7 +39,7 @@ import WorkoutsCard from 'components/home/workouts-card'
 import { useApplyWorkoutRoutine } from 'components/health/workout-presets'
 import { useToday } from 'hooks/use-today'
 import { useStackDay } from 'hooks/use-stack-day'
-import { useDoseTaps } from 'hooks/use-supplement-dose'
+import { useDoseTaps, useReorderStack } from 'hooks/use-supplement-dose'
 import { localDateString } from 'utils/time'
 import { allSupplementsKey } from 'hooks/useSupplementData'
 import { useWeightLogs } from 'hooks/useWeightLogs'
@@ -269,6 +269,7 @@ function SupplementsSection() {
     // next supplement hit its Undo instead. The card shows each dose, and
     // Undo stays one tap (done row) or a swipe away.
     const { onTap, onUndo } = useDoseTaps(date, { undoToast: false })
+    const onReorder = useReorderStack()
 
     const items = useMemo(
         () => buildStack(supplementsQ.data ?? [], logsQ.data ?? []),
@@ -286,6 +287,7 @@ function SupplementsSection() {
             items={items}
             onTap={onTap}
             onUndo={onUndo}
+            onReorder={onReorder}
             nightNote={nightNote}
         />
     )
