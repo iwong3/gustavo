@@ -142,6 +142,8 @@ export type AddExpenseData = {
     split_between_ids?: string[]
     /** Participants whose share the payer covers ("treat"). */
     covered_participant_ids?: string[]
+    /** Who chips in for the treated shares; empty ⇒ the payer covers. */
+    covering_participant_ids?: string[]
     location?: string | null // location name; null clears it on update
     notes?: string
     local_currency_received?: number | null

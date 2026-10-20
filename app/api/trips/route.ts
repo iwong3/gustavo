@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
             [tripIds]
         ),
         pool.query(
-            `SELECT ep.expense_id, ep.user_id, ep.covered_by
+            `SELECT ep.expense_id, ep.user_id, ep.covered_by, ep.covers
              FROM expense_participants ep
              JOIN expenses e ON e.id = ep.expense_id
              WHERE e.trip_id = ANY($1) AND e.deleted_at IS NULL`,
@@ -192,10 +192,10 @@ export async function GET(request: NextRequest) {
     // Split participants by expense. isEveryone is passed as false below:
     // when a split really is "everyone", its participant count equals the
     // trip's, so the per-share division is identical either way.
-    const splitsByExpense = new Map<number, { userId: number; coveredBy: number | null }[]>()
+    const splitsByExpense = new Map<number, { userId: number; coveredBy: number | null; covers: boolean }[]>()
     for (const r of epRes.rows) {
         const list = splitsByExpense.get(r.expense_id) ?? []
-        list.push({ userId: r.user_id, coveredBy: r.covered_by })
+        list.push({ userId: r.user_id, coveredBy: r.covered_by, covers: Boolean(r.covers) })
         splitsByExpense.set(r.expense_id, list)
     }
 
@@ -243,6 +243,7 @@ export async function GET(request: NextRequest) {
                 isEveryone: false,
                 splitBetween: split.map((s) => ({ id: s.userId })),
                 coveredParticipants: split.filter((s) => s.coveredBy != null).map((s) => ({ id: s.userId })),
+                coveringParticipants: split.filter((s) => s.covers).map((s) => ({ id: s.userId })),
             }
         })
 

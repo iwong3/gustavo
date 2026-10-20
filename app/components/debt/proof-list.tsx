@@ -25,7 +25,7 @@ export type ProofRow = {
     usd: number
     /** How many people it's split between. */
     splitCount: number
-    /** Someone in the split was treated (covered by the payer). */
+    /** Someone in the split was treated (covered by the payer or others). */
     treated: boolean
 }
 

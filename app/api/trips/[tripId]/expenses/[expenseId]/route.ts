@@ -8,6 +8,7 @@ import { occMatchSql, occTokensMatch } from '@/lib/occ'
 import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
 import {
     effectiveCovered,
+    effectiveCovering,
     ExpensePeopleError,
     loadTripRoster,
     resolveExpensePeople,
@@ -172,6 +173,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 )
                 const expPayerId = String(payerIdRes.rows[0].paid_by)
                 const coveredIds = effectiveCovered(people.coveredIds ?? new Set(), participantIds, expPayerId)
+                const coveringIds = effectiveCovering(people.coveringIds ?? new Set(), participantIds, coveredIds)
 
                 // Delete existing participants
                 await client.query(
@@ -181,8 +183,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
                 for (const uid of participantIds) {
                     await client.query(
-                        'INSERT INTO expense_participants (expense_id, user_id, covered_by) VALUES ($1, $2, $3)',
-                        [expenseIdNum, uid, coveredIds.has(uid) ? expPayerId : null]
+                        'INSERT INTO expense_participants (expense_id, user_id, covered_by, covers) VALUES ($1, $2, $3, $4)',
+                        [expenseIdNum, uid, coveredIds.has(uid) ? expPayerId : null, coveringIds.has(uid)]
                     )
                 }
             }

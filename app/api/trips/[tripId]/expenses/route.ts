@@ -6,6 +6,7 @@ import { getUserTripRole, getTripAccess, canAddExpense, canViewTrip } from '@/li
 import { upsertPlaceDetails, type PlaceUpsertBody } from '@/lib/place-details'
 import {
     effectiveCovered,
+    effectiveCovering,
     ExpensePeopleError,
     loadTripRoster,
     resolveExpensePeople,
@@ -86,6 +87,7 @@ export async function POST(
             const payerId = people.payerId!
             const participantIds = people.participantIds!
             const coveredIds = effectiveCovered(people.coveredIds ?? new Set(), participantIds, payerId)
+            const coveringIds = effectiveCovering(people.coveringIds ?? new Set(), participantIds, coveredIds)
 
             // Resolve location name → location ID (optional)
             let locationId: number | null = null
@@ -111,11 +113,12 @@ export async function POST(
             )
             const expId = expenseRes.rows[0].id
 
-            // Insert expense_participants (with covered_by for covered participants)
+            // Insert expense_participants: covered_by marks the treated,
+            // covers who chips in for them (none ⇒ the payer)
             for (const userId of participantIds) {
                 await client.query(
-                    `INSERT INTO expense_participants (expense_id, user_id, covered_by) VALUES ($1, $2, $3)`,
-                    [expId, userId, coveredIds.has(userId) ? payerId : null]
+                    `INSERT INTO expense_participants (expense_id, user_id, covered_by, covers) VALUES ($1, $2, $3, $4)`,
+                    [expId, userId, coveredIds.has(userId) ? payerId : null, coveringIds.has(userId)]
                 )
             }
 

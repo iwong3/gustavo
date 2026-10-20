@@ -19,6 +19,7 @@
  */
 
 import { directPairwiseSettlements, simplifyDebts, type Settlement } from './debt'
+import { expenseShares, type ShareExpense } from './expense-shares'
 import type { SettlementRecord, SettlePlan, UserSummary } from './types'
 
 export type { SettlePlan }
@@ -162,28 +163,19 @@ export function roundToTotal(values: number[], targetCents: number): number[] {
  * expense gives exactly the debt map's pair nets.
  */
 export function expenseBalanceEffects(
-    exp: {
-        paidBy: { id: number }
-        splitBetween: { id: number }[]
-        coveredParticipants: { id: number }[]
-        isEveryone: boolean
-    },
+    exp: ShareExpense,
     personId: number,
     usdValue: number,
     participantCount: number
 ): Map<string, number> {
     const effects = new Map<string, number>()
-    const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
-    if (splitCount === 0) return effects
-    const splitCost = usdValue / splitCount
     const payer = key(exp.paidBy.id)
     const me = key(personId)
-    const covered = new Set(exp.coveredParticipants.map((p) => key(p.id)))
-    for (const p of exp.splitBetween) {
-        const other = key(p.id)
-        if (other === payer || covered.has(other)) continue
-        if (payer === me) effects.set(other, (effects.get(other) ?? 0) + splitCost)
-        else if (other === me) effects.set(payer, (effects.get(payer) ?? 0) - splitCost)
+    for (const { id, share } of expenseShares(exp, usdValue, participantCount)) {
+        const other = key(id)
+        if (other === payer) continue
+        if (payer === me) effects.set(other, (effects.get(other) ?? 0) + share)
+        else if (other === me) effects.set(payer, (effects.get(payer) ?? 0) - share)
     }
     return effects
 }

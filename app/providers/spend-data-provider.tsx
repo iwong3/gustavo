@@ -15,6 +15,7 @@ import { useTripData } from 'providers/trip-data-provider'
 import { filterExpenses, type FilterMaps } from 'utils/expense-filters'
 
 import { applySettlements } from '@/lib/debt'
+import { expenseShares } from '@/lib/expense-shares'
 import { computeBlendedRates, computeDebtMap, getExpenseUsdValue, type BlendedRates } from '@/lib/spend'
 import type { Expense, SettlementRecord, UserSummary } from '@/lib/types'
 
@@ -148,23 +149,13 @@ function computeSummaries(
         // Per-person split cost (what they owe from this expense)
         const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
         const splitCost = usdValue / splitCount
-        const coveredIds = new Set(exp.coveredParticipants.map((p) => p.id))
+
+        // Net spend: treated people's shares go to their coverers
+        for (const { id, share } of expenseShares(exp, usdValue, participantCount)) {
+            netSpendByPerson.set(id, (netSpendByPerson.get(id) ?? 0) + share)
+        }
 
         for (const participant of exp.splitBetween) {
-            // Net spend: covered participants' shares go to the payer instead
-            if (coveredIds.has(participant.id)) {
-                // Covered person doesn't pay — payer absorbs their share
-                netSpendByPerson.set(
-                    exp.paidBy.id,
-                    (netSpendByPerson.get(exp.paidBy.id) ?? 0) + splitCost
-                )
-            } else {
-                netSpendByPerson.set(
-                    participant.id,
-                    (netSpendByPerson.get(participant.id) ?? 0) + splitCost
-                )
-            }
-
             if (isSplitFilterActive && !splitBetweenFilters.get(String(participant.id))) {
                 continue
             }

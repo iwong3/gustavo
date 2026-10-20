@@ -4,6 +4,7 @@
 // the two can never disagree on the math.
 
 import { applySettlements, computeNetBalances, simplifyDebts } from './debt'
+import { expenseShares } from './expense-shares'
 import type { SettlementRecord, TripStats } from './types'
 
 /** The minimal expense shape the spend math needs. `Expense` satisfies it;
@@ -19,6 +20,8 @@ export type SpendExpense = {
     isEveryone: boolean
     splitBetween: { id: number }[]
     coveredParticipants: { id: number }[]
+    /** Who covers the treated shares; empty/missing ⇒ the payer. */
+    coveringParticipants?: { id: number }[]
 }
 
 // --- Blended exchange rate calculation ---
@@ -130,19 +133,14 @@ export function computeDebtMap(
         const usdValue = getExpenseUsdValue(exp, blendedRates)
         totalSpend += usdValue
         const payerId = exp.paidBy.id
-        const splitCount = exp.isEveryone ? participantCount : exp.splitBetween.length
-        const splitCost = usdValue / splitCount
 
-        // Build set of covered participant IDs for fast lookup
-        const coveredIds = new Set(exp.coveredParticipants.map((p) => p.id))
-
-        for (const participant of exp.splitBetween) {
-            if (participant.id === payerId) continue
-            if (coveredIds.has(participant.id)) continue // covered — no debt
-            // participant owes payer
-            const owes = debtMap.get(participant.id) ?? new Map()
-            owes.set(payerId, (owes.get(payerId) ?? 0) + splitCost)
-            debtMap.set(participant.id, owes)
+        // Everyone but the payer owes the payer their share (treated people
+        // have none; coverers carry theirs plus the treat — lib/expense-shares)
+        for (const { id, share } of expenseShares(exp, usdValue, participantCount)) {
+            if (String(id) === String(payerId)) continue
+            const owes = debtMap.get(id) ?? new Map()
+            owes.set(payerId, (owes.get(payerId) ?? 0) + share)
+            debtMap.set(id, owes)
         }
     }
 
@@ -155,33 +153,22 @@ export function computeDebtMap(
  * How much of one expense a user is really responsible for, matching the
  * netSpendByPerson semantics in spend-data-provider: the expense splits
  * evenly across its participants, except covered ("treat") participants,
- * whose shares are absorbed by the payer.
+ * whose shares are split across the coverers (the payer by default).
  *
  * `usdValue` is passed in (rather than derived here) so callers can use the
  * blended-exchange-rate value from useSpendData().getUsdValue.
  */
 export function expenseShareForUser(
-    exp: Pick<SpendExpense, 'isEveryone' | 'splitBetween' | 'coveredParticipants' | 'paidBy'>,
+    exp: Pick<SpendExpense, 'isEveryone' | 'splitBetween' | 'coveredParticipants' | 'coveringParticipants' | 'paidBy'>,
     userId: number,
     usdValue: number,
     participantCount: number
 ): number {
-    const splitCount = exp.isEveryone
-        ? participantCount
-        : exp.splitBetween.length
-    if (splitCount === 0) return 0
-    const splitCost = usdValue / splitCount
-
     // String() both sides — ids are BIGINT strings at runtime and callers may
     // hold the user id from a different source than the expense rows.
-    const coveredIds = new Set(exp.coveredParticipants.map((p) => String(p.id)))
-
     let share = 0
-    for (const participant of exp.splitBetween) {
-        const responsibleId = coveredIds.has(String(participant.id))
-            ? exp.paidBy.id
-            : participant.id
-        if (String(responsibleId) === String(userId)) share += splitCost
+    for (const s of expenseShares(exp, usdValue, participantCount)) {
+        if (String(s.id) === String(userId)) share += s.share
     }
     return share
 }

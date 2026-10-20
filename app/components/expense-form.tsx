@@ -17,7 +17,8 @@ import dayjs from 'dayjs'
 import { fetchExpenseCategories } from 'utils/api'
 import { queryKeys, staleTimes } from '@/lib/query-keys'
 
-import { colors, pressTextSx } from '@/lib/colors'
+import { colors, pressIconSx, pressTextSx } from '@/lib/colors'
+import { expenseShares } from '@/lib/expense-shares'
 import { findPossibleDuplicates } from '@/lib/expense-duplicates'
 import { derivePlaceCity } from '@/lib/place-display'
 import type { PlaceDetails } from '@/lib/types'
@@ -32,7 +33,7 @@ import {
     prefilledFieldSx,
     selectMenuProps,
 } from '@/lib/form-styles'
-import { IconCheck, IconChevronDown, IconCopy } from '@tabler/icons-react'
+import { IconCash, IconCheck, IconChevronDown, IconCopy, IconGift, type Icon } from '@tabler/icons-react'
 import { CategoryPicker } from 'components/category-picker'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
@@ -233,6 +234,10 @@ export default function ExpenseForm({
     const [coveredParticipants, setCoveredParticipants] = useState<string[]>(
         expense?.coveredParticipants.map((u) => String(u.id)) ?? []
     )
+    // Who chips in for the treated shares; empty ⇒ the payer (00047)
+    const [coveringParticipants, setCoveringParticipants] = useState<string[]>(
+        expense?.coveringParticipants?.map((u) => String(u.id)) ?? []
+    )
     const [googlePlace, setGooglePlace] = useState<PlaceDetails | null>(() =>
         toPlaceDetails(expense)
     )
@@ -374,6 +379,9 @@ export default function ExpenseForm({
             setCoveredParticipants(
                 expense.coveredParticipants.map((u) => String(u.id))
             )
+            setCoveringParticipants(
+                expense.coveringParticipants?.map((u) => String(u.id)) ?? []
+            )
             setLocation(expense.locationName ?? '')
             setGooglePlace(toPlaceDetails(expense))
             setNotes(expense.notes ?? '')
@@ -420,6 +428,7 @@ export default function ExpenseForm({
                 setSplitBetween([paidBy])
             }
             setCoveredParticipants([])
+            setCoveringParticipants([])
         }
     }, [isCurrencyExchange, paidBy, foreignCurrencies])
 
@@ -435,8 +444,9 @@ export default function ExpenseForm({
             // A split needs at least one person
             if (current.length === 1) return
             next = current.filter((p) => p !== person)
-            // Remove from covered if no longer in split
+            // Remove from treated/covering if no longer in split
             setCoveredParticipants((prev) => prev.filter((p) => p !== person))
+            setCoveringParticipants((prev) => prev.filter((p) => p !== person))
         } else {
             next = [...current, person]
         }
@@ -448,12 +458,27 @@ export default function ExpenseForm({
         if (isEveryone) {
             setSplitBetween([paidBy || people[0]])
             setCoveredParticipants([])
+            setCoveringParticipants([])
         } else {
             setSplitBetween(['Everyone'])
         }
     }
 
+    // Treating or covering someone implies they're on the expense: a tap on
+    // an excluded row's toggle adds them to the split too
+    const includeInSplit = (person: string) => {
+        const current = isEveryone ? people : splitBetween
+        if (current.includes(person)) return
+        const next = [...current, person]
+        setSplitBetween(next.length === people.length ? ['Everyone'] : next)
+    }
+
     const toggleCovered = (person: string) => {
+        includeInSplit(person)
+        if (!coveredParticipants.includes(person)) {
+            // Treated people can't also be covering
+            setCoveringParticipants((prev) => prev.filter((p) => p !== person))
+        }
         setCoveredParticipants((prev) =>
             prev.includes(person)
                 ? prev.filter((p) => p !== person)
@@ -479,6 +504,30 @@ export default function ExpenseForm({
         setCoveredParticipants(
             allCovered ? [] : coverableParticipants.map((p) => String(p.id))
         )
+        if (!allCovered) setCoveringParticipants([])
+    }
+
+    // Who covers the treated shares — mirrors lib/expense-shares: the marked
+    // people still in the split and not treated, else the payer (shown on
+    // when they're in the split; otherwise they cover off-screen).
+    const includedIds = isEveryone ? people : splitBetween
+    const hasTreats = coveredParticipants.length > 0
+    const payerInSplit = includedIds.includes(paidBy)
+    const markedCovering = coveringParticipants.filter(
+        (p) => includedIds.includes(p) && !coveredParticipants.includes(p)
+    )
+    const coveringIds =
+        markedCovering.length > 0 ? markedCovering : payerInSplit ? [paidBy] : []
+
+    const toggleCovering = (person: string) => {
+        includeInSplit(person)
+        const next = coveringIds.includes(person)
+            ? coveringIds.filter((p) => p !== person)
+            : [...coveringIds, person]
+        // Someone has to cover — unchecking the last one would silently fall
+        // back to the payer, so it's a no-op instead
+        if (next.length === 0 && payerInSplit) return
+        setCoveringParticipants(next)
     }
 
     // Header summary: headcount + per-person share (shown once, not per row)
@@ -490,6 +539,26 @@ export default function ExpenseForm({
         (!isNaN(costNum) && costNum > 0 && includedCount > 0
             ? ` · ${currencyMeta.symbol}${(costNum / includedCount).toFixed(currencyMeta.decimals)}${includedCount > 1 ? ' each' : ''}`
             : '')
+
+    // "Pays" column: each person's share in the expense's currency, live
+    const showPays = !isNaN(costNum) && costNum > 0 && !isCurrencyExchange
+    const paysById = new Map(
+        showPays
+            ? expenseShares(
+                  {
+                      paidBy: { id: paidBy as unknown as number },
+                      isEveryone: false,
+                      splitBetween: includedIds.map((id) => ({ id: id as unknown as number })),
+                      coveredParticipants: coveredParticipants.map((id) => ({ id: id as unknown as number })),
+                      coveringParticipants: coveringIds.map((id) => ({ id: id as unknown as number })),
+                  },
+                  costNum,
+                  includedIds.length
+              ).map((s) => [String(s.id), s.share])
+            : []
+    )
+    const formatPays = (amount: number) =>
+        `${currencyMeta.symbol}${amount.toFixed(currencyMeta.decimals)}`
 
     // Same amount + currency within a day of an existing expense — someone
     // may have logged this bill already. A hint only; never blocks saving.
@@ -569,6 +638,7 @@ export default function ExpenseForm({
                 coveredParticipants.length > 0
                     ? coveredParticipants
                     : undefined,
+            covering_participant_ids: hasTreats ? coveringIds : undefined,
             // Cleared fields go as null/'' (not undefined) — the PUT only
             // writes fields present in the body, so undefined would keep the
             // old value and an edit could never clear them
@@ -666,38 +736,97 @@ export default function ExpenseForm({
         </Box>
     )
 
-    // "Treat" toggle pill — marks a share as covered by the payer. State is
-    // signalled by fill only (no icon, constant weight) so the width and the
-    // row height never shift when toggled.
-    const treatPill = (on: boolean, label: string, onToggle: () => void) => (
+    // Treat / Cover toggles: a round icon button per column. State is fill
+    // only, and every column is always laid out, so nothing ever moves under
+    // a finger mid-tap; the column header names the icon. Disabled = dimmed
+    // and inert (the tap is swallowed so it can't toggle the row either).
+    const iconToggle = (
+        on: boolean,
+        Glyph: Icon,
+        label: string,
+        onToggle: () => void,
+        disabled = false
+    ) => (
         <Box
-            onClick={(e) => {
-                e.stopPropagation()
-                onToggle()
-            }}
-            role="button"
+            component="button"
+            type="button"
             aria-pressed={on}
+            aria-label={label}
+            aria-disabled={disabled || undefined}
+            onClick={(e: { stopPropagation: () => void }) => {
+                e.stopPropagation()
+                if (!disabled) onToggle()
+            }}
             sx={{
-                marginLeft: 'auto',
+                opacity: disabled ? 0.35 : 1,
+                width: 34,
+                height: 34,
+                padding: 0,
                 flexShrink: 0,
+                borderRadius: '50%',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                height: 26,
-                fontSize: 11,
-                fontWeight: 600,
-                lineHeight: 1,
-                paddingX: '10px',
-                borderRadius: '13px',
-                cursor: 'pointer',
-                userSelect: 'none',
-                border: `1px solid ${on ? colors.primaryBlack : `${colors.primaryBlack}55`}`,
-                backgroundColor: on
-                    ? colors.primaryYellow
-                    : colors.primaryWhite,
+                justifyContent: 'center',
+                border: `1px solid ${on ? colors.primaryBlack : `${colors.primaryBlack}40`}`,
+                backgroundColor: on ? colors.primaryYellow : colors.primaryWhite,
                 boxShadow: on ? `1px 1px 0px ${colors.primaryBlack}` : 'none',
-                color: on ? colors.primaryBlack : `${colors.primaryBlack}80`,
+                ...(disabled ? { cursor: 'default' } : pressIconSx),
             }}>
-            {label}
+            <Glyph
+                size={17}
+                stroke={2}
+                color={on ? colors.primaryBlack : `${colors.primaryBlack}66`}
+            />
+        </Box>
+    )
+
+    const legendTextSx = {
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        color: colors.primaryBrown,
+        lineHeight: 1,
+    } as const
+    const splitCellsSx = {
+        marginLeft: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0,
+    } as const
+    // Treat / Cover / Pays: three equal columns, contents centered, so the
+    // header labels and the row contents share one axis per column
+    const splitColSx = {
+        width: 60,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    } as const
+
+    // Column legend in the split header (text only, so the three labels sit
+    // on one line). Treat's is tappable (treat everyone); taps never reach
+    // the header's Everyone toggle.
+    const columnLegend = (label: string, onTap?: () => void) => (
+        <Box
+            component={onTap ? 'button' : 'div'}
+            type={onTap ? 'button' : undefined}
+            aria-label={onTap ? label + ' everyone' : undefined}
+            onClick={(e: { stopPropagation: () => void }) => {
+                e.stopPropagation()
+                onTap?.()
+            }}
+            sx={{
+                ...splitColSx,
+                height: 34,
+                padding: 0,
+                border: 'none',
+                background: 'none',
+                cursor: onTap ? 'pointer' : 'default',
+                ...(onTap ? pressTextSx : {}),
+            }}>
+            <Typography sx={legendTextSx}>{label}</Typography>
         </Box>
     )
 
@@ -1111,8 +1240,10 @@ export default function ExpenseForm({
                     )
                 })()}
 
-            {/* 6. Split between — one row per participant: tap the row to
-                include, "Treat" pill to have the payer cover that share */}
+            {/* 6. Split between — a small table: tap a row to include, the
+                gift column treats someone, the cash column picks who covers
+                them (inert until someone's treated), and Pays shows each
+                share live. Every column is always there — nothing shifts */}
             <Box sx={{ opacity: isCurrencyExchange ? 0.5 : 1 }}>
                 <Box
                     sx={{
@@ -1143,14 +1274,15 @@ export default function ExpenseForm({
                         overflow: 'hidden',
                         pointerEvents: isCurrencyExchange ? 'none' : 'auto',
                     }}>
-                    {/* Header row: Everyone toggle + Treat all */}
+                    {/* Header row: Everyone toggle + column legend (tap the
+                        gift legend to treat everyone) */}
                     <Box
                         onClick={toggleEveryone}
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 1,
-                            height: 42,
+                            height: 46,
                             paddingX: '10px',
                             cursor: 'pointer',
                             userSelect: 'none',
@@ -1166,35 +1298,40 @@ export default function ExpenseForm({
                             }}>
                             Everyone
                         </Typography>
-                        {coverableParticipants.length > 1 &&
-                            treatPill(
-                                allCovered,
-                                'Treat all',
-                                toggleTreatAll
+                        <Box sx={splitCellsSx}>
+                            {columnLegend(
+                                'Treat',
+                                coverableParticipants.length > 1
+                                    ? toggleTreatAll
+                                    : undefined
                             )}
+                            {columnLegend('Cover')}
+                            {columnLegend('Pays')}
+                        </Box>
                     </Box>
                     {trip.participants.map((p, i) => {
-                        const included =
-                            isEveryone || splitBetween.includes(String(p.id))
-                        const isPayer = String(p.id) === paidBy
-                        const isCovered = coveredParticipants.includes(
-                            String(p.id)
-                        )
+                        const id = String(p.id)
+                        const included = isEveryone || splitBetween.includes(id)
+                        const isPayer = id === paidBy
+                        const isCovered = coveredParticipants.includes(id)
+                        const pays = paysById.get(id) ?? 0
                         return (
                             <Box
                                 key={p.id}
-                                onClick={() => toggleRow(String(p.id))}
+                                onClick={() => toggleRow(id)}
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 1,
-                                    height: 42,
+                                    height: 46,
                                     paddingX: '10px',
                                     cursor: 'pointer',
                                     userSelect: 'none',
-                                    backgroundColor: included
-                                        ? colors.primaryWhite
-                                        : `${colors.primaryBlack}08`,
+                                    backgroundColor: !included
+                                        ? `${colors.primaryBlack}08`
+                                        : isCovered
+                                          ? `${colors.primaryYellow}26`
+                                          : colors.primaryWhite,
                                     borderBottom:
                                         i < trip.participants.length - 1
                                             ? `1px solid ${colors.primaryBlack}15`
@@ -1219,8 +1356,10 @@ export default function ExpenseForm({
                                     />
                                 </Box>
                                 <Typography
+                                    noWrap
                                     sx={{
                                         fontSize: 13,
+                                        minWidth: 0,
                                         color: included
                                             ? colors.primaryBlack
                                             : 'text.secondary',
@@ -1238,15 +1377,46 @@ export default function ExpenseForm({
                                             backgroundColor:
                                                 colors.primaryYellow,
                                             color: colors.primaryBlack,
+                                            flexShrink: 0,
                                         }}>
                                         paid
                                     </Box>
                                 )}
-                                {included &&
-                                    !isPayer &&
-                                    treatPill(isCovered, 'Treat', () =>
-                                        toggleCovered(String(p.id))
-                                    )}
+                                <Box sx={splitCellsSx}>
+                                    <Box sx={splitColSx}>
+                                        {!isPayer &&
+                                            iconToggle(
+                                                isCovered,
+                                                IconGift,
+                                                `Treat ${p.firstName}`,
+                                                () => toggleCovered(id)
+                                            )}
+                                    </Box>
+                                    <Box sx={splitColSx}>
+                                        {!isCovered &&
+                                            iconToggle(
+                                                hasTreats && included && coveringIds.includes(id),
+                                                IconCash,
+                                                `${p.firstName} covers the treat`,
+                                                () => toggleCovering(id),
+                                                !hasTreats
+                                            )}
+                                    </Box>
+                                    <Box sx={splitColSx}>
+                                        <Typography
+                                            sx={{
+                                                fontSize: 13,
+                                                fontWeight: 700,
+                                                whiteSpace: 'nowrap',
+                                                color:
+                                                    showPays && included && pays > 0
+                                                        ? colors.primaryBlack
+                                                        : 'text.secondary',
+                                            }}>
+                                            {showPays && included ? formatPays(pays) : '—'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
                             </Box>
                         )
                     })}

@@ -29,7 +29,7 @@ with `?expenseId=` that one expense's full, uncapped history.
 - **Splits** (`groupSplitRows`): saving an expense DELETEs its whole split and
   re-INSERTs it. Split rows are grouped by expense + exact `changed_at`
   (DELETEs = old split, INSERTs = new) and folded into the expense's own entry
-  as synthetic **`split` / `covered`** name lists — the diff then shows
+  as synthetic **`split` / `covered` / `covering`** name lists — the diff then shows
   "Split: + Marco". A split saved with no expense row gets a synthesized update
   entry. Split rows are matched on `expense_id` *inside the JSON*, not
   `record_id` (deleted split rows no longer exist in the live table).

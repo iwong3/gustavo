@@ -34,6 +34,7 @@ const FIELD_LABELS: Record<string, string> = {
     // Synthetic — the split, rebuilt from expense_participants rows (see attachSplits)
     split: 'Split',
     covered: 'Covered',
+    covering: 'Covering',
 }
 
 // Fields to exclude from diffs (internal/noisy).
@@ -160,10 +161,11 @@ function resolveIdFields(data: Data, maps: Maps): Data {
 // every row of a transaction with the same changed_at (now()), so grouping
 // split rows by expense + changed_at recovers each save's before/after split:
 // DELETEs are the old split, INSERTs the new one. It's then folded into the
-// expense's own entry as synthetic `split` / `covered` fields, so the feed
+// expense's own entry as synthetic `split` / `covered` / `covering` fields, so the feed
 // shows "Split: +Marco" rather than 2N "Added/Removed X from split" rows.
 
-type SplitSide = Map<string, string | null> // participant name → covered-by name
+// participant name → covered-by name (treated) + whether they cover treats
+type SplitSide = Map<string, { by: string | null; covers: boolean }>
 type SplitGroup = {
     expenseId: number
     changedAt: string
@@ -178,10 +180,12 @@ const splitKey = (expenseId: number, changedAt: string) =>
 
 const names = (side: SplitSide) => Array.from(side.keys()).sort()
 const coveredNames = (side: SplitSide) =>
-    Array.from(side.entries()).filter(([, by]) => by !== null).map(([n]) => n).sort()
+    Array.from(side.entries()).filter(([, v]) => v.by !== null).map(([n]) => n).sort()
+const coveringNames = (side: SplitSide) =>
+    Array.from(side.entries()).filter(([, v]) => v.covers).map(([n]) => n).sort()
 
 function splitFields(side: SplitSide): Data {
-    return { split: names(side), covered: coveredNames(side) }
+    return { split: names(side), covered: coveredNames(side), covering: coveringNames(side) }
 }
 
 type AuditRow = {
@@ -234,8 +238,12 @@ function groupSplitRows(rows: AuditRow[], users: Map<number, string>): Map<strin
         }
         const oldName = person(row.old_data?.user_id)
         const newName = person(row.new_data?.user_id)
-        if (row.old_data && oldName) g.before.set(oldName, person(row.old_data.covered_by))
-        if (row.new_data && newName) g.after.set(newName, person(row.new_data.covered_by))
+        if (row.old_data && oldName) {
+            g.before.set(oldName, { by: person(row.old_data.covered_by), covers: Boolean(row.old_data.covers) })
+        }
+        if (row.new_data && newName) {
+            g.after.set(newName, { by: person(row.new_data.covered_by), covers: Boolean(row.new_data.covers) })
+        }
     }
     return groups
 }
@@ -352,7 +360,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const liveSplits = new Map<number, SplitSide>()
         if (deletedExpenseIds.size > 0) {
             const liveRes = await pool.query(
-                `SELECT expense_id, user_id, covered_by FROM expense_participants
+                `SELECT expense_id, user_id, covered_by, covers FROM expense_participants
                 WHERE expense_id = ANY($1::bigint[])`,
                 [Array.from(deletedExpenseIds)]
             )
@@ -360,7 +368,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 const eid = Number(r.expense_id)
                 const side = liveSplits.get(eid) ?? new Map()
                 const who = maps.users.get(Number(r.user_id)) ?? 'Unknown'
-                side.set(who, r.covered_by ? maps.users.get(Number(r.covered_by)) ?? 'Unknown' : null)
+                side.set(who, {
+                    by: r.covered_by ? maps.users.get(Number(r.covered_by)) ?? 'Unknown' : null,
+                    covers: Boolean(r.covers),
+                })
                 liveSplits.set(eid, side)
             }
         }

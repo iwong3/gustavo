@@ -72,7 +72,7 @@ export async function loadTripExpenses(tripId: number, onlyIds?: number[]) {
 
     // Fetch all expense participants in one query (including covered_by)
     const epRes = await pool.query(
-        `SELECT ep.expense_id, ep.covered_by, u.id, u.name, u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url
+        `SELECT ep.expense_id, ep.covered_by, ep.covers, u.id, u.name, u.email, u.avatar_url, u.initials, u.icon_color, u.venmo_url
          FROM expense_participants ep
          JOIN users u ON ep.user_id = u.id
          WHERE ep.expense_id = ANY($1)
@@ -95,6 +95,9 @@ export async function loadTripExpenses(tripId: number, onlyIds?: number[]) {
         const splitBetween = participants.map(userSummary)
         const coveredParticipants = participants
             .filter((p) => p.covered_by != null)
+            .map(userSummary)
+        const coveringParticipants = participants
+            .filter((p) => p.covers)
             .map(userSummary)
         return {
             id: e.id,
@@ -127,6 +130,7 @@ export async function loadTripExpenses(tripId: number, onlyIds?: number[]) {
             }) : null,
             splitBetween,
             coveredParticipants,
+            coveringParticipants,
             isEveryone: splitBetween.length === tripParticipantCount,
             localCurrencyReceived: e.local_currency_received ? parseFloat(e.local_currency_received) : null,
             googlePlaceId: e.google_place_id || null,

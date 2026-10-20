@@ -43,7 +43,7 @@ const firstName = (name: unknown) => String(name ?? '').split(' ')[0] || 'Someon
 /** Fields holding a person's (already resolved) name — shown by first name. */
 const PERSON_FIELDS = new Set(['paid_by', 'reported_by', 'covered_by', 'from_user_id', 'to_user_id'])
 const DATE_FIELDS = new Set(['date', 'start_date', 'end_date', 'settled_on'])
-const LIST_FIELDS = new Set(['split', 'covered'])
+const LIST_FIELDS = new Set(['split', 'covered', 'covering'])
 
 const num = (v: unknown) => (v === null || v === undefined || v === '' ? NaN : Number(v))
 
@@ -333,6 +333,9 @@ function snapshotRows(entry: ActivityEntry, context: ActivityContext) {
     }
     if (Array.isArray(data.covered) && data.covered.length) {
         rows.push({ label: 'Covered', value: formatFieldValue('covered', data.covered, data) })
+    }
+    if (Array.isArray(data.covering) && data.covering.length) {
+        rows.push({ label: 'Covering', value: formatFieldValue('covering', data.covering, data) })
     }
     return rows
 }

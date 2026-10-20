@@ -110,14 +110,15 @@ const ParticipantLine = ({
     isPayer,
     isCovered,
     isCurrentUser,
-    payerFirstName,
+    treatedBy,
 }: {
     user: UserSummary
     amount: number
     isPayer: boolean
     isCovered: boolean
     isCurrentUser: boolean
-    payerFirstName: string
+    /** Who covers the treated shares, e.g. "Ivan + Jenny". */
+    treatedBy: string
 }) => (
     <Box
         sx={{
@@ -192,7 +193,7 @@ const ParticipantLine = ({
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                     }}>
-                    treated by {payerFirstName}
+                    treated by {treatedBy}
                 </Typography>
             </Box>
         )}
@@ -254,6 +255,16 @@ export const DrawerReceipt = ({
         hasForeignAmount && costUsd === 0 && expense.costOriginal > 0 && !expense.conversionError
 
     const coveredIds = new Set(expense.coveredParticipants.map((u) => String(u.id)))
+    // Who covers the treats — the marked coverers still in the split, else
+    // the payer (lib/expense-shares' rule)
+    const coverers = (expense.coveringParticipants ?? []).filter(
+        (u) =>
+            !coveredIds.has(String(u.id)) &&
+            expense.splitBetween.some((s) => String(s.id) === String(u.id))
+    )
+    const treatedBy = (coverers.length > 0 ? coverers : [expense.paidBy])
+        .map((u) => u.firstName)
+        .join(' + ')
 
     // The per-row amount comes from expenseShareForUser — the same function the
     // debts page uses — rather than being recomputed here. This UI used to do
@@ -262,9 +273,9 @@ export const DrawerReceipt = ({
     // through one function is what stops that from coming back.
     //
     // The engine's rule: cost divides across EVERY participant, treated ones
-    // included, and each treated share is reattributed to the payer. So the
-    // column sums to TOTAL — the payer carries their own share plus whatever
-    // they picked up, and nobody is charged twice.
+    // included, and the treated shares are split across the coverers (the
+    // payer by default). So the column sums to TOTAL — coverers carry their
+    // own share plus their part of the treat, and nobody is charged twice.
     const splitCount = expense.isEveryone
         ? tripParticipantCount
         : expense.splitBetween.length
@@ -440,7 +451,7 @@ export const DrawerReceipt = ({
                             isPayer={String(user.id) === String(expense.paidBy.id)}
                             isCovered={coveredIds.has(String(user.id))}
                             isCurrentUser={String(user.id) === String(currentUserId)}
-                            payerFirstName={expense.paidBy.firstName}
+                            treatedBy={treatedBy}
                         />
                     ))}
 

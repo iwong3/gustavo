@@ -28,6 +28,8 @@ export type ExpensePeopleInput = {
     split_between_ids?: (string | number)[]
     split_everyone?: boolean
     covered_participant_ids?: (string | number)[]
+    /** Who chips in for the treated shares (none ⇒ the payer). */
+    covering_participant_ids?: (string | number)[]
     /** Legacy: first names. */
     paid_by?: string
     split_between?: string[]
@@ -41,6 +43,8 @@ export type ResolvedPeople = {
     participantIds?: string[]
     /** Set when the body names a split or covered people. */
     coveredIds?: Set<string>
+    /** Set alongside coveredIds: who chips in for the treated shares. */
+    coveringIds?: Set<string>
 }
 
 /** A bad request: the route answers 400 with this message. */
@@ -115,6 +119,11 @@ export function resolveExpensePeople(roster: RosterEntry[], body: ExpensePeopleI
     } else if (out.participantIds) {
         out.coveredIds = new Set()
     }
+    if (body.covering_participant_ids !== undefined) {
+        out.coveringIds = new Set(body.covering_participant_ids.map((id) => checkId(id, 'Someone covering a treat')))
+    } else if (out.coveredIds) {
+        out.coveringIds = new Set()
+    }
 
     return out
 }
@@ -126,4 +135,15 @@ export function resolveExpensePeople(roster: RosterEntry[], body: ExpensePeopleI
 export function effectiveCovered(covered: Set<string>, participantIds: string[], payerId: string): Set<string> {
     const inSplit = new Set(participantIds)
     return new Set(Array.from(covered).filter((id) => inSplit.has(id) && id !== payerId))
+}
+
+/**
+ * Who chips in for the treated shares: people in the split who aren't
+ * treated themselves. Empty when nobody is treated (nothing to cover) — and
+ * empty means the payer covers, so that never needs storing explicitly.
+ */
+export function effectiveCovering(covering: Set<string>, participantIds: string[], covered: Set<string>): Set<string> {
+    if (covered.size === 0) return new Set()
+    const inSplit = new Set(participantIds)
+    return new Set(Array.from(covering).filter((id) => inSplit.has(id) && !covered.has(id)))
 }

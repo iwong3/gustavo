@@ -92,7 +92,11 @@ export type Expense = {
     reportedBy: UserSummary | null
     reportedAt: string | null
     splitBetween: UserSummary[]
+    /** Treated: their share is covered by others. */
     coveredParticipants: UserSummary[]
+    /** Who chips in for the treated shares (00047); empty ⇒ the payer.
+     *  Optional: expenses cached before then lack it. */
+    coveringParticipants?: UserSummary[]
     isEveryone: boolean
     notes: string
     receiptImageUrl: string | null

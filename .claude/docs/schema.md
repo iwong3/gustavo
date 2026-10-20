@@ -1,6 +1,6 @@
 # Database Schema
 
-> Current through migration **00046**. When you add a migration, update this doc in the same change.
+> Current through migration **00047**. When you add a migration, update this doc in the same change.
 
 ## ER Diagram
 
@@ -108,7 +108,8 @@ expense_participants
   id BIGINT PK
   expense_id BIGINT FK -> expenses (CASCADE)
   user_id BIGINT FK -> users
-  covered_by BIGINT FK -> users (nullable) -- set = share absorbed by coverer, no debt accrued
+  covered_by BIGINT FK -> users (nullable) -- set = treated: share absorbed by the coverers, no debt of its own (value = payer id)
+  covers BOOLEAN NOT NULL DEFAULT false -- chips in for the treated shares, split evenly across covers rows; none = the payer covers (00047)
   UNIQUE(expense_id, user_id)
 
 settlements -- recorded debt payments between trip participants (00038)
@@ -393,7 +394,7 @@ users 1──* settlements (from_user_id, to_user_id, created_by)
 - **Soft deletes** — `deleted_at TIMESTAMPTZ` on long-lived entities (users, trips, locations, expenses, expense_categories, exercises, supplements, presets, foods, food_groups, symptoms, weight_logs, workouts). All queries filter `WHERE deleted_at IS NULL`.
 - **Expense categories** — global (not trip-scoped), with `created_by` for ownership. System categories have a `slug` (e.g. `currency_exchange`) and `created_by = NULL`; they cannot be renamed or deleted. Soft-deleted categories still display on existing expenses and remain filterable.
 - **"Everyone" split detection** — compare expense_participants count to trip_participants count for that trip. No separate flag column.
-- **Covered participants** — `expense_participants.covered_by` set means that share is absorbed by the coverer (in practice the payer) and accrues no debt.
+- **Covered participants (treats)** — `expense_participants.covered_by` set marks a treated participant: their share accrues no debt of their own. The treated shares split evenly across the expense's `covers = true` rows (the "Cover" column); with no covers rows the payer absorbs them (pre-00047 behavior). Math: `expenseShares()` in `lib/spend.ts`; covered/covers people must be in the split and are mutually exclusive.
 - **Users without email** — some participants don't have Google accounts. They have `email = NULL` and cannot log in, but can be referenced as payers/participants.
 - **Trip ownership** — `trips.created_by` determines the owner. The owner is also recorded as a participant with `role = 'owner'`.
 - **Multi-currency trips (00035)** — `trip_currencies` is the source of truth for the expense form's currency options; `trip_countries` records destinations. Legacy `trips.currency` is backfilled into `trip_currencies` and awaits a drop migration.
