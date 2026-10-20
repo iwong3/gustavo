@@ -486,13 +486,14 @@ export default function ExpenseForm({
         )
     }
 
-    // Participants eligible for covering: in the split, not the payer
-    const coverableParticipants = useMemo(() => {
-        const splitSet = isEveryone ? new Set(people) : new Set(splitBetween)
-        return trip.participants.filter(
-            (p) => String(p.id) !== paidBy && splitSet.has(String(p.id))
-        )
-    }, [trip.participants, splitBetween, isEveryone, paidBy, people])
+    // Participants eligible for covering: in the split, not the payer. No
+    // manual useMemo — the React Compiler memoizes it (a manual one here made
+    // it skip the whole component: "existing memoization could not be
+    // preserved")
+    const coverableSplit = isEveryone ? new Set(people) : new Set(splitBetween)
+    const coverableParticipants = trip.participants.filter(
+        (p) => String(p.id) !== paidBy && coverableSplit.has(String(p.id))
+    )
 
     const allCovered =
         coverableParticipants.length > 0 &&
