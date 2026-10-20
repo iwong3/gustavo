@@ -8,7 +8,7 @@
  * The top card auto-advances every CYCLE_MS: it flies off to the left and
  * tucks in at the back. Swipe left for the next card, right for the previous
  * one; touching the deck pauses the timer until RESUME_MS after you let go.
- * Tapping a card opens that trip's Activity page. Gesture follows code-guide
+ * Tapping a card opens that expense (a deleted one: the trip's Activity page). Gesture follows code-guide
  * § Touch Gesture Conventions (axis-lock, `touch-action: pan-y`,
  * preventDefault once horizontal, yield to descendants). Reduced motion: no
  * auto-advance, swipes still work.
@@ -60,7 +60,12 @@ function DeckCard({ entry, now, interactive }: { entry: HomeActivityEntry; now?:
     return (
         <Box
             component={Link}
-            href={`/gustavo/trips/${entry.tripSlug}/activity`}
+            href={
+                // A deleted expense has no page — its trail (and Restore) is on Activity
+                deleted
+                    ? `/gustavo/trips/${entry.tripSlug}/activity`
+                    : `/gustavo/trips/${entry.tripSlug}/expenses/${entry.expenseId}`
+            }
             tabIndex={interactive ? 0 : -1}
             aria-hidden={!interactive}
             draggable={false}
