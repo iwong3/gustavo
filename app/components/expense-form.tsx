@@ -559,6 +559,15 @@ export default function ExpenseForm({
     )
     const formatPays = (amount: number) =>
         `${currencyMeta.symbol}${amount.toFixed(currencyMeta.decimals)}`
+    // Under each Pays amount: the difference from an even split, so a treat's
+    // effect reads at a glance. Null when it rounds to zero (plain splits
+    // look exactly as before).
+    const evenShare = includedIds.length > 0 ? costNum / includedIds.length : 0
+    const formatDiff = (amount: number): string | null => {
+        const diff = amount - evenShare
+        if (Number(Math.abs(diff).toFixed(currencyMeta.decimals)) === 0) return null
+        return `${diff > 0 ? '+' : '−'}${formatPays(Math.abs(diff))}`
+    }
 
     // Same amount + currency within a day of an existing expense — someone
     // may have logged this bill already. A hint only; never blocks saving.
@@ -781,12 +790,13 @@ export default function ExpenseForm({
         </Box>
     )
 
+    // One style for every label in the split header row (Everyone + columns)
     const legendTextSx = {
-        fontSize: 9,
+        fontSize: 11,
         fontWeight: 700,
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
-        color: colors.primaryBrown,
+        color: colors.primaryBlack,
         lineHeight: 1,
     } as const
     const splitCellsSx = {
@@ -1287,17 +1297,14 @@ export default function ExpenseForm({
                             cursor: 'pointer',
                             userSelect: 'none',
                             backgroundColor: colors.primaryWhite,
-                            borderBottom: `1px solid ${colors.primaryBlack}`,
+                            // Dividers are inset shadows, not borders: a
+                            // border eats 1px of the 46, leaving an odd
+                            // content height that puts the 18px checkbox on
+                            // a half pixel (renders a pixel low)
+                            boxShadow: `inset 0 -1px 0 ${colors.primaryBlack}`,
                         }}>
                         {includeCheckbox(isEveryone)}
-                        <Typography
-                            sx={{
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: colors.primaryBlack,
-                            }}>
-                            Everyone
-                        </Typography>
+                        <Typography sx={legendTextSx}>Everyone</Typography>
                         <Box sx={splitCellsSx}>
                             {columnLegend(
                                 'Treat',
@@ -1332,9 +1339,9 @@ export default function ExpenseForm({
                                         : isCovered
                                           ? `${colors.primaryYellow}26`
                                           : colors.primaryWhite,
-                                    borderBottom:
+                                    boxShadow:
                                         i < trip.participants.length - 1
-                                            ? `1px solid ${colors.primaryBlack}15`
+                                            ? `inset 0 -1px 0 ${colors.primaryBlack}15`
                                             : 'none',
                                     transition: 'background-color 0.15s',
                                 }}>
@@ -1402,11 +1409,12 @@ export default function ExpenseForm({
                                                 !hasTreats
                                             )}
                                     </Box>
-                                    <Box sx={splitColSx}>
+                                    <Box sx={{ ...splitColSx, flexDirection: 'column', gap: '3px' }}>
                                         <Typography
                                             sx={{
                                                 fontSize: 13,
                                                 fontWeight: 700,
+                                                lineHeight: 1,
                                                 whiteSpace: 'nowrap',
                                                 color:
                                                     showPays && included && pays > 0
@@ -1415,6 +1423,18 @@ export default function ExpenseForm({
                                             }}>
                                             {showPays && included ? formatPays(pays) : '—'}
                                         </Typography>
+                                        {showPays && included && formatDiff(pays) && (
+                                            <Typography
+                                                sx={{
+                                                    fontSize: 10,
+                                                    fontWeight: 600,
+                                                    lineHeight: 1,
+                                                    whiteSpace: 'nowrap',
+                                                    color: colors.primaryBrown,
+                                                }}>
+                                                {formatDiff(pays)}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Box>
                             </Box>
