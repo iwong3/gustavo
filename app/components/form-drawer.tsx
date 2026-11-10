@@ -1,6 +1,7 @@
 'use client'
 
 import { colors } from '@/lib/colors'
+import { APP_MAX_WIDTH } from '@/lib/layout'
 import { Box } from '@mui/material'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -107,6 +108,9 @@ export default function FormDrawer({ open, onClose, children }: Props) {
                     left: 0,
                     right: 0,
                     bottom: 0,
+                    // Centered sheet in the app column on wide screens
+                    maxWidth: APP_MAX_WIDTH,
+                    mx: 'auto',
                     backgroundColor: colors.primaryWhite,
                     borderTopLeftRadius: '16px',
                     borderTopRightRadius: '16px',

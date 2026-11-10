@@ -14,6 +14,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 
 import { colors, hardShadow, pressIconSx } from '@/lib/colors'
+import { columnPaddingX } from '@/lib/layout'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
@@ -47,7 +48,9 @@ function ContentFab() {
                 display: 'flex',
                 alignItems: 'flex-end',
                 justifyContent: 'flex-end',
-                padding: 2,
+                // Sits at the content column's corner, not the screen's
+                paddingY: 2,
+                paddingX: columnPaddingX(16),
                 zIndex: 5,
             }}>
             <Fab
@@ -103,6 +106,8 @@ function BottomTabBar({
                 width: '100%',
                 height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                // Tabs span the content column; the bar stays full-bleed
+                paddingX: columnPaddingX(),
                 backgroundColor: colors.primaryYellow,
                 borderTopLeftRadius: 32,
                 borderTopRightRadius: 32,
@@ -481,8 +486,9 @@ export default function AppShell({
                                 width: '100%',
                                 height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
                                 paddingTop: 'env(safe-area-inset-top, 0px)',
-                                // Match the body content's 16px edge inset (paddingX: 2)
-                                px: 2,
+                                // Match the body content's 16px edge inset
+                                // (paddingX: 2), inside the app column
+                                paddingX: columnPaddingX(16),
                                 position: 'fixed',
                                 top: 0,
                                 backgroundColor: colors.secondaryYellow,
@@ -594,6 +600,9 @@ export default function AppShell({
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'flex-start',
+                                // Caps page width on wide screens (Duo inner
+                                // display, tablets) — see lib/layout.ts
+                                paddingX: columnPaddingX(),
                             }}>
                             {children}
                         </Box>

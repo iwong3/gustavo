@@ -251,7 +251,7 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
 
 ## Navigation Chrome
 
-- **Bottom tab bar** (`BottomTabBar` in `app/gustavo/layout.tsx`): Home |
+- **Bottom tab bar** (`BottomTabBar` in `app/gustavo/app-shell.tsx`): Home |
   Trips | Health | Settings. Leaf pages swap it for a `PageActionBar`
   (Cancel | Save, Delete | Edit …). Re-tapping the active tab scrolls to top.
 - **Header top-left** (`HeaderCornerButton`): empty on Home, Gus on tab roots
@@ -267,6 +267,14 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
   state in `refine-store.ts` / `filter-stores.ts` / `sort-store.ts`).
 
 There is no nav drawer — tabs + the header corner are the whole navigation.
+
+- **App column width**: on wide screens (iPhone Duo inner display, tablets)
+  everything centers in an `APP_MAX_WIDTH` column (`lib/layout.ts`). The
+  backgrounds stay full width, and `columnPaddingX()` pads the content in
+  `#main-scroll`, the header, the tab bar and `PageActionBar`. New
+  viewport-wide fixed UI should use it too, or use `maxWidth: APP_MAX_WIDTH,
+  mx: 'auto'` for a centered panel. Phones are narrower than the cap, so
+  nothing changes there.
 
 - **Page title rows**: every tool/list page starts its content with
   `PageTitleRow` (`components/page-title-row.tsx`) — bold 16px title left;
