@@ -269,12 +269,13 @@ const { loading, fetchDataError } = useTripsStore(useShallow((s) => s))
 There is no nav drawer — tabs + the header corner are the whole navigation.
 
 - **App column width**: on wide screens (iPhone Duo inner display, tablets)
-  everything centers in an `APP_MAX_WIDTH` column (`lib/layout.ts`). The
-  backgrounds stay full width, and `columnPaddingX()` pads the content in
-  `#main-scroll`, the header, the tab bar and `PageActionBar`. New
-  viewport-wide fixed UI should use it too, or use `maxWidth: APP_MAX_WIDTH,
-  mx: 'auto'` for a centered panel. Phones are narrower than the cap, so
-  nothing changes there.
+  everything centers in an `APP_MAX_WIDTH` column (`lib/layout.ts`).
+  `#main-scroll` and the header keep full-width backgrounds and use
+  `columnPaddingX()` to pad their content into the column. The bottom bars
+  (tab bar, `PageActionBar`) are themselves the column's width
+  (`left: 0, right: 0, maxWidth: APP_MAX_WIDTH, mx: 'auto'`). New
+  viewport-wide fixed UI should do one or the other. Phones are narrower
+  than the cap, so nothing changes there.
 
 - **Page title rows**: every tool/list page starts its content with
   `PageTitleRow` (`components/page-title-row.tsx`) — bold 16px title left;

@@ -14,7 +14,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 
 import { colors, hardShadow, pressIconSx } from '@/lib/colors'
-import { columnPaddingX } from '@/lib/layout'
+import { APP_MAX_WIDTH, columnPaddingX } from '@/lib/layout'
 import { Fab } from '@mui/material'
 import { IconPlus } from '@tabler/icons-react'
 import { ClientOnly } from 'components/client-only'
@@ -103,11 +103,13 @@ function BottomTabBar({
                 alignItems: 'center',
                 position: 'fixed',
                 bottom: 0,
-                width: '100%',
+                // The bar itself is the app column's width, centered
+                left: 0,
+                right: 0,
+                maxWidth: APP_MAX_WIDTH,
+                mx: 'auto',
                 height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                // Tabs span the content column; the bar stays full-bleed
-                paddingX: columnPaddingX(),
                 backgroundColor: colors.primaryYellow,
                 borderTopLeftRadius: 32,
                 borderTopRightRadius: 32,
@@ -615,6 +617,9 @@ export default function AppShell({
                                 left: 0,
                                 right: 0,
                                 height: 'env(safe-area-inset-bottom, 0px)',
+                                // Under the bottom bar, so the same width
+                                maxWidth: APP_MAX_WIDTH,
+                                mx: 'auto',
                                 backgroundColor: colors.primaryYellow,
                                 zIndex: 9,
                             }}

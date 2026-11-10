@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom'
 import { Box, Typography } from '@mui/material'
 
 import { colors, pressIconSx } from '@/lib/colors'
-import { columnPaddingX } from '@/lib/layout'
+import { APP_MAX_WIDTH } from '@/lib/layout'
 
 type ActionBarContextValue = {
     active: boolean
@@ -94,11 +94,13 @@ export function PageActionBar({ children }: { children: React.ReactNode }) {
                 alignItems: 'center',
                 position: 'fixed',
                 bottom: 0,
-                width: '100%',
+                // Same width as the tab bar it replaces: the app column
+                left: 0,
+                right: 0,
+                maxWidth: APP_MAX_WIDTH,
+                mx: 'auto',
                 height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                // Actions span the content column, like the tab bar
-                paddingX: columnPaddingX(),
                 backgroundColor: colors.primaryYellow,
                 borderTopLeftRadius: 32,
                 borderTopRightRadius: 32,
