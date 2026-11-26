@@ -11,7 +11,7 @@
 
 // Relative (not '@/') so the Vitest suite can resolve this value import — the
 // path alias is only configured for Next, and type-only '@/' imports are erased.
-import { derivePlaceCity } from './place-display'
+import { derivePlaceCity, findAddressComponent } from './place-display'
 import type { AddressComponent } from '@/lib/types'
 
 /** One (place, trip) the user spent at — the raw grain the map query returns,
@@ -108,16 +108,11 @@ const sortTripsByDateDesc = (trips: Map<string, TripMapCityTrip>): TripMapCityTr
         a.startDate === b.startDate ? 0 : a.startDate < b.startDate ? 1 : -1
     )
 
-const findComponent = (
-    components: AddressComponent[] | null | undefined,
-    type: string
-) => components?.find((c) => c.types.includes(type)) ?? null
-
 /** ISO country code for a place, from its address components ("JP", "US"). */
 function deriveCountryCode(
     components: AddressComponent[] | null | undefined
 ): string | null {
-    return findComponent(components, 'country')?.shortText ?? null
+    return findAddressComponent(components, 'country')?.shortText ?? null
 }
 
 /**

@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+    cleanAddressComponents,
     derivePlaceArea,
     derivePlaceCity,
     formatPlaceArea,
@@ -124,5 +125,44 @@ describe('formatRating', () => {
     it('omits the count when unknown, and the whole thing without a rating', () => {
         expect(formatRating(4.6, null)).toBe('4.6★')
         expect(formatRating(null, 2431)).toBeNull()
+    })
+})
+
+// Places API (New) is proto3 JSON: empty fields are omitted, so cached
+// components can lack `types` or `longText`. These used to throw mid-render
+// and blank a whole trip's expense list.
+describe('malformed address components', () => {
+    const malformed = [
+        { longText: '2', shortText: '2' }, // no types
+        { types: ['locality', 'political'], shortText: 'Shibuya City' }, // no longText
+        { longText: 'Tokyo', shortText: 'Tokyo', types: ['administrative_area_level_1', 'political'] },
+        { longText: 'Japan', shortText: 'JP', types: ['country', 'political'] },
+        { types: ['postal_code'] }, // no text at all
+        null,
+    ] as unknown as AddressComponent[]
+
+    it('cleans components into a safe shape', () => {
+        expect(cleanAddressComponents(malformed)).toEqual([
+            { longText: '2', shortText: '2', types: [] },
+            { longText: 'Shibuya City', shortText: 'Shibuya City', types: ['locality', 'political'] },
+            { longText: 'Tokyo', shortText: 'Tokyo', types: ['administrative_area_level_1', 'political'] },
+            { longText: 'Japan', shortText: 'JP', types: ['country', 'political'] },
+        ])
+        expect(cleanAddressComponents('not an array')).toEqual([])
+        expect(cleanAddressComponents(undefined)).toEqual([])
+    })
+
+    it('derives the area instead of throwing', () => {
+        expect(formatPlaceArea(malformed)).toBe('Shibuya, Tokyo')
+        expect(derivePlaceCity(malformed)).toBe('Tokyo')
+    })
+
+    it('survives a JP locality with no text at all', () => {
+        const noLocalityText = [
+            { types: ['locality', 'political'] },
+            { longText: 'Kyoto', shortText: 'Kyoto', types: ['administrative_area_level_1'] },
+            { longText: 'Japan', shortText: 'JP', types: ['country'] },
+        ] as unknown as AddressComponent[]
+        expect(formatPlaceArea(noLocalityText)).toBe('Kyoto')
     })
 })

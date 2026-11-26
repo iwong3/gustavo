@@ -9,6 +9,7 @@ import { cardSx, colors } from '@/lib/colors'
 import { sortSpec, useSortStore } from 'components/menu/sort/sort-store'
 import { ExpenseRow } from 'components/receipts/expense-row'
 import { DateGroupHeader } from 'components/receipts/date-group-header'
+import { RowErrorBoundary } from 'components/receipts/row-error-boundary'
 import { SwipeableRow } from 'components/receipts/swipeable-row'
 import { showToast } from 'components/toast-store'
 import { usePressPrefetch } from 'hooks/use-press-prefetch'
@@ -69,7 +70,21 @@ const ListRow = memo(function ListRow({
                 onDelete={() => onDelete(expense)}
                 backgroundColor={expense.conversionError ? '#ffe8e5' : colors.primaryWhite}
                 showBottomBorder={showBottomBorder}>
-                <ExpenseRow expense={expense} onTap={onTap} hideDate={hideDate} />
+                <RowErrorBoundary
+                    fallback={
+                        <Box
+                            onClick={() => onTap(expense)}
+                            sx={{ px: 1.5, py: 1.5, cursor: 'pointer' }}>
+                            <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
+                                {typeof expense.name === 'string' ? expense.name : 'Expense'}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                                Couldn&apos;t display this expense
+                            </Typography>
+                        </Box>
+                    }>
+                    <ExpenseRow expense={expense} onTap={onTap} hideDate={hideDate} />
+                </RowErrorBoundary>
             </SwipeableRow>
         </div>
     )
