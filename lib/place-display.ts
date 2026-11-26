@@ -18,6 +18,45 @@ export type PlaceArea = {
     coarse: string | null
 }
 
+/**
+ * Address components as Google actually sends them, made safe to read.
+ *
+ * The type says every component has `longText`, `shortText` and `types`, but
+ * Places API (New) speaks proto3 JSON, which OMITS empty fields — a component
+ * can arrive with no `types` or no `longText`, and the raw JSON is cached in
+ * place_details as-is. One such component on a Japanese place made the area
+ * rule throw while rendering, which took down a trip's whole expense list.
+ * Missing types become `[]`, missing text falls back to the other spelling,
+ * and components with no text at all are dropped.
+ */
+export function cleanAddressComponents(components: unknown): AddressComponent[] {
+    if (!Array.isArray(components)) return []
+    const out: AddressComponent[] = []
+    for (const c of components) {
+        if (!c || typeof c !== 'object') continue
+        const raw = c as Partial<Record<keyof AddressComponent, unknown>>
+        const longText = typeof raw.longText === 'string' ? raw.longText : ''
+        const shortText = typeof raw.shortText === 'string' ? raw.shortText : ''
+        if (!longText && !shortText) continue
+        out.push({
+            longText: longText || shortText,
+            shortText: shortText || longText,
+            types: Array.isArray(raw.types)
+                ? raw.types.filter((t): t is string => typeof t === 'string')
+                : [],
+        })
+    }
+    return out
+}
+
+/** The first component of `type`, null when there's none (malformed-tolerant). */
+export function findAddressComponent(
+    components: AddressComponent[] | null | undefined,
+    type: string
+): AddressComponent | null {
+    return cleanAddressComponents(components).find((c) => c.types.includes(type)) ?? null
+}
+
 const find = (components: AddressComponent[], type: string) =>
     components.find((c) => c.types.includes(type)) ?? null
 
@@ -41,9 +80,10 @@ const stripWardSuffix = (name: string) => name.replace(/\s+(City|Ward)$/, '')
  * through to the sublocality/locality reading, which is correct for most places.
  */
 export function derivePlaceArea(
-    components: AddressComponent[] | null | undefined
+    rawComponents: AddressComponent[] | null | undefined
 ): PlaceArea {
-    if (!components || components.length === 0) return { fine: null, coarse: null }
+    const components = cleanAddressComponents(rawComponents)
+    if (components.length === 0) return { fine: null, coarse: null }
 
     const country = find(components, 'country')
     const admin1 = find(components, 'administrative_area_level_1')
@@ -100,8 +140,7 @@ export function derivePlaceCity(
     // coarse is the city when there's a finer area; otherwise fine already is.
     if (coarse) return coarse
     if (fine) return fine
-    const country = components ? find(components, 'country') : null
-    return country?.longText ?? null
+    return findAddressComponent(components, 'country')?.longText ?? null
 }
 
 /** Area for an expense's place, falling back to the trip's location name.

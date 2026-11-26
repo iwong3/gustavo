@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthWithUserId } from '@/lib/api-helpers'
+import { cleanAddressComponents } from '@/lib/place-display'
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
@@ -52,13 +53,9 @@ export async function GET(
         ? (priceLevelMap[data.priceLevel] ?? null)
         : (data.priceLevel ?? null)
 
-    const addressComponents = (data.addressComponents || []).map(
-        (c: { longText: string; shortText: string; types: string[] }) => ({
-            longText: c.longText,
-            shortText: c.shortText,
-            types: c.types,
-        })
-    )
+    // Proto3 JSON omits empty fields (a component can lack `types` or
+    // `longText`) — normalize before it's cached and rendered
+    const addressComponents = cleanAddressComponents(data.addressComponents)
 
     // Extract photo resource names (for Places Photos API)
     const photoRefs = (data.photos || [])
