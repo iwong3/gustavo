@@ -49,6 +49,9 @@ export default function PlaceAutocomplete({
     const [loading, setLoading] = useState(false)
     const sessionTokenRef = useRef(crypto.randomUUID())
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+    // Bumped on every new query or clear, so a slow in-flight search can't
+    // repopulate (and reopen) the dropdown after the user has moved on
+    const requestIdRef = useRef(0)
 
     // Warm the position up front when access was already granted (no
     // prompt), so the first search is already biased. First-time users get
@@ -71,9 +74,11 @@ export default function PlaceAutocomplete({
 
     const fetchPredictions = useCallback((query: string) => {
         if (debounceRef.current) clearTimeout(debounceRef.current)
+        const requestId = ++requestIdRef.current
 
         if (query.trim().length < 2) {
             setOptions([])
+            setLoading(false)
             return
         }
 
@@ -85,16 +90,20 @@ export default function PlaceAutocomplete({
                 sessionTokenRef.current,
                 coords ?? { regionCode: fallbackRegionCode }
             )
+            if (requestId !== requestIdRef.current) return
             setOptions(results)
             setLoading(false)
         }, 300)
     }, [fallbackRegionCode])
 
+    // Clear debounce timer on unmount
+    useEffect(() => () => clearTimeout(debounceRef.current), [])
+
     const handleSelect = async (_: unknown, prediction: string | PlacePrediction | null) => {
-        if (!prediction || typeof prediction === 'string') {
-            onChange(null)
-            return
-        }
+        // Nothing to pick: the search box's ✕ (cleared via onInputChange) or
+        // Enter on free text. There's no place selected while the search box
+        // is showing, so there's nothing to report up either.
+        if (!prediction || typeof prediction === 'string') return
 
         onPick?.()
         const details = await getPlaceDetails(prediction.placeId)
@@ -181,7 +190,9 @@ export default function PlaceAutocomplete({
             loading={loading}
             inputValue={inputValue}
             onInputChange={(_, val, reason) => {
-                if (reason === 'input') {
+                // 'input' = typing, 'clear' = the ✕ button. Other reasons
+                // (reset/blur) are ignored — the display syncs from `value`.
+                if (reason === 'input' || reason === 'clear') {
                     setInputValue(val)
                     fetchPredictions(val)
                 }
