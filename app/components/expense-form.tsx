@@ -4,6 +4,7 @@ import {
     Box,
     ButtonBase,
     FormControl,
+    InputAdornment,
     Menu,
     MenuItem,
     Select,
@@ -33,7 +34,7 @@ import {
     prefilledFieldSx,
     selectMenuProps,
 } from '@/lib/form-styles'
-import { IconCash, IconCheck, IconChevronDown, IconCopy, IconGift, type Icon } from '@tabler/icons-react'
+import { IconCash, IconCheck, IconChevronDown, IconCopy, IconGift, IconX, type Icon } from '@tabler/icons-react'
 import { CategoryPicker } from 'components/category-picker'
 import { FormDateField } from 'components/form-date-field'
 import { FormPage } from 'components/form-page'
@@ -920,7 +921,36 @@ export default function ExpenseForm({
                     fullWidth
                     size="small"
                     inputRef={nameInputRef}
-                    slotProps={{ htmlInput: { maxLength: 200 } }}
+                    slotProps={{
+                        htmlInput: { maxLength: 200 },
+                        input: {
+                            // Quick reset when the place's autofilled name
+                            // isn't what you want — focuses for retyping
+                            endAdornment: name ? (
+                                <InputAdornment position="end">
+                                    <ButtonBase
+                                        aria-label="Clear expense name"
+                                        // Keep focus (and the keyboard) in the field
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                            setName('')
+                                            if (prefilled.name)
+                                                setPrefilled((p) => ({ ...p, name: false }))
+                                            nameInputRef.current?.focus()
+                                        }}
+                                        sx={{
+                                            ...pressIconSx,
+                                            // Bigger tap target than the icon
+                                            p: '6px',
+                                            m: '-6px',
+                                            borderRadius: '4px',
+                                        }}>
+                                        <IconX size={16} color={colors.primaryBlack} />
+                                    </ButtonBase>
+                                </InputAdornment>
+                            ) : undefined,
+                        },
+                    }}
                     sx={
                         fieldErrors.name
                             ? errorFieldSx
