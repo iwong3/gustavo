@@ -128,7 +128,7 @@ export default function ExpenseDetailGallery() {
             </SpecimenGroup>
 
             <SpecimenGroup title="DrawerReceipt">
-                <Specimen label="USD, split 2 — no rate lines">
+                <Specimen label="USD, split 2 — no amount/rate line under the total">
                     <DrawerReceipt
                         expense={usd}
                         costUsd={42.5}
@@ -176,7 +176,7 @@ export default function ExpenseDetailGallery() {
                         totalDays={12}
                     />
                 </Specimen>
-                <Specimen label="currency exchange — adds a RECEIVED line">
+                <Specimen label="currency exchange — PAID hero, received + rate under it">
                     <DrawerReceipt
                         expense={exchange}
                         costUsd={200}
