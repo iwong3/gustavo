@@ -2,6 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 import { IconAlertTriangle, IconGift } from '@tabler/icons-react'
+import type { ReactNode } from 'react'
 
 import { colors } from '@/lib/colors'
 import { expenseShareForUser } from '@/lib/spend'
@@ -12,23 +13,31 @@ import type { Expense, UserSummary } from '@/lib/types'
 
 // ── The receipt ───────────────────────────────────────────────────────────────
 //
-// The money half of the expense, drawn as a thermal receipt: amount → rate →
-// total → per-head is genuinely receipt-shaped content, and dot leaders + mono
-// digits make it read BETTER here than in a card.
+// The money half of the expense, drawn as a thermal receipt. Top to bottom it
+// answers "how much was it" first: one big centred TOTAL in USD, with the
+// original amount and rate on a single line under it. Then the split.
 //
-// People are the exception, and the reason this isn't a full-page receipt:
-// avatars and mixed-case names carry identity that ALL-CAPS mono destroys. So
-// the ledger lines are mono, the people rows are the app's normal type — a
-// printed receipt with the app's people stickers on it.
+// People rows are the exception to the receipt styling: avatars and
+// mixed-case names carry identity that ALL-CAPS mono destroys. So the money is
+// mono, the people rows are the app's normal type — a printed receipt with the
+// app's people stickers on it.
+//
+// Legibility floor (Nov 2026 pass): nothing under 11px, names and amounts at
+// 15px, and a pinned mono face (JetBrains Mono, self-hosted via next/font in
+// app/layout.tsx) — `ui-monospace` is SF Mono on iOS but has no Android
+// equivalent, where it fell back to thin, wide faces.
 //
 // It deliberately ends with the barcode and no call to action: debts are
 // settled on the debts page, never per-expense.
 
 const BOBA_COST = 6.5
 const BOBA_EMOJI = '🧋'
-const LEADER_COLOR = '#b9b09a'
 
-const monoFont = 'ui-monospace, "Cascadia Mono", Consolas, monospace'
+const monoFont =
+    'var(--font-receipt-mono), ui-monospace, "Cascadia Mono", Consolas, monospace'
+/** Secondary text on the paper — darker than text.secondary, which washes out
+ *  on the warm off-white at receipt sizes. */
+const softInk = `${colors.primaryBlack}b3`
 
 /**
  * Torn bottom edge, cut out of the paper itself with a mask.
@@ -48,60 +57,105 @@ const monoFont = 'ui-monospace, "Cascadia Mono", Consolas, monospace'
 const TOOTH = 12
 const tornBottomMask = `conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / ${TOOTH}px 100%`
 
+/** "¥151.20" — the rate always shows two decimals, even for zero-decimal
+ *  currencies (FormattedMoney would print JPY as "¥151"). */
+const formatRate = (rate: number, currency: string) =>
+    new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(rate)
+
 const Divider = () => (
     <Box
         sx={{
-            borderTop: `1.5px dashed ${colors.primaryBlack}73`,
-            marginY: 1,
+            borderTop: `1px dashed ${colors.primaryBlack}8c`,
+            marginY: 1.25,
         }}
     />
 )
 
-/** A ledger line: label ···················· value */
-const LedgerLine = ({
-    label,
-    value,
-    big = false,
-    valueColor,
-}: {
-    label: string
-    value: string
-    big?: boolean
-    valueColor?: string
-}) => (
-    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-        <Typography
-            sx={{
-                fontFamily: monoFont,
-                fontSize: big ? 16 : 12,
-                fontWeight: big ? 800 : 400,
-                lineHeight: 1.7,
-                color: colors.primaryBlack,
-                whiteSpace: 'nowrap',
-            }}>
-            {label}
-        </Typography>
-        {/* Dot leader — takes the slack so the value stays flush right */}
-        <Box
-            sx={{
-                flex: 1,
-                borderBottom: `2px dotted ${LEADER_COLOR}`,
-                transform: 'translateY(-3px)',
-            }}
-        />
-        <Typography
-            sx={{
-                fontFamily: monoFont,
-                fontSize: big ? 16 : 12,
-                fontWeight: big ? 800 : 400,
-                lineHeight: 1.7,
-                fontVariantNumeric: 'tabular-nums',
-                color: valueColor ?? colors.primaryBlack,
-                whiteSpace: 'nowrap',
-            }}>
-            {value}
-        </Typography>
+/** Outlined tag after a name: PAID / YOU */
+const Pill = ({ label }: { label: string }) => (
+    <Box
+        component="span"
+        sx={{
+            flexShrink: 0,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.4px',
+            lineHeight: 1.4,
+            paddingX: '5px',
+            border: `1px solid ${colors.primaryBlack}`,
+            borderRadius: '3px',
+            backgroundColor: colors.primaryWhite,
+            color: colors.primaryBlack,
+        }}>
+        {label}
     </Box>
+)
+
+/** The big centred number and the line(s) under it */
+const HeroTotal = ({
+    caption,
+    amount,
+    isError,
+    children,
+}: {
+    caption: string
+    amount: string
+    isError: boolean
+    children?: ReactNode
+}) => (
+    <Box
+        sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px',
+            paddingTop: 0.75,
+            textAlign: 'center',
+        }}>
+        <Typography
+            sx={{
+                fontFamily: monoFont,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '1.5px',
+                color: colors.primaryBrown,
+            }}>
+            {caption}
+        </Typography>
+        <Typography
+            sx={{
+                fontFamily: monoFont,
+                fontSize: 38,
+                fontWeight: 800,
+                lineHeight: 1.1,
+                letterSpacing: '-1px',
+                fontVariantNumeric: 'tabular-nums',
+                color: isError ? colors.primaryRed : colors.primaryBlack,
+            }}>
+            {amount}
+        </Typography>
+        {children}
+    </Box>
+)
+
+/** A line under the hero: "¥8,400 at ¥151.20/$" */
+const HeroSubline = ({ children, tone = 'ink' }: { children: ReactNode; tone?: 'ink' | 'brown' }) => (
+    <Typography
+        sx={{
+            fontFamily: monoFont,
+            fontSize: tone === 'brown' ? 12 : 13,
+            fontWeight: 500,
+            fontVariantNumeric: 'tabular-nums',
+            color: tone === 'brown' ? colors.primaryBrown : softInk,
+            '& b': { color: colors.primaryBlack, fontWeight: 700 },
+        }}>
+        {children}
+    </Typography>
 )
 
 const ParticipantLine = ({
@@ -111,6 +165,7 @@ const ParticipantLine = ({
     isCovered,
     isCurrentUser,
     treatedBy,
+    coversNote,
 }: {
     user: UserSummary
     amount: number
@@ -119,23 +174,25 @@ const ParticipantLine = ({
     isCurrentUser: boolean
     /** Who covers the treated shares, e.g. "Ivan + Jenny". */
     treatedBy: string
+    /** For a coverer: "incl. $13.89 for Sarah" — why their row is bigger. */
+    coversNote: string | null
 }) => (
     <Box
         sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
-            paddingY: 0.5,
+            gap: 1.25,
+            paddingY: '7px',
             // "You" is what the eye hunts for — give it the highlight, and let
             // it bleed to the paper's edge so it reads as a marker stroke
             ...(isCurrentUser && {
                 marginX: -1,
                 paddingX: 1,
-                borderRadius: '3px',
+                borderRadius: '4px',
                 backgroundColor: colors.primaryYellow,
             }),
             ...(!isCurrentUser && {
-                borderBottom: `1px solid ${colors.primaryBlack}14`,
+                borderBottom: `1px solid ${colors.primaryBlack}1a`,
                 '&:last-of-type': { borderBottom: 'none' },
             }),
         }}>
@@ -143,67 +200,62 @@ const ParticipantLine = ({
             name={user.firstName}
             initials={user.initials}
             iconColor={user.iconColor}
-            sx={{ width: 22, height: 22, fontSize: 9, flexShrink: 0, opacity: isCovered ? 0.55 : 1 }}
+            sx={{ width: 28, height: 28, fontSize: 11, flexShrink: 0, opacity: isCovered ? 0.55 : 1 }}
         />
-        <Typography
-            sx={{
-                fontSize: 12.5,
-                fontWeight: isPayer || isCurrentUser ? 700 : 400,
-                color: colors.primaryBlack,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: 0,
-            }}>
-            {user.firstName}
-        </Typography>
-
-        {isPayer && (
-            <Typography
-                sx={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: '0.3px',
-                    color: colors.primaryBrown,
-                    flexShrink: 0,
-                }}>
-                PAYER
-            </Typography>
-        )}
-        {isCurrentUser && !isPayer && (
-            <Typography
-                sx={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: '0.3px',
-                    color: colors.primaryBrown,
-                    flexShrink: 0,
-                }}>
-                YOU
-            </Typography>
-        )}
-        {isCovered && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, minWidth: 0 }}>
-                <IconGift size={11} color={colors.primaryRed} style={{ flexShrink: 0 }} />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                 <Typography
                     sx={{
-                        fontSize: 10.5,
-                        color: 'text.secondary',
+                        fontSize: 15,
+                        fontWeight: isPayer || isCurrentUser ? 700 : 500,
+                        lineHeight: 1.3,
+                        color: colors.primaryBlack,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        minWidth: 0,
                     }}>
-                    treated by {treatedBy}
+                    {user.firstName}
                 </Typography>
+                {isPayer && <Pill label="PAID" />}
+                {isCurrentUser && <Pill label="YOU" />}
             </Box>
-        )}
+            {isCovered ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0 }}>
+                    <IconGift size={12} color={colors.primaryRed} style={{ flexShrink: 0 }} />
+                    <Typography
+                        sx={{
+                            fontSize: 12,
+                            color: softInk,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}>
+                        Treated by {treatedBy}
+                    </Typography>
+                </Box>
+            ) : (
+                coversNote && (
+                    <Typography
+                        sx={{
+                            fontSize: 12,
+                            color: softInk,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}>
+                        {coversNote}
+                    </Typography>
+                )
+            )}
+        </Box>
 
         <Typography
             sx={{
                 marginLeft: 'auto',
                 flexShrink: 0,
                 fontFamily: monoFont,
-                fontSize: 12.5,
+                fontSize: 15,
                 fontWeight: 700,
                 fontVariantNumeric: 'tabular-nums',
                 color: isCovered ? 'text.secondary' : colors.primaryBlack,
@@ -239,7 +291,7 @@ export const DrawerReceipt = ({
     // PAID and `currency` names the currency RECEIVED, not the currency of
     // costOriginal (see lib/spend.ts § computeBlendedRates). Formatting
     // costOriginal as `currency` would print "¥200" for $200 — so exchanges get
-    // their own ledger shape instead of the foreign-amount one.
+    // their own hero shape instead of the foreign-amount one.
     const isExchange = expense.categorySlug === 'currency_exchange'
     const hasForeignAmount = !isExchange && expense.currency !== 'USD'
     const exchangeRateOut =
@@ -254,17 +306,22 @@ export const DrawerReceipt = ({
     const noRate =
         hasForeignAmount && costUsd === 0 && expense.costOriginal > 0 && !expense.conversionError
 
+    const splitIds = new Set(expense.splitBetween.map((u) => String(u.id)))
     const coveredIds = new Set(expense.coveredParticipants.map((u) => String(u.id)))
     // Who covers the treats — the marked coverers still in the split, else
     // the payer (lib/expense-shares' rule)
     const coverers = (expense.coveringParticipants ?? []).filter(
-        (u) =>
-            !coveredIds.has(String(u.id)) &&
-            expense.splitBetween.some((s) => String(s.id) === String(u.id))
+        (u) => !coveredIds.has(String(u.id)) && splitIds.has(String(u.id))
     )
     const treatedBy = (coverers.length > 0 ? coverers : [expense.paidBy])
         .map((u) => u.firstName)
         .join(' + ')
+    // Treated people the engine actually counts (it ignores any not in the split)
+    const treatedNames = expense.coveredParticipants
+        .filter((u) => splitIds.has(String(u.id)))
+        .map((u) => u.firstName)
+    const treatedLabel =
+        treatedNames.length <= 2 ? treatedNames.join(' + ') : `${treatedNames.length} people`
 
     // The per-row amount comes from expenseShareForUser — the same function the
     // debts page uses — rather than being recomputed here. This UI used to do
@@ -280,13 +337,24 @@ export const DrawerReceipt = ({
         ? tripParticipantCount
         : expense.splitBetween.length
     const splitCost = splitCount > 0 ? costUsd / splitCount : 0
-    const payerInSplit = expense.splitBetween.some(
-        (u) => String(u.id) === String(expense.paidBy.id)
-    )
+    const payerInSplit = splitIds.has(String(expense.paidBy.id))
     const amountFor = (user: UserSummary) =>
         expenseShareForUser(expense, user.id, costUsd, tripParticipantCount)
 
+    // A coverer's row is bigger than the base share; say why. The extra is
+    // whatever the engine gave them beyond their own share (none if they're
+    // outside the split, e.g. a payer who isn't eating).
+    const coversNoteFor = (user: UserSummary, amount: number) => {
+        if (treatedNames.length === 0 || coveredIds.has(String(user.id))) return null
+        const ownShare = splitIds.has(String(user.id)) ? splitCost : 0
+        const extra = amount - ownShare
+        if (!(extra > 0.005)) return null
+        return `incl. ${FormattedMoney('USD').format(extra)} for ${treatedLabel}`
+    }
+
     const bobaCount = costUsd > 0 ? Math.round((costUsd / BOBA_COST) * 10) / 10 : 0
+    // Boba is a joke about spending, not about swapping money
+    const showBoba = bobaCount > 0 && !expense.conversionError && !isExchange
 
     // Payer first, then alphabetical. A payer outside the split still gets a
     // row: they're who paid, and if they treated anyone they carry that cost —
@@ -299,6 +367,10 @@ export const DrawerReceipt = ({
     const rows = payerInSplit ? sorted : [expense.paidBy, ...sorted]
 
     const splitLabel = splitCount === 1 ? 'Not split' : `Split ${splitCount} ways`
+    // With treats, rows differ from the even split — "each" would be a lie
+    const perHeadLabel = `${FormattedMoney('USD').format(splitCost)} ${
+        treatedNames.length > 0 ? 'base share' : 'each'
+    }`
 
     // Fine print carries the receipt-shaped metadata (where this sits in the
     // trip). Who filed it stays in prose in the page footer — a receipt would
@@ -335,150 +407,140 @@ export const DrawerReceipt = ({
                     WebkitMask: tornBottomMask,
                     mask: tornBottomMask,
                 }}>
-                    <Typography
-                        sx={{
-                            fontFamily: monoFont,
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '2.5px',
-                            textAlign: 'center',
-                            color: colors.primaryBrown,
-                        }}>
-                        * * * GUSTAVO EXPENSE CO. * * *
-                    </Typography>
+                <Typography
+                    sx={{
+                        fontFamily: monoFont,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: '2px',
+                        textAlign: 'center',
+                        color: colors.primaryBrown,
+                    }}>
+                    GUSTAVO EXPENSE CO.
+                </Typography>
 
-                    <Divider />
-
-                    {/* Ledger */}
+                <HeroTotal
+                    caption={isExchange ? 'PAID' : 'TOTAL'}
+                    amount={FormattedMoney('USD').format(costUsd)}
+                    isError={expense.conversionError || noRate}>
                     {hasForeignAmount && (
-                        <LedgerLine
-                            label={`AMOUNT (${expense.currency})`}
-                            value={FormattedMoney(expense.currency).format(expense.costOriginal)}
-                        />
+                        <HeroSubline>
+                            <b>{FormattedMoney(expense.currency).format(expense.costOriginal)}</b>
+                            {expense.exchangeRate != null &&
+                                ` at ${formatRate(expense.exchangeRate, expense.currency)}/$`}
+                        </HeroSubline>
                     )}
-                    {hasForeignAmount && expense.exchangeRate != null && (
-                        <LedgerLine
-                            label="RATE"
-                            value={`${expense.exchangeRate.toFixed(2)} ${expense.currency} / $`}
-                        />
-                    )}
-                    <LedgerLine
-                        label={isExchange ? 'PAID (USD)' : 'TOTAL (USD)'}
-                        value={FormattedMoney('USD').format(costUsd)}
-                        big
-                        valueColor={expense.conversionError ? colors.primaryRed : undefined}
-                    />
-
-                    {(expense.conversionError || noRate) && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 0.5,
-                                marginTop: 0.5,
-                            }}>
-                            <IconAlertTriangle size={13} color={colors.primaryRed} />
-                            <Typography
-                                sx={{
-                                    fontFamily: monoFont,
-                                    fontSize: 10.5,
-                                    fontWeight: 700,
-                                    color: colors.primaryRed,
-                                    textAlign: 'center',
-                                }}>
-                                {expense.conversionError
-                                    ? 'COULD NOT CONVERT TO USD'
-                                    : `NO ${expense.currency} RATE — LOG A CURRENCY EXCHANGE`}
-                            </Typography>
-                        </Box>
-                    )}
-
                     {/* What you got for the USD — the point of an exchange */}
                     {isExchange && expense.localCurrencyReceived != null && (
-                        <LedgerLine
-                            label={`RECEIVED (${expense.currency})`}
-                            value={FormattedMoney(expense.currency, 0).format(
-                                expense.localCurrencyReceived
-                            )}
-                        />
+                        <HeroSubline>
+                            <b>
+                                {FormattedMoney(expense.currency, 0).format(
+                                    expense.localCurrencyReceived
+                                )}
+                            </b>
+                            {' received'}
+                            {exchangeRateOut != null &&
+                                ` at ${formatRate(exchangeRateOut, expense.currency)}/$`}
+                        </HeroSubline>
                     )}
-                    {exchangeRateOut != null && (
-                        <LedgerLine
-                            label="RATE"
-                            value={`${exchangeRateOut.toFixed(2)} ${expense.currency} / $`}
-                        />
+                    {showBoba && (
+                        <HeroSubline tone="brown">
+                            ≈ {bobaCount} {bobaCount === 1 ? 'boba' : 'bobas'} {BOBA_EMOJI}
+                        </HeroSubline>
                     )}
+                </HeroTotal>
 
-                    {/* Boba is a joke about spending, not about swapping money */}
-                    {bobaCount > 0 && !expense.conversionError && !isExchange && (
+                {(expense.conversionError || noRate) && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 0.5,
+                            marginTop: 0.75,
+                        }}>
+                        <IconAlertTriangle size={14} color={colors.primaryRed} style={{ flexShrink: 0 }} />
                         <Typography
                             sx={{
                                 fontFamily: monoFont,
                                 fontSize: 11,
+                                fontWeight: 700,
+                                color: colors.primaryRed,
                                 textAlign: 'center',
-                                color: colors.primaryBrown,
                             }}>
-                            ≈ {bobaCount} {bobaCount === 1 ? 'BOBA' : 'BOBAS'} {BOBA_EMOJI}
+                            {expense.conversionError
+                                ? 'COULD NOT CONVERT TO USD'
+                                : `NO ${expense.currency} RATE — LOG A CURRENCY EXCHANGE`}
                         </Typography>
-                    )}
-
-                    <Divider />
-
-                    {/* People */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'baseline',
-                            marginBottom: 0.5,
-                        }}>
-                        <Typography sx={{ fontSize: 12, fontWeight: 800, color: colors.primaryBlack }}>
-                            {splitLabel}
-                        </Typography>
-                        {splitCount > 1 && (
-                            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>
-                                {FormattedMoney('USD').format(splitCost)} each
-                            </Typography>
-                        )}
                     </Box>
+                )}
 
-                    {rows.map((user) => (
-                        <ParticipantLine
-                            key={user.id}
-                            user={user}
-                            amount={amountFor(user)}
-                            isPayer={String(user.id) === String(expense.paidBy.id)}
-                            isCovered={coveredIds.has(String(user.id))}
-                            isCurrentUser={String(user.id) === String(currentUserId)}
-                            treatedBy={treatedBy}
-                        />
-                    ))}
+                <Divider />
 
-                    <Divider />
-
-                    {/* Barcode — pure decoration, encodes nothing */}
-                    <Box
-                        aria-hidden
-                        sx={{
-                            height: 26,
-                            width: '62%',
-                            margin: '9px auto 3px',
-                            backgroundImage: `repeating-linear-gradient(90deg, ${colors.primaryBlack} 0 2px, transparent 2px 5px, ${colors.primaryBlack} 5px 6px, transparent 6px 8px, ${colors.primaryBlack} 8px 11px, transparent 11px 13px, ${colors.primaryBlack} 13px 14px, transparent 14px 18px)`,
-                        }}
-                    />
-                    {finePrint && (
-                        <Typography
-                            sx={{
-                                fontFamily: monoFont,
-                                fontSize: 9.5,
-                                letterSpacing: '0.4px',
-                                textAlign: 'center',
-                                color: 'text.secondary',
-                            }}>
-                            {finePrint}
+                {/* People */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        gap: 1,
+                        marginBottom: 0.5,
+                    }}>
+                    <Typography sx={{ fontSize: 14, fontWeight: 800, color: colors.primaryBlack }}>
+                        {splitLabel}
+                    </Typography>
+                    {splitCount > 1 && (
+                        <Typography sx={{ fontSize: 13, fontWeight: 500, color: softInk }}>
+                            {perHeadLabel}
                         </Typography>
                     )}
+                </Box>
+
+                {/* Own wrapper so :last-of-type finds the last row — as
+                    siblings of the Dividers (also divs) it never matched */}
+                <Box>
+                    {rows.map((user) => {
+                        const amount = amountFor(user)
+                        return (
+                            <ParticipantLine
+                                key={user.id}
+                                user={user}
+                                amount={amount}
+                                isPayer={String(user.id) === String(expense.paidBy.id)}
+                                isCovered={coveredIds.has(String(user.id))}
+                                isCurrentUser={String(user.id) === String(currentUserId)}
+                                treatedBy={treatedBy}
+                                coversNote={coversNoteFor(user, amount)}
+                            />
+                        )
+                    })}
+                </Box>
+
+                <Divider />
+
+                {/* Barcode — pure decoration, encodes nothing */}
+                <Box
+                    aria-hidden
+                    sx={{
+                        height: 26,
+                        width: '62%',
+                        margin: '9px auto 3px',
+                        backgroundImage: `repeating-linear-gradient(90deg, ${colors.primaryBlack} 0 2px, transparent 2px 5px, ${colors.primaryBlack} 5px 6px, transparent 6px 8px, ${colors.primaryBlack} 8px 11px, transparent 11px 13px, ${colors.primaryBlack} 13px 14px, transparent 14px 18px)`,
+                    }}
+                />
+                {finePrint && (
+                    <Typography
+                        sx={{
+                            fontFamily: monoFont,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            letterSpacing: '0.4px',
+                            textAlign: 'center',
+                            color: softInk,
+                        }}>
+                        {finePrint}
+                    </Typography>
+                )}
             </Box>
         </Box>
     )

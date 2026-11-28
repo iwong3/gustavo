@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Roboto, IBM_Plex_Serif } from 'next/font/google'
+import { Roboto, IBM_Plex_Serif, JetBrains_Mono } from 'next/font/google'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
@@ -17,6 +17,17 @@ const ibmPlexSerif = IBM_Plex_Serif({
     weight: ['300', '400', '500', '700'],
     subsets: ['latin'],
     variable: '--font-serif',
+    display: 'swap',
+})
+
+// The expense receipt's digits (components/receipts/drawer/drawer-receipt).
+// Pinned rather than `ui-monospace`, which only resolves on Apple platforms —
+// Android fell back to thin, wide system monos. Variable font: every weight.
+// Deliberately NOT --font-mono: several components already reference that
+// (undefined) variable and would all change font at once.
+const receiptMono = JetBrains_Mono({
+    subsets: ['latin'],
+    variable: '--font-receipt-mono',
     display: 'swap',
 })
 
@@ -85,7 +96,7 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="en" className={`${roboto.variable} ${ibmPlexSerif.variable}`}>
+        <html lang="en" className={`${roboto.variable} ${ibmPlexSerif.variable} ${receiptMono.variable}`}>
             <head>
                 <link rel="icon" href="/gus-fring-square.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/gus-fring-square.png" />
