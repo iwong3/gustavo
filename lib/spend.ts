@@ -193,7 +193,7 @@ export function computeTripStats(input: {
     participantIds: number[]
     settlements: TripStatsSettlement[]
     currentUserId: number
-    /** YYYY-MM-DD — "today" for the todaySpendUsd bucket. */
+    /** YYYY-MM-DD — "today" for the yourTodayUsd bucket. */
     todayIso: string
 }): Omit<TripStats, 'latestExpense'> {
     const { participantIds, settlements, currentUserId, todayIso } = input
@@ -210,14 +210,15 @@ export function computeTripStats(input: {
     const blendedRates = computeBlendedRates(expenses)
 
     let totalSpendUsd = 0
-    let todaySpendUsd = 0
+    let yourTodayUsd = 0
     let yourShareUsd = 0
     for (const exp of expenses) {
         const raw = getExpenseUsdValue(exp, blendedRates)
         const usd = Number.isFinite(raw) ? raw : 0
         totalSpendUsd += usd
-        if (exp.date === todayIso) todaySpendUsd += usd
-        yourShareUsd += expenseShareForUser(exp, currentUserId, usd, participantIds.length)
+        const share = expenseShareForUser(exp, currentUserId, usd, participantIds.length)
+        yourShareUsd += share
+        if (exp.date === todayIso) yourTodayUsd += share
     }
 
     const { debtMap } = computeDebtMap(expenses, participantIds.length)
@@ -236,7 +237,7 @@ export function computeTripStats(input: {
     return {
         expenseCount: expenses.length,
         totalSpendUsd: round2(totalSpendUsd),
-        todaySpendUsd: round2(todaySpendUsd),
+        yourTodayUsd: round2(yourTodayUsd),
         yourShareUsd: round2(yourShareUsd),
         yourNetUsd,
         isSettled,

@@ -43,8 +43,8 @@ export type TripStats = {
     expenseCount: number
     /** Whole-group total spend. */
     totalSpendUsd: number
-    /** Whole-group spend dated today (server UTC date). */
-    todaySpendUsd: number
+    /** Current user's share of expenses dated today (the client's local date). */
+    yourTodayUsd: number
     /** Current user's share of expenses (covered shares absorbed by payer). */
     yourShareUsd: number
     /** Current user's net debt position: + = owed to you, − = you owe. */

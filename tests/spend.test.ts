@@ -220,15 +220,16 @@ describe('computeTripStats', () => {
         expect(stats.isSettled).toBe(false)
     })
 
-    it('buckets today spend by date', () => {
+    it("buckets the user's share of today's spend by date", () => {
         const stats = computeTripStats(
             statsInput([
-                leanExpense({ date: '2026-07-14', costOriginal: 40, costConvertedUsd: 40 }),
+                leanExpense({ date: '2026-07-14', costOriginal: 42, costConvertedUsd: 42 }),
                 leanExpense({ date: '2026-07-13' }),
             ])
         )
-        expect(stats.todaySpendUsd).toBeCloseTo(40)
-        expect(stats.totalSpendUsd).toBeCloseTo(130)
+        // Ivan's third of today's 42 (not the group's 42)
+        expect(stats.yourTodayUsd).toBeCloseTo(14)
+        expect(stats.totalSpendUsd).toBeCloseTo(132)
     })
 
     it('marks the trip settled once recorded payments cover the debts', () => {
@@ -301,7 +302,7 @@ describe('computeTripStats', () => {
         expect(stats).toMatchObject({
             expenseCount: 0,
             totalSpendUsd: 0,
-            todaySpendUsd: 0,
+            yourTodayUsd: 0,
             yourShareUsd: 0,
             yourNetUsd: 0,
             isSettled: true,

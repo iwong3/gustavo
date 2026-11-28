@@ -16,7 +16,7 @@ import type {
 /** users.id is BIGINT — the API returns it as a STRING at runtime even though
  *  lib/types.ts says number. Fixtures model the runtime truth so id-comparison
  *  bugs (e.g. Number(param) === p.id never matching) surface in the gallery. */
-const asId = (id: string) => id as unknown as number
+export const asId = (id: string) => id as unknown as number
 
 export const ivan: UserSummary = {
     id: asId('1'),
@@ -318,7 +318,7 @@ export function makeTripStats(overrides: Partial<TripStats> = {}): TripStats {
     return {
         expenseCount: 12,
         totalSpendUsd: 1284,
-        todaySpendUsd: 96,
+        yourTodayUsd: 38,
         yourShareUsd: 512,
         yourNetUsd: 63,
         isSettled: false,

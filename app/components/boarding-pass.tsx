@@ -5,7 +5,7 @@
  *
  * One anatomy across all three states; only the strip, stats, and stub vary:
  *   - upcoming    slate strip with a departure countdown
- *   - travelling  yellow strip, day counter, journey progress bar, debt pill
+ *   - travelling  yellow strip, day counter, your spend + debt pill, per-day journey bar
  *   - complete    sage strip, passport stamps (debt status + per-country ink)
  *
  * Presentational and gallery-importable: everything comes in via props
@@ -120,23 +120,12 @@ function Field({ label, align = 'left', children }: {
     )
 }
 
-/** Stick figure mid-party — the journey bar's traveller marker. */
-function PartyingTraveller({ size }: { size: number }) {
-    return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-            stroke={colors.primaryBlack} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="4.5" r="2.4" />
-            <path d="M12 8v6.5" />
-            <path d="M12 10.5 7 6" />
-            <path d="M12 10.5 17 6" />
-            <path d="M12 14.5 8.5 20" />
-            <path d="M12 14.5l3.5 5" />
-        </svg>
-    )
-}
+/** Progress through the vacation: one segment per day between the start /
+ *  end date labels — past days filled, today a raised (taller, shadowed) block, the rest
+ *  faint outlines. Very long trips (segments would be slivers) collapse to a
+ *  single filled track with the same today block. */
+const MAX_SEGMENTS = 31
 
-/** Progress through the vacation: date labels bracket a dotted trail with one
- *  tick per day; the traveller rides the yellow fill. */
 function JourneyBar({ startDate, endDate, todayIso }: {
     startDate: string
     endDate: string
@@ -144,89 +133,60 @@ function JourneyBar({ startDate, endDate, todayIso }: {
 }) {
     const days = Math.max(1, diffDays(startDate, endDate) + 1)
     const dayOfTrip = Math.min(days, Math.max(1, diffDays(startDate, todayIso) + 1))
-    const frac = Math.min(1, Math.max(0.04, (dayOfTrip - 0.5) / days))
-    const LABEL_W = 38 // room for the date labels at each end
+
+    const pastSx = {
+        height: 8,
+        borderRadius: '2px',
+        backgroundColor: colors.primaryYellow,
+        border: `1px solid ${colors.primaryBlack}`,
+    } as const
+    const todaySx = {
+        height: 14,
+        borderRadius: '3px',
+        backgroundColor: colors.primaryYellow,
+        border: `1.5px solid ${colors.primaryBlack}`,
+        boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
+    } as const
+    const futureSx = {
+        height: 8,
+        borderRadius: '2px',
+        border: `1px solid ${colors.primaryBlack}`,
+        opacity: 0.2,
+    } as const
 
     return (
-        <Box sx={{ position: 'relative', height: 30, marginTop: 1.5 }}>
-            <Typography sx={{ ...journeyLabelSx, left: 0 }}>{shortDay(startDate)}</Typography>
-            <Typography sx={{ ...journeyLabelSx, right: 0 }}>{shortDay(endDate)}</Typography>
-            <Box
-                sx={{
-                    position: 'absolute',
-                    left: LABEL_W,
-                    right: LABEL_W,
-                    top: '50%',
-                    borderTop: `2.5px dotted ${colors.primaryBlack}`,
-                    opacity: 0.3,
-                }}
-            />
-            {days <= 16 && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        left: LABEL_W,
-                        right: LABEL_W,
-                        top: '50%',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        zIndex: 1,
-                    }}>
-                    {Array.from({ length: days }, (_, i) => (
-                        <Box
-                            key={i}
-                            sx={{
-                                width: 4,
-                                height: 4,
-                                borderRadius: '50%',
-                                backgroundColor: colors.primaryBlack,
-                                opacity: 0.5,
-                                transform: 'translateY(-50%)',
-                            }}
-                        />
-                    ))}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginTop: 1.75 }}>
+            <Typography sx={journeyLabelSx}>{shortDay(startDate)}</Typography>
+            {days <= MAX_SEGMENTS ? (
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: days <= 16 ? '3px' : '2px' }}>
+                    {Array.from({ length: days }, (_, i) => {
+                        const day = i + 1
+                        const sx = day < dayOfTrip ? pastSx : day === dayOfTrip ? todaySx : futureSx
+                        return <Box key={i} sx={{ ...sx, flex: 1, minWidth: 0 }} />
+                    })}
+                </Box>
+            ) : (
+                <Box sx={{ flex: 1, position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ ...futureSx, position: 'absolute', left: 0, right: 0 }} />
+                    <Box sx={{ ...pastSx, position: 'absolute', left: 0, width: `${((dayOfTrip - 1) / days) * 100}%` }} />
+                    <Box
+                        sx={{
+                            ...todaySx,
+                            position: 'absolute',
+                            width: 8,
+                            left: `${((dayOfTrip - 0.5) / days) * 100}%`,
+                            transform: 'translateX(-50%)',
+                        }}
+                    />
                 </Box>
             )}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    left: LABEL_W,
-                    top: '50%',
-                    height: 7,
-                    transform: 'translateY(-52%)',
-                    width: `calc((100% - ${LABEL_W * 2}px) * ${frac})`,
-                    backgroundColor: colors.primaryYellow,
-                    border: `1.5px solid ${colors.primaryBlack}`,
-                    borderRadius: 999,
-                }}
-            />
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: `calc(${LABEL_W}px + (100% - ${LABEL_W * 2}px) * ${frac})`,
-                    transform: 'translate(-50%, -50%)',
-                    width: 26,
-                    height: 26,
-                    borderRadius: '50%',
-                    backgroundColor: colors.primaryYellow,
-                    border: `1.5px solid ${colors.primaryBlack}`,
-                    boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 2,
-                }}>
-                <PartyingTraveller size={15} />
-            </Box>
+            <Typography sx={journeyLabelSx}>{shortDay(endDate)}</Typography>
         </Box>
     )
 }
 
 const journeyLabelSx = {
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
+    flexShrink: 0,
     fontSize: 8,
     fontWeight: 800,
     letterSpacing: '0.06em',
@@ -482,7 +442,9 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                 {/* Fields */}
                 <Box sx={{ position: 'relative', zIndex: 2, display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-start' }}>
                     <Field label="Dates">
-                        {formatDateRange(trip.startDate, trip.endDate)}
+                        <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
+                            {formatDateRange(trip.startDate, trip.endDate)}
+                        </Box>
                     </Field>
                     <Field label="Passengers">
                         <Box sx={{ display: 'flex' }}>
@@ -505,18 +467,6 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                             ))}
                         </Box>
                     </Field>
-                    {state === 'travelling' && stats && (
-                        <>
-                            <Box sx={{ marginLeft: 'auto' }}>
-                                <Field label="Today" align="right">
-                                    {fmtUsdWhole(stats.todaySpendUsd)}
-                                </Field>
-                            </Box>
-                            <Field label="Total" align="right">
-                                {fmtUsdWhole(stats.totalSpendUsd)}
-                            </Field>
-                        </>
-                    )}
                     {state === 'upcoming' && stats && safeNum(stats.totalSpendUsd) > 0 && (
                         <Box sx={{ marginLeft: 'auto' }}>
                             <Field label="Total" align="right">
@@ -526,27 +476,33 @@ export default function BoardingPass({ trip, todayIso }: BoardingPassProps) {
                     )}
                 </Box>
 
-                {/* Journey bar + debt pill */}
+                {/* Your spend + debt pill, then the journey bar */}
                 {state === 'travelling' && (
                     <>
-                        <JourneyBar startDate={trip.startDate} endDate={trip.endDate} todayIso={today} />
-                        {stats && Math.abs(net) >= 0.005 && (
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: 0.75 }}>
-                                <Typography
-                                    sx={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        paddingX: 1,
-                                        paddingY: '3px',
-                                        borderRadius: 999,
-                                        border: `1.5px solid ${colors.primaryBlack}`,
-                                        boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
-                                        backgroundColor: net > 0 ? STRIP_SAGE : '#f0b8b4',
-                                    }}>
-                                    {net > 0 ? `You're owed ${fmtUsd(net)}` : `You owe ${fmtUsd(-net)}`}
-                                </Typography>
+                        {stats && (
+                            <Box sx={{ position: 'relative', zIndex: 2, display: 'flex', gap: 2.25, marginTop: 1.25, alignItems: 'flex-end' }}>
+                                <Field label="You spent">{fmtUsdWhole(stats.yourShareUsd)}</Field>
+                                <Field label="Today">{fmtUsdWhole(stats.yourTodayUsd)}</Field>
+                                {Math.abs(net) >= 0.005 && (
+                                    <Typography
+                                        sx={{
+                                            marginLeft: 'auto',
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            whiteSpace: 'nowrap',
+                                            paddingX: 1,
+                                            paddingY: '3px',
+                                            borderRadius: 999,
+                                            border: `1.5px solid ${colors.primaryBlack}`,
+                                            boxShadow: `1.5px 1.5px 0 ${colors.primaryBlack}`,
+                                            backgroundColor: net > 0 ? STRIP_SAGE : '#f0b8b4',
+                                        }}>
+                                        {net > 0 ? `You're owed ${fmtUsd(net)}` : `You owe ${fmtUsd(-net)}`}
+                                    </Typography>
+                                )}
                             </Box>
                         )}
+                        <JourneyBar startDate={trip.startDate} endDate={trip.endDate} todayIso={today} />
                     </>
                 )}
             </Box>
