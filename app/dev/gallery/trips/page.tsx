@@ -9,7 +9,7 @@ import DeparturesBoard from 'components/departures-board'
 import { TripsMap } from 'components/trips-map'
 import type { TripMapCity, TripMapSummary } from '@/lib/trip-map'
 
-import { GALLERY_TODAY, makePassTrip, makeTripStats } from '../fixtures'
+import { GALLERY_TODAY, asId, makePassTrip, makeTripStats } from '../fixtures'
 import { GalleryPage, Specimen, SpecimenGroup } from '../gallery-ui'
 
 // Where-we've-been map fixtures — a spread of real cities so the projection,
@@ -111,19 +111,46 @@ const travellingOwing = makePassTrip({
     countries: ['JP', 'KR'],
     stats: makeTripStats({
         yourNetUsd: -41.5,
-        todaySpendUsd: 0,
+        yourTodayUsd: 0,
         latestExpense: { name: 'Karaoke night', byFirstName: 'Marco', reportedAt: '2026-07-13T22:10:00Z' },
     }),
+})
+
+// Mirrors the real Japan card: 14 days, mid-trip, a crowded passenger row,
+// a cross-month date range, and a large group total.
+const travellingFull = makePassTrip({
+    name: 'Japan 2026',
+    startDate: '2026-07-08',
+    endDate: '2026-07-21',
+    participants: [
+        ...makePassTrip().participants,
+        { ...makePassTrip().participants[1], id: asId('9101'), firstName: 'Ana', initials: 'AM', iconColor: '#4aa3f0' },
+        { ...makePassTrip().participants[2], id: asId('9102'), firstName: 'Lily', initials: 'LI', iconColor: '#e08a94' },
+    ],
+    stats: makeTripStats({
+        totalSpendUsd: 24645,
+        yourShareUsd: 4102,
+        yourTodayUsd: 0,
+        yourNetUsd: -497.63,
+        latestExpense: { name: 'Mitarashi Dango', byFirstName: 'Ivan', reportedAt: '2026-07-14T06:00:00Z' },
+    }),
+})
+
+// Past the segment cap — collapses to a single filled track.
+const travellingLong = makePassTrip({
+    name: 'Gap Year',
+    startDate: '2026-06-01',
+    endDate: '2026-08-15',
 })
 
 const travellingEmpty = makePassTrip({
     name: 'Long Haul',
     startDate: '2026-06-20',
-    endDate: '2026-07-20', // 31 days — journey bar skips the day ticks
+    endDate: '2026-07-20', // 31 days — the most that still get one segment each
     stats: makeTripStats({
         expenseCount: 0,
         totalSpendUsd: 0,
-        todaySpendUsd: 0,
+        yourTodayUsd: 0,
         yourShareUsd: 0,
         yourNetUsd: 0,
         isSettled: true,
@@ -139,7 +166,7 @@ const upcoming = makePassTrip({
     stats: makeTripStats({
         expenseCount: 2,
         totalSpendUsd: 890,
-        todaySpendUsd: 0,
+        yourTodayUsd: 0,
         yourNetUsd: 0,
         latestExpense: { name: 'Bangkok flights', byFirstName: 'Ivan', reportedAt: '2026-07-12T10:00:00Z' },
     }),
@@ -153,7 +180,7 @@ const upcomingTomorrow = makePassTrip({
     stats: makeTripStats({
         expenseCount: 0,
         totalSpendUsd: 0,
-        todaySpendUsd: 0,
+        yourTodayUsd: 0,
         yourNetUsd: 0,
         latestExpense: null,
     }),
@@ -270,8 +297,14 @@ export default function TripsGallery() {
                 <Specimen label="you owe · $0 today · two countries">
                     <BoardingPass trip={travellingOwing} todayIso={GALLERY_TODAY} />
                 </Specimen>
-                <Specimen label="31-day trip (no day ticks) · no expenses yet">
+                <Specimen label="day 7 of 14 · six passengers · you owe">
+                    <BoardingPass trip={travellingFull} todayIso={GALLERY_TODAY} />
+                </Specimen>
+                <Specimen label="31-day trip (max segments) · no expenses yet">
                     <BoardingPass trip={travellingEmpty} todayIso={GALLERY_TODAY} />
+                </Specimen>
+                <Specimen label="76-day trip (single track)">
+                    <BoardingPass trip={travellingLong} todayIso={GALLERY_TODAY} />
                 </Specimen>
             </SpecimenGroup>
 
